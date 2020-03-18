@@ -4,7 +4,7 @@ Repository for improving the developer experience for working with Kubernetes
 
 ## Proposal
 
-To be able to provide solutions to developers to make using Kubernetes easier. To give a developer the least number of steps to take their locally running application and make it consistently deployable into kubernetes environments. Without abstracting them too much from the ecosystem / open source community or reducing operational awareness of their application.
+To provide solutions to developers to make using Kubernetes easier. To give a developer the least number of steps to take their locally running application and make it consistently deployable into kubernetes environments. Without abstracting them too much from the ecosystem / open source community or reducing operational awareness of their application.
 
 ## Current Situation / Assumptions
 
