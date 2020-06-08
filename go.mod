@@ -3,6 +3,7 @@ module github.com/appvia/kube-devx
 go 1.14
 
 require (
+	github.com/compose-spec/compose-go v0.0.0-20200608091248-554a39de0b3a
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
