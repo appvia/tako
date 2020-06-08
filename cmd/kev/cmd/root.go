@@ -24,12 +24,15 @@ o  o o-o   o
 
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
-	Use:   "kev",
-		Short: "Reuse and run your Docker Compose applications on Kubernetes",
+	Use: "kev",
+
+	Short: "Reuse and run your Docker Compose applications on Kubernetes",
+
 	Long: `Kev helps you transform your Docker Compose applications 
    into Cloud Native applications you can run on Kubernetes.`,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
-		base := path.Join( "hack", "sample-dc-app", "docker-compose.yml")
+		base := path.Join("hack", "sample-dc-app", "docker-compose.yml")
 		override := path.Join("hack", "sample-dc-app", "docker-compose.override.yml")
 		workingDir := path.Dir(base)
 
@@ -56,8 +59,10 @@ var rootCmd = &cobra.Command{
 		prettyPrint(config.NetworkNames())
 		return nil
 	},
+
 	SilenceErrors: true,
-	SilenceUsage:  true,
+
+	SilenceUsage: true,
 }
 
 func init() {
