@@ -1,0 +1,6 @@
+app:
+  name: hello-world
+  services:
+    # Start, expected app services
+    - '[placeholder]' # add service name
+    - '[placeholder]' # add service name
