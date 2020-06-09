@@ -9,6 +9,8 @@ import (
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/spf13/cobra"
+
+	_fmt "github.com/appvia/kube-devx/internal/fmt"
 )
 
 var longDescription = `(init) reuses one or more docker-compose files to initialise a cloud native app.
@@ -61,6 +63,7 @@ func init() {
 
 func runInitCmd(cmd *cobra.Command, args []string) error {
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
+
 	config, err := load(composeFiles)
 
 	if err != nil {
@@ -68,16 +71,16 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("Loaded ...")
-	prettyPrint(composeFiles)
+	_fmt.PrettyPrint(composeFiles)
 	fmt.Println("\nFound ...")
 	fmt.Println("\nServices:")
-	prettyPrint(config.ServiceNames())
+	_fmt.PrettyPrint(config.ServiceNames())
 
 	fmt.Println("\nVolumes:")
-	prettyPrint(config.VolumeNames())
+	_fmt.PrettyPrint(config.VolumeNames())
 
 	fmt.Println("\nNetworks:")
-	prettyPrint(config.NetworkNames())
+	_fmt.PrettyPrint(config.NetworkNames())
 
 	return nil
 }
@@ -105,10 +108,4 @@ func load(paths []string) (*compose.Config, error) {
 	})
 }
 
-func prettyPrint(v interface{}) (err error) {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err == nil {
-		fmt.Printf("%s\n", string(b))
-	}
-	return
-}
+
