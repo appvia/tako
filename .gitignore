@@ -1,3 +1,6 @@
+### Generated App Definitions ###
+.kev/*
+
 ### IDEs ###
 .idea/*
 /bin/

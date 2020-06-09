@@ -3,14 +3,17 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
+	"github.com/disiqueira/gotree"
+	"github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
-
-	_fmt "github.com/appvia/kube-devx/internal/fmt"
 )
+
+const BaseDir = ".kev"
 
 var longDescription = `(init) reuses one or more docker-compose files to initialise a cloud native app.
 
@@ -61,25 +64,52 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, args []string) error {
+	appName, _ := cmd.Flags().GetString("name")
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
 
 	config, err := load(composeFiles)
-
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Loaded ...")
-	_fmt.PrettyPrint(composeFiles)
-	fmt.Println("\nFound ...")
-	fmt.Println("\nServices:")
-	_fmt.PrettyPrint(config.ServiceNames())
+	defSource := gotree.New("\n\nSource compose file(s)")
+	for _, e := range composeFiles {
+		defSource.Add(e)
+	}
+	fmt.Println(defSource.Print())
 
-	fmt.Println("\nVolumes:")
-	_fmt.PrettyPrint(config.VolumeNames())
+	appDir := path.Join(BaseDir, appName)
+	if err := os.MkdirAll(appDir, os.ModePerm); err != nil {
+		return err
+	}
 
-	fmt.Println("\nNetworks:")
-	_fmt.PrettyPrint(config.NetworkNames())
+	bytes, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	appBaseCompose := path.Join(appDir, "compose.yaml")
+	ioutil.WriteFile(appBaseCompose, bytes, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	appBaseConfig := path.Join(appDir, "config.yaml")
+	var appTempConfigContent = fmt.Sprintf(`app:
+  name: %s
+  description: new app.
+`, appName)
+	ioutil.WriteFile(appBaseConfig, []byte(appTempConfigContent), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Base app definition and config initialised...\n")
+	defTree := gotree.New(BaseDir)
+	node2 := defTree.Add(appDir)
+	node2.Add(appBaseCompose)
+	node2.Add(appBaseConfig)
+	fmt.Println(defTree.Print())
 
 	return nil
 }
