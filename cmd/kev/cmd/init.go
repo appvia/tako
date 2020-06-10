@@ -104,7 +104,7 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("Base app definition and config initialised...\n")
+	fmt.Println("🚀 App initialised\n")
 	defTree := gotree.New(BaseDir)
 	node2 := defTree.Add(appDir)
 	node2.Add(appBaseCompose)
