@@ -30,7 +30,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Reuses project docker-compose file(s) to initialise an app definition.",
 	Long:  longDescription,
-	RunE: runInitCmd,
+	RunE:  runInitCmd,
 }
 
 func init() {
@@ -106,7 +106,7 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("🚀 App initialised\n")
+	fmt.Println("🚀 App initialised")
 	defTree := gotree.New(BaseDir)
 	node2 := defTree.Add(appName)
 	node2.Add(appBaseComposeFile)
@@ -138,5 +138,3 @@ func load(paths []string) (*compose.Config, error) {
 		ConfigFiles: configFiles,
 	})
 }
-
-
