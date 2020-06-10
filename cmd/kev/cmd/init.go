@@ -88,27 +88,29 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	appBaseCompose := path.Join(appDir, "compose.yaml")
-	ioutil.WriteFile(appBaseCompose, bytes, os.ModePerm)
+	appBaseComposeFile := "compose.yaml"
+	appBaseComposePath := path.Join(appDir, appBaseComposeFile)
+	ioutil.WriteFile(appBaseComposePath, bytes, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	appBaseConfig := path.Join(appDir, "config.yaml")
+	appBaseConfigFile := "config.yaml"
+	appBaseConfigPath := path.Join(appDir, appBaseConfigFile)
 	var appTempConfigContent = fmt.Sprintf(`app:
   name: %s
   description: new app.
 `, appName)
-	ioutil.WriteFile(appBaseConfig, []byte(appTempConfigContent), os.ModePerm)
+	ioutil.WriteFile(appBaseConfigPath, []byte(appTempConfigContent), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("🚀 App initialised\n")
 	defTree := gotree.New(BaseDir)
-	node2 := defTree.Add(appDir)
-	node2.Add(appBaseCompose)
-	node2.Add(appBaseConfig)
+	node2 := defTree.Add(appName)
+	node2.Add(appBaseComposeFile)
+	node2.Add(appBaseConfigFile)
 	fmt.Println(defTree.Print())
 
 	return nil
