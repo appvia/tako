@@ -52,6 +52,7 @@ func init() {
 	})
 }
 
+// Execute command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		if err != silentErr {
