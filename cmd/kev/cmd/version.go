@@ -19,7 +19,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/appvia/kube-devx/pkg/version"
+	"github.com/appvia/kube-devx/pkg/kev/version"
 	"github.com/spf13/cobra"
 )
 

@@ -17,20 +17,9 @@
 package cmd
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
-
-	"github.com/compose-spec/compose-go/loader"
-	compose "github.com/compose-spec/compose-go/types"
-	"github.com/disiqueira/gotree"
-	"github.com/goccy/go-yaml"
+	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
 	"github.com/spf13/cobra"
 )
-
-// BaseDir is a top level directory for Kev files
-const BaseDir = ".kev"
 
 var initLongDesc = `(init) reuses one or more docker-compose files to initialise a cloud native app.
 
@@ -81,77 +70,5 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, args []string) error {
-	appName, _ := cmd.Flags().GetString("name")
-	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
-
-	config, err := load(composeFiles)
-	if err != nil {
-		return err
-	}
-
-	defSource := gotree.New("\n\nSource compose file(s)")
-	for _, e := range composeFiles {
-		defSource.Add(e)
-	}
-	fmt.Println(defSource.Print())
-
-	appDir := path.Join(BaseDir, appName)
-	if err := os.MkdirAll(appDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	bytes, err := yaml.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	appBaseComposeFile := "compose.yaml"
-	appBaseComposePath := path.Join(appDir, appBaseComposeFile)
-	ioutil.WriteFile(appBaseComposePath, bytes, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	appBaseConfigFile := "config.yaml"
-	appBaseConfigPath := path.Join(appDir, appBaseConfigFile)
-	var appTempConfigContent = fmt.Sprintf(`app:
-  name: %s
-  description: new app.
-`, appName)
-	ioutil.WriteFile(appBaseConfigPath, []byte(appTempConfigContent), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("🚀 App initialised")
-	defTree := gotree.New(BaseDir)
-	node2 := defTree.Add(appName)
-	node2.Add(appBaseComposeFile)
-	node2.Add(appBaseConfigFile)
-	fmt.Println(defTree.Print())
-
-	return nil
-}
-
-func load(paths []string) (*compose.Config, error) {
-	var configFiles []compose.ConfigFile
-
-	for _, path := range paths {
-		b, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-
-		config, err := loader.ParseYAML(b)
-		if err != nil {
-			return nil, err
-		}
-
-		configFiles = append(configFiles, compose.ConfigFile{Filename: path, Config: config})
-	}
-
-	return loader.Load(compose.ConfigDetails{
-		WorkingDir:  path.Dir(paths[0]),
-		ConfigFiles: configFiles,
-	})
+	return bootstrap.FromCompose(cmd, args)
 }

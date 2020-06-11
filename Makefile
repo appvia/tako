@@ -20,7 +20,7 @@ ifeq ($(USE_GIT_VERSION),true)
 else
 	VERSION ?= $(GIT_LAST_TAG)
 endif
-LFLAGS ?= -X github.com/appvia/kube-devx/pkg/version.Tag=${GIT_LAST_TAG} -X github.com/appvia/kube-devx/pkg/version.GitSHA=${GIT_SHA} -X github.com/appvia/kube-devx/pkg/version.Compiled=${BUILD_TIME} -X github.com/appvia/kube-devx/pkg/version.Release=${VERSION} -X github.com/appvia/kube-devx/pkg/version.GitBranch=${GIT_BRANCH}
+LFLAGS ?= -X github.com/appvia/kube-devx/pkg/${NAME}/version.Tag=${GIT_LAST_TAG} -X github.com/appvia/kube-devx/pkg/${NAME}/version.GitSHA=${GIT_SHA} -X github.com/appvia/kube-devx/pkg/${NAME}/version.Compiled=${BUILD_TIME} -X github.com/appvia/kube-devx/pkg/${NAME}/version.Release=${VERSION} -X github.com/appvia/kube-devx/pkg/${NAME}/version.GitBranch=${GIT_BRANCH}
 CLI_PLATFORMS=darwin linux windows
 CLI_ARCHITECTURES=386 amd64
 export GOFLAGS = -mod=vendor

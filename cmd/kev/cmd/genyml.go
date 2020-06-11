@@ -29,12 +29,14 @@ var genymlCmd = &cobra.Command{
 	RunE:  runGenYamlCmd,
 }
 
+// App struct
 type App struct {
-	Name     string   `yaml:"name"`
+	Name string `yaml:"name"`
 	// Services []yaml.Node `yaml:"services"`
 	Services *yaml.Node `yaml:"services,omitempty"`
 }
 
+// Doc struct
 type Doc struct {
 	App *App `yaml:"app"`
 }
@@ -46,15 +48,15 @@ func runGenYamlCmd(cmd *cobra.Command, _ []string) error {
 			Name: "hello-world",
 			Services: &yaml.Node{
 				HeadComment: "Start, expected app services",
-				Kind: yaml.SequenceNode,
+				Kind:        yaml.SequenceNode,
 				Content: []*yaml.Node{
 					{
-						Kind: yaml.ScalarNode,
+						Kind:        yaml.ScalarNode,
 						Value:       "[placeholder]",
 						LineComment: "add service name",
 					},
 					{
-						Kind: yaml.ScalarNode,
+						Kind:        yaml.ScalarNode,
 						Value:       "[placeholder]",
 						LineComment: "add service name",
 					},
