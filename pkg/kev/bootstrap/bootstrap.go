@@ -43,7 +43,7 @@ type Payload struct {
 // NewApp creates a new AppDefinition using
 // provided name, docker compose files and app root
 func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
-	config, err := load(composeFiles)
+	config, err := loadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +54,11 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 	}
 
 	bytes, err = transform.DeployWithDefaults(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err = transform.HealthCheckBase(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +87,7 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 	}, nil
 }
 
-func load(paths []string) (*compose.Config, error) {
+func loadAndParse(paths []string) (*compose.Config, error) {
 	var configFiles []compose.ConfigFile
 
 	for _, path := range paths {

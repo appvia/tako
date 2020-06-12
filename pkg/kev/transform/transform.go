@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/appvia/kube-devx/pkg/kev/defaults"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
@@ -32,7 +33,6 @@ type Transform func(data []byte) ([]byte, error)
 
 // UnmarshallGeneral deserializes a []byte into an map[string]interface{}
 func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
-	log.Println("UnmarshallComposeConfig")
 	var out map[string]interface{}
 	err := yaml.Unmarshal(data, &out)
 	if err != nil {
@@ -43,8 +43,6 @@ func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
 
 // UnmarshallComposeConfig deserializes a []]byte into *compose.Config
 func UnmarshallComposeConfig(data []byte) (*compose.Config, error) {
-	log.Println("UnmarshallComposeConfig")
-
 	source, err := UnmarshallGeneral(data)
 	if err != nil {
 		return nil, err
@@ -72,33 +70,41 @@ func DeployWithDefaults(data []byte) ([]byte, error) {
 	}
 
 	var updated compose.Services
-	var action compose.ServiceFunc = func(svc compose.ServiceConfig) error {
+	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
 		if svc.Deploy == nil {
-			replica := uint64(1)
-			parallelism := uint64(1)
-			svc.Deploy = &compose.DeployConfig{
-				Replicas: &replica,
-				Mode:     "replicated",
-				Resources: compose.Resources{
-					Limits: &compose.Resource{
-						NanoCPUs:    "0.2",
-						MemoryBytes: compose.UnitBytes(int64(20)),
-					},
-					Reservations: &compose.Resource{
-						NanoCPUs:    "0.1",
-						MemoryBytes: compose.UnitBytes(int64(10)),
-					},
-				},
-				UpdateConfig: &compose.UpdateConfig{
-					Parallelism: &parallelism,
-				},
-			}
+			svc.Deploy = defaults.Deploy()
 		}
 		updated = append(updated, svc)
 		return nil
+	})
+	if err != nil {
+		return []byte{}, err
 	}
 
-	if err := x.WithServices(x.ServiceNames(), action); err != nil {
+	x.Services = nil
+	x.Services = updated
+	return yaml.Marshal(x)
+}
+
+// HealthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
+// to any service missing a healthcheck block.
+func HealthCheckBase(data []byte) ([]byte, error) {
+	log.Println("Transform: HealthCheckBase")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	var updated compose.Services
+	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
+		if svc.HealthCheck == nil {
+			svc.HealthCheck = defaults.HealthCheck(svc.Name)
+		}
+		updated = append(updated, svc)
+		return nil
+	})
+	if err != nil {
 		return []byte{}, err
 	}
 
@@ -110,7 +116,7 @@ func DeployWithDefaults(data []byte) ([]byte, error) {
 // Echo can be used to view data at different stages of
 // a transform pipeline.
 func Echo(data []byte) ([]byte, error) {
-	log.Println("Transform: DeployWithDefaults")
+	log.Println("Transform: Echo")
 	x, err := UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
