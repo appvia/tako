@@ -24,6 +24,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// BaseDir is a top level directory for Kev files
+const BaseDir = ".kev"
+
 const banner = `
 o
 | /

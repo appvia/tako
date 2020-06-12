@@ -19,74 +19,61 @@ package bootstrap
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev/transform"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
-	"github.com/disiqueira/gotree"
-	"github.com/goccy/go-yaml"
-	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
-// BaseDir is a top level directory for Kev files
-const BaseDir = ".kev"
+// AppDefinition provides details for the app's base compose and config files.
+type AppDefinition struct {
+	Name        string
+	BaseCompose Payload
+	Config      Payload
+}
 
-// FromCompose initiate an App from docker compose files
-func FromCompose(cmd *cobra.Command, args []string) error {
-	appName, _ := cmd.Flags().GetString("name")
-	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
+// Payload details an app definition Payload, including its Content and recommended file path.
+type Payload struct {
+	Content  []byte
+	FilePath string
+}
 
+// NewApp creates a new AppDefinition using
+// provided name, docker compose files and app root
+func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 	config, err := load(composeFiles)
 	if err != nil {
-		return err
-	}
-
-	defSource := gotree.New("\n\nSource compose file(s)")
-	for _, e := range composeFiles {
-		defSource.Add(e)
-	}
-	fmt.Println(defSource.Print())
-
-	appDir := path.Join(BaseDir, appName)
-	if err := os.MkdirAll(appDir, os.ModePerm); err != nil {
-		return err
+		return nil, err
 	}
 
 	bytes, err := yaml.Marshal(config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	transform.EchoTransform(bytes)
+	appDir := path.Join(root, name)
 
 	appBaseComposeFile := "compose.yaml"
 	appBaseComposePath := path.Join(appDir, appBaseComposeFile)
-	ioutil.WriteFile(appBaseComposePath, bytes, os.ModePerm)
-	if err != nil {
-		return err
-	}
 
 	appBaseConfigFile := "config.yaml"
 	appBaseConfigPath := path.Join(appDir, appBaseConfigFile)
 	var appTempConfigContent = fmt.Sprintf(`app:
    name: %s
    description: new app.
- `, appName)
-	ioutil.WriteFile(appBaseConfigPath, []byte(appTempConfigContent), os.ModePerm)
-	if err != nil {
-		return err
-	}
+ `, name)
 
-	fmt.Println("🚀 App initialised")
-	defTree := gotree.New(BaseDir)
-	node2 := defTree.Add(appName)
-	node2.Add(appBaseComposeFile)
-	node2.Add(appBaseConfigFile)
-	fmt.Println(defTree.Print())
-
-	return nil
+	return &AppDefinition{
+		BaseCompose: Payload{
+			Content:  bytes,
+			FilePath: appBaseComposePath,
+		},
+		Config: Payload{
+			Content:  []byte(appTempConfigContent),
+			FilePath: appBaseConfigPath,
+		},
+	}, nil
 }
 
 func load(paths []string) (*compose.Config, error) {

@@ -17,8 +17,15 @@
 package cmd
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+
 	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
+	"github.com/disiqueira/gotree"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var initLongDesc = `(init) reuses one or more docker-compose files to initialise a cloud native app.
@@ -70,5 +77,44 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, args []string) error {
-	return bootstrap.FromCompose(cmd, args)
+	appName, _ := cmd.Flags().GetString("name")
+	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
+
+	defSource := gotree.New("\n\nSource compose file(s)")
+	for _, e := range composeFiles {
+		defSource.Add(e)
+	}
+	fmt.Println(defSource.Print())
+
+	def, err := bootstrap.NewApp(BaseDir, appName, composeFiles)
+	if err != nil {
+		return err
+	}
+
+	appDir := path.Join(BaseDir, appName)
+	if err := os.MkdirAll(appDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	ioutil.WriteFile(def.BaseCompose.FilePath, def.BaseCompose.Content, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	enc := yaml.NewEncoder(outFile)
+	enc.SetIndent(2)
+
+	ioutil.WriteFile(def.Config.FilePath, def.Config.Content, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("🚀 App initialised")
+	defTree := gotree.New(BaseDir)
+	node2 := defTree.Add(appName)
+	node2.Add(def.BaseCompose.FilePath)
+	node2.Add(def.Config.FilePath)
+	fmt.Println(defTree.Print())
+
+	return nil
 }
