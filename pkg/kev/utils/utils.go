@@ -17,9 +17,13 @@
 package utils
 
 import (
+	"bytes"
+	"log"
+
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
+	yaml3 "gopkg.in/yaml.v3"
 )
 
 // UnmarshallGeneral deserializes a []byte into an map[string]interface{}
@@ -48,4 +52,20 @@ func UnmarshallComposeConfig(data []byte) (*compose.Config, error) {
 			},
 		},
 	})
+}
+
+func MarshallAndFormat(v interface{}, spaces int) ([]byte, error) {
+	var out bytes.Buffer
+	encoder := yaml3.NewEncoder(&out)
+	defer func() {
+		if err := encoder.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	encoder.SetIndent(spaces)
+	if err := encoder.Encode(&v); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }

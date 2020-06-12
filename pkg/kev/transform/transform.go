@@ -18,7 +18,6 @@ package transform
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/appvia/kube-devx/pkg/kev/defaults"
 	"github.com/appvia/kube-devx/pkg/kev/utils"
@@ -34,14 +33,13 @@ type Transform func(data []byte) ([]byte, error)
 // DeployWithDefaults attaches a deploy block with presets to any service
 // missing a deploy block.
 func DeployWithDefaults(data []byte) ([]byte, error) {
-	log.Println("Transform: DeployWithDefaults")
-
 	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
 
 	var updated compose.Services
+
 	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
 		if svc.Deploy == nil {
 			svc.Deploy = defaults.Deploy()
@@ -60,8 +58,6 @@ func DeployWithDefaults(data []byte) ([]byte, error) {
 // HealthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
 // to any service missing a healthcheck block.
 func HealthCheckBase(data []byte) ([]byte, error) {
-	log.Println("Transform: HealthCheckBase")
-
 	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
@@ -86,8 +82,6 @@ func HealthCheckBase(data []byte) ([]byte, error) {
 // ExternaliseSecrets ensures that all top level secrets are set to external
 // to specify that the secrets have already been created.
 func ExternaliseSecrets(data []byte) ([]byte, error) {
-	log.Println("Transform: ExternaliseSecrets")
-
 	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
@@ -112,8 +106,6 @@ func ExternaliseSecrets(data []byte) ([]byte, error) {
 // ExternaliseConfigs ensures that all top level configs are set to external
 // to specify that the configs have already been created.
 func ExternaliseConfigs(data []byte) ([]byte, error) {
-	log.Println("Transform: ExternaliseConfigs")
-
 	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
@@ -138,7 +130,6 @@ func ExternaliseConfigs(data []byte) ([]byte, error) {
 // Echo can be used to view data at different stages of
 // a transform pipeline.
 func Echo(data []byte) ([]byte, error) {
-	log.Println("Transform: Echo")
 	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
