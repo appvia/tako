@@ -18,8 +18,11 @@ package transform
 
 import (
 	"fmt"
+	"log"
 
-	"gopkg.in/yaml.v3"
+	"github.com/compose-spec/compose-go/loader"
+	compose "github.com/compose-spec/compose-go/types"
+	"github.com/goccy/go-yaml"
 )
 
 // Transform is a transform func type.
@@ -27,8 +30,9 @@ import (
 // Useful as a function param for functions that accept transforms.
 type Transform func(data []byte) ([]byte, error)
 
-// unmarshall unmarshalls a data byte into an map[string]interface{}
-func unmarshall(data []byte) (map[string]interface{}, error) {
+// UnmarshallGeneral deserializes a []byte into an map[string]interface{}
+func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
+	log.Println("UnmarshallComposeConfig")
 	var out map[string]interface{}
 	err := yaml.Unmarshal(data, &out)
 	if err != nil {
@@ -37,10 +41,77 @@ func unmarshall(data []byte) (map[string]interface{}, error) {
 	return out, nil
 }
 
-// EchoTransform can be used to view data at different stages of
+// UnmarshallComposeConfig deserializes a []]byte into *compose.Config
+func UnmarshallComposeConfig(data []byte) (*compose.Config, error) {
+	log.Println("UnmarshallComposeConfig")
+
+	source, err := UnmarshallGeneral(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return loader.Load(compose.ConfigDetails{
+		WorkingDir: ".",
+		ConfigFiles: []compose.ConfigFile{
+			{
+				Filename: "temp-file",
+				Config:   source,
+			},
+		},
+	})
+}
+
+// DeployWithDefaults attaches a deploy block with presets to any service
+// missing a deploy block.
+func DeployWithDefaults(data []byte) ([]byte, error) {
+	log.Println("Transform: DeployWithDefaults")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	var updated compose.Services
+	var action compose.ServiceFunc = func(svc compose.ServiceConfig) error {
+		if svc.Deploy == nil {
+			replica := uint64(1)
+			parallelism := uint64(1)
+			svc.Deploy = &compose.DeployConfig{
+				Replicas: &replica,
+				Mode:     "replicated",
+				Resources: compose.Resources{
+					Limits: &compose.Resource{
+						NanoCPUs:    "0.2",
+						MemoryBytes: compose.UnitBytes(int64(20)),
+					},
+					Reservations: &compose.Resource{
+						NanoCPUs:    "0.1",
+						MemoryBytes: compose.UnitBytes(int64(10)),
+					},
+				},
+				UpdateConfig: &compose.UpdateConfig{
+					Parallelism: &parallelism,
+				},
+			}
+		}
+		updated = append(updated, svc)
+		return nil
+	}
+
+	if err := x.WithServices(x.ServiceNames(), action); err != nil {
+		return []byte{}, err
+	}
+
+	x.Services = nil
+	x.Services = updated
+	return yaml.Marshal(x)
+}
+
+// Echo can be used to view data at different stages of
 // a transform pipeline.
-func EchoTransform(data []byte) ([]byte, error) {
-	x, err := unmarshall(data)
+func Echo(data []byte) ([]byte, error) {
+	log.Println("Transform: DeployWithDefaults")
+	x, err := UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}

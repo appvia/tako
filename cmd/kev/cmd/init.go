@@ -25,7 +25,6 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
 	"github.com/disiqueira/gotree"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var initLongDesc = `(init) reuses one or more docker-compose files to initialise a cloud native app.
@@ -100,9 +99,6 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	enc := yaml.NewEncoder(outFile)
-	enc.SetIndent(2)
 
 	ioutil.WriteFile(def.Config.FilePath, def.Config.Content, os.ModePerm)
 	if err != nil {

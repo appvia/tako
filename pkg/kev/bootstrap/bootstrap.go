@@ -21,9 +21,10 @@ import (
 	"io/ioutil"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev/transform"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
 // AppDefinition provides details for the app's base compose and config files.
@@ -52,17 +53,19 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 		return nil, err
 	}
 
+	bytes, err = transform.DeployWithDefaults(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err = transform.Echo(bytes)
+	if err != nil {
+		return nil, err
+	}
+
 	appDir := path.Join(root, name)
-
-	appBaseComposeFile := "compose.yaml"
-	appBaseComposePath := path.Join(appDir, appBaseComposeFile)
-
-	appBaseConfigFile := "config.yaml"
-	appBaseConfigPath := path.Join(appDir, appBaseConfigFile)
-	var appTempConfigContent = fmt.Sprintf(`app:
-   name: %s
-   description: new app.
- `, name)
+	appBaseComposePath := path.Join(appDir, "compose.yaml")
+	appBaseConfigPath := path.Join(appDir, "config.yaml")
 
 	return &AppDefinition{
 		BaseCompose: Payload{
@@ -70,7 +73,10 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 			FilePath: appBaseComposePath,
 		},
 		Config: Payload{
-			Content:  []byte(appTempConfigContent),
+			Content: []byte(fmt.Sprintf(`app:
+   name: %s
+   description: new app.
+ `, name)),
 			FilePath: appBaseConfigPath,
 		},
 	}, nil
