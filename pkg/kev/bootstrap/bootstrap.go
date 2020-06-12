@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev/transform"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/disiqueira/gotree"
@@ -57,6 +58,8 @@ func FromCompose(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	transform.EchoTransform(bytes)
 
 	appBaseComposeFile := "compose.yaml"
 	appBaseComposePath := path.Join(appDir, appBaseComposeFile)
