@@ -81,7 +81,6 @@ func DeployWithDefaults(data []byte) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	x.Services = nil
 	x.Services = updated
 	return yaml.Marshal(x)
 }
@@ -108,8 +107,36 @@ func HealthCheckBase(data []byte) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	x.Services = nil
 	x.Services = updated
+	return yaml.Marshal(x)
+}
+
+// ExternaliseSecrets ensures that all top level secrets are set to external
+// to specify that this secret has already been created.
+func ExternaliseSecrets(data []byte) ([]byte, error) {
+	log.Println("Transform: ExternaliseSecrets")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	noSecrets := len(x.Secrets) < 1
+	if noSecrets {
+		return data, nil
+	}
+
+	updated := make(map[string]compose.SecretConfig)
+	for key, config := range x.Secrets {
+		config.File = ""
+		config.External = compose.External{
+			Name:     config.External.Name,
+			External: true,
+		}
+		updated[key] = config
+	}
+
+	x.Secrets = updated
 	return yaml.Marshal(x)
 }
 

@@ -63,6 +63,11 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 		return nil, err
 	}
 
+	bytes, err = transform.ExternaliseSecrets(bytes)
+	if err != nil {
+		return nil, err
+	}
+
 	bytes, err = transform.Echo(bytes)
 	if err != nil {
 		return nil, err
