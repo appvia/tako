@@ -17,10 +17,10 @@
 package bootstrap
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/transform"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
@@ -43,12 +43,12 @@ type Payload struct {
 // NewApp creates a new AppDefinition using
 // provided name, docker compose files and app root
 func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
-	config, err := loadAndParse(composeFiles)
+	compose, err := loadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err := yaml.Marshal(config)
+	bytes, err := yaml.Marshal(compose)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,15 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 		return nil, err
 	}
 
+	// Application Configuration
+	appConfig := config.New()
+
+	// Infer configuration parameters from transformed compose
+	bytes, err = config.Infer(bytes, appConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	bytes, err = transform.Echo(bytes)
 	if err != nil {
 		return nil, err
@@ -82,19 +91,22 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 	appBaseComposePath := path.Join(appDir, "compose.yaml")
 	appBaseConfigPath := path.Join(appDir, "config.yaml")
 
+	configBytes, err := appConfig.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
 	return &AppDefinition{
 		BaseCompose: Payload{
 			Content:  bytes,
 			FilePath: appBaseComposePath,
 		},
 		Config: Payload{
-			Content: []byte(fmt.Sprintf(`app:
-   name: %s
-   description: new app.
- `, name)),
+			Content:  configBytes,
 			FilePath: appBaseConfigPath,
 		},
 	}, nil
+
 }
 
 func loadAndParse(paths []string) (*compose.Config, error) {

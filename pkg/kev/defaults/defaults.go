@@ -20,25 +20,30 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/appvia/kube-devx/pkg/kev/config"
 	compose "github.com/compose-spec/compose-go/types"
+	"github.com/dustin/go-humanize"
 )
 
 // Deploy returns a deploy block with configured presets.
 func Deploy() *compose.DeployConfig {
-	replica := uint64(1)
-	parallelism := uint64(1)
+	replica := uint64(config.DefaultReplicaNumber)
+	parallelism := uint64(config.DefaultRollingUpdateMaxSurge)
+
+	defaultMemLimit, _ := humanize.ParseBytes(config.DefaultResourceLimitMem)
+	defaultMemReq, _ := humanize.ParseBytes(config.DefaultResourceRequestMem)
 
 	return &compose.DeployConfig{
 		Replicas: &replica,
 		Mode:     "replicated",
 		Resources: compose.Resources{
 			Limits: &compose.Resource{
-				NanoCPUs:    "0.2",
-				MemoryBytes: compose.UnitBytes(int64(20)),
+				NanoCPUs:    config.DefaultResourceLimitCPU,
+				MemoryBytes: compose.UnitBytes(defaultMemLimit),
 			},
 			Reservations: &compose.Resource{
-				NanoCPUs:    "0.1",
-				MemoryBytes: compose.UnitBytes(int64(10)),
+				NanoCPUs:    config.DefaultResourceRequestCPU,
+				MemoryBytes: compose.UnitBytes(defaultMemReq),
 			},
 		},
 		UpdateConfig: &compose.UpdateConfig{

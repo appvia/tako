@@ -21,7 +21,7 @@ import (
 	"log"
 
 	"github.com/appvia/kube-devx/pkg/kev/defaults"
-	"github.com/compose-spec/compose-go/loader"
+	"github.com/appvia/kube-devx/pkg/kev/utils"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
 )
@@ -31,40 +31,12 @@ import (
 // Useful as a function param for functions that accept transforms.
 type Transform func(data []byte) ([]byte, error)
 
-// UnmarshallGeneral deserializes a []byte into an map[string]interface{}
-func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
-	var out map[string]interface{}
-	err := yaml.Unmarshal(data, &out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// UnmarshallComposeConfig deserializes a []]byte into *compose.Config
-func UnmarshallComposeConfig(data []byte) (*compose.Config, error) {
-	source, err := UnmarshallGeneral(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return loader.Load(compose.ConfigDetails{
-		WorkingDir: ".",
-		ConfigFiles: []compose.ConfigFile{
-			{
-				Filename: "temp-file",
-				Config:   source,
-			},
-		},
-	})
-}
-
 // DeployWithDefaults attaches a deploy block with presets to any service
 // missing a deploy block.
 func DeployWithDefaults(data []byte) ([]byte, error) {
 	log.Println("Transform: DeployWithDefaults")
 
-	x, err := UnmarshallComposeConfig(data)
+	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -90,7 +62,7 @@ func DeployWithDefaults(data []byte) ([]byte, error) {
 func HealthCheckBase(data []byte) ([]byte, error) {
 	log.Println("Transform: HealthCheckBase")
 
-	x, err := UnmarshallComposeConfig(data)
+	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -116,7 +88,7 @@ func HealthCheckBase(data []byte) ([]byte, error) {
 func ExternaliseSecrets(data []byte) ([]byte, error) {
 	log.Println("Transform: ExternaliseSecrets")
 
-	x, err := UnmarshallComposeConfig(data)
+	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -142,7 +114,7 @@ func ExternaliseSecrets(data []byte) ([]byte, error) {
 func ExternaliseConfigs(data []byte) ([]byte, error) {
 	log.Println("Transform: ExternaliseConfigs")
 
-	x, err := UnmarshallComposeConfig(data)
+	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -167,7 +139,7 @@ func ExternaliseConfigs(data []byte) ([]byte, error) {
 // a transform pipeline.
 func Echo(data []byte) ([]byte, error) {
 	log.Println("Transform: Echo")
-	x, err := UnmarshallComposeConfig(data)
+	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
