@@ -112,7 +112,7 @@ func HealthCheckBase(data []byte) ([]byte, error) {
 }
 
 // ExternaliseSecrets ensures that all top level secrets are set to external
-// to specify that this secret has already been created.
+// to specify that the secrets have already been created.
 func ExternaliseSecrets(data []byte) ([]byte, error) {
 	log.Println("Transform: ExternaliseSecrets")
 
@@ -129,14 +129,37 @@ func ExternaliseSecrets(data []byte) ([]byte, error) {
 	updated := make(map[string]compose.SecretConfig)
 	for key, config := range x.Secrets {
 		config.File = ""
-		config.External = compose.External{
-			Name:     config.External.Name,
-			External: true,
-		}
+		config.External.External = true
 		updated[key] = config
 	}
 
 	x.Secrets = updated
+	return yaml.Marshal(x)
+}
+
+// ExternaliseConfigs ensures that all top level configs are set to external
+// to specify that the configs have already been created.
+func ExternaliseConfigs(data []byte) ([]byte, error) {
+	log.Println("Transform: ExternaliseConfigs")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	noConfigs := len(x.Configs) < 1
+	if noConfigs {
+		return data, nil
+	}
+
+	updated := make(map[string]compose.ConfigObjConfig)
+	for key, config := range x.Configs {
+		config.File = ""
+		config.External.External = true
+		updated[key] = config
+	}
+
+	x.Configs = updated
 	return yaml.Marshal(x)
 }
 
