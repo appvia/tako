@@ -18,8 +18,12 @@ package transform
 
 import (
 	"fmt"
+	"log"
 
-	"gopkg.in/yaml.v3"
+	"github.com/appvia/kube-devx/pkg/kev/defaults"
+	"github.com/compose-spec/compose-go/loader"
+	compose "github.com/compose-spec/compose-go/types"
+	"github.com/goccy/go-yaml"
 )
 
 // Transform is a transform func type.
@@ -27,8 +31,8 @@ import (
 // Useful as a function param for functions that accept transforms.
 type Transform func(data []byte) ([]byte, error)
 
-// unmarshall unmarshalls a data byte into an map[string]interface{}
-func unmarshall(data []byte) (map[string]interface{}, error) {
+// UnmarshallGeneral deserializes a []byte into an map[string]interface{}
+func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
 	var out map[string]interface{}
 	err := yaml.Unmarshal(data, &out)
 	if err != nil {
@@ -37,10 +41,133 @@ func unmarshall(data []byte) (map[string]interface{}, error) {
 	return out, nil
 }
 
-// EchoTransform can be used to view data at different stages of
+// UnmarshallComposeConfig deserializes a []]byte into *compose.Config
+func UnmarshallComposeConfig(data []byte) (*compose.Config, error) {
+	source, err := UnmarshallGeneral(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return loader.Load(compose.ConfigDetails{
+		WorkingDir: ".",
+		ConfigFiles: []compose.ConfigFile{
+			{
+				Filename: "temp-file",
+				Config:   source,
+			},
+		},
+	})
+}
+
+// DeployWithDefaults attaches a deploy block with presets to any service
+// missing a deploy block.
+func DeployWithDefaults(data []byte) ([]byte, error) {
+	log.Println("Transform: DeployWithDefaults")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	var updated compose.Services
+	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
+		if svc.Deploy == nil {
+			svc.Deploy = defaults.Deploy()
+		}
+		updated = append(updated, svc)
+		return nil
+	})
+	if err != nil {
+		return []byte{}, err
+	}
+
+	x.Services = updated
+	return yaml.Marshal(x)
+}
+
+// HealthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
+// to any service missing a healthcheck block.
+func HealthCheckBase(data []byte) ([]byte, error) {
+	log.Println("Transform: HealthCheckBase")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	var updated compose.Services
+	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
+		if svc.HealthCheck == nil {
+			svc.HealthCheck = defaults.HealthCheck(svc.Name)
+		}
+		updated = append(updated, svc)
+		return nil
+	})
+	if err != nil {
+		return []byte{}, err
+	}
+
+	x.Services = updated
+	return yaml.Marshal(x)
+}
+
+// ExternaliseSecrets ensures that all top level secrets are set to external
+// to specify that the secrets have already been created.
+func ExternaliseSecrets(data []byte) ([]byte, error) {
+	log.Println("Transform: ExternaliseSecrets")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	noSecrets := len(x.Secrets) < 1
+	if noSecrets {
+		return data, nil
+	}
+
+	updated := make(map[string]compose.SecretConfig)
+	for key, config := range x.Secrets {
+		config.File = ""
+		config.External.External = true
+		updated[key] = config
+	}
+
+	x.Secrets = updated
+	return yaml.Marshal(x)
+}
+
+// ExternaliseConfigs ensures that all top level configs are set to external
+// to specify that the configs have already been created.
+func ExternaliseConfigs(data []byte) ([]byte, error) {
+	log.Println("Transform: ExternaliseConfigs")
+
+	x, err := UnmarshallComposeConfig(data)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	noConfigs := len(x.Configs) < 1
+	if noConfigs {
+		return data, nil
+	}
+
+	updated := make(map[string]compose.ConfigObjConfig)
+	for key, config := range x.Configs {
+		config.File = ""
+		config.External.External = true
+		updated[key] = config
+	}
+
+	x.Configs = updated
+	return yaml.Marshal(x)
+}
+
+// Echo can be used to view data at different stages of
 // a transform pipeline.
-func EchoTransform(data []byte) ([]byte, error) {
-	x, err := unmarshall(data)
+func Echo(data []byte) ([]byte, error) {
+	log.Println("Transform: Echo")
+	x, err := UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}

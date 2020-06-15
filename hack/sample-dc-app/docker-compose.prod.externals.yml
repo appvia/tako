@@ -20,9 +20,11 @@ services:
     environment:
       - CACHE_ENDPOINT
       - CACHE_PASSWORD
+    configs:
+      - cache-name
     secrets:
-      - cache-endpoint-env
-      - cache-password-env
+      - cache-endpoint
+      - redis-password
     networks:
       - prod-esnet
 
@@ -30,9 +32,14 @@ networks:
   prod-esnet:
     driver: bridge
 
+configs:
+  cache-name:
+    file: ./secret_data
+
 secrets:
-  cache-endpoint-env:
+  cache-endpoint:
+    file: ./secret_data
+  cache-password:
     external: true
-  cache-password-env:
-    external: true
+    name: redis-password
 
