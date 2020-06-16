@@ -26,15 +26,25 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
+// Inferred struct holds compose with parameter placeholders
+// and derived application configuration
+type Inferred struct {
+	ComposeWithPlaceholders []byte
+	AppConfig               *Config
+}
+
 // Infer looks at resultant compose.yaml and extracts elements useful to
 // deployment in Kubernetes, replaces values of those attributes with placeholders
 // and places actual values in config.yaml for further tweaking.
-func Infer(data []byte, appConfig *Config) ([]byte, error) {
+func Infer(data []byte) (Inferred, error) {
 	log.Println("Config: Infer")
+
+	// Application Configuration
+	appConfig := New()
 
 	compose, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
-		return []byte{}, err
+		return Inferred{}, err
 	}
 
 	// Extract volumes information
@@ -56,7 +66,15 @@ func Infer(data []byte, appConfig *Config) ([]byte, error) {
 		appConfig.Components[s.Name] = *c
 	}
 
-	return yaml.Marshal(compose)
+	composeBytes, err := yaml.Marshal(compose)
+	if err != nil {
+		return Inferred{}, err
+	}
+
+	return Inferred{
+		ComposeWithPlaceholders: composeBytes,
+		AppConfig:               appConfig,
+	}, nil
 }
 
 // setSensibleDefaults set common app level parameters with sensible defaults

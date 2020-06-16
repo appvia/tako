@@ -73,14 +73,14 @@ func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
 		return nil, err
 	}
 
-	// Application Configuration
-	appConfig := config.New()
-
 	// Infer configuration parameters from transformed compose
-	bytes, err = config.Infer(bytes, appConfig)
+	inferred, err := config.Infer(bytes)
 	if err != nil {
 		return nil, err
 	}
+	// Assigning inferred information
+	bytes = inferred.ComposeWithPlaceholders
+	appConfig := inferred.AppConfig
 
 	bytes, err = transform.Echo(bytes)
 	if err != nil {
