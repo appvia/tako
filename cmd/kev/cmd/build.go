@@ -59,7 +59,7 @@ func init() {
 		[]string{},
 		"Target environment for which configuration should be compiled",
 	)
-	initCmd.MarkFlagRequired("environment")
+	buildCmd.MarkFlagRequired("environment")
 
 	rootCmd.AddCommand(buildCmd)
 }
