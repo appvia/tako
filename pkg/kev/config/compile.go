@@ -31,38 +31,49 @@ type CompiledConfig struct {
 }
 
 // Compile calculates effective configuration with base configuration
-// extended/overidden by environment specific configuration
-func Compile(root, name, env string) (*CompiledConfig, error) {
+// extended/overidden by environments specific configuration
+func Compile(root, name string, envs []string) ([]CompiledConfig, error) {
 	appDir := path.Join(root, name)
 	appBaseConfigPath := path.Join(appDir, "config.yaml")
-	appEnvConfigPath := path.Join(appDir, env, "config.yaml")
-	appCompiledConfigPath := path.Join(appDir, env, "config-compiled.yaml")
 
 	// Read and unmarshal base configuration
 	baseConfigContent, err := ioutil.ReadFile(appBaseConfigPath)
 	if err != nil {
-		return &CompiledConfig{}, err
+		return nil, err
 	}
 	baseConfig := Config{}
-	_ = yaml.Unmarshal([]byte(baseConfigContent), &baseConfig)
-
-	// Read and unmarshal env configuration
-	envConfigContent, err := ioutil.ReadFile(appEnvConfigPath)
-	if err != nil {
-		return &CompiledConfig{}, err
-	}
-	envConfig := Config{}
-	_ = yaml.Unmarshal([]byte(envConfigContent), &envConfig)
-
-	mergo.Merge(&envConfig, baseConfig)
-
-	compiledConfigBytes, err := envConfig.Bytes()
-	if err != nil {
-		return &CompiledConfig{}, err
+	if err = yaml.Unmarshal([]byte(baseConfigContent), &baseConfig); err != nil {
+		return nil, err
 	}
 
-	return &CompiledConfig{
-		Content:  compiledConfigBytes,
-		FilePath: appCompiledConfigPath,
-	}, nil
+	var compiledConfigs []CompiledConfig
+
+	for _, env := range envs {
+		appEnvConfigPath := path.Join(appDir, env, "config.yaml")
+		appCompiledConfigPath := path.Join(appDir, env, "config-compiled.yaml")
+
+		// Read and unmarshal env configuration
+		envConfigContent, err := ioutil.ReadFile(appEnvConfigPath)
+		if err != nil {
+			return nil, err
+		}
+		envConfig := Config{}
+		if err = yaml.Unmarshal([]byte(envConfigContent), &envConfig); err != nil {
+			return nil, err
+		}
+
+		mergo.Merge(&envConfig, baseConfig)
+
+		compiledConfigBytes, err := envConfig.Bytes()
+		if err != nil {
+			return nil, err
+		}
+
+		compiledConfigs = append(compiledConfigs, CompiledConfig{
+			Content:  compiledConfigBytes,
+			FilePath: appCompiledConfigPath,
+		})
+	}
+
+	return compiledConfigs, nil
 }
