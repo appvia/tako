@@ -54,15 +54,15 @@ func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]F
 	envConfig := &EnvConfig{
 		Workload: &yaml3.Node{
 			Kind:        yaml3.MappingNode,
-			HeadComment: "Override global workload settings here.",
+			LineComment: "Override global workload settings here.",
 		},
 		Service: &yaml3.Node{
 			Kind:        yaml3.MappingNode,
-			HeadComment: "Override global service settings here.",
+			LineComment: "Override global service settings here.",
 		},
 		Volumes: &yaml3.Node{
 			Kind:        yaml3.MappingNode,
-			HeadComment: "Override global volumes settings here.",
+			LineComment: "Override global volumes settings here.",
 		},
 		Components: make(map[string]*yaml3.Node),
 	}
@@ -70,7 +70,7 @@ func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]F
 	for key := range baseConfig.Components {
 		envConfig.Components[key] = &yaml3.Node{
 			Kind:        yaml3.MappingNode,
-			HeadComment: fmt.Sprintf("Override %s settings here.", key),
+			LineComment: fmt.Sprintf("Override the %s service settings here.", key),
 		}
 	}
 
