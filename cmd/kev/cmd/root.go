@@ -32,7 +32,9 @@ o
 | /
 OO   o-o o   o
 | \  |-'  \ /
-o  o o-o   o      `
+o  o o-o   o
+
+`
 
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{

@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ var buildLongDesc = `(build) builds configuration.
 var buildCmd = &cobra.Command{
 	Use: "build",
 	// @todo: change short description!
-	Short: "Builds an application configuration for given environment.",
+	Short: "Builds an application configuration for given environment (ALL environments by default).",
 	Long:  buildLongDesc,
 	RunE:  runBuildCmd,
 }
@@ -51,13 +52,20 @@ func init() {
 		[]string{},
 		"Target environment for which configuration should be compiled",
 	)
-	buildCmd.MarkFlagRequired("environment")
 
 	rootCmd.AddCommand(buildCmd)
 }
 
 func runBuildCmd(cmd *cobra.Command, args []string) error {
-	appEnvironments, _ := cmd.Flags().GetStringSlice("environment")
+	appEnvironments, err := cmd.Flags().GetStringSlice("environment")
+
+	// No environment supplied - discovering all env subdirs
+	if len(appEnvironments) == 0 {
+		appEnvironments, err = app.GetEnvironments(BaseDir)
+		if err != nil {
+			return err
+		}
+	}
 
 	compiledConfigs, err := config.Compile(BaseDir, appEnvironments)
 	if err != nil {
@@ -68,9 +76,8 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 		if err = ioutil.WriteFile(compiledConfig.FilePath, compiledConfig.Content, os.ModePerm); err != nil {
 			return err
 		}
+		fmt.Printf("🔩 App configuration built for `%s` environment\n", compiledConfig.Environment)
 	}
-
-	fmt.Println("🔩 App configuration built")
 
 	return nil
 }
