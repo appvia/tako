@@ -8,6 +8,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/goccy/go-yaml v1.7.5
+	github.com/imdario/mergo v0.3.9
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/spf13/cobra v1.0.0
