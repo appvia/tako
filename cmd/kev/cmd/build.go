@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/spf13/cobra"
 )
@@ -56,19 +57,13 @@ func init() {
 }
 
 func runBuildCmd(cmd *cobra.Command, args []string) error {
-	appEnvironments, _ := cmd.Flags().GetStringSlice("environment")
+	appEnvironments, err := cmd.Flags().GetStringSlice("environment")
 
 	// No environment supplied - discovering all env subdirs
 	if len(appEnvironments) == 0 {
-		files, err := ioutil.ReadDir(BaseDir)
+		appEnvironments, err = app.GetEnvironments(BaseDir)
 		if err != nil {
 			return err
-		}
-
-		for _, file := range files {
-			if file.IsDir() {
-				appEnvironments = append(appEnvironments, file.Name())
-			}
 		}
 	}
 

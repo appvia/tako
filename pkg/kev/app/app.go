@@ -18,6 +18,7 @@ package app
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
@@ -46,6 +47,24 @@ func NewDefinition(root string, compose []byte, baseConfig *config.Config, envs 
 		Config:      FileConfig{Content: configData, File: configPath},
 		Envs:        envConfigs,
 	}, nil
+}
+
+// GetEnvironments returns a string slice of all app environments
+func GetEnvironments(root string) ([]string, error) {
+	var envs []string
+
+	files, err := ioutil.ReadDir(root)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			envs = append(envs, file.Name())
+		}
+	}
+
+	return envs, nil
 }
 
 func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]FileConfig, error) {
