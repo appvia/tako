@@ -32,9 +32,8 @@ type CompiledConfig struct {
 
 // Compile calculates effective configuration with base configuration
 // extended/overidden by environments specific configuration
-func Compile(root, name string, envs []string) ([]CompiledConfig, error) {
-	appDir := path.Join(root, name)
-	appBaseConfigPath := path.Join(appDir, "config.yaml")
+func Compile(root string, envs []string) ([]CompiledConfig, error) {
+	appBaseConfigPath := path.Join(root, "config.yaml")
 
 	// Read and unmarshal base configuration
 	baseConfigContent, err := ioutil.ReadFile(appBaseConfigPath)
@@ -49,8 +48,8 @@ func Compile(root, name string, envs []string) ([]CompiledConfig, error) {
 	var compiledConfigs []CompiledConfig
 
 	for _, env := range envs {
-		appEnvConfigPath := path.Join(appDir, env, "config.yaml")
-		appCompiledConfigPath := path.Join(appDir, env, "config-compiled.yaml")
+		appEnvConfigPath := path.Join(root, env, "config.yaml")
+		appCompiledConfigPath := path.Join(root, env, "config-compiled.yaml")
 
 		// Read and unmarshal env configuration
 		envConfigContent, err := ioutil.ReadFile(appEnvConfigPath)

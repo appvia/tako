@@ -29,8 +29,8 @@ import (
 )
 
 // NewApp creates a new Definition using
-// provided name, docker compose files and app root
-func NewApp(root, name string, composeFiles, envs []string) (*app.Definition, error) {
+// provided docker compose files and app root
+func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 	baseCompose, err := loadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func NewApp(root, name string, composeFiles, envs []string) (*app.Definition, er
 		return nil, err
 	}
 
-	return app.NewDefinition(root, name, inferred.ComposeWithPlaceholders, inferred.AppConfig, envs)
+	return app.NewDefinition(root, inferred.ComposeWithPlaceholders, inferred.AppConfig, envs)
 }
 
 func loadAndParse(paths []string) (*compose.Config, error) {

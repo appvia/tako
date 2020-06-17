@@ -27,12 +27,11 @@ import (
 
 // NewDefinition creates a new app definition
 // based on a compose.yaml, inferred app config and required environments.
-func NewDefinition(root, name string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
-	appDir := path.Join(root, name)
-	composePath := path.Join(appDir, "compose.yaml")
-	configPath := path.Join(appDir, "config.yaml")
+func NewDefinition(root string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
+	composePath := path.Join(root, "compose.yaml")
+	configPath := path.Join(root, "config.yaml")
 
-	envConfigs, err := createEnvData(envs, appDir, baseConfig)
+	envConfigs, err := createEnvData(envs, root, baseConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,6 @@ func NewDefinition(root, name string, compose []byte, baseConfig *config.Config,
 	}
 
 	return &Definition{
-		Name:        name,
 		BaseCompose: FileConfig{Content: compose, File: composePath},
 		Config:      FileConfig{Content: configData, File: configPath},
 		Envs:        envConfigs,
