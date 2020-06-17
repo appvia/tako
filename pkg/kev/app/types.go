@@ -24,7 +24,6 @@ import (
 
 // Definition provides details for the app's base compose and config files.
 type Definition struct {
-	Name        string
 	BaseCompose FileConfig
 	Config      FileConfig
 	Envs        []FileConfig
@@ -36,6 +35,7 @@ type FileConfig struct {
 	File    string
 }
 
+// Dir returns application config directory
 func (c FileConfig) Dir() string {
 	return path.Dir(c.File)
 }
