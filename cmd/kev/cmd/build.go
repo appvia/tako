@@ -53,29 +53,30 @@ func init() {
 	)
 	buildCmd.MarkFlagRequired("name")
 
-	flags.StringP(
+	flags.StringSliceP(
 		"environment",
 		"e",
-		"",
-		"Target environment in addition to application base (optional) ",
+		[]string{},
+		"Target environment for which configuration should be compiled",
 	)
-	buildCmd.MarkFlagRequired("environment")
+	initCmd.MarkFlagRequired("environment")
 
 	rootCmd.AddCommand(buildCmd)
 }
 
 func runBuildCmd(cmd *cobra.Command, args []string) error {
 	appName, _ := cmd.Flags().GetString("name")
-	appEnvironment, _ := cmd.Flags().GetString("environment")
+	appEnvironments, _ := cmd.Flags().GetStringSlice("environment")
 
-	compiledConfig, err := config.Compile(BaseDir, appName, appEnvironment)
+	compiledConfigs, err := config.Compile(BaseDir, appName, appEnvironments)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(compiledConfig.FilePath, compiledConfig.Content, os.ModePerm)
-	if err != nil {
-		return err
+	for _, compiledConfig := range compiledConfigs {
+		if err = ioutil.WriteFile(compiledConfig.FilePath, compiledConfig.Content, os.ModePerm); err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("🔩 App configuration built")
