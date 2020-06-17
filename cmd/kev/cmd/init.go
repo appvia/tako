@@ -91,12 +91,6 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 
-	defSource := gotree.New("\n\nSource compose file(s)")
-	for _, e := range composeFiles {
-		defSource.Add(e)
-	}
-	fmt.Println(defSource.Print())
-
 	def, err := bootstrap.NewApp(BaseDir, appName, composeFiles, envs)
 	if err != nil {
 		return err
@@ -115,7 +109,14 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	fmt.Println("🚀 App initialised")
+	fmt.Printf("🚀 %s app initialised", appName)
+
+	defSource := gotree.New("\n\nSource compose file(s)")
+	for _, e := range composeFiles {
+		defSource.Add(e)
+	}
+	fmt.Println(defSource.Print())
+
 	defTree := gotree.New(BaseDir)
 	node2 := defTree.Add(appName)
 	node2.Add(def.BaseCompose.File)
