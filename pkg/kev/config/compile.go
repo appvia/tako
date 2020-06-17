@@ -24,10 +24,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// CompiledConfig holds compiled configuration content and suggested file path
+// CompiledConfig holds compiled environment configuration content and suggested file path
 type CompiledConfig struct {
-	Content  []byte
-	FilePath string
+	Environment string
+	Content     []byte
+	FilePath    string
 }
 
 // Compile calculates effective configuration with base configuration
@@ -69,8 +70,9 @@ func Compile(root string, envs []string) ([]CompiledConfig, error) {
 		}
 
 		compiledConfigs = append(compiledConfigs, CompiledConfig{
-			Content:  compiledConfigBytes,
-			FilePath: appCompiledConfigPath,
+			Environment: env,
+			Content:     compiledConfigBytes,
+			FilePath:    appCompiledConfigPath,
 		})
 	}
 
