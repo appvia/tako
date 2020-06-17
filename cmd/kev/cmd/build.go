@@ -45,14 +45,6 @@ func init() {
 	flags := buildCmd.Flags()
 	flags.SortFlags = false
 
-	flags.StringP(
-		"name",
-		"n",
-		"",
-		"Application name",
-	)
-	buildCmd.MarkFlagRequired("name")
-
 	flags.StringSliceP(
 		"environment",
 		"e",
@@ -65,10 +57,9 @@ func init() {
 }
 
 func runBuildCmd(cmd *cobra.Command, args []string) error {
-	appName, _ := cmd.Flags().GetString("name")
 	appEnvironments, _ := cmd.Flags().GetStringSlice("environment")
 
-	compiledConfigs, err := config.Compile(BaseDir, appName, appEnvironments)
+	compiledConfigs, err := config.Compile(BaseDir, appEnvironments)
 	if err != nil {
 		return err
 	}
