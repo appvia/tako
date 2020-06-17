@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 
@@ -32,11 +33,17 @@ var initLongDesc = `(init) reuses one or more docker-compose files to initialise
 Examples:
 
   # Initialise an app definition with a single docker-compose file
-  $ kev init -n <myapp> -e <production> -c docker-compose.yaml
+  $ kev init -n <myapp> -c docker-compose.yaml
 
   # Initialise an app definition with multiple docker-compose files.
   # These will be interpreted as one file.
-  $ kev init -n <myapp> -e <production> -c docker-compose.yaml -c docker-compose.other.yaml`
+  $ kev init -n <myapp> -c docker-compose.yaml -c docker-compose.other.yaml
+
+  # Initialise an app definition with a deployment environment. 
+  $ kev init -n <myapp> -e staging -c docker-compose.yaml
+
+  # Initialise an app definition with multiple deployment environments. 
+  $ kev init -n <myapp> -e staging -e dev -e prod -c docker-compose.yaml`
 
 var initCmd = &cobra.Command{
 	Use:   "init",
@@ -55,7 +62,9 @@ func init() {
 		"",
 		"Application name",
 	)
-	initCmd.MarkFlagRequired("name")
+	if err := initCmd.MarkFlagRequired("name"); err != nil {
+		log.Fatal(err)
+	}
 
 	flags.StringSliceP(
 		"compose-file",
@@ -63,21 +72,44 @@ func init() {
 		[]string{},
 		"Compose file to use as application base - use multiple flags for additional files",
 	)
-	initCmd.MarkFlagRequired("compose-file")
+	if err := initCmd.MarkFlagRequired("compose-file"); err != nil {
+		log.Fatal(err)
+	}
 
-	flags.StringP(
+	flags.StringSliceP(
 		"environment",
 		"e",
-		"",
-		"Target environment in addition to application base (optional) ",
+		[]string{},
+		"Deployment environments in addition to application base (optional) ",
 	)
 
 	rootCmd.AddCommand(initCmd)
 }
 
-func runInitCmd(cmd *cobra.Command, args []string) error {
+func runInitCmd(cmd *cobra.Command, _ []string) error {
 	appName, _ := cmd.Flags().GetString("name")
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
+	envs, _ := cmd.Flags().GetStringSlice("environment")
+
+	def, err := bootstrap.NewApp(BaseDir, appName, composeFiles, envs)
+	if err != nil {
+		return err
+	}
+
+	appDir := path.Join(BaseDir, def.Name)
+	if err := os.MkdirAll(appDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(def.BaseCompose.File, def.BaseCompose.Content, os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(def.Config.File, def.Config.Content, os.ModePerm); err != nil {
+		return err
+	}
+
+	fmt.Printf("🚀 %s app initialised", appName)
 
 	defSource := gotree.New("\n\nSource compose file(s)")
 	for _, e := range composeFiles {
@@ -85,31 +117,23 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println(defSource.Print())
 
-	def, err := bootstrap.NewApp(BaseDir, appName, composeFiles)
-	if err != nil {
-		return err
-	}
-
-	appDir := path.Join(BaseDir, appName)
-	if err := os.MkdirAll(appDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	ioutil.WriteFile(def.BaseCompose.FilePath, def.BaseCompose.Content, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	ioutil.WriteFile(def.Config.FilePath, def.Config.Content, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("🚀 App initialised")
 	defTree := gotree.New(BaseDir)
 	node2 := defTree.Add(appName)
-	node2.Add(def.BaseCompose.FilePath)
-	node2.Add(def.Config.FilePath)
+	node2.Add(def.BaseCompose.File)
+	node2.Add(def.Config.File)
+
+	for _, env := range def.Envs {
+		if err := os.MkdirAll(env.Dir(), os.ModePerm); err != nil {
+			return err
+		}
+
+		if err := ioutil.WriteFile(env.File, env.Content, os.ModePerm); err != nil {
+			return err
+		}
+
+		node2.Add(env.File)
+	}
+
 	fmt.Println(defTree.Print())
 
 	return nil

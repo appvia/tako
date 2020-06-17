@@ -18,7 +18,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/appvia/kube-devx/pkg/kev/utils"
 	compose "github.com/compose-spec/compose-go/types"
@@ -37,24 +36,22 @@ type Inferred struct {
 // deployment in Kubernetes, replaces values of those attributes with placeholders
 // and places actual values in config.yaml for further tweaking.
 func Infer(data []byte) (Inferred, error) {
-	log.Println("Config: Infer")
-
 	// Application Configuration
 	appConfig := New()
 
-	compose, err := utils.UnmarshallComposeConfig(data)
+	composeConfig, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return Inferred{}, err
 	}
 
 	// Extract volumes information
-	extractVolumesInfo(compose, appConfig)
+	extractVolumesInfo(composeConfig, appConfig)
 	// Set common app level settings
 	setSensibleDefaults(appConfig)
 
 	// Service level parameters
-	for _, s := range compose.Services {
-		// Initiate config component (i.e. compose service)
+	for _, s := range composeConfig.Services {
+		// Initiate config component (i.e. composeConfig service)
 		c := &Component{}
 		// Environment information
 		extractEnvironment(&s, c)
@@ -66,7 +63,7 @@ func Infer(data []byte) (Inferred, error) {
 		appConfig.Components[s.Name] = *c
 	}
 
-	composeBytes, err := yaml.Marshal(compose)
+	composeBytes, err := yaml.Marshal(composeConfig)
 	if err != nil {
 		return Inferred{}, err
 	}

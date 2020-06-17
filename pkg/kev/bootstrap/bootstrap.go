@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/transform"
 	"github.com/compose-spec/compose-go/loader"
@@ -27,103 +28,62 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// AppDefinition provides details for the app's base compose and config files.
-type AppDefinition struct {
-	Name        string
-	BaseCompose Payload
-	Config      Payload
-}
-
-// Payload details an app definition Payload, including its Content and recommended file path.
-type Payload struct {
-	Content  []byte
-	FilePath string
-}
-
-// NewApp creates a new AppDefinition using
+// NewApp creates a new Definition using
 // provided name, docker compose files and app root
-func NewApp(root, name string, composeFiles []string) (*AppDefinition, error) {
-	compose, err := loadAndParse(composeFiles)
+func NewApp(root, name string, composeFiles, envs []string) (*app.Definition, error) {
+	baseCompose, err := loadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err := yaml.Marshal(compose)
+	composeData, err := yaml.Marshal(baseCompose)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err = transform.DeployWithDefaults(bytes)
+	composeData, err = transform.DeployWithDefaults(composeData)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err = transform.HealthCheckBase(bytes)
+	composeData, err = transform.HealthCheckBase(composeData)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err = transform.ExternaliseSecrets(bytes)
+	composeData, err = transform.ExternaliseSecrets(composeData)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err = transform.ExternaliseConfigs(bytes)
+	composeData, err = transform.ExternaliseConfigs(composeData)
 	if err != nil {
 		return nil, err
 	}
 
-	// Infer configuration parameters from transformed compose
-	inferred, err := config.Infer(bytes)
-	if err != nil {
-		return nil, err
-	}
-	// Assigning inferred information
-	bytes = inferred.ComposeWithPlaceholders
-	appConfig := inferred.AppConfig
-
-	bytes, err = transform.Echo(bytes)
+	inferred, err := config.Infer(composeData)
 	if err != nil {
 		return nil, err
 	}
 
-	appDir := path.Join(root, name)
-	appBaseComposePath := path.Join(appDir, "compose.yaml")
-	appBaseConfigPath := path.Join(appDir, "config.yaml")
-
-	configBytes, err := appConfig.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	return &AppDefinition{
-		BaseCompose: Payload{
-			Content:  bytes,
-			FilePath: appBaseComposePath,
-		},
-		Config: Payload{
-			Content:  configBytes,
-			FilePath: appBaseConfigPath,
-		},
-	}, nil
-
+	return app.NewDefinition(root, name, inferred.ComposeWithPlaceholders, inferred.AppConfig, envs)
 }
 
 func loadAndParse(paths []string) (*compose.Config, error) {
 	var configFiles []compose.ConfigFile
 
-	for _, path := range paths {
-		b, err := ioutil.ReadFile(path)
+	for _, p := range paths {
+		b, err := ioutil.ReadFile(p)
 		if err != nil {
 			return nil, err
 		}
 
-		config, err := loader.ParseYAML(b)
+		parsed, err := loader.ParseYAML(b)
 		if err != nil {
 			return nil, err
 		}
 
-		configFiles = append(configFiles, compose.ConfigFile{Filename: path, Config: config})
+		configFiles = append(configFiles, compose.ConfigFile{Filename: p, Config: parsed})
 	}
 
 	return loader.Load(compose.ConfigDetails{
