@@ -54,12 +54,14 @@ func Deploy() compose.DeployConfig {
 
 // HealthCheck returns a healthcheck block with configured placeholders.
 func HealthCheck(svcName string) compose.HealthCheckConfig {
-	testMsg := fmt.Sprintf("\"Placeholeder healthcheck for service [%s]\"", svcName)
-	timeout := compose.Duration(time.Duration(1) * time.Second)
-	interval, startPeriod :=
-		compose.Duration(time.Duration(1)*time.Minute),
-		compose.Duration(time.Duration(1)*time.Minute)
-	retries := uint64(3)
+	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand, svcName)
+	to, _ := time.ParseDuration(config.DefaultLivenessProbeTimeout)
+	iv, _ := time.ParseDuration(config.DefaultLivenessProbeInterval)
+	sp, _ := time.ParseDuration(config.DefaultLivenessProbeInitialDelay)
+	timeout := compose.Duration(to)
+	interval := compose.Duration(iv)
+	startPeriod := compose.Duration(sp)
+	retries := uint64(config.DefaultLivenessProbeRetries)
 
 	return compose.HealthCheckConfig{
 		Test:        []string{"\"CMD\"", "\"echo\"", testMsg},
@@ -67,6 +69,6 @@ func HealthCheck(svcName string) compose.HealthCheckConfig {
 		Interval:    &interval,
 		Retries:     &retries,
 		StartPeriod: &startPeriod,
-		Disable:     true,
+		Disable:     config.DefaultLivenessProbeDisable,
 	}
 }
