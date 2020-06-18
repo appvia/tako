@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/compose-spec/compose-go v0.0.0-20200608091248-554a39de0b3a
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/disiqueira/gotree v1.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.9.0 // indirect
