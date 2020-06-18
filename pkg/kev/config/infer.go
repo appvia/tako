@@ -45,7 +45,7 @@ func Infer(data []byte) (Inferred, error) {
 	}
 
 	// Extract volumes information
-	extractVolumesInfo(composeConfig, appConfig)
+	inferVolumesInfo(composeConfig, appConfig)
 	// Set common app level settings
 	setSensibleDefaults(appConfig)
 
@@ -54,11 +54,13 @@ func Infer(data []byte) (Inferred, error) {
 		// Initiate config component (i.e. composeConfig service)
 		c := &Component{}
 		// Environment information
-		extractEnvironment(&s, c)
+		inferEnvironment(&s, c)
 		// Derive service type
-		extractService(&s, c)
+		inferService(&s, c)
 		// Deployment details
-		extractDeploymentInfo(&s, c)
+		inferDeploymentInfo(&s, c)
+		// Healthcheck details
+		inferHealthcheckInfo(&s, c)
 		// Add component to the app Config
 		appConfig.Components[s.Name] = *c
 	}
@@ -68,8 +70,13 @@ func Infer(data []byte) (Inferred, error) {
 		return Inferred{}, err
 	}
 
+	composeBytesWithPlaceholders, err := injectPlaceholders(composeBytes)
+	if err != nil {
+		return Inferred{}, err
+	}
+
 	return Inferred{
-		ComposeWithPlaceholders: composeBytes,
+		ComposeWithPlaceholders: composeBytesWithPlaceholders,
 		AppConfig:               appConfig,
 	}, nil
 }
@@ -83,7 +90,7 @@ func setSensibleDefaults(appConfig *Config) {
 }
 
 // Extracts volumes information
-func extractVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
+func inferVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
 	// Volumes map
 	vols := make(map[string]Volume)
 
@@ -99,9 +106,7 @@ func extractVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
 }
 
 // Extracts environment variables for each compose service and parametrises them
-func extractEnvironment(s *compose.ServiceConfig, cmp *Component) {
-	// Environmet
-	placeholders := make(compose.MappingWithEquals)
+func inferEnvironment(s *compose.ServiceConfig, cmp *Component) {
 	serviceEnvs := make(map[string]string)
 	for k, v := range s.Environment {
 		if v == nil {
@@ -109,21 +114,14 @@ func extractEnvironment(s *compose.ServiceConfig, cmp *Component) {
 			v = &temp  // in one statement
 		}
 
-		// prepare env variable placeholder
-		p := fmt.Sprint("$${", s.Name, ".environment.", k, "}")
-		placeholders[k] = &p
-
 		serviceEnvs[k] = *v
 	}
 	// set service environment
 	cmp.Environment = serviceEnvs
-
-	// override values of key attributes with parametrised placeholders
-	s.Environment.OverrideBy(placeholders)
 }
 
 // Extracts information about K8s service requirements
-func extractService(s *compose.ServiceConfig, cmp *Component) {
+func inferService(s *compose.ServiceConfig, cmp *Component) {
 	if s.Ports == nil {
 		cmp.Service.Type = NoService
 	} else {
@@ -150,9 +148,9 @@ func extractService(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts deployment information
-func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
-	// Initiate workload object
-	w := Workload{}
+func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
+	// get workload object
+	w := cmp.Workload
 
 	// Workload type
 	if s.Deploy != nil && s.Deploy.Mode == "global" {
@@ -172,6 +170,7 @@ func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 	if s.Deploy != nil {
 		// Replicas
 		w.Replicas = s.Deploy.Replicas
+
 		// RestartPolicy
 		if s.Deploy.RestartPolicy != nil {
 			if s.Deploy.RestartPolicy.Condition == "on-failure" {
@@ -200,4 +199,73 @@ func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 	}
 
 	cmp.Workload = w
+}
+
+// Extracts service healthcheck information
+func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
+	// get workload object
+	w := cmp.Workload
+
+	w.LivenessProbeDisable = s.HealthCheck.Disable
+	w.LivenessProbeCommand = s.HealthCheck.Test
+	w.LivenessProbeInterval = s.HealthCheck.Interval.String()
+	w.LivenessProbeInitialDelay = s.HealthCheck.StartPeriod.String()
+	w.LivenessProbeTimeout = s.HealthCheck.Timeout.String()
+	w.LivenessProbeRetries = s.HealthCheck.Retries
+
+	cmp.Workload = w
+}
+
+// injectPlaceholders substitutes key attribute values with placeholders
+func injectPlaceholders(data []byte) ([]byte, error) {
+
+	// Unmarshal compose config to map[string]interface{}
+	composeConfig, _ := utils.UnmarshallGeneral(data)
+
+	// Service specific placeholders
+	for name, svc := range composeConfig["services"].(map[string]interface{}) {
+		// placeholder prefix
+		prefix := fmt.Sprintf("%s.workload", name)
+
+		//== Deploy ==
+		deploy := svc.(map[string]interface{})["deploy"]
+		//- Replicas
+		deploy.(map[string]interface{})["replicas"] = placeholder(prefix, "replicas")
+		//- Rolling update max surge
+		updateConfig := deploy.(map[string]interface{})["update_config"]
+		updateConfig.(map[string]interface{})["parallelism"] = placeholder(prefix, "rolling-update-max-surge")
+		//- Resource Requests & Limits
+		resources := deploy.(map[string]interface{})["resources"]
+		reservations := resources.(map[string]interface{})["reservations"]
+		limits := resources.(map[string]interface{})["limits"]
+		reservations.(map[string]interface{})["cpus"] = placeholder(prefix, "cpu")
+		reservations.(map[string]interface{})["memory"] = placeholder(prefix, "memory")
+		limits.(map[string]interface{})["cpus"] = placeholder(prefix, "max-cpu")
+		limits.(map[string]interface{})["memory"] = placeholder(prefix, "max-memory")
+
+		//== Healthcheck ==
+		hc := svc.(map[string]interface{})["healthcheck"]
+		hc.(map[string]interface{})["disable"] = placeholder(prefix, "liveness-probe-disable")
+		hc.(map[string]interface{})["interval"] = placeholder(prefix, "liveness-probe-interval")
+		hc.(map[string]interface{})["retries"] = placeholder(prefix, "liveness-probe-retries")
+		hc.(map[string]interface{})["start_period"] = placeholder(prefix, "liveness-probe-initial-delay")
+		hc.(map[string]interface{})["test"] = placeholder(prefix, "liveness-probe-command")
+		hc.(map[string]interface{})["timeout"] = placeholder(prefix, "liveness-probe-timeout")
+
+		//== Environment ==
+		prefix = fmt.Sprintf("%s.environment", name)
+		environment := svc.(map[string]interface{})["environment"]
+		if environment != nil {
+			for e := range environment.(map[string]interface{}) {
+				environment.(map[string]interface{})[e] = placeholder(prefix, e)
+			}
+		}
+	}
+
+	return utils.MarshallAndFormat(composeConfig, 2)
+}
+
+// Builds config attribute value placeholder
+func placeholder(prefix, key string) string {
+	return fmt.Sprintf("${%s.%s}", prefix, key)
 }
