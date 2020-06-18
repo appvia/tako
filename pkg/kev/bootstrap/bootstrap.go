@@ -41,7 +41,7 @@ func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 		return nil, err
 	}
 
-	composeData, err = transform.DeployWithDefaults(composeData)
+	composeData, err = transform.AugmentOrAddDeploy(composeData)
 	if err != nil {
 		return nil, err
 	}

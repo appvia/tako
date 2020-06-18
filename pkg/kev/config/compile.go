@@ -42,7 +42,7 @@ func Compile(root string, envs []string) ([]CompiledConfig, error) {
 		return nil, err
 	}
 	baseConfig := Config{}
-	if err = yaml.Unmarshal([]byte(baseConfigContent), &baseConfig); err != nil {
+	if err = yaml.Unmarshal(baseConfigContent, &baseConfig); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func Compile(root string, envs []string) ([]CompiledConfig, error) {
 			return nil, err
 		}
 		envConfig := Config{}
-		if err = yaml.Unmarshal([]byte(envConfigContent), &envConfig); err != nil {
+		if err = yaml.Unmarshal(envConfigContent, &envConfig); err != nil {
 			return nil, err
 		}
 

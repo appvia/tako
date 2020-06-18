@@ -26,14 +26,14 @@ import (
 )
 
 // Deploy returns a deploy block with configured presets.
-func Deploy() *compose.DeployConfig {
+func Deploy() compose.DeployConfig {
 	replica := uint64(config.DefaultReplicaNumber)
 	parallelism := uint64(config.DefaultRollingUpdateMaxSurge)
 
 	defaultMemLimit, _ := humanize.ParseBytes(config.DefaultResourceLimitMem)
 	defaultMemReq, _ := humanize.ParseBytes(config.DefaultResourceRequestMem)
 
-	return &compose.DeployConfig{
+	return compose.DeployConfig{
 		Replicas: &replica,
 		Mode:     "replicated",
 		Resources: compose.Resources{
@@ -53,7 +53,7 @@ func Deploy() *compose.DeployConfig {
 }
 
 // HealthCheck returns a healthcheck block with configured placeholders.
-func HealthCheck(svcName string) *compose.HealthCheckConfig {
+func HealthCheck(svcName string) compose.HealthCheckConfig {
 	testMsg := fmt.Sprintf("\"Placeholeder healthcheck for service [%s]\"", svcName)
 	timeout := compose.Duration(time.Duration(1) * time.Second)
 	interval, startPeriod :=
@@ -61,7 +61,7 @@ func HealthCheck(svcName string) *compose.HealthCheckConfig {
 		compose.Duration(time.Duration(1)*time.Minute)
 	retries := uint64(3)
 
-	return &compose.HealthCheckConfig{
+	return compose.HealthCheckConfig{
 		Test:        []string{"\"CMD\"", "\"echo\"", testMsg},
 		Timeout:     &timeout,
 		Interval:    &interval,
