@@ -45,7 +45,7 @@ func Infer(data []byte) (Inferred, error) {
 	}
 
 	// Extract volumes information
-	extractVolumesInfo(composeConfig, appConfig)
+	inferVolumesInfo(composeConfig, appConfig)
 	// Set common app level settings
 	setSensibleDefaults(appConfig)
 
@@ -54,13 +54,13 @@ func Infer(data []byte) (Inferred, error) {
 		// Initiate config component (i.e. composeConfig service)
 		c := &Component{}
 		// Environment information
-		extractEnvironment(&s, c)
+		inferEnvironment(&s, c)
 		// Derive service type
-		extractService(&s, c)
+		inferService(&s, c)
 		// Deployment details
-		extractDeploymentInfo(&s, c)
+		inferDeploymentInfo(&s, c)
 		// Healthcheck details
-		extractHealthcheckInfo(&s, c)
+		inferHealthcheckInfo(&s, c)
 		// Add component to the app Config
 		appConfig.Components[s.Name] = *c
 	}
@@ -90,7 +90,7 @@ func setSensibleDefaults(appConfig *Config) {
 }
 
 // Extracts volumes information
-func extractVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
+func inferVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
 	// Volumes map
 	vols := make(map[string]Volume)
 
@@ -106,7 +106,7 @@ func extractVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
 }
 
 // Extracts environment variables for each compose service and parametrises them
-func extractEnvironment(s *compose.ServiceConfig, cmp *Component) {
+func inferEnvironment(s *compose.ServiceConfig, cmp *Component) {
 	serviceEnvs := make(map[string]string)
 	for k, v := range s.Environment {
 		if v == nil {
@@ -121,7 +121,7 @@ func extractEnvironment(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts information about K8s service requirements
-func extractService(s *compose.ServiceConfig, cmp *Component) {
+func inferService(s *compose.ServiceConfig, cmp *Component) {
 	if s.Ports == nil {
 		cmp.Service.Type = NoService
 	} else {
@@ -148,7 +148,7 @@ func extractService(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts deployment information
-func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
+func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 	// get workload object
 	w := cmp.Workload
 
@@ -202,7 +202,7 @@ func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts service healthcheck information
-func extractHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
+func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
 	// get workload object
 	w := cmp.Workload
 
