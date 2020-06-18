@@ -59,6 +59,8 @@ func Infer(data []byte) (Inferred, error) {
 		extractService(&s, c)
 		// Deployment details
 		extractDeploymentInfo(&s, c)
+		// Healthcheck details
+		extractHealthcheckInfo(&s, c)
 		// Add component to the app Config
 		appConfig.Components[s.Name] = *c
 	}
@@ -151,8 +153,8 @@ func extractService(s *compose.ServiceConfig, cmp *Component) {
 
 // Extracts deployment information
 func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
-	// Initiate workload object
-	w := Workload{}
+	// get workload object
+	w := cmp.Workload
 
 	// Workload type
 	if s.Deploy != nil && s.Deploy.Mode == "global" {
@@ -172,6 +174,7 @@ func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 	if s.Deploy != nil {
 		// Replicas
 		w.Replicas = s.Deploy.Replicas
+
 		// RestartPolicy
 		if s.Deploy.RestartPolicy != nil {
 			if s.Deploy.RestartPolicy.Condition == "on-failure" {
@@ -198,6 +201,21 @@ func extractDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 			w.RollingUpdateMaxSurge = s.Deploy.UpdateConfig.Parallelism
 		}
 	}
+
+	cmp.Workload = w
+}
+
+// Extracts service healthcheck information
+func extractHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
+	// get workload object
+	w := cmp.Workload
+
+	w.LivenessProbeDisable = s.HealthCheck.Disable
+	w.LivenessProbeCommand = s.HealthCheck.Test
+	w.LivenessProbeInterval = s.HealthCheck.Interval.String()
+	w.LivenessProbeInitialDelay = s.HealthCheck.StartPeriod.String()
+	w.LivenessProbeTimeout = s.HealthCheck.Timeout.String()
+	w.LivenessProbeRetries = s.HealthCheck.Retries
 
 	cmp.Workload = w
 }

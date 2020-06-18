@@ -48,6 +48,18 @@ type Workload struct {
 	MaxCPU string `yaml:"max-cpu,omitempty" json:"max_cpu,omitempty" default:"0.2"`
 	// max-memory, Default: 100M. Memory limit per workload.
 	MaxMemory string `yaml:"max-memory,omitempty" json:"max_memory,omitempty" default:"100M"`
+	// liveness-probe-disable, Default: false. Whether to enable liveness probe.
+	LivenessProbeDisable bool `yaml:"liveness-probe-disable,omitempty" json:"liveness_probe_disable,omitempty" default:"false"`
+	// liveness-probe-interval, Default: 1m. Liveness probe interval.
+	LivenessProbeInterval string `yaml:"liveness-probe-interval,omitempty" json:"liveness_probe_interval,omitempty" default:"1m"`
+	// liveness-probe-retries, Default: 3. Liveness probe retry limit.
+	LivenessProbeRetries *uint64 `yaml:"liveness-probe-retries,omitempty" json:"liveness_probe_retries,omitempty" default:"3"`
+	// liveness-probe-initial-delay, Default: 1m. Liveness probe initial delay period.
+	LivenessProbeInitialDelay string `yaml:"liveness-probe-initial-delay,omitempty" json:"liveness_probe_initial_delay,omitempty" default:"3"`
+	// liveness-probe-command, Default: "". Liveness probe command.
+	LivenessProbeCommand []string `yaml:"liveness-probe-command,omitempty" json:"liveness_probe_command,omitempty" default:""`
+	// liveness-probe-timeout, Default: "10s". Liveness probe command timeout.
+	LivenessProbeTimeout string `yaml:"liveness-probe-timeout,omitempty" json:"liveness_probe_timeout,omitempty" default:"10s"`
 }
 
 // Service defines app default component K8s service parameters.
