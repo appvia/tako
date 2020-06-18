@@ -23,6 +23,7 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/utils"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
+	"github.com/imdario/mergo"
 )
 
 // Transform is a transform func type.
@@ -30,20 +31,24 @@ import (
 // Useful as a function param for functions that accept transforms.
 type Transform func(data []byte) ([]byte, error)
 
-// DeployWithDefaults attaches a deploy block with presets to any service
-// missing a deploy block.
-func DeployWithDefaults(data []byte) ([]byte, error) {
+// AugmentOrAddDeploy augments a service's existing deploy block or attaches a new one with default presets.
+func AugmentOrAddDeploy(data []byte) ([]byte, error) {
 	x, err := utils.UnmarshallComposeConfig(data)
 	if err != nil {
 		return []byte{}, err
 	}
 
 	var updated compose.Services
-
 	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
-		if svc.Deploy == nil {
-			svc.Deploy = defaults.Deploy()
+		var deploy = defaults.Deploy()
+
+		if svc.Deploy != nil {
+			if err := mergo.Merge(&deploy, svc.Deploy, mergo.WithOverride); err != nil {
+				return err
+			}
 		}
+
+		svc.Deploy = &deploy
 		updated = append(updated, svc)
 		return nil
 	})
@@ -66,7 +71,8 @@ func HealthCheckBase(data []byte) ([]byte, error) {
 	var updated compose.Services
 	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
 		if svc.HealthCheck == nil {
-			svc.HealthCheck = defaults.HealthCheck(svc.Name)
+			check := defaults.HealthCheck(svc.Name)
+			svc.HealthCheck = &check
 		}
 		updated = append(updated, svc)
 		return nil
