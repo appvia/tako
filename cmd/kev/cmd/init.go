@@ -31,17 +31,16 @@ var initLongDesc = `(init) reuses one or more docker-compose files to initialise
 
 Examples:
 
-  # Initialise an app definition with a single docker-compose file
+  #### Initialise an app definition with a single docker-compose file
   $ kev init -c docker-compose.yaml
 
-  # Initialise an app definition with multiple docker-compose files.
-  # These will be interpreted as one file.
+  #### Initialise an app definition with multiple docker-compose files. These will be interpreted as one file.
   $ kev init -c docker-compose.yaml -c docker-compose.other.yaml
 
-  # Initialise an app definition with a deployment environment.
+  #### Initialise an app definition with a deployment environment.
   $ kev init -e staging -c docker-compose.yaml
 
-  # Initialise an app definition with multiple deployment environments.
+  #### Initialise an app definition with multiple deployment environments.
   $ kev init -e staging -e dev -e prod -c docker-compose.yaml`
 
 var initCmd = &cobra.Command{

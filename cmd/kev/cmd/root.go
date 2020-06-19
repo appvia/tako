@@ -46,6 +46,11 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 }
 
+// NewRootCmd returns root command
+func NewRootCmd() *cobra.Command {
+	return rootCmd
+}
+
 func init() {
 	fmt.Print(banner)
 
