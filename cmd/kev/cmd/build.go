@@ -31,10 +31,10 @@ var buildLongDesc = `(build) builds configuration.
 
  Examples:
 
-   # Builds an app configuration for all environments
+   #### Builds an app configuration for all environments
    $ kev build
 
-   # Builds an app configuration for a specific environment(s)
+   #### Builds an app configuration for a specific environment(s)
    $ kev build -e <production> [-e <dev>]`
 
 var buildCmd = &cobra.Command{
