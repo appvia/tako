@@ -11,8 +11,7 @@ Examples:
   #### Initialise an app definition with a single docker-compose file
   $ kev init -c docker-compose.yaml
 
-  #### Initialise an app definition with multiple docker-compose files.
-  These will be interpreted as one file.
+  #### Initialise an app definition with multiple docker-compose files. These will be interpreted as one file.
   $ kev init -c docker-compose.yaml -c docker-compose.other.yaml
 
   #### Initialise an app definition with a deployment environment.
@@ -29,7 +28,7 @@ kev init [flags]
 
 ```
   -c, --compose-file strings   Compose file to use as application base - use multiple flags for additional files
-  -e, --environment strings    Deployment environments in addition to application base (optional)
+  -e, --environment strings    Deployment environments in addition to application base (optional) 
   -h, --help                   help for init
 ```
 
