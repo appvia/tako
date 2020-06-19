@@ -124,5 +124,13 @@ all: test
 	@$(MAKE) bench
 	@$(MAKE) coverage
 
+gen-docs:
+	@echo "--> Generate CLI reference docs"
+	@./hack/doc-gen/generate.sh
+
+verify-docs:
+	@echo "--> Verify CLI reference docs"
+	@./hack/doc-gen/verify.sh
+
 changelog: release
 	git log $(shell git tag | tail -n1)..HEAD --no-merges --format=%B >> changelog
