@@ -37,9 +37,9 @@ type Workload struct {
 	// type, Default: deployment. Possible option: pod | deployment | statefulset | daemonset | job.
 	Type string `yaml:",omitempty" json:"type,omitempty" default:"deployment"`
 	// replicas, Default: 1. Number of replicas per workload.
-	Replicas *uint64 `yaml:",omitempty" json:",omitempty" default:"1"`
+	Replicas uint64 `yaml:",omitempty" json:",omitempty" default:"1"`
 	// rolling-update-max-surge, Default: 1. Maximum number of containers to be updated at a time.
-	RollingUpdateMaxSurge *uint64 `yaml:"rolling-update-max-surge,omitempty" json:"rolling_update_max_surge,omitempty" default:"1"`
+	RollingUpdateMaxSurge uint64 `yaml:"rolling-update-max-surge,omitempty" json:"rolling_update_max_surge,omitempty" default:"1"`
 	// cpu, Default: 0.1. CPU request per workload.
 	CPU string `yaml:",omitempty" json:"cpu,omitempty" default:"0.1"`
 	// memory, Default: 50M. Memory request per workload.
@@ -53,7 +53,7 @@ type Workload struct {
 	// liveness-probe-interval, Default: 1m. Liveness probe interval.
 	LivenessProbeInterval string `yaml:"liveness-probe-interval,omitempty" json:"liveness_probe_interval,omitempty" default:"1m"`
 	// liveness-probe-retries, Default: 3. Liveness probe retry limit.
-	LivenessProbeRetries *uint64 `yaml:"liveness-probe-retries,omitempty" json:"liveness_probe_retries,omitempty" default:"3"`
+	LivenessProbeRetries uint64 `yaml:"liveness-probe-retries,omitempty" json:"liveness_probe_retries,omitempty" default:"3"`
 	// liveness-probe-initial-delay, Default: 1m. Liveness probe initial delay period.
 	LivenessProbeInitialDelay string `yaml:"liveness-probe-initial-delay,omitempty" json:"liveness_probe_initial_delay,omitempty" default:"3"`
 	// liveness-probe-command, Default: "". Liveness probe command.
