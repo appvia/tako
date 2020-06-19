@@ -169,7 +169,7 @@ func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 
 	if s.Deploy != nil {
 		// Replicas
-		w.Replicas = s.Deploy.Replicas
+		w.Replicas = *s.Deploy.Replicas
 
 		// RestartPolicy
 		if s.Deploy.RestartPolicy != nil {
@@ -194,7 +194,7 @@ func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 		}
 		// Rolling update policy
 		if s.Deploy.UpdateConfig != nil {
-			w.RollingUpdateMaxSurge = s.Deploy.UpdateConfig.Parallelism
+			w.RollingUpdateMaxSurge = *s.Deploy.UpdateConfig.Parallelism
 		}
 	}
 
@@ -211,7 +211,7 @@ func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
 	w.LivenessProbeInterval = s.HealthCheck.Interval.String()
 	w.LivenessProbeInitialDelay = s.HealthCheck.StartPeriod.String()
 	w.LivenessProbeTimeout = s.HealthCheck.Timeout.String()
-	w.LivenessProbeRetries = s.HealthCheck.Retries
+	w.LivenessProbeRetries = *s.HealthCheck.Retries
 
 	cmp.Workload = w
 }
