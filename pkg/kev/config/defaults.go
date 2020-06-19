@@ -51,6 +51,18 @@ const (
 	DefaultSecurityContextRunAsGroup = ""
 	// DefaultSecurityContextFsGroup default fs Group for pod security context
 	DefaultSecurityContextFsGroup = ""
+	// DefaultLivenessProbeDisable default false. Enabled by default
+	DefaultLivenessProbeDisable = false
+	// DefaultLivenessProbeInterval default 1m (1 minute)
+	DefaultLivenessProbeInterval = "1m"
+	// DefaultLivenessProbeRetries default 3. Number of retries for liveness probe command
+	DefaultLivenessProbeRetries = 3
+	// DefaultLivenessProbeInitialDelay default 1m (1 minute)
+	DefaultLivenessProbeInitialDelay = "1m"
+	// DefaultLivenessProbeCommand default command
+	DefaultLivenessProbeCommand = "Define healthcheck command for service %s"
+	// DefaultLivenessProbeTimeout default 10s
+	DefaultLivenessProbeTimeout = "10s"
 
 	// NoService default value
 	NoService = "None"
