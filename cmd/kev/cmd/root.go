@@ -27,6 +27,9 @@ import (
 // BaseDir is a top level directory for Kev files
 const BaseDir = ".kev"
 
+// BuildDir is the build directory for a Kev app
+const BuildDir = ".build"
+
 const banner = `
 o
 | /

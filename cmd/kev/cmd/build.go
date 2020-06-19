@@ -59,27 +59,33 @@ func init() {
 	rootCmd.AddCommand(buildCmd)
 }
 
-func runBuildCmd(cmd *cobra.Command, args []string) error {
-	appEnvironments, err := cmd.Flags().GetStringSlice("environment")
+func runBuildCmd(cmd *cobra.Command, _ []string) error {
+	envs, err := cmd.Flags().GetStringSlice("environment")
 
-	// No environment supplied - discovering all env subdirs
-	if len(appEnvironments) == 0 {
-		appEnvironments, err = app.GetEnvironments(BaseDir)
+	switch count := len(envs); {
+	case count == 0:
+		envs, err = app.GetEnvs(BaseDir)
 		if err != nil {
-			return err
+			return fmt.Errorf("build failed, %s", err)
+		}
+	case count > 0:
+		if err := app.ValidateHasEnvs(BaseDir, envs); err != nil {
+			return fmt.Errorf("build failed, %s", err)
 		}
 	}
 
-	compiledConfigs, err := config.Compile(BaseDir, appEnvironments)
+	compiledConfigs, err := config.Compile(BaseDir, BuildDir, envs)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("🔩 App build complete!")
+
 	for _, compiledConfig := range compiledConfigs {
-		if err = ioutil.WriteFile(compiledConfig.FilePath, compiledConfig.Content, os.ModePerm); err != nil {
+		if err = ioutil.WriteFile(compiledConfig.File, compiledConfig.Content, os.ModePerm); err != nil {
 			return err
 		}
-		fmt.Printf("🔩 App configuration built for `%s` environment\n", compiledConfig.Environment)
+		fmt.Printf("🔧 [%s] environment ready.\n", compiledConfig.Environment)
 	}
 
 	return nil

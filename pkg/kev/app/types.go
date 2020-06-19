@@ -18,6 +18,7 @@ package app
 
 import (
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,8 +36,14 @@ type FileConfig struct {
 	File    string
 }
 
-// Dir returns application config directory
+// Dir returns the application config's immediate parent directory
 func (c FileConfig) Dir() string {
+	parts := strings.Split(c.Path(), "/")
+	return parts[len(parts)-1]
+}
+
+// Path returns the application config's directory path
+func (c FileConfig) Path() string {
 	return path.Dir(c.File)
 }
 

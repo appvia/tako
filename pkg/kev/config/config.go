@@ -17,7 +17,11 @@
 package config
 
 import (
+	"io/ioutil"
+	"path"
+
 	"github.com/goccy/go-yaml"
+	yaml3 "gopkg.in/yaml.v3"
 )
 
 // New creates and returns an app config
@@ -36,4 +40,33 @@ func (c *Config) Bytes() ([]byte, error) {
 		return nil, err
 	}
 	return bytes, nil
+}
+
+// GetBaseConfig returns the base app config
+func GetBaseConfig(root string) (*Config, error) {
+	configPath := path.Join(root, "config.yaml")
+	baseConfigContent, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+	baseConfig := &Config{}
+	if err = yaml3.Unmarshal(baseConfigContent, baseConfig); err != nil {
+		return nil, err
+	}
+
+	return baseConfig, nil
+}
+
+// GetEnvConfig returns a deployment env config
+func GetEnvConfig(root string, env string) (Config, error) {
+	configPath := path.Join(root, env, "config.yaml")
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return Config{}, err
+	}
+	envConfig := Config{}
+	if err = yaml3.Unmarshal(content, &envConfig); err != nil {
+		return Config{}, err
+	}
+	return envConfig, nil
 }

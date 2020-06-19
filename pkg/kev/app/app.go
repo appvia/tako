@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/utils"
@@ -49,8 +50,38 @@ func NewDefinition(root string, compose []byte, baseConfig *config.Config, envs 
 	}, nil
 }
 
-// GetEnvironments returns a string slice of all app environments
-func GetEnvironments(root string) ([]string, error) {
+// ValidateHasEnvs checks whether supplied environments exist or not.
+func ValidateHasEnvs(root string, candidates []string) error {
+	envs, err := GetEnvs(root)
+	if err != nil {
+		return err
+	}
+
+	var invalid []string
+	var counter = len(envs)
+	for x := 0; x < len(candidates); x++ {
+		for y := 0; y < len(envs); y++ {
+			if candidates[x] == envs[y] {
+				break
+			}
+			counter--
+		}
+		if counter == 0 {
+			invalid = append(invalid, candidates[x])
+		}
+		counter = len(envs) - 1
+	}
+
+	iJoin := strings.Join(invalid, ", ")
+	if len(iJoin) > 0 {
+		return fmt.Errorf("cannot find environment(s): %s", iJoin)
+	}
+
+	return nil
+}
+
+// GetEnvs returns a string slice of all app environments
+func GetEnvs(root string) ([]string, error) {
 	var envs []string
 
 	files, err := ioutil.ReadDir(root)
@@ -59,7 +90,7 @@ func GetEnvironments(root string) ([]string, error) {
 	}
 
 	for _, file := range files {
-		if file.IsDir() {
+		if file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
 			envs = append(envs, file.Name())
 		}
 	}
