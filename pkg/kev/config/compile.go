@@ -17,64 +17,50 @@
 package config
 
 import (
-	"io/ioutil"
 	"path"
 
 	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v3"
 )
-
-// CompiledConfig holds compiled environment configuration content and suggested file path
-type CompiledConfig struct {
-	Environment string
-	Content     []byte
-	FilePath    string
-}
 
 // Compile calculates effective configuration with base configuration
 // extended/overidden by environments specific configuration
-func Compile(root string, envs []string) ([]CompiledConfig, error) {
-	appBaseConfigPath := path.Join(root, "config.yaml")
-
-	// Read and unmarshal base configuration
-	baseConfigContent, err := ioutil.ReadFile(appBaseConfigPath)
+func Compile(root, buildDir string, envs []string) ([]CompiledConfig, error) {
+	baseConfig, err := GetBaseConfig(root)
 	if err != nil {
 		return nil, err
 	}
-	baseConfig := &Config{}
-	if err = yaml.Unmarshal(baseConfigContent, baseConfig); err != nil {
-		return nil, err
-	}
 
-	var compiledConfigs []CompiledConfig
-
+	var compiled []CompiledConfig
 	for _, env := range envs {
-		appEnvConfigPath := path.Join(root, env, "config.yaml")
-		appCompiledConfigPath := path.Join(root, env, "config-compiled.yaml")
-
-		// Read and unmarshal env configuration
-		envConfigContent, err := ioutil.ReadFile(appEnvConfigPath)
-		if err != nil {
-			return nil, err
-		}
-		envConfig := Config{}
-		if err = yaml.Unmarshal(envConfigContent, &envConfig); err != nil {
-			return nil, err
-		}
-
-		mergo.Merge(&envConfig, baseConfig)
-
-		compiledConfigBytes, err := envConfig.Bytes()
+		envConfig, err := GetEnvConfig(root, env)
 		if err != nil {
 			return nil, err
 		}
 
-		compiledConfigs = append(compiledConfigs, CompiledConfig{
-			Environment: env,
-			Content:     compiledConfigBytes,
-			FilePath:    appCompiledConfigPath,
-		})
+		compilePath := path.Join(root, buildDir)
+		compiledConfig, err := compileEnvConfig(compilePath, env, envConfig, baseConfig)
+		if err != nil {
+			return nil, err
+		}
+		compiled = append(compiled, compiledConfig)
 	}
 
-	return compiledConfigs, nil
+	return compiled, nil
+}
+
+func compileEnvConfig(compilePath, env string, envConfig Config, baseConfig *Config) (CompiledConfig, error) {
+	mergo.Merge(&envConfig, baseConfig)
+
+	rawConfig, err := envConfig.Bytes()
+	if err != nil {
+		return CompiledConfig{}, err
+	}
+
+	compiledConfigPath := path.Join(compilePath, env, "config-compiled.yaml")
+	compiledEnvConfig := CompiledConfig{
+		Environment: env,
+		Content:     rawConfig,
+		File:        compiledConfigPath,
+	}
+	return compiledEnvConfig, nil
 }

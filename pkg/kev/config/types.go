@@ -112,3 +112,10 @@ type Config struct {
 	// Map of defined compose services
 	Components map[string]Component `yaml:",omitempty,inline" json:"components,omitempty,inline"`
 }
+
+// CompiledConfig holds compiled environment configuration content and suggested file path
+type CompiledConfig struct {
+	Environment string
+	Content     []byte
+	File        string
+}

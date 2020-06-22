@@ -21,7 +21,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
 	"github.com/disiqueira/gotree"
 	"github.com/spf13/cobra"
@@ -83,43 +85,60 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if err := createAppFilesystem(def); err != nil {
+		return err
+	}
+
+	displayInit(composeFiles, def)
+	return nil
+}
+
+func createAppFilesystem(def *app.Definition) error {
 	if err := os.MkdirAll(BaseDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(path.Join(BaseDir, BuildDir), os.ModePerm); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(path.Join(BaseDir, ".gitignore"), []byte(".build/*\n"), os.ModePerm); err != nil {
 		return err
 	}
 
 	if err := ioutil.WriteFile(def.BaseCompose.File, def.BaseCompose.Content, os.ModePerm); err != nil {
 		return err
 	}
-
 	if err := ioutil.WriteFile(def.Config.File, def.Config.Content, os.ModePerm); err != nil {
 		return err
 	}
 
-	fmt.Printf("🚀 App initialised")
+	for _, env := range def.Envs {
+		if err := os.MkdirAll(env.Path(), os.ModePerm); err != nil {
+			return err
+		}
+		if err := os.MkdirAll(path.Join(BaseDir, BuildDir, env.Dir()), os.ModePerm); err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(env.File, env.Content, os.ModePerm); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
+func displayInit(composeFiles []string, def *app.Definition) {
+	fmt.Printf("🚀 App initialised")
 	defSource := gotree.New("\n\nSource compose file(s)")
 	for _, e := range composeFiles {
 		defSource.Add(e)
 	}
 	fmt.Println(defSource.Print())
-
 	defTree := gotree.New("\n\nApplication configuration files")
 	defTree.Add(def.BaseCompose.File)
 	defTree.Add(def.Config.File)
 
 	for _, env := range def.Envs {
-		if err := os.MkdirAll(env.Dir(), os.ModePerm); err != nil {
-			return err
-		}
-
-		if err := ioutil.WriteFile(env.File, env.Content, os.ModePerm); err != nil {
-			return err
-		}
-
 		defTree.Add(env.File)
 	}
-
 	fmt.Println(defTree.Print())
-
-	return nil
 }
