@@ -119,3 +119,13 @@ type CompiledConfig struct {
 	Content     []byte
 	File        string
 }
+
+// ShallowComposeConfig is used to ensure marshaled output is ordered correctly.
+type ShallowComposeConfig struct {
+	Version  string      `json:"version"`
+	Services interface{} `json:"services"`
+	Networks interface{} `yaml:",omitempty" json:"networks,omitempty"`
+	Volumes  interface{} `yaml:",omitempty" json:"volumes,omitempty"`
+	Secrets  interface{} `yaml:",omitempty" json:"secrets,omitempty"`
+	Configs  interface{} `yaml:",omitempty" json:"configs,omitempty"`
+}
