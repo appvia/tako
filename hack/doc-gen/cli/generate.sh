@@ -14,24 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-KEV_ROOT=$(realpath $(dirname ${BASH_SOURCE})/../..)
-DOC_GEN_DIR=$(dirname "${BASH_SOURCE}")
-DOCS_DIR=${KEV_ROOT}/docs/cli-reference
-TMP_DIR="$(mktemp -d)"
+KEV_ROOT=$(cd "$(dirname "$0")/../../.."; pwd)
 
-trap cleanup INT TERM HUP EXIT
-
-cleanup() {
-  rm -rf ${TMP_DIR}
-}
-
-${DOC_GEN_DIR}/generate.sh ${TMP_DIR}
-
-exclude_file="README.md"
-output=$(echo "`diff -r ${DOCS_DIR} ${TMP_DIR}`" | sed "/${exclude_file}/d")
-
-if [[ -n "${output}" ]] ; then
-    echo "FAILURE: verification of docs failed:"
-    echo "${output}"
-    exit 1
+if [[ $# -gt 1 ]]; then
+  echo "usage: ${BASH_SOURCE} [DIRECTORY]"
+  exit 1
 fi
+
+OUTPUT_DIR="$@"
+if [[ -z "${OUTPUT_DIR}" ]]; then
+  OUTPUT_DIR=${KEV_ROOT}/docs/cli
+fi
+
+mkdir -p ${OUTPUT_DIR}
+
+go run ${KEV_ROOT}/hack/doc-gen/cli/kev.go ${OUTPUT_DIR}
+
+# inject header for hugo
+
+echo """---
+weight: 100
+title: Kev CLI Reference
+---
+# CLI Reference
+""" | cat - ${OUTPUT_DIR}/kev.md > ${OUTPUT_DIR}/temp && mv ${OUTPUT_DIR}/temp ${OUTPUT_DIR}/kev.md
+
+
