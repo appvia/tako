@@ -65,18 +65,18 @@ func Infer(data []byte) (Inferred, error) {
 		appConfig.Components[s.Name] = *c
 	}
 
-	composeBytes, err := yaml.Marshal(composeConfig)
+	rawCompose, err := yaml.Marshal(composeConfig)
 	if err != nil {
 		return Inferred{}, err
 	}
 
-	composeBytesWithPlaceholders, err := injectPlaceholders(composeBytes)
+	rawComposeWithPlaceholders, err := injectPlaceholders(rawCompose)
 	if err != nil {
 		return Inferred{}, err
 	}
 
 	return Inferred{
-		ComposeWithPlaceholders: composeBytesWithPlaceholders,
+		ComposeWithPlaceholders: rawComposeWithPlaceholders,
 		AppConfig:               appConfig,
 	}, nil
 }
@@ -262,7 +262,15 @@ func injectPlaceholders(data []byte) ([]byte, error) {
 		}
 	}
 
-	return utils.MarshallAndFormat(composeConfig, 2)
+	out := ShallowComposeConfig{
+		Version:  composeConfig["version"].(string),
+		Services: composeConfig["services"],
+		Networks: composeConfig["networks"],
+		Volumes:  composeConfig["volumes"],
+		Secrets:  composeConfig["secrets"],
+		Configs:  composeConfig["configs"],
+	}
+	return utils.MarshallAndFormat(out, 2)
 }
 
 // Builds config attribute value placeholder
