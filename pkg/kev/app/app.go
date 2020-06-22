@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
@@ -57,24 +58,19 @@ func ValidateHasEnvs(root string, candidates []string) error {
 		return err
 	}
 
+	sort.Strings(envs)
 	var invalid []string
-	var counter = len(envs)
-	for x := 0; x < len(candidates); x++ {
-		for y := 0; y < len(envs); y++ {
-			if candidates[x] == envs[y] {
-				break
-			}
-			counter--
+
+	for _, c := range candidates {
+		i := sort.SearchStrings(envs, c)
+		valid := i < len(envs) && envs[i] == c
+		if !valid {
+			invalid = append(invalid, c)
 		}
-		if counter == 0 {
-			invalid = append(invalid, candidates[x])
-		}
-		counter = len(envs) - 1
 	}
 
-	iJoin := strings.Join(invalid, ", ")
-	if len(iJoin) > 0 {
-		return fmt.Errorf("cannot find environment(s): %s", iJoin)
+	if len(invalid) > 0 {
+		return fmt.Errorf("cannot find environment(s): %s", strings.Join(invalid, ", "))
 	}
 
 	return nil
