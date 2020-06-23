@@ -23,17 +23,27 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Definition provides details for the app's base compose and config files.
+// Definition, is the app definition including base compose, config files.
+// And, environment config files. Also, build config related to the most recent build.
 type Definition struct {
 	BaseCompose FileConfig
 	Config      FileConfig
 	Envs        []FileConfig
+	Build       BuildConfig
+}
+
+// BuildConfig, is an app definition's build config.
+// Mainly, recent compiled config.yaml and resolved compose.yaml data.
+type BuildConfig struct {
+	Compiled []FileConfig
+	Resolved []FileConfig
 }
 
 // FileConfig details an app definition FileConfig, including its Content and recommended file path.
 type FileConfig struct {
-	Content []byte
-	File    string
+	Environment string
+	Content     []byte
+	File        string
 }
 
 // Dir returns the application config's immediate parent directory

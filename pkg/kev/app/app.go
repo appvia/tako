@@ -28,11 +28,18 @@ import (
 	yaml3 "gopkg.in/yaml.v3"
 )
 
-// NewDefinition creates a new app definition
+const (
+	ComposeFile      = "compose.yaml"
+	ComposeBuildFile = "compose.build.yaml"
+	ConfigFile       = "config.yaml"
+	ConfigBuildFile  = "config-compiled.yaml"
+)
+
+// Init creates a new app definition manifest
 // based on a compose.yaml, inferred app config and required environments.
-func NewDefinition(root string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
-	composePath := path.Join(root, "compose.yaml")
-	configPath := path.Join(root, "config.yaml")
+func Init(root string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
+	composePath := path.Join(root, ComposeFile)
+	configPath := path.Join(root, ConfigFile)
 
 	envConfigs, err := createEnvData(envs, root, baseConfig)
 	if err != nil {
@@ -51,7 +58,59 @@ func NewDefinition(root string, compose []byte, baseConfig *config.Config, envs 
 	}, nil
 }
 
-// ValidateHasEnvs checks whether supplied environments exist or not.
+// GetDefinition returns the current app definition manifest
+func GetDefinition(root string, envs []string) (*Definition, error) {
+	composePath := path.Join(root, ComposeFile)
+	baseCompose, err := ioutil.ReadFile(composePath)
+	if err != nil {
+		return nil, err
+	}
+
+	configPath := path.Join(root, ConfigFile)
+	baseConfig, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var envConfigs []FileConfig
+	for _, env := range envs {
+		envConfig, err := GetEnvConfig(root, env)
+		if err != nil {
+			return nil, err
+		}
+		envConfigs = append(envConfigs, envConfig)
+	}
+
+	return &Definition{
+		BaseCompose: FileConfig{
+			Environment: "base",
+			Content:     baseCompose,
+			File:        composePath,
+		},
+		Config: FileConfig{
+			Environment: "base",
+			Content:     baseConfig,
+			File:        configPath,
+		},
+		Envs: envConfigs,
+	}, nil
+}
+
+// GetEnvConfig, retrieves the config.yaml for a specified environment.
+func GetEnvConfig(root string, env string) (FileConfig, error) {
+	configPath := path.Join(root, env, ConfigFile)
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return FileConfig{}, err
+	}
+	return FileConfig{
+		Environment: env,
+		Content:     content,
+		File:        configPath,
+	}, nil
+}
+
+// ValidateHasEnvs, checks whether supplied environments exist or not.
 func ValidateHasEnvs(root string, candidates []string) error {
 	envs, err := GetEnvs(root)
 	if err != nil {
@@ -76,7 +135,7 @@ func ValidateHasEnvs(root string, candidates []string) error {
 	return nil
 }
 
-// GetEnvs returns a string slice of all app environments
+// GetEnvs, returns a string slice of all app environments
 func GetEnvs(root string) ([]string, error) {
 	var envs []string
 
@@ -126,8 +185,9 @@ func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]F
 	var envConfigs []FileConfig
 	for _, env := range envs {
 		envConfigs = append(envConfigs, FileConfig{
-			Content: out,
-			File:    path.Join(appDir, env, "config.yaml"),
+			Environment: env,
+			Content:     out,
+			File:        path.Join(appDir, env, "config.yaml"),
 		})
 	}
 

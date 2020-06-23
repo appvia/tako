@@ -66,7 +66,7 @@ func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 		return nil, err
 	}
 
-	return app.NewDefinition(root, inferred.ComposeWithPlaceholders, inferred.AppConfig, envs)
+	return app.Init(root, inferred.ComposeWithPlaceholders, inferred.AppConfig, envs)
 }
 
 func loadAndParse(paths []string) (*compose.Config, error) {
