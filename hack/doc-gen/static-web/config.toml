@@ -1,0 +1,49 @@
+theme = "docuapi"
+themesdir = "themes"
+languageCode = "en-gb"
+baseurl = "https://docs.appvia.io/kev"
+title = "Kev Reference"
+
+disableKinds = ["taxonomyTerm"]
+
+# Code higlighting settings
+pygmentsCodefences = true
+pygmentsCodeFencesGuesSsyntax = false
+pygmentsOptions = ""
+pygmentsStyle = "monokai"
+pygmentsUseClasses = false
+
+defaultContentLanguage = "en"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.parser]
+      autoHeadingIDType = "github-ascii"
+
+[module]
+[module.hugoVersion]
+[[module.imports]]
+# We include the theme by "../.." above, but we need one module import for Hugo to detect us as a Hugo Module.
+path="github.com/bep/empty-hugo-module"
+
+[params]
+search = true
+
+# Configure the language example tabs.
+[[params.language_tabs]]
+key = "yaml"
+name = ""
+
+#Languages
+[languages]
+
+[languages.en]
+languageName = "English"
+weight = 2
+title = "Kev Reference"
+
+# Left sidebar footer items. Use HTMl or Markdown.
+toc_footers = []
+[languages.en.blackfriday]
+angledQuotes = false
+hrefTargetBlank = true
