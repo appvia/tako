@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/spf13/cobra"
 )
 
@@ -66,27 +66,42 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 	case count == 0:
 		envs, err = app.GetEnvs(BaseDir)
 		if err != nil {
-			return fmt.Errorf("build failed, %s", err)
+			return fmt.Errorf("builds failed, %s", err)
 		}
 	case count > 0:
 		if err := app.ValidateHasEnvs(BaseDir, envs); err != nil {
-			return fmt.Errorf("build failed, %s", err)
+			return fmt.Errorf("builds failed, %s", err)
 		}
 	}
 
-	compiledConfigs, err := config.Compile(BaseDir, BuildDir, envs)
+	definition, err := app.GetDefinition(BaseDir, envs)
+	if err != nil {
+		return err
+	}
+	built, err := app.Build(path.Join(BaseDir, BuildDir), definition)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("🔩 App build complete!")
+	var builds []app.FileConfig
+	builtEnvs := make(map[string]bool)
 
-	for _, compiledConfig := range compiledConfigs {
-		if err = ioutil.WriteFile(compiledConfig.File, compiledConfig.Content, os.ModePerm); err != nil {
+	builds = append(builds, built.Build.Compiled...)
+	builds = append(builds, built.Build.Interpolated...)
+	for _, build := range builds {
+		if err = ioutil.WriteFile(build.File, build.Content, os.ModePerm); err != nil {
 			return err
 		}
-		fmt.Printf("🔧 [%s] environment ready.\n", compiledConfig.Environment)
+		builtEnvs[build.Environment] = true
 	}
 
+	displayBuild(builtEnvs)
 	return nil
+}
+
+func displayBuild(builtEnvsSet map[string]bool) {
+	fmt.Println("🔩 App builds complete!")
+	for k, _ := range builtEnvsSet {
+		fmt.Printf("🔧 [%s] environment ready.\n", k)
+	}
 }

@@ -113,13 +113,6 @@ type Config struct {
 	Components map[string]Component `yaml:",omitempty,inline" json:"components,omitempty,inline"`
 }
 
-// CompiledConfig holds compiled environment configuration content and suggested file path
-type CompiledConfig struct {
-	Environment string
-	Content     []byte
-	File        string
-}
-
 // ShallowComposeConfig is used to ensure marshaled output is ordered correctly.
 type ShallowComposeConfig struct {
 	Version  string      `json:"version"`
