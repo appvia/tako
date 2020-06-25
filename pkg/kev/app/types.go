@@ -35,8 +35,8 @@ type Definition struct {
 // BuildConfig, is an app definition's build config.
 // Mainly, recent compiled config.yaml and resolved compose.yaml data.
 type BuildConfig struct {
-	Compiled []FileConfig
-	Resolved []FileConfig
+	Compiled     []FileConfig
+	Interpolated []FileConfig
 }
 
 // FileConfig details an app definition FileConfig, including its Content and recommended file path.

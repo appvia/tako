@@ -36,12 +36,12 @@ func Build(path string, appDef *Definition) (*Definition, error) {
 
 	appDef.Build.Compiled = append(appDef.Build.Compiled, compiled...)
 
-	resolved, err := ResolveWithConfig(appDef)
+	interpolated, err := InterpolateUsingConfig(appDef)
 	if err != nil {
 		return nil, err
 	}
 
-	appDef.Build.Resolved = append(appDef.Build.Resolved, resolved...)
+	appDef.Build.Interpolated = append(appDef.Build.Interpolated, interpolated...)
 	return appDef, nil
 }
 
@@ -102,31 +102,31 @@ func compileEnvConfig(compilePath, env string, envConfig config.Config, baseConf
 	return compiledEnvConfig, nil
 }
 
-// ResolveWithConfig, interpolates the base compose.yaml creating different
+// InterpolateUsingConfig, interpolates the base compose.yaml creating different
 // variation for every compiled config.yaml per environment.
-func ResolveWithConfig(appDef *Definition) ([]FileConfig, error) {
+func InterpolateUsingConfig(appDef *Definition) ([]FileConfig, error) {
 	target := interpolate.
 		NewTarget().
 		Content(appDef.BaseCompose.Content).
 		Resolver(interpolate.NewJsonPathResolver())
 
-	var resolved []FileConfig
+	var interpolated []FileConfig
 	for _, compiled := range appDef.Build.Compiled {
 		source, err := yaml.YAMLToJSON(compiled.Content)
 		if err != nil {
 			return nil, err
 		}
 
-		interpolated, err := target.Interpolate(source)
+		content, err := target.Interpolate(source)
 		if err != nil {
 			return nil, err
 		}
 
-		resolved = append(resolved, FileConfig{
+		interpolated = append(interpolated, FileConfig{
 			Environment: compiled.Environment,
-			Content:     interpolated,
+			Content:     content,
 			File:        path.Join(path.Dir(compiled.File), ComposeBuildFile),
 		})
 	}
-	return resolved, nil
+	return interpolated, nil
 }

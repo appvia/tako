@@ -22,10 +22,6 @@ import (
 	"path"
 	"sort"
 	"strings"
-
-	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/utils"
-	yaml3 "gopkg.in/yaml.v3"
 )
 
 const (
@@ -34,29 +30,6 @@ const (
 	ConfigFile       = "config.yaml"
 	ConfigBuildFile  = "config-compiled.yaml"
 )
-
-// Init creates a new app definition manifest
-// based on a compose.yaml, inferred app config and required environments.
-func Init(root string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
-	composePath := path.Join(root, ComposeFile)
-	configPath := path.Join(root, ConfigFile)
-
-	envConfigs, err := createEnvData(envs, root, baseConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	configData, err := baseConfig.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Definition{
-		BaseCompose: FileConfig{Content: compose, File: composePath},
-		Config:      FileConfig{Content: configData, File: configPath},
-		Envs:        envConfigs,
-	}, nil
-}
 
 // GetDefinition returns the current app definition manifest
 func GetDefinition(root string, envs []string) (*Definition, error) {
@@ -151,45 +124,4 @@ func GetEnvs(root string) ([]string, error) {
 	}
 
 	return envs, nil
-}
-
-func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]FileConfig, error) {
-	envConfig := &EnvConfig{
-		Workload: &yaml3.Node{
-			Kind:        yaml3.MappingNode,
-			LineComment: "Override global workload settings here.",
-		},
-		Service: &yaml3.Node{
-			Kind:        yaml3.MappingNode,
-			LineComment: "Override global service settings here.",
-		},
-		Volumes: &yaml3.Node{
-			Kind:        yaml3.MappingNode,
-			LineComment: "Override global volumes settings here.",
-		},
-		Components: make(map[string]*yaml3.Node),
-	}
-
-	for key := range baseConfig.Components {
-		envConfig.Components[key] = &yaml3.Node{
-			Kind:        yaml3.MappingNode,
-			LineComment: fmt.Sprintf("Override the %s service settings here.", key),
-		}
-	}
-
-	out, err := utils.MarshallAndFormat(&envConfig, 2)
-	if err != nil {
-		return nil, err
-	}
-
-	var envConfigs []FileConfig
-	for _, env := range envs {
-		envConfigs = append(envConfigs, FileConfig{
-			Environment: env,
-			Content:     out,
-			File:        path.Join(appDir, env, "config.yaml"),
-		})
-	}
-
-	return envConfigs, nil
 }

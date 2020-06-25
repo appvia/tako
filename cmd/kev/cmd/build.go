@@ -87,7 +87,7 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 	builtEnvs := make(map[string]bool)
 
 	builds = append(builds, built.Build.Compiled...)
-	builds = append(builds, built.Build.Resolved...)
+	builds = append(builds, built.Build.Interpolated...)
 	for _, build := range builds {
 		if err = ioutil.WriteFile(build.File, build.Content, os.ModePerm); err != nil {
 			return err
