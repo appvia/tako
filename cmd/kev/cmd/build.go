@@ -74,7 +74,7 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	definition, err := app.GetDefinition(BaseDir, envs)
+	definition, err := app.GetDefinition(BaseDir, BuildDir, envs)
 	if err != nil {
 		return err
 	}
@@ -100,8 +100,8 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 }
 
 func displayBuild(builtEnvsSet map[string]bool) {
-	fmt.Println("🔩 App builds complete!")
-	for k, _ := range builtEnvsSet {
+	for k := range builtEnvsSet {
 		fmt.Printf("🔧 [%s] environment ready.\n", k)
 	}
+	fmt.Println("🔩 App builds complete!")
 }

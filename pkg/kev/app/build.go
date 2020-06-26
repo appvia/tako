@@ -25,7 +25,7 @@ import (
 	"github.com/imdario/mergo"
 )
 
-// Build, builds the app based on an app definition manifest
+// Build builds the app based on an app definition manifest
 func Build(path string, appDef *Definition) (*Definition, error) {
 	appDef.Build = BuildConfig{}
 
@@ -93,7 +93,7 @@ func compileEnvConfig(compilePath, env string, envConfig config.Config, baseConf
 		return FileConfig{}, err
 	}
 
-	compiledConfigPath := path.Join(compilePath, env, "config-compiled.yaml")
+	compiledConfigPath := path.Join(compilePath, env, ConfigBuildFile)
 	compiledEnvConfig := FileConfig{
 		Environment: env,
 		Content:     rawConfig,
@@ -102,7 +102,7 @@ func compileEnvConfig(compilePath, env string, envConfig config.Config, baseConf
 	return compiledEnvConfig, nil
 }
 
-// InterpolateUsingConfig, interpolates the base compose.yaml creating different
+// InterpolateUsingConfig interpolates the base compose.yaml creating different
 // variation for every compiled config.yaml per environment.
 func InterpolateUsingConfig(appDef *Definition) ([]FileConfig, error) {
 	target := interpolate.
