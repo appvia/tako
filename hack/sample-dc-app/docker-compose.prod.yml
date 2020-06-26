@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: frontend.Dockerfile
     environment:
-      PORT: 8080
+      PORT: ${PORT}
     ports:
     - '80:8080'
     networks:

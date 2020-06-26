@@ -18,7 +18,9 @@ package bootstrap
 
 import (
 	"io/ioutil"
+	"os"
 	"path"
+	"regexp"
 
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
@@ -71,6 +73,7 @@ func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 
 func loadAndParse(paths []string) (*compose.Config, error) {
 	var configFiles []compose.ConfigFile
+	envVars := map[string]string{}
 
 	for _, p := range paths {
 		b, err := ioutil.ReadFile(p)
@@ -82,12 +85,27 @@ func loadAndParse(paths []string) (*compose.Config, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		mineHostEnvVars(b, envVars)
 		configFiles = append(configFiles, compose.ConfigFile{Filename: p, Config: parsed})
 	}
 
 	return loader.Load(compose.ConfigDetails{
 		WorkingDir:  path.Dir(paths[0]),
 		ConfigFiles: configFiles,
+		Environment: envVars,
 	})
+}
+
+func mineHostEnvVars(data []byte, target map[string]string) {
+	pattern := regexp.MustCompile(`\$\{(.*)\}`)
+	found := pattern.FindAllSubmatch(data, -1)
+	for _, f := range found {
+		envVar := string(f[1])
+		val := os.Getenv(envVar)
+		// ensures an env var like PORT: ${PORT} is not ignored post parse and load
+		if len(val) < 1 {
+			val = " "
+		}
+		target[envVar] = val
+	}
 }
