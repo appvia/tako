@@ -25,14 +25,18 @@ import (
 )
 
 const (
-	ComposeFile      = "compose.yaml"
+	// ComposeFile base compose file name
+	ComposeFile = "compose.yaml"
+	// ComposeBuildFile build time compose file name
 	ComposeBuildFile = "compose.build.yaml"
-	ConfigFile       = "config.yaml"
-	ConfigBuildFile  = "config-compiled.yaml"
+	// ConfigFile config file name
+	ConfigFile = "config.yaml"
+	// ConfigBuildFile build time config file name
+	ConfigBuildFile = "config.build.yaml"
 )
 
 // GetDefinition returns the current app definition manifest
-func GetDefinition(root string, envs []string) (*Definition, error) {
+func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 	composePath := path.Join(root, ComposeFile)
 	baseCompose, err := ioutil.ReadFile(composePath)
 	if err != nil {
@@ -54,6 +58,20 @@ func GetDefinition(root string, envs []string) (*Definition, error) {
 		envConfigs = append(envConfigs, envConfig)
 	}
 
+	var buildConfig BuildConfig
+	for _, env := range envs {
+		compiled, err := GetBuildConfig(root, buildDir, env, ConfigBuildFile)
+		if err != nil {
+			return nil, err
+		}
+		interpolated, err := GetBuildConfig(root, buildDir, env, ComposeBuildFile)
+		if err != nil {
+			return nil, err
+		}
+		buildConfig.Compiled = append(buildConfig.Compiled, compiled)
+		buildConfig.Interpolated = append(buildConfig.Interpolated, interpolated)
+	}
+
 	return &Definition{
 		BaseCompose: FileConfig{
 			Environment: "base",
@@ -65,12 +83,13 @@ func GetDefinition(root string, envs []string) (*Definition, error) {
 			Content:     baseConfig,
 			File:        configPath,
 		},
-		Envs: envConfigs,
+		Envs:  envConfigs,
+		Build: buildConfig,
 	}, nil
 }
 
-// GetEnvConfig, retrieves the config.yaml for a specified environment.
-func GetEnvConfig(root string, env string) (FileConfig, error) {
+// GetEnvConfig retrieves the config.yaml for a specified environment.
+func GetEnvConfig(root, env string) (FileConfig, error) {
 	configPath := path.Join(root, env, ConfigFile)
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
@@ -83,7 +102,21 @@ func GetEnvConfig(root string, env string) (FileConfig, error) {
 	}, nil
 }
 
-// ValidateHasEnvs, checks whether supplied environments exist or not.
+// GetBuildConfig retrieves the compiled config.build.yaml / interpolated compose.build.yaml for a specified environment.
+func GetBuildConfig(root, buildDir, env, file string) (FileConfig, error) {
+	configPath := path.Join(root, buildDir, env, file)
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return FileConfig{}, err
+	}
+	return FileConfig{
+		Environment: env,
+		Content:     content,
+		File:        configPath,
+	}, nil
+}
+
+// ValidateHasEnvs checks whether supplied environments exist or not.
 func ValidateHasEnvs(root string, candidates []string) error {
 	envs, err := GetEnvs(root)
 	if err != nil {
@@ -108,7 +141,7 @@ func ValidateHasEnvs(root string, candidates []string) error {
 	return nil
 }
 
-// GetEnvs, returns a string slice of all app environments
+// GetEnvs returns a string slice of all app environments
 func GetEnvs(root string) ([]string, error) {
 	var envs []string
 
