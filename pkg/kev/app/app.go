@@ -60,11 +60,8 @@ func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 
 	var buildConfig BuildConfig
 	for _, env := range envs {
-		compiled, err := GetBuildConfig(root, buildDir, env, ConfigBuildFile)
-		if err != nil {
-			return nil, err
-		}
-		interpolated, err := GetBuildConfig(root, buildDir, env, ComposeBuildFile)
+		// get compiled configuration and interpolated compose for a given environment
+		compiled, interpolated, err := GetBuildConfig(root, buildDir, env)
 		if err != nil {
 			return nil, err
 		}
@@ -102,18 +99,29 @@ func GetEnvConfig(root, env string) (FileConfig, error) {
 	}, nil
 }
 
-// GetBuildConfig retrieves the compiled config.build.yaml / interpolated compose.build.yaml for a specified environment.
-func GetBuildConfig(root, buildDir, env, file string) (FileConfig, error) {
-	configPath := path.Join(root, buildDir, env, file)
-	content, err := ioutil.ReadFile(configPath)
+// GetBuildConfig retrieves the compiled config.build.yaml & interpolated compose.build.yaml for a specified environment.
+func GetBuildConfig(root, buildDir, env string) (FileConfig, FileConfig, error) {
+	configPath := path.Join(root, buildDir, env, ConfigBuildFile)
+	configContent, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return FileConfig{}, err
+		return FileConfig{}, FileConfig{}, err
 	}
+
+	composePath := path.Join(root, buildDir, env, ComposeBuildFile)
+	composeContent, err := ioutil.ReadFile(composePath)
+	if err != nil {
+		return FileConfig{}, FileConfig{}, err
+	}
+
 	return FileConfig{
-		Environment: env,
-		Content:     content,
-		File:        configPath,
-	}, nil
+			Environment: env,
+			Content:     configContent,
+			File:        configPath,
+		}, FileConfig{
+			Environment: env,
+			Content:     composeContent,
+			File:        composePath,
+		}, nil
 }
 
 // ValidateHasEnvs checks whether supplied environments exist or not.
