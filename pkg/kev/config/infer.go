@@ -205,8 +205,7 @@ func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
 	// get workload object
 	w := cmp.Workload
-
-	w.LivenessProbeDisable = s.HealthCheck.Disable
+	w.LivenessProbeDisable = &s.HealthCheck.Disable
 	w.LivenessProbeCommand = s.HealthCheck.Test
 	w.LivenessProbeInterval = s.HealthCheck.Interval.String()
 	w.LivenessProbeInitialDelay = s.HealthCheck.StartPeriod.String()

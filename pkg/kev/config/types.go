@@ -49,7 +49,7 @@ type Workload struct {
 	// max-memory, Default: 100M. Memory limit per workload.
 	MaxMemory string `yaml:"max-memory,omitempty" json:"max_memory,omitempty" default:"100M"`
 	// liveness-probe-disable, Default: false. Whether to enable liveness probe.
-	LivenessProbeDisable bool `yaml:"liveness-probe-disable,omitempty" json:"liveness_probe_disable,omitempty" default:"false"`
+	LivenessProbeDisable *bool `yaml:"liveness-probe-disable,omitempty" json:"liveness_probe_disable,omitempty" default:"false"`
 	// liveness-probe-interval, Default: 1m. Liveness probe interval.
 	LivenessProbeInterval string `yaml:"liveness-probe-interval,omitempty" json:"liveness_probe_interval,omitempty" default:"1m"`
 	// liveness-probe-retries, Default: 3. Liveness probe retry limit.
