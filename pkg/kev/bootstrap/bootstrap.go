@@ -100,7 +100,7 @@ func mineHostEnvVars(data []byte, target map[string]string) {
 	pattern := regexp.MustCompile(`\$\{(.*)\}`)
 	found := pattern.FindAllSubmatch(data, -1)
 	for _, f := range found {
-		_, envVar := string(f[0]), string(f[1])
+		envVar := string(f[1])
 		val := os.Getenv(envVar)
 		// ensures an env var like PORT: ${PORT} is not ignored post parse and load
 		if len(val) < 1 {
