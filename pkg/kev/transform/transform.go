@@ -17,29 +17,17 @@
 package transform
 
 import (
-	"fmt"
-
 	"github.com/appvia/kube-devx/pkg/kev/defaults"
-	"github.com/appvia/kube-devx/pkg/kev/utils"
 	compose "github.com/compose-spec/compose-go/types"
-	"github.com/goccy/go-yaml"
 	"github.com/imdario/mergo"
 )
 
-// Transform is a transform func type.
-// Documents how a transform func should be created.
-// Useful as a function param for functions that accept transforms.
-type Transform func(data []byte) ([]byte, error)
+type Transform func(*compose.Project) error
 
 // AugmentOrAddDeploy augments a service's existing deploy block or attaches a new one with default presets.
-func AugmentOrAddDeploy(data []byte) ([]byte, error) {
-	x, err := utils.UnmarshallComposeConfig(data)
-	if err != nil {
-		return []byte{}, err
-	}
-
+func AugmentOrAddDeploy(x *compose.Project) error {
 	var updated compose.Services
-	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
+	err := x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
 		var deploy = defaults.Deploy()
 
 		if svc.Deploy != nil {
@@ -53,23 +41,19 @@ func AugmentOrAddDeploy(data []byte) ([]byte, error) {
 		return nil
 	})
 	if err != nil {
-		return []byte{}, err
+		return err
 	}
 
 	x.Services = updated
-	return yaml.Marshal(x)
+
+	return nil
 }
 
 // HealthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
 // to any service missing a healthcheck block.
-func HealthCheckBase(data []byte) ([]byte, error) {
-	x, err := utils.UnmarshallComposeConfig(data)
-	if err != nil {
-		return []byte{}, err
-	}
-
+func HealthCheckBase(x *compose.Project) error {
 	var updated compose.Services
-	err = x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
+	err := x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
 		if svc.HealthCheck == nil {
 			check := defaults.HealthCheck(svc.Name)
 			svc.HealthCheck = &check
@@ -78,24 +62,19 @@ func HealthCheckBase(data []byte) ([]byte, error) {
 		return nil
 	})
 	if err != nil {
-		return []byte{}, err
+		return err
 	}
 
 	x.Services = updated
-	return yaml.Marshal(x)
+	return nil
 }
 
 // ExternaliseSecrets ensures that all top level secrets are set to external
 // to specify that the secrets have already been created.
-func ExternaliseSecrets(data []byte) ([]byte, error) {
-	x, err := utils.UnmarshallComposeConfig(data)
-	if err != nil {
-		return []byte{}, err
-	}
-
+func ExternaliseSecrets(x *compose.Project) error {
 	noSecrets := len(x.Secrets) < 1
 	if noSecrets {
-		return data, nil
+		return nil
 	}
 
 	updated := make(map[string]compose.SecretConfig)
@@ -106,20 +85,15 @@ func ExternaliseSecrets(data []byte) ([]byte, error) {
 	}
 
 	x.Secrets = updated
-	return yaml.Marshal(x)
+	return nil
 }
 
 // ExternaliseConfigs ensures that all top level configs are set to external
 // to specify that the configs have already been created.
-func ExternaliseConfigs(data []byte) ([]byte, error) {
-	x, err := utils.UnmarshallComposeConfig(data)
-	if err != nil {
-		return []byte{}, err
-	}
-
+func ExternaliseConfigs(x *compose.Project) error {
 	noConfigs := len(x.Configs) < 1
 	if noConfigs {
-		return data, nil
+		return nil
 	}
 
 	updated := make(map[string]compose.ConfigObjConfig)
@@ -130,16 +104,5 @@ func ExternaliseConfigs(data []byte) ([]byte, error) {
 	}
 
 	x.Configs = updated
-	return yaml.Marshal(x)
-}
-
-// Echo can be used to view data at different stages of
-// a transform pipeline.
-func Echo(data []byte) ([]byte, error) {
-	x, err := utils.UnmarshallComposeConfig(data)
-	if err != nil {
-		return []byte{}, err
-	}
-	fmt.Println(string(data))
-	return yaml.Marshal(x)
+	return nil
 }

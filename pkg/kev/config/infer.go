@@ -29,55 +29,35 @@ import (
 // and derived application configuration
 type Inferred struct {
 	ComposeWithPlaceholders []byte
-	AppConfig               *Config
+	BaseConfig              *Config
 }
 
 // Infer looks at resultant compose.yaml and extracts elements useful to
 // deployment in Kubernetes, replaces values of those attributes with placeholders
 // and places actual values in config.yaml for further tweaking.
-func Infer(data []byte) (Inferred, error) {
-	// Application Configuration
-	appConfig := New()
+func Infer(composeConfig *compose.Project) (Inferred, error) {
+	baseConfig := New()
 
-	composeConfig, err := utils.UnmarshallComposeConfig(data)
-	if err != nil {
-		return Inferred{}, err
-	}
+	inferVolumesInfo(composeConfig, baseConfig)
+	setSensibleDefaults(baseConfig)
 
-	// Extract volumes information
-	inferVolumesInfo(composeConfig, appConfig)
-	// Set common app level settings
-	setSensibleDefaults(appConfig)
-
-	// Service level parameters
 	for _, s := range composeConfig.Services {
-		// Initiate config component (i.e. composeConfig service)
 		c := &Component{}
-		// Environment information
 		inferEnvironment(&s, c)
-		// Derive service type
 		inferService(&s, c)
-		// Deployment details
 		inferDeploymentInfo(&s, c)
-		// Healthcheck details
 		inferHealthcheckInfo(&s, c)
-		// Add component to the app Config
-		appConfig.Components[s.Name] = *c
+		baseConfig.Components[s.Name] = *c
 	}
 
-	rawCompose, err := yaml.Marshal(composeConfig)
-	if err != nil {
-		return Inferred{}, err
-	}
-
-	rawComposeWithPlaceholders, err := injectPlaceholders(rawCompose)
+	withPlaceholders, err := injectPlaceholders(composeConfig)
 	if err != nil {
 		return Inferred{}, err
 	}
 
 	return Inferred{
-		ComposeWithPlaceholders: rawComposeWithPlaceholders,
-		AppConfig:               appConfig,
+		ComposeWithPlaceholders: withPlaceholders,
+		BaseConfig:              baseConfig,
 	}, nil
 }
 
@@ -90,7 +70,7 @@ func setSensibleDefaults(appConfig *Config) {
 }
 
 // Extracts volumes information
-func inferVolumesInfo(composeConfig *compose.Config, appConfig *Config) {
+func inferVolumesInfo(composeConfig *compose.Project, appConfig *Config) {
 	// Volumes map
 	vols := make(map[string]Volume)
 
@@ -216,13 +196,20 @@ func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // injectPlaceholders substitutes key attribute values with placeholders
-func injectPlaceholders(data []byte) ([]byte, error) {
+func injectPlaceholders(composeConfig *compose.Project) ([]byte, error) {
+	data, err := yaml.Marshal(composeConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	// Unmarshal compose config to map[string]interface{}
-	composeConfig, _ := utils.UnmarshallGeneral(data)
+	opaqueConfig, err := utils.UnmarshallGeneral(data)
+	if err != nil {
+		return nil, err
+	}
 
 	// Service specific placeholders
-	for name, svc := range composeConfig["services"].(map[string]interface{}) {
+	for name, svc := range opaqueConfig["services"].(map[string]interface{}) {
 		// placeholder prefix
 		prefix := fmt.Sprintf("%s.workload", name)
 
@@ -262,12 +249,11 @@ func injectPlaceholders(data []byte) ([]byte, error) {
 	}
 
 	out := ShallowComposeConfig{
-		Version:  composeConfig["version"].(string),
-		Services: composeConfig["services"],
-		Networks: composeConfig["networks"],
-		Volumes:  composeConfig["volumes"],
-		Secrets:  composeConfig["secrets"],
-		Configs:  composeConfig["configs"],
+		Services: opaqueConfig["services"],
+		Networks: opaqueConfig["networks"],
+		Volumes:  opaqueConfig["volumes"],
+		Secrets:  opaqueConfig["secrets"],
+		Configs:  opaqueConfig["configs"],
 	}
 	return utils.MarshallAndFormat(out, 2)
 }

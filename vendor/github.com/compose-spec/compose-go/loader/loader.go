@@ -45,10 +45,16 @@ type Options struct {
 	SkipValidation bool
 	// Skip interpolation
 	SkipInterpolation bool
+	// Skip normalization
+	SkipNormalization bool
+	// Skip consistency check
+	SkipConsistencyCheck bool
 	// Interpolation options
 	Interpolate *interp.Options
 	// Discard 'env_file' entries after resolving to 'environment' section
 	discardEnvFiles bool
+	// Set project name
+	Name string
 }
 
 // WithDiscardEnvFiles sets the Options to discard the `env_file` section after resolving to
@@ -76,7 +82,7 @@ func ParseYAML(source []byte) (map[string]interface{}, error) {
 }
 
 // Load reads a ConfigDetails and returns a fully loaded configuration
-func Load(configDetails types.ConfigDetails, options ...func(*Options)) (*types.Config, error) {
+func Load(configDetails types.ConfigDetails, options ...func(*Options)) (*types.Project, error) {
 	if len(configDetails.ConfigFiles) < 1 {
 		return nil, errors.Errorf("No files specified")
 	}
@@ -94,8 +100,6 @@ func Load(configDetails types.ConfigDetails, options ...func(*Options)) (*types.
 	}
 
 	configs := []*types.Config{}
-	var err error
-
 	for _, file := range configDetails.ConfigFiles {
 		configDict := file.Config
 		version := schema.Version(configDict)
@@ -107,6 +111,7 @@ func Load(configDetails types.ConfigDetails, options ...func(*Options)) (*types.
 		}
 
 		if !opts.SkipInterpolation {
+			var err error
 			configDict, err = interpolateConfig(configDict, *opts.Interpolate)
 			if err != nil {
 				return nil, err
@@ -135,7 +140,37 @@ func Load(configDetails types.ConfigDetails, options ...func(*Options)) (*types.
 		configs = append(configs, cfg)
 	}
 
-	return merge(configs)
+	model, err := merge(configs)
+	if err != nil {
+		return nil, err
+	}
+
+	project := &types.Project{
+		Name:       opts.Name,
+		WorkingDir: configDetails.WorkingDir,
+		Services:   model.Services,
+		Networks:   model.Networks,
+		Volumes:    model.Volumes,
+		Secrets:    model.Secrets,
+		Configs:    model.Configs,
+		Extensions: model.Extensions,
+	}
+
+	if !opts.SkipNormalization {
+		err = normalize(project)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !opts.SkipConsistencyCheck {
+		err = checkConsistency(project)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return project, nil
 }
 
 func groupXFieldsIntoExtensions(dict map[string]interface{}) map[string]interface{} {

@@ -3,7 +3,7 @@ module github.com/appvia/kube-devx
 go 1.14
 
 require (
-	github.com/compose-spec/compose-go v0.0.0-20200608091248-554a39de0b3a
+	github.com/compose-spec/compose-go v0.0.0-20200629133725-59b25574fd55
 	github.com/disiqueira/gotree v1.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.9.0 // indirect
