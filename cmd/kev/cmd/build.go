@@ -85,9 +85,7 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	builtEnvs := make(map[string]bool)
-	for _, env := range envs {
-		envBuild := built.Build[env]
-
+	for env, envBuild := range built.Build {
 		// create dir for env build first
 		if err := os.MkdirAll(envBuild.ConfigFile.Path(), 0700); err != nil {
 			return err

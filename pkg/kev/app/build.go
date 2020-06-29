@@ -26,20 +26,43 @@ import (
 )
 
 // Build builds the app based on an app definition manifest
-func Build(path string, appDef *Definition) (*Definition, error) {
+func Build(buildRoot string, appDef *Definition) (*Definition, error) {
 
 	appDef.Build = make(map[string]BuildConfig)
+
+	// always add "base" build configuration
+	baseConfigFile := FileConfig{
+		Environment: "base",
+		Content:     appDef.BaseConfig.Content, // no env changes necessary
+		File:        path.Join(buildRoot, ConfigBuildFile),
+	}
+
+	interpolatedBaseCompose, err := InterpolateCompose(buildRoot, baseConfigFile, appDef.BaseCompose)
+	if err != nil {
+		return nil, err
+	}
+
+	baseComposeFile := FileConfig{
+		Environment: "base",
+		Content:     interpolatedBaseCompose.Content,
+		File:        path.Join(buildRoot, ComposeBuildFile),
+	}
+
+	appDef.Build["base"] = BuildConfig{
+		ConfigFile:  baseConfigFile,
+		ComposeFile: baseComposeFile,
+	}
 
 	// iterate through app defined environments
 	for name, envConfig := range appDef.Envs {
 		// get compiled config for current environment
-		compiledEnvConfig, err := CompileConfig(path, envConfig, appDef.BaseConfig)
+		compiledEnvConfig, err := CompileConfig(buildRoot, envConfig, appDef.BaseConfig)
 		if err != nil {
 			return nil, err
 		}
 
 		// interpolate base compose with compiled env config params
-		interpolatedCompose, err := InterpolateCompose(path, compiledEnvConfig, appDef.BaseCompose)
+		interpolatedCompose, err := InterpolateCompose(buildRoot, compiledEnvConfig, appDef.BaseCompose)
 		if err != nil {
 			return nil, err
 		}

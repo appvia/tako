@@ -62,6 +62,17 @@ func GetDefinition(root, buildDir string, envs []string, includeBuildInfo bool) 
 	// Build configuration will be only present after initial build
 	// - respect includeBuildInfo argument passed to GetDefinition.
 	if includeBuildInfo == true {
+		// always preload "base" build configuration
+		buildBaseConfigFile, buildBaseComposeFile, err := GetBuildConfig(root, buildDir, "")
+		if err != nil {
+			return nil, err
+		}
+		buildConfig["base"] = BuildConfig{
+			ConfigFile:  buildBaseConfigFile,
+			ComposeFile: buildBaseComposeFile,
+		}
+
+		// iterate through envs
 		for _, env := range envs {
 			buildConfigFile, buildComposeFile, err := GetBuildConfig(root, buildDir, env)
 			if err != nil {
