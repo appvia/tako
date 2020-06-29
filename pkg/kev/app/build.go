@@ -58,12 +58,12 @@ func Build(path string, appDef *Definition) (*Definition, error) {
 // CompileConfig calculates effective configuration for given environment.
 // i.e. a base configuration extended/overridden by environment specific configuration.
 func CompileConfig(buildRoot string, env, base FileConfig) (FileConfig, error) {
-	baseConfig, err := config.Marshal(base.Content)
+	baseConfig, err := config.Unmarshal(base.Content)
 	if err != nil {
 		return FileConfig{}, err
 	}
 
-	envConfig, err := config.Marshal(env.Content)
+	envConfig, err := config.Unmarshal(env.Content)
 	if err != nil {
 		return FileConfig{}, err
 	}
