@@ -36,7 +36,7 @@ const (
 )
 
 // GetDefinition returns the current app definition manifest
-func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
+func GetDefinition(root, buildDir string, envs []string, includeBuildInfo bool) (*Definition, error) {
 	composePath := path.Join(root, ComposeFile)
 	baseCompose, err := ioutil.ReadFile(composePath)
 	if err != nil {
@@ -49,24 +49,29 @@ func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 		return nil, err
 	}
 
-	var envConfigs []FileConfig
+	envConfigs := make(map[string]FileConfig)
 	for _, env := range envs {
 		envConfig, err := GetEnvConfig(root, env)
 		if err != nil {
 			return nil, err
 		}
-		envConfigs = append(envConfigs, envConfig)
+		envConfigs[env] = envConfig
 	}
 
-	var buildConfig BuildConfig
-	for _, env := range envs {
-		// get compiled configuration and interpolated compose for a given environment
-		compiled, interpolated, err := GetBuildConfig(root, buildDir, env)
-		if err != nil {
-			return nil, err
+	buildConfig := make(map[string]BuildConfig)
+	// Build configuration will be only present after initial build
+	// - respect includeBuildInfo argument passed to GetDefinition.
+	if includeBuildInfo == true {
+		for _, env := range envs {
+			buildConfigFile, buildComposeFile, err := GetBuildConfig(root, buildDir, env)
+			if err != nil {
+				return nil, err
+			}
+			buildConfig[env] = BuildConfig{
+				ConfigFile:  buildConfigFile,
+				ComposeFile: buildComposeFile,
+			}
 		}
-		buildConfig.Compiled = append(buildConfig.Compiled, compiled)
-		buildConfig.Interpolated = append(buildConfig.Interpolated, interpolated)
 	}
 
 	return &Definition{
@@ -75,7 +80,7 @@ func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 			Content:     baseCompose,
 			File:        composePath,
 		},
-		Config: FileConfig{
+		BaseConfig: FileConfig{
 			Environment: "base",
 			Content:     baseConfig,
 			File:        configPath,

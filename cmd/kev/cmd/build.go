@@ -74,25 +74,32 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	definition, err := app.GetDefinition(BaseDir, BuildDir, envs)
+	definition, err := app.GetDefinition(BaseDir, BuildDir, envs, false)
 	if err != nil {
 		return err
 	}
+
 	built, err := app.Build(path.Join(BaseDir, BuildDir), definition)
 	if err != nil {
 		return err
 	}
 
-	var builds []app.FileConfig
 	builtEnvs := make(map[string]bool)
+	for _, env := range envs {
+		envBuild := built.Build[env]
 
-	builds = append(builds, built.Build.Compiled...)
-	builds = append(builds, built.Build.Interpolated...)
-	for _, build := range builds {
-		if err = ioutil.WriteFile(build.File, build.Content, os.ModePerm); err != nil {
+		// create dir for env build first
+		if err := os.MkdirAll(envBuild.ConfigFile.Path(), 0700); err != nil {
 			return err
 		}
-		builtEnvs[build.Environment] = true
+
+		if err = ioutil.WriteFile(envBuild.ConfigFile.File, envBuild.ConfigFile.Content, os.ModePerm); err != nil {
+			return err
+		}
+		if err = ioutil.WriteFile(envBuild.ComposeFile.File, envBuild.ComposeFile.Content, os.ModePerm); err != nil {
+			return err
+		}
+		builtEnvs[env] = true
 	}
 
 	displayBuild(builtEnvs)
