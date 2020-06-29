@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -49,24 +50,43 @@ func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 		return nil, err
 	}
 
-	var envConfigs []FileConfig
+	envConfigs := make(map[string]FileConfig)
 	for _, env := range envs {
 		envConfig, err := GetEnvConfig(root, env)
 		if err != nil {
 			return nil, err
 		}
-		envConfigs = append(envConfigs, envConfig)
+		envConfigs[env] = envConfig
 	}
 
-	var buildConfig BuildConfig
-	for _, env := range envs {
-		// get compiled configuration and interpolated compose for a given environment
-		compiled, interpolated, err := GetBuildConfig(root, buildDir, env)
-		if err != nil {
-			return nil, err
+	// Build configuration will be only present after initial build
+	// so in case it doesn't exist just inform the user to run `kev build`
+	buildConfig := make(map[string]BuildConfig)
+
+	// always preload "base" build configuration
+	buildBaseConfigFile, buildBaseComposeFile, err := GetBuildConfig(root, buildDir, "")
+	if err != nil {
+		fmt.Printf("😱 Couldn't get base build config. Make sure to run `kev build` first: %s\n", err)
+	}
+	if !reflect.DeepEqual(buildBaseConfigFile, FileConfig{}) && !reflect.DeepEqual(buildBaseComposeFile, FileConfig{}) {
+		buildConfig["base"] = BuildConfig{
+			ConfigFile:  buildBaseConfigFile,
+			ComposeFile: buildBaseComposeFile,
 		}
-		buildConfig.Compiled = append(buildConfig.Compiled, compiled)
-		buildConfig.Interpolated = append(buildConfig.Interpolated, interpolated)
+	}
+
+	// iterate through envs
+	for _, env := range envs {
+		buildConfigFile, buildComposeFile, err := GetBuildConfig(root, buildDir, env)
+		if err != nil {
+			fmt.Printf("😱 Couldn't get build config for %s. Make sure to run `kev build` first: %s\n", env, err)
+		}
+		if !reflect.DeepEqual(buildConfigFile, FileConfig{}) && !reflect.DeepEqual(buildComposeFile, FileConfig{}) {
+			buildConfig[env] = BuildConfig{
+				ConfigFile:  buildConfigFile,
+				ComposeFile: buildComposeFile,
+			}
+		}
 	}
 
 	return &Definition{
@@ -75,7 +95,7 @@ func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 			Content:     baseCompose,
 			File:        composePath,
 		},
-		Config: FileConfig{
+		BaseConfig: FileConfig{
 			Environment: "base",
 			Content:     baseConfig,
 			File:        configPath,

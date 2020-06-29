@@ -108,7 +108,7 @@ func createAppFilesystem(def *app.Definition) error {
 	if err := ioutil.WriteFile(def.BaseCompose.File, def.BaseCompose.Content, os.ModePerm); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(def.Config.File, def.Config.Content, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(def.BaseConfig.File, def.BaseConfig.Content, os.ModePerm); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func displayInit(composeFiles []string, def *app.Definition) {
 	fmt.Println(defSource.Print())
 	defTree := gotree.New("\n\nApplication configuration files")
 	defTree.Add(def.BaseCompose.File)
-	defTree.Add(def.Config.File)
+	defTree.Add(def.BaseConfig.File)
 
 	for _, env := range def.Envs {
 		defTree.Add(env.File)

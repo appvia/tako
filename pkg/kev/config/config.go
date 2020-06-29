@@ -39,8 +39,8 @@ func (c *Config) Bytes() ([]byte, error) {
 	return bytes, nil
 }
 
-// Marshal marshals a config from supplied data
-func Marshal(data []byte) (*Config, error) {
+// Unmarshal gets supplied data bytes and returns a Config struct
+func Unmarshal(data []byte) (*Config, error) {
 	config := &Config{}
 	if err := yaml3.Unmarshal(data, config); err != nil {
 		return nil, err

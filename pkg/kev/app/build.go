@@ -26,107 +26,108 @@ import (
 )
 
 // Build builds the app based on an app definition manifest
-func Build(path string, appDef *Definition) (*Definition, error) {
-	appDef.Build = BuildConfig{}
+func Build(buildRoot string, appDef *Definition) (*Definition, error) {
 
-	compiled, err := CompileConfig(path, appDef)
+	appDef.Build = make(map[string]BuildConfig)
+
+	// always add "base" build configuration
+	baseConfigFile := FileConfig{
+		Environment: "base",
+		Content:     appDef.BaseConfig.Content, // no env changes necessary
+		File:        path.Join(buildRoot, ConfigBuildFile),
+	}
+
+	interpolatedBaseCompose, err := InterpolateCompose(buildRoot, baseConfigFile, appDef.BaseCompose)
 	if err != nil {
 		return nil, err
 	}
 
-	appDef.Build.Compiled = append(appDef.Build.Compiled, compiled...)
-
-	interpolated, err := InterpolateUsingConfig(appDef)
-	if err != nil {
-		return nil, err
+	baseComposeFile := FileConfig{
+		Environment: "base",
+		Content:     interpolatedBaseCompose.Content,
+		File:        path.Join(buildRoot, ComposeBuildFile),
 	}
 
-	appDef.Build.Interpolated = append(appDef.Build.Interpolated, interpolated...)
+	appDef.Build["base"] = BuildConfig{
+		ConfigFile:  baseConfigFile,
+		ComposeFile: baseComposeFile,
+	}
+
+	// iterate through app defined environments
+	for name, envConfig := range appDef.Envs {
+		// get compiled config for current environment
+		compiledEnvConfig, err := CompileConfig(buildRoot, envConfig, appDef.BaseConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		// interpolate base compose with compiled env config params
+		interpolatedCompose, err := InterpolateCompose(buildRoot, compiledEnvConfig, appDef.BaseCompose)
+		if err != nil {
+			return nil, err
+		}
+
+		bc := BuildConfig{
+			ConfigFile:  compiledEnvConfig,
+			ComposeFile: interpolatedCompose,
+		}
+		// app definition build information is keyed by environment name
+		appDef.Build[name] = bc
+	}
+
 	return appDef, nil
 }
 
-// CompileConfig calculates effective configuration with base configuration
-// extended/overridden by environments specific configuration
-func CompileConfig(buildRoot string, appDef *Definition) ([]FileConfig, error) {
-	var compiled []FileConfig
-
-	baseConfig, err := config.Marshal(appDef.Config.Content)
-	if err != nil {
-		return nil, err
-	}
-
-	rawBaseConfig, err := baseConfig.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	compiled = append(compiled, FileConfig{
-		Environment: "base",
-		Content:     rawBaseConfig,
-		File:        path.Join(buildRoot, ConfigBuildFile),
-	})
-
-	for _, env := range appDef.Envs {
-		envConfig, err := config.Marshal(env.Content)
-		if err != nil {
-			return nil, err
-		}
-
-		compiledConfig, err := compileEnvConfig(buildRoot, env.Environment, *envConfig, baseConfig)
-		if err != nil {
-			return nil, err
-		}
-		compiled = append(compiled, compiledConfig)
-	}
-
-	return compiled, nil
-}
-
-func compileEnvConfig(compilePath, env string, envConfig config.Config, baseConfig *config.Config) (FileConfig, error) {
-	err := mergo.Merge(&envConfig, baseConfig)
+// CompileConfig calculates effective configuration for given environment.
+// i.e. a base configuration extended/overridden by environment specific configuration.
+func CompileConfig(buildRoot string, env, base FileConfig) (FileConfig, error) {
+	baseConfig, err := config.Unmarshal(base.Content)
 	if err != nil {
 		return FileConfig{}, err
 	}
 
-	rawConfig, err := envConfig.Bytes()
+	envConfig, err := config.Unmarshal(env.Content)
 	if err != nil {
 		return FileConfig{}, err
 	}
 
-	compiledConfigPath := path.Join(compilePath, env, ConfigBuildFile)
-	compiledEnvConfig := FileConfig{
-		Environment: env,
-		Content:     rawConfig,
-		File:        compiledConfigPath,
+	err = mergo.Merge(envConfig, *baseConfig)
+	if err != nil {
+		return FileConfig{}, err
 	}
-	return compiledEnvConfig, nil
+
+	envConfigContent, err := envConfig.Bytes()
+	if err != nil {
+		return FileConfig{}, err
+	}
+
+	return FileConfig{
+		Environment: env.Environment,
+		Content:     envConfigContent,
+		File:        path.Join(buildRoot, env.Environment, ConfigBuildFile),
+	}, nil
 }
 
-// InterpolateUsingConfig interpolates the base compose.yaml creating different
-// variation for every compiled config.yaml per environment.
-func InterpolateUsingConfig(appDef *Definition) ([]FileConfig, error) {
+// InterpolateCompose interpolates the base compose.yaml with compiled config.yaml for given environment.
+func InterpolateCompose(buildRoot string, envConfig, baseCompose FileConfig) (FileConfig, error) {
 	target := interpolate.
 		NewTarget().
-		Content(appDef.BaseCompose.Content).
+		Content(baseCompose.Content).
 		Resolver(interpolate.NewJsonPathResolver())
 
-	var interpolated []FileConfig
-	for _, compiled := range appDef.Build.Compiled {
-		source, err := yaml.YAMLToJSON(compiled.Content)
-		if err != nil {
-			return nil, err
-		}
-
-		content, err := target.Interpolate(source)
-		if err != nil {
-			return nil, err
-		}
-
-		interpolated = append(interpolated, FileConfig{
-			Environment: compiled.Environment,
-			Content:     content,
-			File:        path.Join(path.Dir(compiled.File), ComposeBuildFile),
-		})
+	source, err := yaml.YAMLToJSON(envConfig.Content)
+	if err != nil {
+		return FileConfig{}, err
 	}
-	return interpolated, nil
+
+	envComposeContent, err := target.Interpolate(source)
+	if err != nil {
+		return FileConfig{}, err
+	}
+
+	return FileConfig{
+		Environment: envConfig.Environment,
+		Content:     envComposeContent,
+		File:        path.Join(buildRoot, envConfig.Environment, ComposeBuildFile),
+	}, nil
 }

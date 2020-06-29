@@ -43,12 +43,12 @@ func Init(root string, compose []byte, baseConfig *config.Config, envs []string)
 
 	return &Definition{
 		BaseCompose: FileConfig{Content: compose, File: composePath},
-		Config:      FileConfig{Content: configData, File: configPath},
+		BaseConfig:  FileConfig{Content: configData, File: configPath},
 		Envs:        envConfigs,
 	}, nil
 }
 
-func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]FileConfig, error) {
+func createEnvData(envs []string, appDir string, baseConfig *config.Config) (map[string]FileConfig, error) {
 	envConfig := &EnvConfig{
 		Workload: &yaml3.Node{
 			Kind:        yaml3.MappingNode,
@@ -77,13 +77,13 @@ func createEnvData(envs []string, appDir string, baseConfig *config.Config) ([]F
 		return nil, err
 	}
 
-	var envConfigs []FileConfig
+	envConfigs := make(map[string]FileConfig)
 	for _, env := range envs {
-		envConfigs = append(envConfigs, FileConfig{
+		envConfigs[env] = FileConfig{
 			Environment: env,
 			Content:     out,
 			File:        path.Join(appDir, env, "config.yaml"),
-		})
+		}
 	}
 
 	return envConfigs, nil
