@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -36,7 +37,7 @@ const (
 )
 
 // GetDefinition returns the current app definition manifest
-func GetDefinition(root, buildDir string, envs []string, includeBuildInfo bool) (*Definition, error) {
+func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
 	composePath := path.Join(root, ComposeFile)
 	baseCompose, err := ioutil.ReadFile(composePath)
 	if err != nil {
@@ -58,26 +59,29 @@ func GetDefinition(root, buildDir string, envs []string, includeBuildInfo bool) 
 		envConfigs[env] = envConfig
 	}
 
-	buildConfig := make(map[string]BuildConfig)
 	// Build configuration will be only present after initial build
-	// - respect includeBuildInfo argument passed to GetDefinition.
-	if includeBuildInfo == true {
-		// always preload "base" build configuration
-		buildBaseConfigFile, buildBaseComposeFile, err := GetBuildConfig(root, buildDir, "")
-		if err != nil {
-			return nil, err
-		}
+	// so in case it doesn't exist just inform the user to run `kev build`
+	buildConfig := make(map[string]BuildConfig)
+
+	// always preload "base" build configuration
+	buildBaseConfigFile, buildBaseComposeFile, err := GetBuildConfig(root, buildDir, "")
+	if err != nil {
+		fmt.Printf("😱 Couldn't get base build config. Make sure to run `kev build` first: %s\n", err)
+	}
+	if !reflect.DeepEqual(buildBaseConfigFile, FileConfig{}) && !reflect.DeepEqual(buildBaseComposeFile, FileConfig{}) {
 		buildConfig["base"] = BuildConfig{
 			ConfigFile:  buildBaseConfigFile,
 			ComposeFile: buildBaseComposeFile,
 		}
+	}
 
-		// iterate through envs
-		for _, env := range envs {
-			buildConfigFile, buildComposeFile, err := GetBuildConfig(root, buildDir, env)
-			if err != nil {
-				return nil, err
-			}
+	// iterate through envs
+	for _, env := range envs {
+		buildConfigFile, buildComposeFile, err := GetBuildConfig(root, buildDir, env)
+		if err != nil {
+			fmt.Printf("😱 Couldn't get build config for %s. Make sure to run `kev build` first: %s\n", env, err)
+		}
+		if !reflect.DeepEqual(buildConfigFile, FileConfig{}) && !reflect.DeepEqual(buildComposeFile, FileConfig{}) {
 			buildConfig[env] = BuildConfig{
 				ConfigFile:  buildConfigFile,
 				ComposeFile: buildComposeFile,

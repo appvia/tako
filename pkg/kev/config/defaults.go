@@ -26,11 +26,11 @@ const (
 	// DefaultVolumeClass default PV size
 	DefaultVolumeClass = "standard"
 	// DefaultResourceRequestCPU default CPU resource request
-	DefaultResourceRequestCPU = "100m"
+	DefaultResourceRequestCPU = "0.1"
 	// DefaultResourceRequestMem default Memory resource request
 	DefaultResourceRequestMem = "10Mi"
 	// DefaultResourceLimitCPU default CPU resource limit
-	DefaultResourceLimitCPU = "200m"
+	DefaultResourceLimitCPU = "0.2"
 	// DefaultResourceLimitMem default Memory resource limit
 	DefaultResourceLimitMem = "20Mi"
 	// DefaultService is a default service
