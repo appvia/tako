@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/compose-spec/compose-go/loader"
-	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -34,24 +32,6 @@ func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-// UnmarshallComposeConfig deserializes a []]byte into *compose.Config
-func UnmarshallComposeConfig(data []byte) (*compose.Config, error) {
-	source, err := UnmarshallGeneral(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return loader.Load(compose.ConfigDetails{
-		WorkingDir: ".",
-		ConfigFiles: []compose.ConfigFile{
-			{
-				Filename: "temp-file",
-				Config:   source,
-			},
-		},
-	})
 }
 
 func MarshallAndFormat(v interface{}, spaces int) ([]byte, error) {

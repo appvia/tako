@@ -115,7 +115,6 @@ type Config struct {
 
 // ShallowComposeConfig is used to ensure marshaled output is ordered correctly.
 type ShallowComposeConfig struct {
-	Version  string      `json:"version"`
 	Services interface{} `json:"services"`
 	Networks interface{} `yaml:",omitempty" json:"networks,omitempty"`
 	Volumes  interface{} `yaml:",omitempty" json:"volumes,omitempty"`

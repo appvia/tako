@@ -17,95 +17,51 @@
 package bootstrap
 
 import (
-	"io/ioutil"
-	"os"
-	"path"
-	"regexp"
-
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/transform"
-	"github.com/compose-spec/compose-go/loader"
+	"github.com/compose-spec/compose-go/cli"
 	compose "github.com/compose-spec/compose-go/types"
-	"github.com/goccy/go-yaml"
 )
 
-// NewApp creates a new Definition using
-// provided docker compose files and app root
+// NewApp creates a new Definition using app root and docker compose files
 func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 	baseCompose, err := loadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	composeData, err := yaml.Marshal(baseCompose)
-	if err != nil {
-		return nil, err
+	transforms := []transform.Transform{
+		transform.AugmentOrAddDeploy,
+		transform.HealthCheckBase,
+		transform.ExternaliseSecrets,
+		transform.ExternaliseConfigs,
 	}
 
-	composeData, err = transform.AugmentOrAddDeploy(composeData)
-	if err != nil {
-		return nil, err
-	}
-
-	composeData, err = transform.HealthCheckBase(composeData)
-	if err != nil {
-		return nil, err
-	}
-
-	composeData, err = transform.ExternaliseSecrets(composeData)
-	if err != nil {
-		return nil, err
-	}
-
-	composeData, err = transform.ExternaliseConfigs(composeData)
-	if err != nil {
-		return nil, err
-	}
-
-	inferred, err := config.Infer(composeData)
-	if err != nil {
-		return nil, err
-	}
-
-	return app.Init(root, inferred.ComposeWithPlaceholders, inferred.AppConfig, envs)
-}
-
-func loadAndParse(paths []string) (*compose.Config, error) {
-	var configFiles []compose.ConfigFile
-	envVars := map[string]string{}
-
-	for _, p := range paths {
-		b, err := ioutil.ReadFile(p)
-		if err != nil {
+	for _, t := range transforms {
+		if err := t(baseCompose); err != nil {
 			return nil, err
 		}
-
-		parsed, err := loader.ParseYAML(b)
-		if err != nil {
-			return nil, err
-		}
-		mineHostEnvVars(b, envVars)
-		configFiles = append(configFiles, compose.ConfigFile{Filename: p, Config: parsed})
 	}
 
-	return loader.Load(compose.ConfigDetails{
-		WorkingDir:  path.Dir(paths[0]),
-		ConfigFiles: configFiles,
-		Environment: envVars,
-	})
+	inferred, err := config.Infer(baseCompose)
+	if err != nil {
+		return nil, err
+	}
+
+	return app.Init(root, inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
 }
 
-func mineHostEnvVars(data []byte, target map[string]string) {
-	pattern := regexp.MustCompile(`\$\{(.*)\}`)
-	found := pattern.FindAllSubmatch(data, -1)
-	for _, f := range found {
-		envVar := string(f[1])
-		val := os.Getenv(envVar)
-		// ensures an env var like PORT: ${PORT} is not ignored post parse and load
-		if len(val) < 1 {
-			val = " "
-		}
-		target[envVar] = val
+func loadAndParse(paths []string) (*compose.Project, error) {
+	projectOptions, err := cli.ProjectOptions{
+		ConfigPaths: paths,
+	}.
+		WithOsEnv().
+		WithDotEnv()
+
+	if err != nil {
+		return nil, err
 	}
+
+	return cli.ProjectFromOptions(&projectOptions)
 }
