@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"log"
 
+	"github.com/compose-spec/compose-go/cli"
+	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -34,6 +36,7 @@ func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
 	return out, nil
 }
 
+// MarshallAndFormat marshals arbitrary struct
 func MarshallAndFormat(v interface{}, spaces int) ([]byte, error) {
 	var out bytes.Buffer
 	encoder := yaml3.NewEncoder(&out)
@@ -48,4 +51,19 @@ func MarshallAndFormat(v interface{}, spaces int) ([]byte, error) {
 		return nil, err
 	}
 	return out.Bytes(), nil
+}
+
+// LoadAndParse loads and parses a set of input compose files and returns compose Project object
+func LoadAndParse(paths []string) (*compose.Project, error) {
+	projectOptions, err := cli.ProjectOptions{
+		ConfigPaths: paths,
+	}.
+		WithOsEnv().
+		WithDotEnv()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return cli.ProjectFromOptions(&projectOptions)
 }
