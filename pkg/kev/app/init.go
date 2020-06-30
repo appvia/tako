@@ -28,10 +28,7 @@ import (
 // Init creates a new app definition manifest
 // based on a compose.yaml, inferred app config and required environments.
 func Init(root string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
-	composePath := path.Join(root, ComposeFile)
-	configPath := path.Join(root, ConfigFile)
-
-	envConfigs, err := createEnvData(envs, root, baseConfig)
+	overrides, err := createOverrides(envs, root, baseConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -42,14 +39,17 @@ func Init(root string, compose []byte, baseConfig *config.Config, envs []string)
 	}
 
 	return &Definition{
-		BaseCompose: FileConfig{Content: compose, File: composePath},
-		BaseConfig:  FileConfig{Content: configData, File: configPath},
-		Envs:        envConfigs,
+		Base: ConfigPair{
+			Compose: FileConfig{Content: compose, File: path.Join(root, ComposeFile)},
+			Config:  FileConfig{Content: configData, File: path.Join(root, ConfigFile)},
+		},
+		Overrides: overrides,
+		Build:     BuildConfig{},
 	}, nil
 }
 
-func createEnvData(envs []string, appDir string, baseConfig *config.Config) (map[string]FileConfig, error) {
-	envConfig := &EnvConfig{
+func createOverrides(candidates []string, appDir string, baseConfig *config.Config) (map[string]FileConfig, error) {
+	config := &OverrideConfig{
 		Workload: &yaml3.Node{
 			Kind:        yaml3.MappingNode,
 			LineComment: "Override global workload settings here.",
@@ -66,25 +66,24 @@ func createEnvData(envs []string, appDir string, baseConfig *config.Config) (map
 	}
 
 	for key := range baseConfig.Components {
-		envConfig.Components[key] = &yaml3.Node{
+		config.Components[key] = &yaml3.Node{
 			Kind:        yaml3.MappingNode,
 			LineComment: fmt.Sprintf("Override the %s service settings here.", key),
 		}
 	}
 
-	out, err := utils.MarshallAndFormat(&envConfig, 2)
+	out, err := utils.MarshallAndFormat(&config, 2)
 	if err != nil {
 		return nil, err
 	}
 
-	envConfigs := make(map[string]FileConfig)
-	for _, env := range envs {
-		envConfigs[env] = FileConfig{
-			Environment: env,
-			Content:     out,
-			File:        path.Join(appDir, env, "config.yaml"),
+	overrides := make(map[string]FileConfig)
+	for _, env := range candidates {
+		overrides[env] = FileConfig{
+			Content: out,
+			File:    path.Join(appDir, env, "config.yaml"),
 		}
 	}
 
-	return envConfigs, nil
+	return overrides, nil
 }
