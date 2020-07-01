@@ -25,15 +25,30 @@ import (
 	"github.com/imdario/mergo"
 )
 
-// GetBuildInfo get the latest info as map of overrides and config pairs.
+// GetInternalBuildInfo is mostly used INTERNALLY to get the latest info as map of overrides and config pairs.
 // The build's base config is added under the key defined by the Base constant.
-func (def *Definition) GetBuildInfo() map[string]ConfigTuple {
+func (def *Definition) GetInternalBuildInfo() map[string]ConfigTuple {
 	out := map[string]ConfigTuple{}
 	out[Base] = def.Build.Base
 	for override, pair := range def.Build.Overrides {
 		out[override] = pair
 	}
 	return out
+}
+
+// HasBuiltOverrides informs whether the Build contains overrides.
+func (def *Definition) HasBuiltOverrides() bool {
+	return len(def.Build.Overrides) > 0
+}
+
+// GetAppBuildInfo returns the base app build info, used for build display and manifest render of app only.
+func (def *Definition) GetAppBuildInfo() ConfigTuple {
+	return def.Build.Base
+}
+
+// GetOverridesBuildInfo returns the overrides build info, used for build display and manifest render of envs only.
+func (def *Definition) GetOverridesBuildInfo() map[string]ConfigTuple {
+	return def.Build.Overrides
 }
 
 // DoBuild builds an app definition manifest
