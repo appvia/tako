@@ -96,7 +96,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	appDef, err := app.GetDefinition(BaseDir, BuildDir, envs)
+	appDef, err := app.LoadDefinition(BaseDir, BuildDir, envs)
 	if err != nil {
 		return err
 	}
