@@ -41,16 +41,17 @@ func New() *Converter {
 }
 
 // Render generates outcome
-func (c *Converter) Render(singleFile bool, dir string, app *app.Definition) error {
+func (c *Converter) Render(singleFile bool, dir string, appDef *app.Definition) error {
 
-	for env, bc := range app.Build {
+	envs := make(map[string]app.ConfigTuple)
 
-		// @step Ignore "base" configuration if other deployment environments are present
-		if len(app.Build) > 1 {
-			if env == "base" {
-				continue
-			}
-		}
+	if appDef.HasBuiltOverrides() {
+		envs = appDef.Build.Overrides
+	} else {
+		envs[app.Base] = appDef.Build.Base
+	}
+
+	for env, bc := range envs {
 
 		fmt.Printf("\n🖨️  Rendering %s environment\n", env)
 
@@ -62,7 +63,7 @@ func (c *Converter) Render(singleFile bool, dir string, app *app.Definition) err
 			// adding env name suffix to the custom directory to differentiate
 			outDirPath = path.Join(dir, env)
 		} else {
-			outDirPath = path.Join(bc.ComposeFile.Path(), multiFileSubDir)
+			outDirPath = path.Join(bc.Compose.Path(), multiFileSubDir)
 		}
 
 		// @step Create output directory
@@ -83,7 +84,7 @@ func (c *Converter) Render(singleFile bool, dir string, app *app.Definition) err
 
 		// @step Kuberentes manifests output options
 		opt := ConvertOptions{
-			InputFiles:   []string{bc.ComposeFile.File},
+			InputFiles:   []string{bc.Compose.File},
 			OutFile:      outFilePath,
 			CreateD:      true,
 			Provider:     Name,
@@ -91,7 +92,7 @@ func (c *Converter) Render(singleFile bool, dir string, app *app.Definition) err
 			GenerateYaml: true,
 		}
 
-		// @step Load Compose file (opt.InputFiles[0]) and convert it into interim KomposeObject
+		// @step Load a single Compose file (opt.InputFiles[0]) and convert it into interim KomposeObject
 		komposeObject, err := LoadCompose(opt.InputFiles[0])
 		if err != nil {
 			fmt.Println(err.Error())
@@ -102,7 +103,7 @@ func (c *Converter) Render(singleFile bool, dir string, app *app.Definition) err
 		k := &Kubernetes{Opt: opt}
 
 		// @step get deployment environment configuration
-		envConfig, err := config.Unmarshal(bc.ConfigFile.Content)
+		envConfig, err := config.Unmarshal(bc.Config.Content)
 		if err != nil {
 			return err
 		}
