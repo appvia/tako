@@ -70,7 +70,7 @@ func loadBase(dir string, def *Definition) error {
 	return nil
 }
 
-func loadBaseConfigPair(dir, composeFile, configFile string, pair *ConfigPair) error {
+func loadBaseConfigPair(dir, composeFile, configFile string, pair *ConfigTuple) error {
 	composePath := path.Join(dir, composeFile)
 	compose, err := ioutil.ReadFile(composePath)
 	if err != nil {
@@ -113,15 +113,15 @@ func loadBuildIfAvailable(dir string, envs []string, def *Definition) error {
 		return nil
 	}
 
-	var base ConfigPair
+	var base ConfigTuple
 	if err := loadBaseConfigPair(dir, ComposeBuildFile, ConfigBuildFile, &base); err != nil {
 		return err
 	}
 	def.Build.Base = base
 
-	overrides := map[string]ConfigPair{}
+	overrides := map[string]ConfigTuple{}
 	for _, env := range envs {
-		var pair ConfigPair
+		var pair ConfigTuple
 		if err := loadBaseConfigPair(path.Join(dir, env), ComposeBuildFile, ConfigBuildFile, &pair); err != nil {
 			return err
 		}

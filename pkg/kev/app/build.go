@@ -27,8 +27,8 @@ import (
 
 // GetBuildInfo get the latest info as map of overrides and config pairs.
 // The build's base config is added under the key defined by the Base constant.
-func (def *Definition) GetBuildInfo() map[string]ConfigPair {
-	out := map[string]ConfigPair{}
+func (def *Definition) GetBuildInfo() map[string]ConfigTuple {
+	out := map[string]ConfigTuple{}
 	out[Base] = def.Build.Base
 	for override, pair := range def.Build.Overrides {
 		out[override] = pair
@@ -67,7 +67,7 @@ func (def *Definition) buildBase(buildDir string) error {
 		return err
 	}
 
-	def.Build.Base = ConfigPair{
+	def.Build.Base = ConfigTuple{
 		Compose: FileConfig{
 			Content: interpolated,
 			File:    path.Join(buildDir, ComposeBuildFile),
@@ -82,7 +82,7 @@ func (def *Definition) buildBase(buildDir string) error {
 }
 
 func (def *Definition) buildOverrides(buildDir string) error {
-	def.Build.Overrides = map[string]ConfigPair{}
+	def.Build.Overrides = map[string]ConfigTuple{}
 
 	for override, _ := range def.Overrides {
 		compiledConfig, err := CompileConfig(buildDir, override, def.Overrides[override], def.Base.Config)
@@ -95,7 +95,7 @@ func (def *Definition) buildOverrides(buildDir string) error {
 			return err
 		}
 
-		def.Build.Overrides[override] = ConfigPair{
+		def.Build.Overrides[override] = ConfigTuple{
 			Compose: interpolatedCompose,
 			Config:  compiledConfig,
 		}

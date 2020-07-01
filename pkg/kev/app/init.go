@@ -39,7 +39,7 @@ func Init(root string, compose []byte, baseConfig *config.Config, envs []string)
 	}
 
 	return &Definition{
-		Base: ConfigPair{
+		Base: ConfigTuple{
 			Compose: FileConfig{Content: compose, File: path.Join(root, ComposeFile)},
 			Config:  FileConfig{Content: configData, File: path.Join(root, ConfigFile)},
 		},

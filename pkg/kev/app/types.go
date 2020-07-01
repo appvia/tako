@@ -26,7 +26,7 @@ import (
 // Definition is the app definition including base compose, config files.
 // And, environment config files. Also, build config related to the most recent build.
 type Definition struct {
-	Base      ConfigPair
+	Base      ConfigTuple
 	Overrides map[string]FileConfig // maps environment name to its configuration
 	Build     BuildConfig
 }
@@ -35,8 +35,8 @@ type Definition struct {
 // It contains base config along with interpolated compose.
 // And, compiled config files and interpolated compose files per overriding environment.
 type BuildConfig struct {
-	Base      ConfigPair
-	Overrides map[string]ConfigPair
+	Base      ConfigTuple
+	Overrides map[string]ConfigTuple
 }
 
 // FileConfig details an app definition FileConfig, including its Content and recommended file path.
@@ -45,7 +45,7 @@ type FileConfig struct {
 	File    string
 }
 
-type ConfigPair struct {
+type ConfigTuple struct {
 	Compose FileConfig
 	Config  FileConfig
 }
