@@ -32,23 +32,23 @@ const (
 	multiFileSubDir       = "k8s"
 )
 
-// Converter is a native kubernetes manifests converter
-type Converter struct{}
+// K8s is a native kubernetes manifests converter
+type K8s struct{}
 
 // New return a native Kubernetes converter
-func New() *Converter {
-	return &Converter{}
+func New() *K8s {
+	return &K8s{}
 }
 
 // Render generates outcome
-func (c *Converter) Render(singleFile bool, dir string, appDef *app.Definition) error {
+func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error {
 
 	envs := make(map[string]app.ConfigTuple)
 
 	if appDef.HasBuiltOverrides() {
-		envs = appDef.Build.Overrides
+		envs = appDef.GetOverridesBuildInfo()
 	} else {
-		envs[app.Base] = appDef.Build.Base
+		envs[app.Base] = appDef.GetAppBuildInfo()
 	}
 
 	for env, bc := range envs {

@@ -25,16 +25,16 @@ import (
 // Name of the converter
 const Name = "dummy"
 
-// Converter is a dummy adapter
-type Converter struct{}
+// Dummy is a dummy converter adapter
+type Dummy struct{}
 
 // New return a dummy converter
-func New() *Converter {
-	return &Converter{}
+func New() *Dummy {
+	return &Dummy{}
 }
 
 // Render generates outcome
-func (c *Converter) Render(singleFile bool, dir string, app *app.Definition) error {
+func (c *Dummy) Render(singleFile bool, dir string, app *app.Definition) error {
 	fmt.Printf("Hello from %s adapter Render()\n", Name)
 	return nil
 }
