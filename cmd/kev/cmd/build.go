@@ -83,8 +83,7 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	builtEnvs := make(map[string]bool)
-	for env, build := range def.GetBuildInfo() {
+	for _, build := range def.GetInternalBuildInfo() {
 		if err := os.MkdirAll(build.Config.Path(), os.ModePerm); err != nil {
 			return err
 		}
@@ -95,16 +94,27 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 		if err = ioutil.WriteFile(build.Compose.File, build.Compose.Content, os.ModePerm); err != nil {
 			return err
 		}
-		builtEnvs[env] = true
 	}
 
-	displayBuild(builtEnvs)
+	displayBuild(def)
 	return nil
 }
 
-func displayBuild(builtEnvsSet map[string]bool) {
+func displayBuild(def *app.Definition) {
+	if def.HasBuiltOverrides() {
+		displayEnvsBuilt(def.GetOverridesBuildInfo())
+	} else {
+		displayAppBuilt()
+	}
+}
+
+func displayEnvsBuilt(builtEnvsSet map[string]app.ConfigTuple) {
 	for k := range builtEnvsSet {
 		fmt.Printf("🔧 [%s] environment ready.\n", k)
 	}
-	fmt.Println("🔩 App builds complete!")
+	displayAppBuilt()
+}
+
+func displayAppBuilt() {
+	fmt.Println("🔩 App build complete!")
 }
