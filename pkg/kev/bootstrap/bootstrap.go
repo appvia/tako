@@ -20,13 +20,12 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/transform"
-	"github.com/compose-spec/compose-go/cli"
-	compose "github.com/compose-spec/compose-go/types"
+	"github.com/appvia/kube-devx/pkg/kev/utils"
 )
 
 // NewApp creates a new Definition using app root and docker compose files
 func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
-	baseCompose, err := loadAndParse(composeFiles)
+	baseCompose, err := utils.LoadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -50,18 +49,4 @@ func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 	}
 
 	return app.Init(root, inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
-}
-
-func loadAndParse(paths []string) (*compose.Project, error) {
-	projectOptions, err := cli.ProjectOptions{
-		ConfigPaths: paths,
-	}.
-		WithOsEnv().
-		WithDotEnv()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cli.ProjectFromOptions(&projectOptions)
 }
