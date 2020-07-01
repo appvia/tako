@@ -26,24 +26,28 @@ import (
 // Definition is the app definition including base compose, config files.
 // And, environment config files. Also, build config related to the most recent build.
 type Definition struct {
-	BaseCompose FileConfig
-	BaseConfig  FileConfig
-	Envs        map[string]FileConfig  // maps environment name to its configuration
-	Build       map[string]BuildConfig // maps environment name to its build configuration
+	Base      ConfigTuple
+	Overrides map[string]FileConfig // maps environment name to its configuration
+	Build     BuildConfig
 }
 
 // BuildConfig is an app definition's build config.
-// It contains compiled config file and interpolated compose file information.
+// It contains base config along with interpolated compose.
+// And, compiled config files and interpolated compose files per overriding environment.
 type BuildConfig struct {
-	ConfigFile  FileConfig
-	ComposeFile FileConfig
+	Base      ConfigTuple
+	Overrides map[string]ConfigTuple
 }
 
 // FileConfig details an app definition FileConfig, including its Content and recommended file path.
 type FileConfig struct {
-	Environment string
-	Content     []byte
-	File        string
+	Content []byte
+	File    string
+}
+
+type ConfigTuple struct {
+	Compose FileConfig
+	Config  FileConfig
 }
 
 // Dir returns the application config's immediate parent directory
@@ -57,8 +61,8 @@ func (c FileConfig) Path() string {
 	return path.Dir(c.File)
 }
 
-// EnvConfig to ensure ordering of params in an environment's config.yaml
-type EnvConfig struct {
+// OverrideConfig to ensure ordering of params in an environment's config.yaml
+type OverrideConfig struct {
 	// Defines app default Kubernetes workload parameters.
 	Workload *yaml.Node `yaml:",omitempty" json:"workload,omitempty"`
 	// Defines app default component K8s service parameters.

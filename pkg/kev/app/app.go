@@ -19,8 +19,8 @@ package app
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
-	"reflect"
 	"sort"
 	"strings"
 )
@@ -28,120 +28,141 @@ import (
 const (
 	// ComposeFile base compose file name
 	ComposeFile = "compose.yaml"
+
 	// ComposeBuildFile build time compose file name
 	ComposeBuildFile = "compose.build.yaml"
+
 	// ConfigFile config file name
 	ConfigFile = "config.yaml"
+
 	// ConfigBuildFile build time config file name
 	ConfigBuildFile = "config.build.yaml"
+
+	// Base labels the app's base Compose and Config files during init and build.
+	// These files are the basis for user defined overrides that map to app environments.
+	// This is a reserved name.
+	Base = "kev-base"
 )
 
-// GetDefinition returns the current app definition manifest
-func GetDefinition(root, buildDir string, envs []string) (*Definition, error) {
-	composePath := path.Join(root, ComposeFile)
-	baseCompose, err := ioutil.ReadFile(composePath)
-	if err != nil {
+// LoadDefinition returns the current app definition manifest
+func LoadDefinition(root, buildDir string, envs []string) (*Definition, error) {
+	var def = &Definition{}
+
+	if err := loadBase(root, def); err != nil {
 		return nil, err
 	}
 
-	configPath := path.Join(root, ConfigFile)
-	baseConfig, err := ioutil.ReadFile(configPath)
-	if err != nil {
+	if err := loadOverrides(root, envs, def); err != nil {
 		return nil, err
 	}
 
-	envConfigs := make(map[string]FileConfig)
-	for _, env := range envs {
-		envConfig, err := GetEnvConfig(root, env)
-		if err != nil {
-			return nil, err
-		}
-		envConfigs[env] = envConfig
+	if err := loadBuildIfAvailable(path.Join(root, buildDir), envs, def); err != nil {
+		return nil, err
 	}
 
-	// Build configuration will be only present after initial build
-	// so in case it doesn't exist just inform the user to run `kev build`
-	buildConfig := make(map[string]BuildConfig)
-
-	// always preload "base" build configuration
-	buildBaseConfigFile, buildBaseComposeFile, err := GetBuildConfig(root, buildDir, "")
-	if err != nil {
-		fmt.Printf("😱 Couldn't get base build config. Make sure to run `kev build` first: %s\n", err)
-	}
-	if !reflect.DeepEqual(buildBaseConfigFile, FileConfig{}) && !reflect.DeepEqual(buildBaseComposeFile, FileConfig{}) {
-		buildConfig["base"] = BuildConfig{
-			ConfigFile:  buildBaseConfigFile,
-			ComposeFile: buildBaseComposeFile,
-		}
-	}
-
-	// iterate through envs
-	for _, env := range envs {
-		buildConfigFile, buildComposeFile, err := GetBuildConfig(root, buildDir, env)
-		if err != nil {
-			fmt.Printf("😱 Couldn't get build config for %s. Make sure to run `kev build` first: %s\n", env, err)
-		}
-		if !reflect.DeepEqual(buildConfigFile, FileConfig{}) && !reflect.DeepEqual(buildComposeFile, FileConfig{}) {
-			buildConfig[env] = BuildConfig{
-				ConfigFile:  buildConfigFile,
-				ComposeFile: buildComposeFile,
-			}
-		}
-	}
-
-	return &Definition{
-		BaseCompose: FileConfig{
-			Environment: "base",
-			Content:     baseCompose,
-			File:        composePath,
-		},
-		BaseConfig: FileConfig{
-			Environment: "base",
-			Content:     baseConfig,
-			File:        configPath,
-		},
-		Envs:  envConfigs,
-		Build: buildConfig,
-	}, nil
+	return def, nil
 }
 
-// GetEnvConfig retrieves the config.yaml for a specified environment.
-func GetEnvConfig(root, env string) (FileConfig, error) {
+func loadBase(dir string, def *Definition) error {
+	if err := loadBaseConfigPair(dir, ComposeFile, ConfigFile, &def.Base); err != nil {
+		return err
+	}
+	return nil
+}
+
+func loadBaseConfigPair(dir, composeFile, configFile string, pair *ConfigTuple) error {
+	composePath := path.Join(dir, composeFile)
+	compose, err := ioutil.ReadFile(composePath)
+	if err != nil {
+		return err
+	}
+
+	configPath := path.Join(dir, configFile)
+	config, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+
+	pair.Compose = FileConfig{
+		Content: compose,
+		File:    composePath,
+	}
+	pair.Config = FileConfig{
+		Content: config,
+		File:    configPath,
+	}
+	return nil
+}
+
+func loadOverrides(dir string, envs []string, def *Definition) error {
+	overrides := make(map[string]FileConfig)
+	for _, env := range envs {
+		config, err := loadOverrideConfig(dir, env)
+		if err != nil {
+			return err
+		}
+		overrides[env] = config
+	}
+	def.Overrides = overrides
+	return nil
+}
+
+func loadBuildIfAvailable(dir string, envs []string, def *Definition) error {
+	def.Build = BuildConfig{}
+	if !WasBuilt(dir) {
+		return nil
+	}
+
+	var base ConfigTuple
+	if err := loadBaseConfigPair(dir, ComposeBuildFile, ConfigBuildFile, &base); err != nil {
+		return err
+	}
+	def.Build.Base = base
+
+	overrides := map[string]ConfigTuple{}
+	for _, env := range envs {
+		var pair ConfigTuple
+		if err := loadBaseConfigPair(path.Join(dir, env), ComposeBuildFile, ConfigBuildFile, &pair); err != nil {
+			return err
+		}
+		overrides[env] = pair
+	}
+	def.Build.Overrides = overrides
+
+	return nil
+}
+
+// loadOverrideConfig retrieves the config.yaml for a specified environment.
+func loadOverrideConfig(root, env string) (FileConfig, error) {
 	configPath := path.Join(root, env, ConfigFile)
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return FileConfig{}, err
 	}
+
 	return FileConfig{
-		Environment: env,
-		Content:     content,
-		File:        configPath,
+		Content: content,
+		File:    configPath,
 	}, nil
 }
 
-// GetBuildConfig retrieves the compiled config.build.yaml & interpolated compose.build.yaml for a specified environment.
-func GetBuildConfig(root, buildDir, env string) (FileConfig, FileConfig, error) {
-	configPath := path.Join(root, buildDir, env, ConfigBuildFile)
-	configContent, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		return FileConfig{}, FileConfig{}, err
-	}
+// WasBuilt checks whether the app has previously been built
+func WasBuilt(buildDir string) bool {
+	composeBuildExists := fileExists(path.Join(buildDir, ComposeBuildFile))
+	configBuildExists := fileExists(path.Join(buildDir, ConfigBuildFile))
+	return composeBuildExists && configBuildExists
+}
 
-	composePath := path.Join(root, buildDir, env, ComposeBuildFile)
-	composeContent, err := ioutil.ReadFile(composePath)
-	if err != nil {
-		return FileConfig{}, FileConfig{}, err
+func fileExists(filePath string) bool {
+	if _, err := os.Stat(filePath); err == nil {
+		// exists
+		return true
+	} else if os.IsNotExist(err) {
+		// does not exist
+		return false
+	} else {
+		return false
 	}
-
-	return FileConfig{
-			Environment: env,
-			Content:     configContent,
-			File:        configPath,
-		}, FileConfig{
-			Environment: env,
-			Content:     composeContent,
-			File:        composePath,
-		}, nil
 }
 
 // ValidateHasEnvs checks whether supplied environments exist or not.
