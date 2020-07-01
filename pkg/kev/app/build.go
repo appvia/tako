@@ -26,10 +26,10 @@ import (
 )
 
 // GetBuildInfo get the latest info as map of overrides and config pairs.
-// The build's base config is added under the key "base".
+// The build's base config is added under the key defined by the Base constant.
 func (def *Definition) GetBuildInfo() map[string]ConfigPair {
 	out := map[string]ConfigPair{}
-	out["base"] = def.Build.Base
+	out[Base] = def.Build.Base
 	for override, pair := range def.Build.Overrides {
 		out[override] = pair
 	}
