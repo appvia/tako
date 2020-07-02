@@ -35,7 +35,7 @@ type Inferred struct {
 // Infer looks at resultant compose.yaml and extracts elements useful to
 // deployment in Kubernetes, replaces values of those attributes with placeholders
 // and places actual values in config.yaml for further tweaking.
-func Infer(composeConfig *compose.Project) (Inferred, error) {
+func Infer(composeVersion string, composeConfig *compose.Project) (Inferred, error) {
 	baseConfig := New()
 
 	inferVolumesInfo(composeConfig, baseConfig)
@@ -50,7 +50,7 @@ func Infer(composeConfig *compose.Project) (Inferred, error) {
 		baseConfig.Components[s.Name] = *c
 	}
 
-	withPlaceholders, err := injectPlaceholders(composeConfig)
+	withPlaceholders, err := injectPlaceholders(composeVersion, composeConfig)
 	if err != nil {
 		return Inferred{}, err
 	}
@@ -196,7 +196,7 @@ func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // injectPlaceholders substitutes key attribute values with placeholders
-func injectPlaceholders(composeConfig *compose.Project) ([]byte, error) {
+func injectPlaceholders(composeVersion string, composeConfig *compose.Project) ([]byte, error) {
 	data, err := yaml.Marshal(composeConfig)
 	if err != nil {
 		return nil, err
@@ -249,6 +249,7 @@ func injectPlaceholders(composeConfig *compose.Project) ([]byte, error) {
 	}
 
 	out := ShallowComposeConfig{
+		Version:  composeVersion,
 		Services: opaqueConfig["services"],
 		Networks: opaqueConfig["networks"],
 		Volumes:  opaqueConfig["volumes"],
