@@ -18,6 +18,7 @@ package utils
 
 import (
 	"bytes"
+	"io/ioutil"
 	"log"
 
 	"github.com/compose-spec/compose-go/cli"
@@ -66,4 +67,24 @@ func LoadAndParse(paths []string) (*compose.Project, error) {
 	}
 
 	return cli.ProjectFromOptions(&projectOptions)
+}
+
+// GetComposeVersion extracts version from compose file and returns a string
+func GetComposeVersion(file string) (string, error) {
+	type ComposeVersion struct {
+		Version string `json:"version"` // This affects YAML as well
+	}
+
+	version := ComposeVersion{}
+
+	compose, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+
+	if err = yaml.Unmarshal(compose, &version); err != nil {
+		return "", err
+	}
+
+	return version.Version, nil
 }

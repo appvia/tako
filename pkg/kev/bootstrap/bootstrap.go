@@ -25,6 +25,10 @@ import (
 
 // NewApp creates a new Definition using app root and docker compose files
 func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
+	composeVersion, err := utils.GetComposeVersion(composeFiles[0])
+	if err != nil {
+		return nil, err
+	}
 	baseCompose, err := utils.LoadAndParse(composeFiles)
 	if err != nil {
 		return nil, err
@@ -43,7 +47,7 @@ func NewApp(root string, composeFiles, envs []string) (*app.Definition, error) {
 		}
 	}
 
-	inferred, err := config.Infer(baseCompose)
+	inferred, err := config.Infer(composeVersion, baseCompose)
 	if err != nil {
 		return nil, err
 	}
