@@ -100,12 +100,12 @@ func (def *Definition) buildOverrides(buildDir string) error {
 	def.Build.Overrides = map[string]ConfigTuple{}
 
 	for override, _ := range def.Overrides {
-		compiledConfig, err := CompileConfig(buildDir, override, def.Overrides[override], def.Base.Config)
+		compiledConfig, err := compileConfig(buildDir, override, def.Overrides[override], def.Base.Config)
 		if err != nil {
 			return err
 		}
 
-		interpolatedCompose, err := InterpolateComposeOverride(buildDir, override, compiledConfig, def.Base.Compose)
+		interpolatedCompose, err := interpolateComposeOverride(buildDir, override, compiledConfig, def.Base.Compose)
 		if err != nil {
 			return err
 		}
@@ -119,37 +119,49 @@ func (def *Definition) buildOverrides(buildDir string) error {
 	return nil
 }
 
-// CompileConfig calculates effective configuration for given environment.
+// compileConfig calculates effective configuration for given environment.
 // i.e. a base configuration extended/overridden by environment specific configuration.
-func CompileConfig(buildRoot, override string, overrideConfig, base FileConfig) (FileConfig, error) {
+func compileConfig(buildRoot, override string, overrideConfig, base FileConfig) (FileConfig, error) {
 	baseConfig, err := config.Unmarshal(base.Content)
 	if err != nil {
 		return FileConfig{}, err
 	}
 
-	envConfig, err := config.Unmarshal(overrideConfig.Content)
+	config, err := config.Unmarshal(overrideConfig.Content)
 	if err != nil {
 		return FileConfig{}, err
 	}
 
-	err = mergo.Merge(envConfig, *baseConfig)
+	err = mergo.Merge(config, *baseConfig)
 	if err != nil {
 		return FileConfig{}, err
 	}
 
-	envConfigContent, err := envConfig.Bytes()
+	tempMergePatchToBeRemovedAfterMergoRelease0_3_10(config, *baseConfig)
+
+	configContent, err := config.Bytes()
 	if err != nil {
 		return FileConfig{}, err
 	}
 
 	return FileConfig{
-		Content: envConfigContent,
+		Content: configContent,
 		File:    path.Join(buildRoot, override, ConfigBuildFile),
 	}, nil
 }
 
-// InterpolateComposeOverride interpolates the base compose.yaml with compiled config.yaml for given environment.
-func InterpolateComposeOverride(buildDir, override string, overrideConfig, baseCompose FileConfig) (FileConfig, error) {
+// @todo remove this - See https://github.com/imdario/mergo/issues/131
+// Addresses (workload, service.workload).LivenessProbeDisable
+func tempMergePatchToBeRemovedAfterMergoRelease0_3_10(dst *config.Config, src config.Config) {
+	dst.Workload.LivenessProbeDisable = src.Workload.LivenessProbeDisable
+	for key, c := range dst.Components {
+		c.Workload.LivenessProbeDisable = src.Components[key].Workload.LivenessProbeDisable
+		dst.Components[key] = c
+	}
+}
+
+// interpolateComposeOverride interpolates the base compose.yaml with compiled config.yaml for given environment.
+func interpolateComposeOverride(buildDir, override string, overrideConfig, baseCompose FileConfig) (FileConfig, error) {
 	target := interpolate.
 		NewTarget().
 		Content(baseCompose.Content).
