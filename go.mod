@@ -6,7 +6,6 @@ require (
 	github.com/compose-spec/compose-go v0.0.0-20200629133725-59b25574fd55
 	github.com/disiqueira/gotree v1.0.0
 	github.com/docker/go-units v0.4.0
-	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/goccy/go-yaml v1.7.5
