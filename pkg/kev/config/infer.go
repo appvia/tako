@@ -21,7 +21,6 @@ import (
 
 	"github.com/appvia/kube-devx/pkg/kev/utils"
 	compose "github.com/compose-spec/compose-go/types"
-	"github.com/dustin/go-humanize"
 	"github.com/goccy/go-yaml"
 )
 
@@ -165,12 +164,12 @@ func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 		// Resources Requests
 		if s.Deploy.Resources.Reservations != nil {
 			w.CPU = s.Deploy.Resources.Reservations.NanoCPUs
-			w.Memory = humanize.Bytes(uint64(s.Deploy.Resources.Reservations.MemoryBytes))
+			w.Memory = GetMemoryQuantity(int64(s.Deploy.Resources.Reservations.MemoryBytes))
 		}
 		// Resources Limits
 		if s.Deploy.Resources.Limits != nil {
 			w.MaxCPU = s.Deploy.Resources.Limits.NanoCPUs
-			w.MaxMemory = humanize.Bytes(uint64(s.Deploy.Resources.Limits.MemoryBytes))
+			w.MaxMemory = GetMemoryQuantity(int64(s.Deploy.Resources.Limits.MemoryBytes))
 		}
 		// Rolling update policy
 		if s.Deploy.UpdateConfig != nil {
@@ -183,7 +182,6 @@ func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 
 // Extracts service healthcheck information
 func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
-	// get workload object
 	w := cmp.Workload
 	w.LivenessProbeDisable = &s.HealthCheck.Disable
 	w.LivenessProbeCommand = s.HealthCheck.Test
