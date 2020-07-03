@@ -42,12 +42,12 @@ type Workload struct {
 	RollingUpdateMaxSurge uint64 `yaml:"rolling-update-max-surge,omitempty" json:"rolling_update_max_surge,omitempty" default:"1"`
 	// cpu, Default: 0.1. CPU request per workload.
 	CPU string `yaml:",omitempty" json:"cpu,omitempty" default:"0.1"`
-	// memory, Default: 50M. Memory request per workload.
-	Memory string `yaml:",omitempty" json:"memory,omitempty" default:"50M"`
+	// memory, Default: 10Mi. Memory request per workload.
+	Memory string `yaml:",omitempty" json:"memory,omitempty" default:"10Mi"`
 	// max-cpu, Default: 0.2. CPU limit per workload.
 	MaxCPU string `yaml:"max-cpu,omitempty" json:"max_cpu,omitempty" default:"0.2"`
-	// max-memory, Default: 100M. Memory limit per workload.
-	MaxMemory string `yaml:"max-memory,omitempty" json:"max_memory,omitempty" default:"100M"`
+	// max-memory, Default: 20Mi. Memory limit per workload.
+	MaxMemory string `yaml:"max-memory,omitempty" json:"max_memory,omitempty" default:"20Mi"`
 	// liveness-probe-disable, Default: false. Whether to enable liveness probe.
 	LivenessProbeDisable *bool `yaml:"liveness-probe-disable,omitempty" json:"liveness_probe_disable,omitempty" default:"false"`
 	// liveness-probe-interval, Default: 1m. Liveness probe interval.
