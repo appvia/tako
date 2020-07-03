@@ -362,7 +362,7 @@ func TranslatePodResource(service *ServiceConfig, template *v1.PodTemplateSpec) 
 		resourceLimit := v1.ResourceList{}
 
 		if service.MemLimit != 0 {
-			resourceLimit[v1.ResourceMemory] = *resource.NewQuantity(int64(service.MemLimit), "RandomStringForFormat")
+			resourceLimit[v1.ResourceMemory] = *resource.NewQuantity(int64(service.MemLimit), resource.BinarySI)
 		}
 
 		if service.CPULimit != 0 {
@@ -377,7 +377,7 @@ func TranslatePodResource(service *ServiceConfig, template *v1.PodTemplateSpec) 
 		resourceRequests := v1.ResourceList{}
 
 		if service.MemReservation != 0 {
-			resourceRequests[v1.ResourceMemory] = *resource.NewQuantity(int64(service.MemReservation), "RandomStringForFormat")
+			resourceRequests[v1.ResourceMemory] = *resource.NewQuantity(int64(service.MemReservation), resource.BinarySI)
 		}
 
 		if service.CPUReservation != 0 {
