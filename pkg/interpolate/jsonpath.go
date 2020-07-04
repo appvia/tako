@@ -27,23 +27,23 @@ const jsonPathKeyPattern = `\$\{(.*\.+.*)\}`
 
 func NewJsonPathResolver() Resolver {
 	return jsonPathResolver{
-		resolvedKeys: map[string]gjson.Result{},
+		resolvedKeys: map[string][]byte{},
 	}
 }
 
 type jsonPathResolver struct {
-	resolvedKeys map[string]gjson.Result
+	resolvedKeys map[string][]byte
 }
 
-func (r jsonPathResolver) Resolve(source, target []byte) ([]byte, error) {
-	err := r.resolveKeys(source, target)
+func (r jsonPathResolver) Resolve(source, target []byte, formatters ...Formatter) ([]byte, error) {
+	err := r.resolveKeys(source, target, formatters...)
 	if err != nil {
 		return nil, err
 	}
 	return r.resolve(target), nil
 }
 
-func (r jsonPathResolver) resolveKeys(source, target []byte) error {
+func (r jsonPathResolver) resolveKeys(source, target []byte, formatters ...Formatter) error {
 	pattern, err := regexp.Compile(jsonPathKeyPattern)
 	if err != nil {
 		return err
@@ -52,7 +52,11 @@ func (r jsonPathResolver) resolveKeys(source, target []byte) error {
 	found := pattern.FindAllSubmatch(target, -1)
 	for _, f := range found {
 		key, jsonPath := string(f[0]), string(f[1])
-		r.resolvedKeys[key] = gjson.GetBytes(source, jsonPath)
+		temp := []byte(gjson.GetBytes(source, jsonPath).String())
+		for _, c := range formatters {
+			temp = c(temp)
+		}
+		r.resolvedKeys[key] = temp
 	}
 	return nil
 }
@@ -60,7 +64,7 @@ func (r jsonPathResolver) resolveKeys(source, target []byte) error {
 func (r jsonPathResolver) resolve(target []byte) []byte {
 	var resolved = target
 	for k, v := range r.resolvedKeys {
-		resolved = bytes.ReplaceAll(resolved, []byte(k), []byte(v.String()))
+		resolved = bytes.ReplaceAll(resolved, []byte(k), v)
 	}
 	return resolved
 }

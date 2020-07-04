@@ -16,15 +16,17 @@
 
 package interpolate
 
-type Target struct {
-	raw        []byte
-	prepared   []byte
-	transforms []func(data []byte) ([]byte, error)
-	resolver   Resolver
-}
+import (
+	"fmt"
+	"regexp"
+)
 
-type Formatter func(value []byte) []byte
-
-type Resolver interface {
-	Resolve(data []byte, target []byte, formatters ...Formatter) ([]byte, error)
+// WithQuoteDecimalValue formats a decimal value to '<decimal_value>'
+var WithQuoteDecimalValue Formatter = func(value []byte) []byte {
+	result := value
+	pattern := regexp.MustCompile(`\d+(\.\d{1,2})+`)
+	if pattern.Match(value) {
+		result = []byte(fmt.Sprintf("\"%s\"", value))
+	}
+	return result
 }

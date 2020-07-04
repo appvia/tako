@@ -77,7 +77,7 @@ func (def *Definition) buildBase(buildDir string) error {
 		return err
 	}
 
-	interpolated, err := target.Interpolate(source)
+	interpolated, err := target.Interpolate(source, interpolate.WithQuoteDecimalValue)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (def *Definition) buildOverrides(buildDir string) error {
 			return err
 		}
 
-		interpolatedCompose, err := interpolateComposeOverride(buildDir, override, compiledConfig, def.Base.Compose)
+		interpolatedCompose, err := interpolateComposeOverride(buildDir, override, def.Base.Compose, compiledConfig)
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func tempMergePatchToBeRemovedAfterMergoRelease0_3_10(dst *config.Config, src co
 }
 
 // interpolateComposeOverride interpolates the base compose.yaml with compiled config.yaml for given environment.
-func interpolateComposeOverride(buildDir, override string, overrideConfig, baseCompose FileConfig) (FileConfig, error) {
+func interpolateComposeOverride(buildDir, override string, baseCompose, overrideConfig FileConfig) (FileConfig, error) {
 	target := interpolate.
 		NewTarget().
 		Content(baseCompose.Content).
@@ -172,7 +172,7 @@ func interpolateComposeOverride(buildDir, override string, overrideConfig, baseC
 		return FileConfig{}, err
 	}
 
-	envComposeContent, err := target.Interpolate(source)
+	envComposeContent, err := target.Interpolate(source, interpolate.WithQuoteDecimalValue)
 	if err != nil {
 		return FileConfig{}, err
 	}

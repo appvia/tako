@@ -25,8 +25,8 @@ func (t *Target) Content(c []byte) *Target {
 	return t
 }
 
-func (t *Target) Transform(transform func(data []byte) ([]byte, error)) *Target {
-	t.transforms = append(t.transforms, transform)
+func (t *Target) Prepare(transform ...func(data []byte) ([]byte, error)) *Target {
+	t.transforms = append(t.transforms, transform...)
 	return t
 }
 
@@ -35,7 +35,7 @@ func (t *Target) Resolver(resolver Resolver) *Target {
 	return t
 }
 
-func (t *Target) Interpolate(data []byte) ([]byte, error) {
+func (t *Target) Interpolate(data []byte, f ...Formatter) ([]byte, error) {
 	if len(t.prepared) < 1 {
 		err := t.prepData()
 		if err != nil {
@@ -43,7 +43,7 @@ func (t *Target) Interpolate(data []byte) ([]byte, error) {
 		}
 	}
 
-	return t.resolver.Resolve(data, t.prepared)
+	return t.resolver.Resolve(data, t.prepared, f...)
 }
 
 func (t *Target) prepData() error {
