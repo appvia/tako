@@ -41,7 +41,7 @@ var buildCmd = &cobra.Command{
 	// @todo: change short description!
 	Short: "Builds an application configuration for given environment (ALL environments by default).",
 	Long:  buildLongDesc,
-	RunE:  runBuildCmd,
+	RunE:  RunBuildCmd,
 }
 
 func init() {
@@ -58,7 +58,8 @@ func init() {
 	rootCmd.AddCommand(buildCmd)
 }
 
-func runBuildCmd(cmd *cobra.Command, _ []string) error {
+// RunBuildCmd prepares build artefacts. Conditionally invoked by `render`.
+func RunBuildCmd(cmd *cobra.Command, _ []string) error {
 	envs, err := cmd.Flags().GetStringSlice("environment")
 
 	switch count := len(envs); {
