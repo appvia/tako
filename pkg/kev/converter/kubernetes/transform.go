@@ -65,7 +65,7 @@ const (
 // LabelControllerType def controller type label
 const LabelControllerType string = "kompose.controller.type"
 
-// Transform prepares maps komposeObject to k8s objects
+// Transform maps komposeObject to k8s objects
 // returns object that are already sorted in the way that Services are first
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1140
 func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, envConfig *config.Config) ([]runtime.Object, error) {
