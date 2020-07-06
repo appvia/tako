@@ -86,17 +86,17 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 
 	switch count := len(envs); {
 	case count == 0:
-		envs, err = app.GetEnvs(BaseDir)
+		envs, err = app.GetEnvs()
 		if err != nil {
 			return fmt.Errorf("render failed, %s", err)
 		}
 	case count > 0:
-		if err := app.ValidateHasEnvs(BaseDir, envs); err != nil {
+		if err := app.ValidateHasEnvs(envs); err != nil {
 			return fmt.Errorf("render failed, %s", err)
 		}
 	}
 
-	appDef, err := app.LoadDefinition(BaseDir, BuildDir, envs)
+	appDef, err := app.LoadDefinition(envs)
 	if err != nil {
 		return err
 	}
