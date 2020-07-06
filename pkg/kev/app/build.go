@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/appvia/kube-devx/pkg/interpolate"
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/ghodss/yaml"
 	"github.com/imdario/mergo"
@@ -54,21 +55,21 @@ func (def *Definition) GetOverridesBuildInfo() map[string]ConfigTuple {
 }
 
 // DoBuild builds an app definition manifest
-func (def *Definition) DoBuild(buildDir string) error {
+func (def *Definition) DoBuild() error {
 	def.Build = BuildConfig{}
 
-	if err := def.buildBase(buildDir); err != nil {
+	if err := def.buildBase(); err != nil {
 		return err
 	}
 
-	if err := def.buildOverrides(buildDir); err != nil {
+	if err := def.buildOverrides(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (def *Definition) buildBase(buildDir string) error {
+func (def *Definition) buildBase() error {
 	target := interpolate.
 		NewTarget().
 		Content(def.Base.Compose.Content).
@@ -87,27 +88,27 @@ func (def *Definition) buildBase(buildDir string) error {
 	def.Build.Base = ConfigTuple{
 		Compose: FileConfig{
 			Content: interpolated,
-			File:    path.Join(buildDir, ComposeBuildFile),
+			File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, ComposeBuildFile),
 		},
 		Config: FileConfig{
 			Content: def.Base.Config.Content,
-			File:    path.Join(buildDir, ConfigBuildFile),
+			File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, ConfigBuildFile),
 		},
 	}
 
 	return nil
 }
 
-func (def *Definition) buildOverrides(buildDir string) error {
+func (def *Definition) buildOverrides() error {
 	def.Build.Overrides = map[string]ConfigTuple{}
 
 	for override, _ := range def.Overrides {
-		compiledConfig, err := compileConfig(buildDir, override, def.Overrides[override], def.Base.Config)
+		compiledConfig, err := compileConfig(override, def.Overrides[override], def.Base.Config)
 		if err != nil {
 			return err
 		}
 
-		interpolatedCompose, err := interpolateComposeOverride(buildDir, override, def.Base.Compose, compiledConfig)
+		interpolatedCompose, err := interpolateComposeOverride(override, def.Base.Compose, compiledConfig)
 		if err != nil {
 			return err
 		}
@@ -123,7 +124,7 @@ func (def *Definition) buildOverrides(buildDir string) error {
 
 // compileConfig calculates effective configuration for given environment.
 // i.e. a base configuration extended/overridden by environment specific configuration.
-func compileConfig(buildRoot, override string, overrideConfig, base FileConfig) (FileConfig, error) {
+func compileConfig(override string, overrideConfig, base FileConfig) (FileConfig, error) {
 	baseConfig, err := config.Unmarshal(base.Content)
 	if err != nil {
 		return FileConfig{}, err
@@ -148,7 +149,7 @@ func compileConfig(buildRoot, override string, overrideConfig, base FileConfig) 
 
 	return FileConfig{
 		Content: configContent,
-		File:    path.Join(buildRoot, override, ConfigBuildFile),
+		File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, override, ConfigBuildFile),
 	}, nil
 }
 
@@ -163,7 +164,7 @@ func tempMergePatchToBeRemovedAfterMergoRelease0_3_10(dst *config.Config, src co
 }
 
 // interpolateComposeOverride interpolates the base compose.yaml with compiled config.yaml for given environment.
-func interpolateComposeOverride(buildDir, override string, baseCompose, overrideConfig FileConfig) (FileConfig, error) {
+func interpolateComposeOverride(override string, baseCompose, overrideConfig FileConfig) (FileConfig, error) {
 	target := interpolate.
 		NewTarget().
 		Content(baseCompose.Content).
@@ -181,7 +182,7 @@ func interpolateComposeOverride(buildDir, override string, baseCompose, override
 
 	return FileConfig{
 		Content: envComposeContent,
-		File:    path.Join(buildDir, override, ComposeBuildFile),
+		File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, override, ComposeBuildFile),
 	}, nil
 }
 

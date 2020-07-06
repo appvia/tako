@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/utils"
 	yaml3 "gopkg.in/yaml.v3"
@@ -27,8 +28,8 @@ import (
 
 // Init creates a new app definition manifest
 // based on a compose.yaml, inferred app config and required environments.
-func Init(root string, compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
-	overrides, err := createOverrides(envs, root, baseConfig)
+func Init(compose []byte, baseConfig *config.Config, envs []string) (*Definition, error) {
+	overrides, err := createOverrides(envs, baseConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -40,15 +41,16 @@ func Init(root string, compose []byte, baseConfig *config.Config, envs []string)
 
 	return &Definition{
 		Base: ConfigTuple{
-			Compose: FileConfig{Content: compose, File: path.Join(root, ComposeFile)},
-			Config:  FileConfig{Content: configData, File: path.Join(root, ConfigFile)},
+			// Note that if kev.WorkDir is defined compose with placeholders will be placed there
+			Compose: FileConfig{Content: compose, File: path.Join(kev.BaseDir, kev.WorkDir, ComposeFile)},
+			Config:  FileConfig{Content: configData, File: path.Join(kev.BaseDir, ConfigFile)},
 		},
 		Overrides: overrides,
 		Build:     BuildConfig{},
 	}, nil
 }
 
-func createOverrides(candidates []string, appDir string, baseConfig *config.Config) (map[string]FileConfig, error) {
+func createOverrides(candidates []string, baseConfig *config.Config) (map[string]FileConfig, error) {
 	config := &OverrideConfig{
 		Workload: &yaml3.Node{
 			Kind:        yaml3.MappingNode,
@@ -81,7 +83,7 @@ func createOverrides(candidates []string, appDir string, baseConfig *config.Conf
 	for _, env := range candidates {
 		overrides[env] = FileConfig{
 			Content: out,
-			File:    path.Join(appDir, env, "config.yaml"),
+			File:    path.Join(kev.BaseDir, env, ConfigFile),
 		}
 	}
 

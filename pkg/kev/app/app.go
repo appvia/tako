@@ -23,6 +23,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/appvia/kube-devx/pkg/kev"
 )
 
 const (
@@ -32,7 +34,7 @@ const (
 	// ComposeBuildFile build time compose file name
 	ComposeBuildFile = "compose.build.yaml"
 
-	// ConfigFile config file name
+	// ConfigFile config file name (base)
 	ConfigFile = "config.yaml"
 
 	// ConfigBuildFile build time config file name
@@ -45,39 +47,55 @@ const (
 )
 
 // LoadDefinition returns the current app definition manifest
-func LoadDefinition(root, buildDir string, envs []string) (*Definition, error) {
+func LoadDefinition(envs []string) (*Definition, error) {
 	var def = &Definition{}
 
-	if err := loadBase(root, def); err != nil {
+	if err := loadBase(&def.Base); err != nil {
 		return nil, err
 	}
 
-	if err := loadOverrides(root, envs, def); err != nil {
+	if err := loadOverrides(envs, def); err != nil {
 		return nil, err
 	}
 
-	if err := loadBuildIfAvailable(path.Join(root, buildDir), envs, def); err != nil {
+	if err := loadBuildIfAvailable(envs, def); err != nil {
 		return nil, err
 	}
 
 	return def, nil
 }
 
-func loadBase(dir string, def *Definition) error {
-	if err := loadBaseConfigPair(dir, ComposeFile, ConfigFile, &def.Base); err != nil {
+// loadBase loads base config pair
+// Note: If kev.WorkDir is defined base compose file will be placed
+// under this subdirectory to declutter config space.
+func loadBase(pair *ConfigTuple) error {
+	composePath := path.Join(kev.BaseDir, kev.WorkDir, ComposeFile)
+	configPath := path.Join(kev.BaseDir, ConfigFile)
+	if err := configPair(composePath, configPath, pair); err != nil {
 		return err
 	}
 	return nil
 }
 
-func loadBaseConfigPair(dir, composeFile, configFile string, pair *ConfigTuple) error {
-	composePath := path.Join(dir, composeFile)
+// loadBuildConfigPair load built config pair for a given environment.
+// To get the base build config pair, pass env as an empty string!
+func loadBuildConfigPair(env string, pair *ConfigTuple) error {
+	envDir := path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, env)
+	composePath := path.Join(envDir, ComposeBuildFile)
+	configPath := path.Join(envDir, ConfigBuildFile)
+	if err := configPair(composePath, configPath, pair); err != nil {
+		return err
+	}
+	return nil
+}
+
+// configPair returns a ConfigTuple for provided compose and config paths
+func configPair(composePath, configPath string, pair *ConfigTuple) error {
 	compose, err := ioutil.ReadFile(composePath)
 	if err != nil {
 		return err
 	}
 
-	configPath := path.Join(dir, configFile)
 	config, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return err
@@ -94,10 +112,10 @@ func loadBaseConfigPair(dir, composeFile, configFile string, pair *ConfigTuple) 
 	return nil
 }
 
-func loadOverrides(dir string, envs []string, def *Definition) error {
+func loadOverrides(envs []string, def *Definition) error {
 	overrides := make(map[string]FileConfig)
 	for _, env := range envs {
-		config, err := loadOverrideConfig(dir, env)
+		config, err := loadOverrideConfig(env)
 		if err != nil {
 			return err
 		}
@@ -107,14 +125,14 @@ func loadOverrides(dir string, envs []string, def *Definition) error {
 	return nil
 }
 
-func loadBuildIfAvailable(dir string, envs []string, def *Definition) error {
+func loadBuildIfAvailable(envs []string, def *Definition) error {
 	def.Build = BuildConfig{}
-	if !WasBuilt(dir) {
+	if !WasBuilt() {
 		return nil
 	}
 
 	var base ConfigTuple
-	if err := loadBaseConfigPair(dir, ComposeBuildFile, ConfigBuildFile, &base); err != nil {
+	if err := loadBuildConfigPair("", &base); err != nil {
 		return err
 	}
 	def.Build.Base = base
@@ -122,7 +140,7 @@ func loadBuildIfAvailable(dir string, envs []string, def *Definition) error {
 	overrides := map[string]ConfigTuple{}
 	for _, env := range envs {
 		var pair ConfigTuple
-		if err := loadBaseConfigPair(path.Join(dir, env), ComposeBuildFile, ConfigBuildFile, &pair); err != nil {
+		if err := loadBuildConfigPair(env, &pair); err != nil {
 			return err
 		}
 		overrides[env] = pair
@@ -133,8 +151,8 @@ func loadBuildIfAvailable(dir string, envs []string, def *Definition) error {
 }
 
 // loadOverrideConfig retrieves the config.yaml for a specified environment.
-func loadOverrideConfig(root, env string) (FileConfig, error) {
-	configPath := path.Join(root, env, ConfigFile)
+func loadOverrideConfig(env string) (FileConfig, error) {
+	configPath := path.Join(kev.BaseDir, env, ConfigFile)
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return FileConfig{}, err
@@ -147,7 +165,8 @@ func loadOverrideConfig(root, env string) (FileConfig, error) {
 }
 
 // WasBuilt checks whether the app has previously been built
-func WasBuilt(buildDir string) bool {
+func WasBuilt() bool {
+	buildDir := path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir)
 	composeBuildExists := fileExists(path.Join(buildDir, ComposeBuildFile))
 	configBuildExists := fileExists(path.Join(buildDir, ConfigBuildFile))
 	return composeBuildExists && configBuildExists
@@ -166,8 +185,8 @@ func fileExists(filePath string) bool {
 }
 
 // ValidateHasEnvs checks whether supplied environments exist or not.
-func ValidateHasEnvs(root string, candidates []string) error {
-	envs, err := GetEnvs(root)
+func ValidateHasEnvs(candidates []string) error {
+	envs, err := GetEnvs()
 	if err != nil {
 		return err
 	}
@@ -191,10 +210,10 @@ func ValidateHasEnvs(root string, candidates []string) error {
 }
 
 // GetEnvs returns a string slice of all app environments
-func GetEnvs(root string) ([]string, error) {
+func GetEnvs() ([]string, error) {
 	var envs []string
 
-	files, err := ioutil.ReadDir(root)
+	files, err := ioutil.ReadDir(kev.BaseDir)
 	if err != nil {
 		return nil, err
 	}

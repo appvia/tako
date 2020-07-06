@@ -45,6 +45,7 @@ type FileConfig struct {
 	File    string
 }
 
+// ConfigTuple is a configuration spec containing information about compose and config file pair
 type ConfigTuple struct {
 	Compose FileConfig
 	Config  FileConfig
