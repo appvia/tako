@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 )
@@ -29,7 +30,7 @@ const (
 	// Name of the converter
 	Name                  = "kubernetes"
 	singleFileDefaultName = "k8s.yaml"
-	multiFileSubDir       = "k8s"
+	multiFileSubDir       = ".k8s"
 )
 
 // K8s is a native kubernetes manifests converter
@@ -63,7 +64,7 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			// adding env name suffix to the custom directory to differentiate
 			outDirPath = path.Join(dir, env)
 		} else {
-			outDirPath = path.Join(bc.Compose.Path(), multiFileSubDir)
+			outDirPath = path.Join(kev.BaseDir, multiFileSubDir, env)
 		}
 
 		// @step Create output directory
