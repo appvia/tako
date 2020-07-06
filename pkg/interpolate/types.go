@@ -23,7 +23,7 @@ type Target struct {
 	resolver   Resolver
 }
 
-type Formatter func(value []byte) []byte
+type Formatter func(key string, value []byte) []byte
 
 type Resolver interface {
 	Resolve(data []byte, target []byte, formatters ...Formatter) ([]byte, error)
