@@ -38,7 +38,14 @@ var renderCmd = &cobra.Command{
 	Use:   "render",
 	Short: "Render an application deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
-	RunE:  runRenderCmd,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if !app.WasBuilt() {
+			if err := RunBuildCmd(cmd, args); err != nil {
+				return err
+			}
+		}
+		return runRenderCmd(cmd, args)
+	},
 }
 
 func init() {
@@ -82,7 +89,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	dir, err := cmd.Flags().GetString("dir")
 	envs, err := cmd.Flags().GetStringSlice("environment")
 
-	fmt.Println("⚙️  Output format:", format)
+	fmt.Println("\n⚙️  Output format:", format)
 
 	switch count := len(envs); {
 	case count == 0:
@@ -96,17 +103,17 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	appDef, err := app.LoadDefinition(envs)
+	def, err := app.LoadDefinition(envs)
 	if err != nil {
 		return err
 	}
 
 	c := converter.Factory(format)
-	if err := c.Render(singleFile, dir, appDef); err != nil {
+	if err := c.Render(singleFile, dir, def); err != nil {
 		return err
 	}
 
-	fmt.Println("🧰 App render complete!")
+	fmt.Println("\n🧰 App render complete!")
 
 	return nil
 }
