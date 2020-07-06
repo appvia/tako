@@ -26,12 +26,22 @@ const (
 	// DefaultVolumeClass default PV size
 	DefaultVolumeClass = "standard"
 	// DefaultResourceRequestCPU default CPU resource request
+	// This value follows docker compose resource notation
+	// https://docs.docker.com/compose/compose-file/#resources
+	// Kubernetes notation details: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu
+	// Default: 0.1, which is equivalent to 10% of CPU
 	DefaultResourceRequestCPU = "0.1"
 	// DefaultResourceRequestMem default Memory resource request
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
 	DefaultResourceRequestMem = "10Mi"
 	// DefaultResourceLimitCPU default CPU resource limit
+	// This value follows docker compose resource notation
+	// https://docs.docker.com/compose/compose-file/#resources
+	// Kubernetes notation details: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu
+	// Default: 0.2, which is equivalent to 20% of CPU
 	DefaultResourceLimitCPU = "0.2"
 	// DefaultResourceLimitMem default Memory resource limit
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
 	DefaultResourceLimitMem = "20Mi"
 	// DefaultService is a default service
 	DefaultService = NoService

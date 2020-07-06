@@ -22,7 +22,7 @@ import (
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	compose "github.com/compose-spec/compose-go/types"
-	"github.com/dustin/go-humanize"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // Deploy returns a deploy block with configured presets.
@@ -30,8 +30,11 @@ func Deploy() compose.DeployConfig {
 	replica := uint64(config.DefaultReplicaNumber)
 	parallelism := uint64(config.DefaultRollingUpdateMaxSurge)
 
-	defaultMemLimit, _ := humanize.ParseBytes(config.DefaultResourceLimitMem)
-	defaultMemReq, _ := humanize.ParseBytes(config.DefaultResourceRequestMem)
+	lm, _ := resource.ParseQuantity(config.DefaultResourceLimitMem)
+	rm, _ := resource.ParseQuantity(config.DefaultResourceRequestMem)
+
+	defaultMemLimit, _ := lm.AsInt64()
+	defaultMemReq, _ := rm.AsInt64()
 
 	return compose.DeployConfig{
 		Replicas: &replica,
