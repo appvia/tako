@@ -38,14 +38,10 @@ var renderCmd = &cobra.Command{
 	Use:   "render",
 	Short: "Render an application deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if !app.WasBuilt() {
-			if err := RunBuildCmd(cmd, args); err != nil {
-				return err
-			}
-		}
-		return runRenderCmd(cmd, args)
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return RunBuildCmd(cmd, args)
 	},
+	RunE: runRenderCmd,
 }
 
 func init() {
