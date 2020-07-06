@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/spf13/cobra"
@@ -64,22 +63,22 @@ func runBuildCmd(cmd *cobra.Command, _ []string) error {
 
 	switch count := len(envs); {
 	case count == 0:
-		envs, err = app.GetEnvs(BaseDir)
+		envs, err = app.GetEnvs()
 		if err != nil {
 			return fmt.Errorf("builds failed, %s", err)
 		}
 	case count > 0:
-		if err := app.ValidateHasEnvs(BaseDir, envs); err != nil {
+		if err := app.ValidateHasEnvs(envs); err != nil {
 			return fmt.Errorf("builds failed, %s", err)
 		}
 	}
 
-	def, err := app.LoadDefinition(BaseDir, BuildDir, envs)
+	def, err := app.LoadDefinition(envs)
 	if err != nil {
 		return err
 	}
 
-	if err := def.DoBuild(path.Join(BaseDir, BuildDir)); err != nil {
+	if err := def.DoBuild(); err != nil {
 		return err
 	}
 
