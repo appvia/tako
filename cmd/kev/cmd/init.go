@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
 	"github.com/disiqueira/gotree"
@@ -80,7 +81,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 
-	def, err := bootstrap.NewApp(BaseDir, composeFiles, envs)
+	def, err := bootstrap.NewApp(composeFiles, envs)
 	if err != nil {
 		return err
 	}
@@ -94,14 +95,10 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 }
 
 func createAppFilesystem(def *app.Definition) error {
-	if err := os.MkdirAll(BaseDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir), os.ModePerm); err != nil {
 		return err
 	}
-
-	if err := os.MkdirAll(path.Join(BaseDir, BuildDir), os.ModePerm); err != nil {
-		return err
-	}
-	if err := ioutil.WriteFile(path.Join(BaseDir, ".gitignore"), []byte(".build/*\n"), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(path.Join(kev.BaseDir, ".gitignore"), []byte(path.Join(kev.WorkDir, kev.BuildDir, "*")), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -116,7 +113,7 @@ func createAppFilesystem(def *app.Definition) error {
 		if err := os.MkdirAll(env.Path(), os.ModePerm); err != nil {
 			return err
 		}
-		if err := os.MkdirAll(path.Join(BaseDir, BuildDir, env.Dir()), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, env.Dir()), os.ModePerm); err != nil {
 			return err
 		}
 		if err := ioutil.WriteFile(env.File, env.Content, os.ModePerm); err != nil {
@@ -134,7 +131,6 @@ func displayInit(composeFiles []string, def *app.Definition) {
 	}
 	fmt.Println(defSource.Print())
 	defTree := gotree.New("\n\nApplication configuration files")
-	defTree.Add(def.Base.Compose.File)
 	defTree.Add(def.Base.Config.File)
 
 	for _, env := range def.Overrides {
