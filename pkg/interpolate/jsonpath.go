@@ -54,7 +54,7 @@ func (r jsonPathResolver) resolveKeys(source, target []byte, formatters ...Forma
 		key, jsonPath := string(f[0]), string(f[1])
 		temp := []byte(gjson.GetBytes(source, jsonPath).String())
 		for _, c := range formatters {
-			temp = c(temp)
+			temp = c(key, temp)
 		}
 		r.resolvedKeys[key] = temp
 	}

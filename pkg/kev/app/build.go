@@ -17,7 +17,9 @@
 package app
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
 	"github.com/appvia/kube-devx/pkg/interpolate"
 	"github.com/appvia/kube-devx/pkg/kev/config"
@@ -77,7 +79,7 @@ func (def *Definition) buildBase(buildDir string) error {
 		return err
 	}
 
-	interpolated, err := target.Interpolate(source, interpolate.WithQuoteDecimalValue)
+	interpolated, err := target.Interpolate(source, quoteCPU)
 	if err != nil {
 		return err
 	}
@@ -172,7 +174,7 @@ func interpolateComposeOverride(buildDir, override string, baseCompose, override
 		return FileConfig{}, err
 	}
 
-	envComposeContent, err := target.Interpolate(source, interpolate.WithQuoteDecimalValue)
+	envComposeContent, err := target.Interpolate(source, quoteCPU)
 	if err != nil {
 		return FileConfig{}, err
 	}
@@ -181,4 +183,13 @@ func interpolateComposeOverride(buildDir, override string, baseCompose, override
 		Content: envComposeContent,
 		File:    path.Join(buildDir, override, ComposeBuildFile),
 	}, nil
+}
+
+// quoteCPU formats cpu values to quoted values. E.g. "<CPU_VALUE>"
+var quoteCPU interpolate.Formatter = func(key string, value []byte) []byte {
+	hasCpu := strings.Contains(strings.ToLower(key), "cpu")
+	if hasCpu {
+		return []byte(fmt.Sprintf("\"%s\"", value))
+	}
+	return value
 }
