@@ -22,7 +22,7 @@ const (
 	// DefaultRollingUpdateMaxSurge default number of containers to be updated at a time
 	DefaultRollingUpdateMaxSurge = 1
 	// DefaultVolumeSize default value PV class
-	DefaultVolumeSize = "1Gi"
+	DefaultVolumeSize = "100Mi"
 	// DefaultVolumeClass default PV size
 	DefaultVolumeClass = "standard"
 	// DefaultResourceRequestCPU default CPU resource request

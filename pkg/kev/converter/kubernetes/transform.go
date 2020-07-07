@@ -52,7 +52,7 @@ type Kubernetes struct {
 
 // PVCRequestSize (Persistent Volume Claim) has default size
 // @todo take defaults from confg.defaults!
-const PVCRequestSize = "100Mi"
+const PVCRequestSize = config.DefaultVolumeSize
 
 const (
 	// DeploymentController is controller type for Deployment
