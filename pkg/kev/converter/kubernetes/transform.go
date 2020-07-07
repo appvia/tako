@@ -37,6 +37,7 @@ import (
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1189,24 +1190,24 @@ func (k *Kubernetes) InitPod(name string, service ServiceConfig) *v1.Pod {
 
 // CreateNetworkPolicy initializes Network policy
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1109
-func (k *Kubernetes) CreateNetworkPolicy(name string, networkName string) (*v1beta1.NetworkPolicy, error) {
+func (k *Kubernetes) CreateNetworkPolicy(name string, networkName string) (*networking.NetworkPolicy, error) {
 
 	str := "true"
-	np := &v1beta1.NetworkPolicy{
+	np := &networking.NetworkPolicy{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "NetworkPolicy",
-			APIVersion: "extensions/v1beta1",
+			APIVersion: "networking.k8s.io/v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name: networkName,
 			//Labels: ConfigLabels(name)(name),
 		},
-		Spec: v1beta1.NetworkPolicySpec{
+		Spec: networking.NetworkPolicySpec{
 			PodSelector: meta.LabelSelector{
 				MatchLabels: map[string]string{"io.kompose.network/" + networkName: str},
 			},
-			Ingress: []v1beta1.NetworkPolicyIngressRule{{
-				From: []v1beta1.NetworkPolicyPeer{{
+			Ingress: []networking.NetworkPolicyIngressRule{{
+				From: []networking.NetworkPolicyPeer{{
 					PodSelector: &meta.LabelSelector{
 						MatchLabels: map[string]string{"io.kompose.network/" + networkName: str},
 					},
