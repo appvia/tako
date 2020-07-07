@@ -95,7 +95,7 @@ const (
 	// DaemonsetWorkload workload type
 	DaemonsetWorkload = "DaemonSet"
 	// StatefulsetWorkload workload type
-	StatefulsetWorkload = "StatefulsetSet"
+	StatefulsetWorkload = "StatefulSet"
 	// JobWorkload workload type
 	JobWorkload = "Job"
 )
