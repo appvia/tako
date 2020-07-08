@@ -1066,10 +1066,26 @@ func (k *Kubernetes) ConfigEnvs(name string, service ServiceConfig, opt ConvertO
 	// Load up the environment variables
 	for _, v := range service.Environment {
 		if !keysFromEnvFile[v.Name] {
-			envs = append(envs, v1.EnvVar{
-				Name:  v.Name,
-				Value: v.Value,
-			})
+			// @step check whether env var value references secret e.g. `secret.my-secret-name.my-key`
+			parts := strings.Split(v.Value, ".")
+			if len(parts) == 3 && parts[0] == "secret" {
+				envs = append(envs, v1.EnvVar{
+					Name: v.Name,
+					ValueFrom: &v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: parts[1],
+							},
+							Key: parts[2],
+						},
+					},
+				})
+			} else {
+				envs = append(envs, v1.EnvVar{
+					Name:  v.Name,
+					Value: v.Value,
+				})
+			}
 		}
 
 	}
