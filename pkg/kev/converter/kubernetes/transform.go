@@ -1191,8 +1191,9 @@ func (k *Kubernetes) createConfigMapFromComposeConfig(name string, opt ConvertOp
 		currentConfigName := config.Source
 		currentConfigObj := service.ConfigsMetaData[currentConfigName]
 		if currentConfigObj.External.External {
-			// @todo: External service configs are ignored. Perhaps we can handle it better, or communicate to the user
-			// 		  as to what they need to do to make the deployment work!
+			fmt.Printf("⚠️  Your deployment(s) expects '%s' configmap to exist in the target K8s cluster namespace.\n", name)
+			fmt.Println("   Follow the official guidelines on how to create K8s configmap manually")
+			fmt.Println("   https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/")
 			continue
 		}
 		currentFileName := currentConfigObj.File
