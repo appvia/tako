@@ -575,8 +575,9 @@ func (k *Kubernetes) CreateSecrets(komposeObject KomposeObject) ([]*v1.Secret, e
 			}
 			objects = append(objects, secret)
 		} else {
-			// @todo: Implement external secrets handling!
-			fmt.Printf("External secrets %s is not currently supported - ignoring", name)
+			fmt.Printf("⚠️  Your deployment(s) expects '%s' secret to exist in the target K8s cluster namespace.\n", name)
+			fmt.Println("   Follow the official guidelines on how to create K8s secrets manually")
+			fmt.Println("   https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/")
 		}
 	}
 	return objects, nil
