@@ -66,7 +66,16 @@ func LoadAndParse(paths []string) (*compose.Project, error) {
 		return nil, err
 	}
 
-	return cli.ProjectFromOptions(&projectOptions)
+	project, err := cli.ProjectFromOptions(&projectOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range project.Services {
+		project.Services[i].EnvFile = nil
+	}
+
+	return project, nil
 }
 
 // GetComposeVersion extracts version from compose file and returns a string
