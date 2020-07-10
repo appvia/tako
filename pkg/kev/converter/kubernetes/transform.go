@@ -140,7 +140,7 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 
 			for _, net := range service.Network {
 
-				fmt.Printf("Network %s is detected at Source, shall be converted to equivalent NetworkPolicy at Destination\n", net)
+				fmt.Printf("ℹ️  %v '%s' network detected and will be converted to equivalent NetworkPolicy\n", name, net)
 				np, err := k.CreateNetworkPolicy(name, net)
 
 				if err != nil {
