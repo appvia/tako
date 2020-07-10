@@ -49,7 +49,8 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 	if appDef.HasBuiltOverrides() {
 		envs = appDef.GetOverridesBuildInfo()
 	} else {
-		envs[app.Base] = appDef.GetAppBuildInfo()
+		// default build configuration
+		envs[""] = appDef.GetAppBuildInfo()
 	}
 
 	for env, bc := range envs {
