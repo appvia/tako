@@ -65,8 +65,7 @@ const (
 	ReplicationController = "replicationcontroller"
 )
 
-// LabelControllerType def controller type label
-const LabelControllerType string = "kompose.controller.type"
+var customConfig *config.Config
 
 // Transform maps komposeObject to k8s objects
 // returns object that are already sorted in the way that Services are first
@@ -74,6 +73,7 @@ const LabelControllerType string = "kompose.controller.type"
 func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, envConfig *config.Config) ([]runtime.Object, error) {
 
 	// @todo: make use of passed envConfig - this might be used to better control the outcome!
+	customConfig = envConfig
 
 	// this will hold all the converted data
 	var allobjects []runtime.Object
@@ -1410,11 +1410,27 @@ func (k *Kubernetes) CreateService(name string, service ServiceConfig, objects [
 	servicePorts := k.ConfigServicePorts(name, service)
 	svc.Spec.Ports = servicePorts
 
-	if service.ServiceType == "Headless" {
+	// @step Get the actual service type by prioritising kev config over kompose labels
+	// @todo Refactor when we figure out the configuration via labels
+	component := customConfig.Components[name]
+	serviceType := ""
+	if component.Service.Type != "" {
+		// prioritise app component service type
+		serviceType = component.Service.Type
+	} else if customConfig.Service.Type != "" {
+		// fallback to app default service type
+		serviceType = customConfig.Service.Type
+	} else {
+		// fallback to Kompose derived value
+		serviceType = service.ServiceType
+	}
+
+	// @step set the service spec
+	if serviceType == config.HeadlessService {
 		svc.Spec.Type = v1.ServiceTypeClusterIP
 		svc.Spec.ClusterIP = "None"
 	} else {
-		svc.Spec.Type = v1.ServiceType(service.ServiceType)
+		svc.Spec.Type = v1.ServiceType(serviceType)
 	}
 
 	// Configure annotations
