@@ -116,7 +116,7 @@ func inferService(s *composego.ServiceConfig, cmp *Component) {
 				// Service published as LoadBalancer
 				// @todo: we might need to supress that and create ClusterIP kind by default!
 				cmp.Service.Type = LoadBalancerService
-			} else if p.Published != 0 {
+			} else if p.Published != 0 || (p.Published == 0 && p.Target != 0) {
 				// Service published as ClusterIP
 				cmp.Service.Type = ClusterIPService
 			} else if p.Published == 0 {
