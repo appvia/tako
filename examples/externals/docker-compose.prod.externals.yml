@@ -3,7 +3,7 @@ services:
   frontend:
     image: ezodude/frontend-cok8s:prod
     build:
-      context: .
+      context: ../../hack/sample-dc-app
       dockerfile: frontend.Dockerfile
     environment:
       PORT: 8080
@@ -15,7 +15,7 @@ services:
   backend:
     image: ezodude/backend-cok8s:prod
     build:
-      context: .
+      context: ../../hack/sample-dc-app
       dockerfile: backend.Dockerfile
     environment:
       - CACHE_ENDPOINT

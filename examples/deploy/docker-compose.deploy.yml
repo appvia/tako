@@ -3,12 +3,12 @@ services:
   frontend:
     image: ezodude/frontend-cok8s:prod
     build:
-      context: .
+      context: ../../hack/sample-dc-app
       dockerfile: frontend.Dockerfile
-    env_file:
-      - ./front-env
     environment:
-      PORTX: ${PORT}
+      PORT: 8080
+    deploy:
+      replicas: 3
     ports:
     - '80:8080'
     networks:
@@ -17,12 +17,13 @@ services:
   backend:
     image: ezodude/backend-cok8s:prod
     build:
-      context: .
+      context: ../../hack/sample-dc-app
       dockerfile: backend.Dockerfile
-    env_file:
-      - ./back-env
+    deploy:
+      replicas: 2
     environment:
       - CACHE_ENDPOINT
+      - CACHE_PASSWORD
     networks:
       - prod-esnet
 
