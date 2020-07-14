@@ -1,15 +1,13 @@
 version: '3.7'
 services:
   db:
-    image: mysql:8.0.19
     command: '--default-authentication-plugin=mysql_native_password'
     volumes:
       - db_data:/var/lib/mysql
     restart: always
     env_file:
-      - db-envs
+      - ./db-envs
   wordpress:
-    image: wordpress:latest
     ports:
       - 80:80
     restart: always

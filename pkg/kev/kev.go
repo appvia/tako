@@ -20,9 +20,10 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/compose"
 	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kube-devx/pkg/kev/converter"
 )
 
-func InitApp(composeFiles, envs []string) (*app.Definition, error) {
+func Init(composeFiles, envs []string) (*app.Definition, error) {
 	versionedProject, err := compose.LoadAndPrepVersionedProject(composeFiles)
 	if err != nil {
 		return nil, err
@@ -36,7 +37,7 @@ func InitApp(composeFiles, envs []string) (*app.Definition, error) {
 	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
 }
 
-func BuildApp(envs []string) (*app.Definition, error) {
+func Build(envs []string) (*app.Definition, error) {
 	envs, err := app.ValidateEnvsOrGetAll(envs)
 	if err != nil {
 		return nil, err
@@ -52,4 +53,23 @@ func BuildApp(envs []string) (*app.Definition, error) {
 	}
 
 	return def, nil
+}
+
+func Render(format string, singleFile bool, dir string, envs []string) error {
+	envs, err := app.ValidateEnvsOrGetAll(envs)
+	if err != nil {
+		return err
+	}
+
+	def, err := app.LoadDefinition(envs)
+	if err != nil {
+		return err
+	}
+
+	c := converter.Factory(format)
+	if err := c.Render(singleFile, dir, def); err != nil {
+		return err
+	}
+
+	return nil
 }

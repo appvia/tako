@@ -19,29 +19,29 @@ package config
 const (
 	// DefaultVolumeSize default value PV class
 	DefaultVolumeSize = "100Mi"
-	// DefaultVolumeClass default PV size
-	DefaultVolumeClass = "standard"
-	// DefaultService is a default service
-	DefaultService = NoService
-	// DefaultRestartPolicy is a default restart policy
-	DefaultRestartPolicy = RestartPolicyAlways
-	// DefaultWorkload is a defauld workload type
-	DefaultWorkload = DeploymentWorkload
-	// DefaultServiceAccountName is a default SA to be used
-	DefaultServiceAccountName = "default"
-	// DefaultImagePullPolicy default image pull policy
-	DefaultImagePullPolicy = "IfNotPresent"
-	// DefaultImagePullSecret default image pull credentials secret name
-	DefaultImagePullSecret = ""
-	// DefaultSecurityContextRunAsUser default UID for pod security context
-	DefaultSecurityContextRunAsUser = ""
-	// DefaultSecurityContextRunAsGroup default GID for pod security context
-	DefaultSecurityContextRunAsGroup = ""
-	// DefaultSecurityContextFsGroup default fs Group for pod security context
-	DefaultSecurityContextFsGroup = ""
+	// defaultVolumeClass default PV size
+	defaultVolumeClass = "standard"
+	// defaultService is a default service
+	defaultService = noService
+	// defaultRestartPolicy is a default restart policy
+	defaultRestartPolicy = RestartPolicyAlways
+	// defaultWorkload is a defauld workload type
+	defaultWorkload = DeploymentWorkload
+	// defaultServiceAccountName is a default SA to be used
+	defaultServiceAccountName = "default"
+	// defaultImagePullPolicy default image pull policy
+	defaultImagePullPolicy = "IfNotPresent"
+	// defaultImagePullSecret default image pull credentials secret name
+	defaultImagePullSecret = ""
+	// defaultSecurityContextRunAsUser default UID for pod security context
+	defaultSecurityContextRunAsUser = ""
+	// defaultSecurityContextRunAsGroup default GID for pod security context
+	defaultSecurityContextRunAsGroup = ""
+	// defaultSecurityContextFsGroup default fs Group for pod security context
+	defaultSecurityContextFsGroup = ""
 
-	// NoService default value
-	NoService = "None"
+	// noService default value
+	noService = "None"
 	// NodePortService svc type
 	NodePortService = "NodePort"
 	// LoadBalancerService svc type

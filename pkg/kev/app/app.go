@@ -24,11 +24,6 @@ import (
 )
 
 const (
-	// Base labels the app's base Compose and Config files during init and build.
-	// These files are the basis for user defined overrides that map to app environments.
-	// This is a reserved name.
-	Base = "kev-base"
-
 	// baseDir is a top level directory for app files
 	baseDir = ".kev"
 

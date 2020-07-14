@@ -66,8 +66,8 @@ func Infer(versioned *compose.VersionedProject) (Inferred, error) {
 // setSensibleDefaults set common app level parameters with sensible defaults
 func setSensibleDefaults(appConfig *Config) {
 	appConfig.Workload = Workload{
-		ImagePullPolicy:    DefaultImagePullPolicy,
-		ServiceAccountName: DefaultServiceAccountName,
+		ImagePullPolicy:    defaultImagePullPolicy,
+		ServiceAccountName: defaultServiceAccountName,
 	}
 }
 
@@ -79,7 +79,7 @@ func inferVolumesInfo(versioned *compose.VersionedProject, appConfig *Config) {
 	for _, v := range versioned.VolumeNames() {
 		vols[normalizeVolumeName(v)] = Volume{
 			Size:  DefaultVolumeSize,
-			Class: DefaultVolumeClass,
+			Class: defaultVolumeClass,
 		}
 	}
 
@@ -105,7 +105,7 @@ func inferEnvironment(s *composego.ServiceConfig, cmp *Component) {
 // Extracts information about K8s service requirements
 func inferService(s *composego.ServiceConfig, cmp *Component) {
 	if s.Ports == nil {
-		cmp.Service.Type = NoService
+		cmp.Service.Type = noService
 	} else {
 		for _, p := range s.Ports {
 			if p.Published != 0 && p.Mode == "host" {

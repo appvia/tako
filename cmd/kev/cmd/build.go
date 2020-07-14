@@ -59,29 +59,36 @@ func init() {
 	rootCmd.AddCommand(buildCmd)
 }
 
-// RunBuildCmd prepares build artefacts. Conditionally invoked by `render`.
+// RunBuildCmd prepares build artifacts.
 func RunBuildCmd(cmd *cobra.Command, _ []string) error {
 	envs, err := cmd.Flags().GetStringSlice("environment")
 
-	def, err := kev.BuildApp(envs)
+	def, err := kev.Build(envs)
 	if err != nil {
 		return err
 	}
 
-	for _, build := range def.GetInternalBuildInfo() {
+	if err := writeBuildFileSystem(def); err != nil {
+		return err
+	}
+	displayBuild(def)
+
+	return nil
+}
+
+func writeBuildFileSystem(def *app.Definition) error {
+	for _, build := range def.GetBuildInfo() {
 		if err := os.MkdirAll(build.Config.Path(), os.ModePerm); err != nil {
 			return err
 		}
 
-		if err = ioutil.WriteFile(build.Config.File, build.Config.Content, os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(build.Config.File, build.Config.Content, os.ModePerm); err != nil {
 			return err
 		}
-		if err = ioutil.WriteFile(build.Compose.File, build.Compose.Content, os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(build.Compose.File, build.Compose.Content, os.ModePerm); err != nil {
 			return err
 		}
 	}
-
-	displayBuild(def)
 	return nil
 }
 

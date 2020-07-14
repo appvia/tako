@@ -80,7 +80,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 
-	def, err := kev.InitApp(composeFiles, envs)
+	def, err := kev.Init(composeFiles, envs)
 	if err != nil {
 		return err
 	}
