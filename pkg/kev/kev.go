@@ -35,3 +35,21 @@ func InitApp(composeFiles, envs []string) (*app.Definition, error) {
 
 	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
 }
+
+func BuildApp(envs []string) (*app.Definition, error) {
+	envs, err := app.ValidateEnvsOrGetAll(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	def, err := app.LoadDefinition(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := def.DoBuild(); err != nil {
+		return nil, err
+	}
+
+	return def, nil
+}

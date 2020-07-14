@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/spf13/cobra"
 )
@@ -62,24 +63,8 @@ func init() {
 func RunBuildCmd(cmd *cobra.Command, _ []string) error {
 	envs, err := cmd.Flags().GetStringSlice("environment")
 
-	switch count := len(envs); {
-	case count == 0:
-		envs, err = app.GetEnvs()
-		if err != nil {
-			return fmt.Errorf("builds failed, %s", err)
-		}
-	case count > 0:
-		if err := app.ValidateHasEnvs(envs); err != nil {
-			return fmt.Errorf("builds failed, %s", err)
-		}
-	}
-
-	def, err := app.LoadDefinition(envs)
+	def, err := kev.BuildApp(envs)
 	if err != nil {
-		return err
-	}
-
-	if err := def.DoBuild(); err != nil {
 		return err
 	}
 

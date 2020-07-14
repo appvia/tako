@@ -95,3 +95,22 @@ func GetEnvs() ([]string, error) {
 
 	return envs, nil
 }
+
+// ValidateEnvsOrGetAll ensures the supplied non empty list of envs is valid.
+// If env list is empty return all available envs.
+func ValidateEnvsOrGetAll(envs []string) ([]string, error) {
+	switch count := len(envs); {
+	case count == 0:
+		var err error
+		envs, err = GetEnvs()
+		if err != nil {
+			return nil, fmt.Errorf("builds failed, %s", err)
+		}
+	case count > 0:
+		if err := ValidateHasEnvs(envs); err != nil {
+			return nil, fmt.Errorf("builds failed, %s", err)
+		}
+	}
+
+	return envs, nil
+}
