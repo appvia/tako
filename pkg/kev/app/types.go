@@ -31,6 +31,26 @@ type Definition struct {
 	Build     BuildConfig
 }
 
+func (def *Definition) RootDir() string {
+	return baseDir
+}
+
+func (def *Definition) WorkDir() string {
+	return workDir
+}
+
+func (def *Definition) WorkPath() string {
+	return path.Join(def.RootDir(), def.WorkDir())
+}
+
+func (def *Definition) BuildDir() string {
+	return buildDir
+}
+
+func (def *Definition) BuildPath() string {
+	return path.Join(def.RootDir(), def.WorkDir(), def.BuildDir())
+}
+
 // BuildConfig is an app definition's build config.
 // It contains base config along with interpolated compose.
 // And, compiled config files and interpolated compose files per overriding environment.

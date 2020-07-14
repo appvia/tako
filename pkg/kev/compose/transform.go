@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
-package transform
+package compose
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev/defaults"
+	"fmt"
+	"time"
+
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-type Transform func(*compose.Project) error
+type Transform func(*VersionedProject) error
 
 // AugmentOrAddDeploy augments a service's existing deploy block or attaches a new one with default presets.
-func AugmentOrAddDeploy(x *compose.Project) error {
+func AugmentOrAddDeploy(x *VersionedProject) error {
 	var updated compose.Services
 	err := x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
-		var deploy = defaults.Deploy()
+		var deploy = createDeploy()
 
 		if svc.Deploy != nil {
 			if err := mergo.Merge(&deploy, svc.Deploy, mergo.WithOverride); err != nil {
@@ -51,11 +54,11 @@ func AugmentOrAddDeploy(x *compose.Project) error {
 
 // HealthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
 // to any service missing a healthcheck block.
-func HealthCheckBase(x *compose.Project) error {
+func HealthCheckBase(x *VersionedProject) error {
 	var updated compose.Services
 	err := x.WithServices(x.ServiceNames(), func(svc compose.ServiceConfig) error {
 		if svc.HealthCheck == nil {
-			check := defaults.HealthCheck(svc.Name)
+			check := createHealthCheck(svc.Name)
 			svc.HealthCheck = &check
 		}
 		updated = append(updated, svc)
@@ -71,7 +74,7 @@ func HealthCheckBase(x *compose.Project) error {
 
 // ExternaliseSecrets ensures that all top level secrets are set to external
 // to specify that the secrets have already been created.
-func ExternaliseSecrets(x *compose.Project) error {
+func ExternaliseSecrets(x *VersionedProject) error {
 	noSecrets := len(x.Secrets) < 1
 	if noSecrets {
 		return nil
@@ -90,7 +93,7 @@ func ExternaliseSecrets(x *compose.Project) error {
 
 // ExternaliseConfigs ensures that all top level configs are set to external
 // to specify that the configs have already been created.
-func ExternaliseConfigs(x *compose.Project) error {
+func ExternaliseConfigs(x *VersionedProject) error {
 	noConfigs := len(x.Configs) < 1
 	if noConfigs {
 		return nil
@@ -105,4 +108,55 @@ func ExternaliseConfigs(x *compose.Project) error {
 
 	x.Configs = updated
 	return nil
+}
+
+// createDeploy returns a deploy block with configured presets.
+func createDeploy() compose.DeployConfig {
+	replica := uint64(defaultReplicaNumber)
+	parallelism := uint64(defaultRollingUpdateMaxSurge)
+
+	lm, _ := resource.ParseQuantity(defaultResourceLimitMem)
+	rm, _ := resource.ParseQuantity(defaultResourceRequestMem)
+
+	defaultMemLimit, _ := lm.AsInt64()
+	defaultMemReq, _ := rm.AsInt64()
+
+	return compose.DeployConfig{
+		Replicas: &replica,
+		Mode:     "replicated",
+		Resources: compose.Resources{
+			Limits: &compose.Resource{
+				NanoCPUs:    defaultResourceLimitCPU,
+				MemoryBytes: compose.UnitBytes(defaultMemLimit),
+			},
+			Reservations: &compose.Resource{
+				NanoCPUs:    defaultResourceRequestCPU,
+				MemoryBytes: compose.UnitBytes(defaultMemReq),
+			},
+		},
+		UpdateConfig: &compose.UpdateConfig{
+			Parallelism: &parallelism,
+		},
+	}
+}
+
+// createHealthCheck returns a healthcheck block with configured placeholders.
+func createHealthCheck(svcName string) compose.HealthCheckConfig {
+	testMsg := fmt.Sprintf(defaultLivenessProbeCommand, svcName)
+	to, _ := time.ParseDuration(defaultLivenessProbeTimeout)
+	iv, _ := time.ParseDuration(defaultLivenessProbeInterval)
+	sp, _ := time.ParseDuration(defaultLivenessProbeInitialDelay)
+	timeout := compose.Duration(to)
+	interval := compose.Duration(iv)
+	startPeriod := compose.Duration(sp)
+	retries := uint64(defaultLivenessProbeRetries)
+
+	return compose.HealthCheckConfig{
+		Test:        []string{"\"CMD\"", "\"echo\"", testMsg},
+		Timeout:     &timeout,
+		Interval:    &interval,
+		Retries:     &retries,
+		StartPeriod: &startPeriod,
+		Disable:     defaultLivenessProbeDisable,
+	}
 }

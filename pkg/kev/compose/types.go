@@ -14,25 +14,11 @@
  * limitations under the License.
  */
 
-package bootstrap
+package compose
 
-import (
-	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/compose"
-	"github.com/appvia/kube-devx/pkg/kev/config"
-)
+import compose "github.com/compose-spec/compose-go/types"
 
-// NewApp creates a new Definition using app root and docker compose files
-func NewApp(composeFiles, envs []string) (*app.Definition, error) {
-	versionedProject, err := compose.LoadAndPrepVersionedProject(composeFiles)
-	if err != nil {
-		return nil, err
-	}
-
-	inferred, err := config.Infer(versionedProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
+type VersionedProject struct {
+	Version string
+	*compose.Project
 }

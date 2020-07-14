@@ -15,16 +15,3 @@
  */
 
 package kev
-
-const (
-	// BaseDir is a top level directory for Kev files
-	BaseDir = ".kev"
-
-	// WorkDir is kev workspace directory and contains interim artefacts and compiled configuration
-	// If defined it must start with "." to differentiate from environment directories
-	WorkDir = ".workspace"
-
-	// BuildDir is the build directory for a Kev app
-	// It must start with "." if InternalsDir is not specified
-	BuildDir = "build"
-)

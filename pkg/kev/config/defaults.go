@@ -17,32 +17,10 @@
 package config
 
 const (
-	// DefaultReplicaNumber default number of replicas per workload
-	DefaultReplicaNumber = 1
-	// DefaultRollingUpdateMaxSurge default number of containers to be updated at a time
-	DefaultRollingUpdateMaxSurge = 1
 	// DefaultVolumeSize default value PV class
 	DefaultVolumeSize = "100Mi"
 	// DefaultVolumeClass default PV size
 	DefaultVolumeClass = "standard"
-	// DefaultResourceRequestCPU default CPU resource request
-	// This value follows docker compose resource notation
-	// https://docs.docker.com/compose/compose-file/#resources
-	// Kubernetes notation details: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu
-	// Default: 0.1, which is equivalent to 10% of CPU
-	DefaultResourceRequestCPU = "0.1"
-	// DefaultResourceRequestMem default Memory resource request
-	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
-	DefaultResourceRequestMem = "10Mi"
-	// DefaultResourceLimitCPU default CPU resource limit
-	// This value follows docker compose resource notation
-	// https://docs.docker.com/compose/compose-file/#resources
-	// Kubernetes notation details: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu
-	// Default: 0.5, which is equivalent to 50% of CPU
-	DefaultResourceLimitCPU = "0.5"
-	// DefaultResourceLimitMem default Memory resource limit
-	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
-	DefaultResourceLimitMem = "500Mi"
 	// DefaultService is a default service
 	DefaultService = NoService
 	// DefaultRestartPolicy is a default restart policy
@@ -61,18 +39,6 @@ const (
 	DefaultSecurityContextRunAsGroup = ""
 	// DefaultSecurityContextFsGroup default fs Group for pod security context
 	DefaultSecurityContextFsGroup = ""
-	// DefaultLivenessProbeDisable default false. Enabled by default
-	DefaultLivenessProbeDisable = false
-	// DefaultLivenessProbeInterval default 1m (1 minute)
-	DefaultLivenessProbeInterval = "1m"
-	// DefaultLivenessProbeRetries default 3. Number of retries for liveness probe command
-	DefaultLivenessProbeRetries = 3
-	// DefaultLivenessProbeInitialDelay default 1m (1 minute)
-	DefaultLivenessProbeInitialDelay = "1m"
-	// DefaultLivenessProbeCommand default command
-	DefaultLivenessProbeCommand = "Define healthcheck command for service %s"
-	// DefaultLivenessProbeTimeout default 10s
-	DefaultLivenessProbeTimeout = "10s"
 
 	// NoService default value
 	NoService = "None"

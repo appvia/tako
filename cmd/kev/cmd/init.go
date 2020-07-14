@@ -23,7 +23,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
 	"github.com/disiqueira/gotree"
@@ -95,10 +94,13 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 }
 
 func createAppFilesystem(def *app.Definition) error {
-	if err := os.MkdirAll(path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir), os.ModePerm); err != nil {
+	if err := os.MkdirAll(def.BuildPath(), os.ModePerm); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(kev.BaseDir, ".gitignore"), []byte(path.Join(kev.WorkDir, kev.BuildDir, "*")), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(
+		path.Join(def.RootDir(), ".gitignore"),
+		[]byte(path.Join(def.WorkDir(), def.BuildDir(),
+			"*")), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -109,14 +111,14 @@ func createAppFilesystem(def *app.Definition) error {
 		return err
 	}
 
-	for _, env := range def.Overrides {
-		if err := os.MkdirAll(env.Path(), os.ModePerm); err != nil {
+	for _, o := range def.Overrides {
+		if err := os.MkdirAll(o.Path(), os.ModePerm); err != nil {
 			return err
 		}
-		if err := os.MkdirAll(path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, env.Dir()), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Join(def.BuildPath(), o.Dir()), os.ModePerm); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(env.File, env.Content, os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(o.File, o.Content, os.ModePerm); err != nil {
 			return err
 		}
 	}

@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/utils"
+	kyaml "github.com/appvia/kube-devx/pkg/kev/yaml"
 	yaml3 "gopkg.in/yaml.v3"
 )
 
@@ -41,9 +40,9 @@ func Init(compose []byte, baseConfig *config.Config, envs []string) (*Definition
 
 	return &Definition{
 		Base: ConfigTuple{
-			// Note that if kev.WorkDir is defined compose with placeholders will be placed there
-			Compose: FileConfig{Content: compose, File: path.Join(kev.BaseDir, kev.WorkDir, ComposeFile)},
-			Config:  FileConfig{Content: configData, File: path.Join(kev.BaseDir, ConfigFile)},
+			// Note that if kev.workDir is defined compose with placeholders will be placed there
+			Compose: FileConfig{Content: compose, File: path.Join(baseDir, workDir, composeFile)},
+			Config:  FileConfig{Content: configData, File: path.Join(baseDir, configFile)},
 		},
 		Overrides: overrides,
 		Build:     BuildConfig{},
@@ -74,7 +73,7 @@ func createOverrides(candidates []string, baseConfig *config.Config) (map[string
 		}
 	}
 
-	out, err := utils.MarshallAndFormat(&config, 2)
+	out, err := kyaml.MarshalIndent(&config, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +82,7 @@ func createOverrides(candidates []string, baseConfig *config.Config) (map[string
 	for _, env := range candidates {
 		overrides[env] = FileConfig{
 			Content: out,
-			File:    path.Join(kev.BaseDir, env, ConfigFile),
+			File:    path.Join(baseDir, env, configFile),
 		}
 	}
 

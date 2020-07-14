@@ -30,24 +30,24 @@ import (
 	"strings"
 	"time"
 
+	compose "github.com/appvia/kube-devx/pkg/kev/compose"
 	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/utils"
-	compose "github.com/compose-spec/compose-go/types"
+	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 )
 
-// LoadCompose loads a compose file into KomposeObject
+// LoadCompose loads a composego file into KomposeObject
 func LoadCompose(file string) (KomposeObject, error) {
-	// Load compose
-	comopseConfig, err := utils.LoadAndParse([]string{file})
+	// Load compose project
+	project, err := compose.LoadProject([]string{file})
 	if err != nil {
 		return KomposeObject{}, err
 	}
 
 	// parse and map to KomposeObject
-	komposeObject, err := dockerComposeToKomposeMapping(comopseConfig)
+	komposeObject, err := dockerComposeToKomposeMapping(project)
 	if err != nil {
 		return KomposeObject{}, err
 	}
@@ -55,20 +55,20 @@ func LoadCompose(file string) (KomposeObject, error) {
 	return komposeObject, nil
 }
 
-// dockerComposeToKomposeMapping maps docker compose into interim KomposeObject representation
+// dockerComposeToKomposeMapping maps docker composego into interim KomposeObject representation
 // @todo: As we already extract a bunch of information from the Compose we could potentially
 // fall back onto that info instead of processing it again?
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L277
-func dockerComposeToKomposeMapping(composeObject *compose.Project) (KomposeObject, error) {
+func dockerComposeToKomposeMapping(composeObject *composego.Project) (KomposeObject, error) {
 
 	// @step initialise object
 	komposeObject := KomposeObject{
 		ServiceConfigs: make(map[string]ServiceConfig),
-		LoadedFrom:     "compose",
+		LoadedFrom:     "composego",
 		Secrets:        composeObject.Secrets,
 	}
 
-	// @step parse compose object and convert it to KomposeObject
+	// @step parse composego object and convert it to KomposeObject
 	for _, composeServiceConfig := range composeObject.Services {
 
 		// @step initiate service config
@@ -162,13 +162,13 @@ func dockerComposeToKomposeMapping(composeObject *compose.Project) (KomposeObjec
 		serviceConfig.EnvFile = composeServiceConfig.EnvFile
 
 		// @step ports
-		// compose v3.2+ uses a new "long syntax" format
+		// composego v3.2+ uses a new "long syntax" format
 		// https://docs.docker.com/compose/compose-file/#ports
 		// here we will translate `expose` too, they basically means the same thing in kubernetes
 		serviceConfig.Port = loadPorts(composeServiceConfig.Ports, serviceConfig.Expose)
 
 		// @step volumes
-		// compose v3 uses "long syntax" format for volumes
+		// composego v3 uses "long syntax" format for volumes
 		// https://docs.docker.com/compose/compose-file/#long-syntax-3
 		serviceConfig.VolList = loadVolumes(composeServiceConfig.Volumes)
 
@@ -179,7 +179,7 @@ func dockerComposeToKomposeMapping(composeObject *compose.Project) (KomposeObjec
 
 		// @step log if the service name has been normalised
 		if normalizeServiceNames(name) != name {
-			fmt.Printf("Service name in docker-compose has been changed from %q to %q", name, normalizeServiceNames(name))
+			fmt.Printf("Service name in docker-composego has been changed from %q to %q", name, normalizeServiceNames(name))
 		}
 
 		// @step configs
@@ -220,9 +220,9 @@ func normalizeVolumes(svcName string) string {
 	return strings.Replace(svcName, "_", "-", -1)
 }
 
-// parseNetwork parses compose networks
+// parseNetwork parses composego networks
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L407
-func parseNetwork(composeServiceConfig *compose.ServiceConfig, serviceConfig *ServiceConfig, composeObject *compose.Project) {
+func parseNetwork(composeServiceConfig *composego.ServiceConfig, serviceConfig *ServiceConfig, composeObject *composego.Project) {
 	if len(composeServiceConfig.Networks) == 0 {
 		defaultNetwork, _ := composeObject.Networks["default"]
 		if defaultNetwork.Name != "" {
@@ -233,7 +233,7 @@ func parseNetwork(composeServiceConfig *compose.ServiceConfig, serviceConfig *Se
 		for key := range composeServiceConfig.Networks {
 			alias = key
 			netName := composeObject.Networks[alias].Name
-			// if Network Name Field is empty in the docker-compose definition
+			// if Network Name Field is empty in the docker-composego definition
 			// we will use the alias name defined in service config file
 			if netName == "" {
 				netName = alias
@@ -243,9 +243,9 @@ func parseNetwork(composeServiceConfig *compose.ServiceConfig, serviceConfig *Se
 	}
 }
 
-// parseResources parses compose resource requests & limits
+// parseResources parses composego resource requests & limits
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L427
-func parseResources(composeServiceConfig *compose.ServiceConfig, serviceConfig *ServiceConfig) error {
+func parseResources(composeServiceConfig *composego.ServiceConfig, serviceConfig *ServiceConfig) error {
 	deploy := composeServiceConfig.Deploy
 
 	if deploy != nil {
@@ -286,7 +286,7 @@ func parseResources(composeServiceConfig *compose.ServiceConfig, serviceConfig *
 
 // parseHealthCheck extracts healthcheck information to Kubernetes supported format
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L234
-func parseHealthCheck(composeHealthCheck compose.HealthCheckConfig) (HealthCheck, error) {
+func parseHealthCheck(composeHealthCheck composego.HealthCheckConfig) (HealthCheck, error) {
 
 	var timeout, interval, retries, startPeriod int32
 
@@ -329,7 +329,7 @@ func parseHealthCheck(composeHealthCheck compose.HealthCheckConfig) (HealthCheck
 	}, nil
 }
 
-// loadPlacement parses placement information from compose.
+// loadPlacement parses placement information from composego.
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L136
 func loadPlacement(constraints []string) map[string]string {
 	placement := make(map[string]string)
@@ -358,9 +358,9 @@ func loadPlacement(constraints []string) map[string]string {
 	return placement
 }
 
-// parseEnvironment parses compose service environment
+// parseEnvironment parses composego service environment
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L465
-func parseEnvironment(composeServiceConfig *compose.ServiceConfig, serviceConfig *ServiceConfig) {
+func parseEnvironment(composeServiceConfig *composego.ServiceConfig, serviceConfig *ServiceConfig) {
 	// DockerCompose uses map[string]*string while we use []string
 	// So let's convert that using this hack
 	// Note: unset env pick up the env value on host if exist
@@ -383,7 +383,7 @@ func parseEnvironment(composeServiceConfig *compose.ServiceConfig, serviceConfig
 // Convert Docker Compose v3 ports to Ports
 // expose ports will be treated as TCP ports
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L185
-func loadPorts(ports []compose.ServicePortConfig, expose []string) []Ports {
+func loadPorts(ports []composego.ServicePortConfig, expose []string) []Ports {
 	komposePorts := []Ports{}
 
 	exist := map[string]bool{}
@@ -435,7 +435,7 @@ func loadPorts(ports []compose.ServicePortConfig, expose []string) []Ports {
 // TODO: Refactor it similar to loadV3Ports
 // See: https://docs.docker.com/compose/compose-file/#long-syntax-3
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L163
-func loadVolumes(volumes []compose.ServiceVolumeConfig) []string {
+func loadVolumes(volumes []composego.ServiceVolumeConfig) []string {
 
 	var volArray []string
 	for _, vol := range volumes {
@@ -460,7 +460,7 @@ func loadVolumes(volumes []compose.ServiceVolumeConfig) []string {
 func parseKomposeLabels(labels map[string]string, serviceConfig *ServiceConfig) error {
 	// Label handler
 	// Labels used to influence conversion of kompose will be handled
-	// from here for docker-compose. Each loader will have such handler.
+	// from here for docker-composego. Each loader will have such handler.
 
 	if serviceConfig.Labels == nil {
 		serviceConfig.Labels = make(map[string]string)
@@ -530,7 +530,7 @@ func handleServiceType(ServiceType string) (string, error) {
 // handleVolume iterates through services and sets volumes for each
 // respecting volume lables if set in the manifest
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L535
-func handleVolume(komposeObject *KomposeObject, volumes *compose.Volumes) {
+func handleVolume(komposeObject *KomposeObject, volumes *composego.Volumes) {
 	for name := range komposeObject.ServiceConfigs {
 		vols, err := retrieveVolume(name, *komposeObject)
 		if err != nil {
@@ -555,7 +555,7 @@ func handleVolume(komposeObject *KomposeObject, volumes *compose.Volumes) {
 
 // getVolumeLabels returns size and selector if present in named volume labels
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L559
-func getVolumeLabels(name string, volumes *compose.Volumes) (string, string) {
+func getVolumeLabels(name string, volumes *composego.Volumes) (string, string) {
 	size, selector := "", ""
 
 	if volume, ok := (*volumes)[name]; ok {

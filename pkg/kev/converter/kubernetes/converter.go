@@ -21,7 +21,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 )
@@ -65,7 +64,7 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			// adding env name suffix to the custom directory to differentiate
 			outDirPath = path.Join(dir, env)
 		} else {
-			outDirPath = path.Join(kev.BaseDir, multiFileSubDir, env)
+			outDirPath = path.Join(appDef.RootDir(), multiFileSubDir, env)
 		}
 
 		// @step Create output directory

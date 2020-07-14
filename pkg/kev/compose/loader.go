@@ -14,48 +14,46 @@
  * limitations under the License.
  */
 
-package utils
+package compose
 
 import (
-	"bytes"
 	"io/ioutil"
-	"log"
 
 	"github.com/compose-spec/compose-go/cli"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
-	yaml3 "gopkg.in/yaml.v3"
 )
 
-// UnmarshallGeneral deserializes a []byte into an map[string]interface{}
-func UnmarshallGeneral(data []byte) (map[string]interface{}, error) {
-	var out map[string]interface{}
-	err := yaml.Unmarshal(data, &out)
+// LoadAndPrepVersionedProject loads and parses a set of input compose files and returns a VersionedProject object
+func LoadAndPrepVersionedProject(paths []string) (*VersionedProject, error) {
+	composeProject, err := LoadProject(paths)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-// MarshallAndFormat marshals arbitrary struct
-func MarshallAndFormat(v interface{}, spaces int) ([]byte, error) {
-	var out bytes.Buffer
-	encoder := yaml3.NewEncoder(&out)
-	defer func() {
-		if err := encoder.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	encoder.SetIndent(spaces)
-	if err := encoder.Encode(&v); err != nil {
+	version, err := getComposeVersion(paths[0])
+	if err != nil {
 		return nil, err
 	}
-	return out.Bytes(), nil
+
+	project := &VersionedProject{version, composeProject}
+
+	transforms := []Transform{
+		AugmentOrAddDeploy,
+		HealthCheckBase,
+		ExternaliseSecrets,
+		ExternaliseConfigs,
+	}
+	for _, t := range transforms {
+		if err := t(project); err != nil {
+			return nil, err
+		}
+	}
+
+	return project, nil
 }
 
-// LoadAndParse loads and parses a set of input compose files and returns compose Project object
-func LoadAndParse(paths []string) (*compose.Project, error) {
+// LoadProject loads and parses a set of input compose files and returns a compose VersionedProject object
+func LoadProject(paths []string) (*compose.Project, error) {
 	projectOptions, err := cli.ProjectOptions{
 		ConfigPaths: paths,
 	}.
@@ -74,12 +72,11 @@ func LoadAndParse(paths []string) (*compose.Project, error) {
 	for i := range project.Services {
 		project.Services[i].EnvFile = nil
 	}
-
 	return project, nil
 }
 
-// GetComposeVersion extracts version from compose file and returns a string
-func GetComposeVersion(file string) (string, error) {
+// getComposeVersion extracts version from compose file and returns a string
+func getComposeVersion(file string) (string, error) {
 	type ComposeVersion struct {
 		Version string `json:"version"` // This affects YAML as well
 	}

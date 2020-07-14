@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/appvia/kube-devx/pkg/interpolate"
-	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/ghodss/yaml"
 	"github.com/imdario/mergo"
@@ -88,11 +87,11 @@ func (def *Definition) buildBase() error {
 	def.Build.Base = ConfigTuple{
 		Compose: FileConfig{
 			Content: interpolated,
-			File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, ComposeBuildFile),
+			File:    path.Join(baseDir, workDir, buildDir, composeBuildFile),
 		},
 		Config: FileConfig{
 			Content: def.Base.Config.Content,
-			File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, ConfigBuildFile),
+			File:    path.Join(baseDir, workDir, buildDir, configBuildFile),
 		},
 	}
 
@@ -149,7 +148,7 @@ func compileConfig(override string, overrideConfig, base FileConfig) (FileConfig
 
 	return FileConfig{
 		Content: configContent,
-		File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, override, ConfigBuildFile),
+		File:    path.Join(baseDir, workDir, buildDir, override, configBuildFile),
 	}, nil
 }
 
@@ -182,7 +181,7 @@ func interpolateComposeOverride(override string, baseCompose, overrideConfig Fil
 
 	return FileConfig{
 		Content: envComposeContent,
-		File:    path.Join(kev.BaseDir, kev.WorkDir, kev.BuildDir, override, ComposeBuildFile),
+		File:    path.Join(baseDir, workDir, buildDir, override, composeBuildFile),
 	}, nil
 }
 

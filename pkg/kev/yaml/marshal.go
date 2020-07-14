@@ -14,25 +14,28 @@
  * limitations under the License.
  */
 
-package bootstrap
+package yaml
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/compose"
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"bytes"
+	"log"
+
+	yaml3 "gopkg.in/yaml.v3"
 )
 
-// NewApp creates a new Definition using app root and docker compose files
-func NewApp(composeFiles, envs []string) (*app.Definition, error) {
-	versionedProject, err := compose.LoadAndPrepVersionedProject(composeFiles)
-	if err != nil {
+// MarshalIndent marshals arbitrary struct and applies Indent to format the output
+func MarshalIndent(v interface{}, indent int) ([]byte, error) {
+	var out bytes.Buffer
+	encoder := yaml3.NewEncoder(&out)
+	defer func() {
+		if err := encoder.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	encoder.SetIndent(indent)
+	if err := encoder.Encode(&v); err != nil {
 		return nil, err
 	}
-
-	inferred, err := config.Infer(versionedProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
+	return out.Bytes(), nil
 }
