@@ -23,8 +23,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/bootstrap"
 	"github.com/disiqueira/gotree"
 	"github.com/spf13/cobra"
 )
@@ -80,7 +80,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	composeFiles, _ := cmd.Flags().GetStringSlice("compose-file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 
-	def, err := bootstrap.NewApp(composeFiles, envs)
+	def, err := kev.InitApp(composeFiles, envs)
 	if err != nil {
 		return err
 	}

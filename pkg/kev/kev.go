@@ -15,3 +15,23 @@
  */
 
 package kev
+
+import (
+	"github.com/appvia/kube-devx/pkg/kev/app"
+	"github.com/appvia/kube-devx/pkg/kev/compose"
+	"github.com/appvia/kube-devx/pkg/kev/config"
+)
+
+func InitApp(composeFiles, envs []string) (*app.Definition, error) {
+	versionedProject, err := compose.LoadAndPrepVersionedProject(composeFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	inferred, err := config.Infer(versionedProject)
+	if err != nil {
+		return nil, err
+	}
+
+	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
+}
