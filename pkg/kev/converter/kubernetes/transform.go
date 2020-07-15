@@ -1208,17 +1208,17 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 		replica = opt.Replicas
 	}
 
-	// @step Check to see if Docker Compose v3 Deploy.Mode has been set to "global"
-	// @todo: Could use already infered data instead?
-	if service.DeployMode == "global" {
-		//default use daemonset
-		if opt.Controller == "" {
-			opt.CreateD = false
-			opt.CreateDS = true
-		} else if opt.Controller != "daemonset" {
-			fmt.Printf("Global deploy mode service is best converted to daemonset, now it convert to %s", opt.Controller)
-		}
+	// @step Check whether compose service deploy mode is set to global (which indicates daemonset should be used!)
+	wType := ""
+	if customConfig.Components[name].Workload.Type != config.DaemonsetWorkload {
+		wType = customConfig.Components[name].Workload.Type
+	} else if customConfig.Workload.Type != config.DaemonsetWorkload {
+		wType = customConfig.Workload.Type
+	}
 
+	if service.DeployMode == "global" && wType != "" {
+		// compose service defined as global but kev configuration workload type is different than DaemonSet
+		fmt.Printf("Compose service defined as 'global' should map to K8s DaemonSet. User override forces conversion to %s", wType)
 	}
 
 	// @step Resolve labels first
