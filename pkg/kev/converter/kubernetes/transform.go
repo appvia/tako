@@ -35,6 +35,7 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
+	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
@@ -491,6 +492,55 @@ func (k *Kubernetes) InitDS(name string, service ServiceConfig) *v1beta1.DaemonS
 		},
 	}
 	return ds
+}
+
+// InitSTS initialises a new StatefulSet
+func (k *Kubernetes) InitSTS(name string, service ServiceConfig, replicas int) *v1apps.StatefulSet {
+
+	repl := int32(replicas)
+
+	var podSpec v1.PodSpec
+	if len(service.Configs) > 0 {
+		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
+	} else {
+		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+	}
+
+	sts := &v1apps.StatefulSet{
+		TypeMeta: meta.TypeMeta{
+			Kind:       "StatefulSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name:   name,
+			Labels: ConfigAllLabels(name, &service),
+		},
+		Spec: v1apps.StatefulSetSpec{
+			Replicas: &repl,
+			Selector: &meta.LabelSelector{
+				MatchLabels: ConfigLabels(name),
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: meta.ObjectMeta{
+					Annotations: ConfigAnnotations(service),
+				},
+				Spec: podSpec,
+			},
+		},
+	}
+	sts.Spec.Template.Labels = ConfigLabels(name)
+
+	// @step define service name responsible for governing the StatefulSet
+	sts.Spec.ServiceName = name
+
+	// @step derives service update strategy and adds to the deployment configuration spec
+	update := &v1apps.RollingUpdateStatefulSetStrategy{}
+	sts.Spec.UpdateStrategy = v1apps.StatefulSetUpdateStrategy{
+		Type:          v1apps.RollingUpdateStatefulSetStrategyType,
+		RollingUpdate: update,
+	}
+
+	return sts
 }
 
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
@@ -1266,6 +1316,12 @@ func (k *Kubernetes) UpdateController(obj runtime.Object, updateTemplate func(*v
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1beta1.Deployment:
+		err = updateTemplate(&t.Spec.Template)
+		if err != nil {
+			return errors.Wrap(err, "updateTemplate failed")
+		}
+		updateMeta(&t.ObjectMeta)
+	case *v1apps.StatefulSet:
 		err = updateTemplate(&t.Spec.Template)
 		if err != nil {
 			return errors.Wrap(err, "updateTemplate failed")
