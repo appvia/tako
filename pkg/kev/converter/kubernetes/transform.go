@@ -36,6 +36,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
+	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
@@ -541,6 +542,46 @@ func (k *Kubernetes) InitSTS(name string, service ServiceConfig, replicas int) *
 	}
 
 	return sts
+}
+
+// InitJ initialises a new Kubernetes Job
+func (k *Kubernetes) InitJ(name string, service ServiceConfig, replicas int) *v1batch.Job {
+
+	repl := int32(replicas)
+
+	var podSpec v1.PodSpec
+	if len(service.Configs) > 0 {
+		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
+	} else {
+		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+	}
+
+	j := &v1batch.Job{
+		TypeMeta: meta.TypeMeta{
+			Kind:       "Job",
+			APIVersion: "batch/v1",
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name:   name,
+			Labels: ConfigAllLabels(name, &service),
+		},
+		Spec: v1batch.JobSpec{
+			Parallelism: &repl,
+			Completions: &repl,
+			Selector: &meta.LabelSelector{
+				MatchLabels: ConfigLabels(name),
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: meta.ObjectMeta{
+					Annotations: ConfigAnnotations(service),
+				},
+				Spec: podSpec,
+			},
+		},
+	}
+	j.Spec.Template.Labels = ConfigLabels(name)
+
+	return j
 }
 
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
@@ -1328,6 +1369,12 @@ func (k *Kubernetes) UpdateController(obj runtime.Object, updateTemplate func(*v
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1beta1.DaemonSet:
+		err = updateTemplate(&t.Spec.Template)
+		if err != nil {
+			return errors.Wrap(err, "updateTemplate failed")
+		}
+		updateMeta(&t.ObjectMeta)
+	case *v1batch.Job:
 		err = updateTemplate(&t.Spec.Template)
 		if err != nil {
 			return errors.Wrap(err, "updateTemplate failed")
