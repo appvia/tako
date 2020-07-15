@@ -1199,6 +1199,7 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 
 	// @step get number of replicas for service
 	// @todo Prioritise kev config over kompose convert option for now!
+	// @todo Remove opt.Replicas from convert options and cleanup
 	replica = 1
 	if customConfig.Components[name].Workload.Replicas != 0 {
 		replica = int(customConfig.Components[name].Workload.Replicas)
@@ -1221,16 +1222,10 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 		fmt.Printf("Compose service defined as 'global' should map to K8s DaemonSet. User override forces conversion to %s", wType)
 	}
 
-	// @step Resolve labels first
-	// @todo: We could still support label overrides for workload types potentially, or
-	// 		  just refer to infered configuration - as user will be able to set their workload
-	// 		  controller preference in environment config.
+	// @step Resolve kompose.controller.type label
 	if val, ok := service.Labels[LabelControllerType]; ok {
-		opt.CreateD = false
-		opt.CreateDS = false
-		opt.CreateRC = false
 		if opt.Controller != "" {
-			fmt.Printf("Use label %s type %s for service %s, ignore %s flags", LabelControllerType, val, name, opt.Controller)
+			fmt.Printf("Use controller type %s for service %s", val, name)
 		}
 		opt.Controller = val
 	}
