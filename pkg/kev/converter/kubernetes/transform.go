@@ -1198,7 +1198,7 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 	var replica int
 
 	// @step get number of replicas for service
-	if opt.IsReplicaSetFlag || service.Replicas == 0 {
+	if service.Replicas == 0 {
 		// @todo: reference kev configuration as we already have infered that detail, and user can override per environment?
 		replica = opt.Replicas
 	} else {

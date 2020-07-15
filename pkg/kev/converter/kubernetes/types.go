@@ -70,7 +70,6 @@ type ConvertOptions struct {
 	IsDeploymentFlag            bool
 	IsDaemonSetFlag             bool
 	IsReplicationControllerFlag bool
-	IsReplicaSetFlag            bool
 	IsDeploymentConfigFlag      bool
 	IsNamespaceFlag             bool
 
