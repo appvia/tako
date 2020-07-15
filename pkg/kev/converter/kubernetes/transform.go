@@ -917,7 +917,7 @@ func (k *Kubernetes) ConfigVolumes(name string, service ServiceConfig) ([]v1.Vol
 	var cms []*v1.ConfigMap
 	var volumeName string
 
-	// Set a var based on if the user wants to use empty volumes
+	// Set volumes configuration based on user preference, e.g. to use empty volumes
 	// as opposed to persistent volumes and volume claims
 	useEmptyVolumes := k.Opt.EmptyVols
 	useHostPath := k.Opt.Volumes == "hostPath"
