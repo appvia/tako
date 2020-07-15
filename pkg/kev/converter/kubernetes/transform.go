@@ -1198,11 +1198,14 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 	var replica int
 
 	// @step get number of replicas for service
-	if service.Replicas == 0 {
-		// @todo: reference kev configuration as we already have infered that detail, and user can override per environment?
+	// @todo Prioritise kev config over kompose convert option for now!
+	replica = 1
+	if customConfig.Components[name].Workload.Replicas != 0 {
+		replica = int(customConfig.Components[name].Workload.Replicas)
+	} else if customConfig.Workload.Replicas != 0 {
+		replica = int(customConfig.Workload.Replicas)
+	} else if opt.Replicas != 0 {
 		replica = opt.Replicas
-	} else {
-		replica = service.Replicas
 	}
 
 	// @step Check to see if Docker Compose v3 Deploy.Mode has been set to "global"
