@@ -1606,11 +1606,22 @@ func (k *Kubernetes) UpdateKubernetesObjects(name string, service ServiceConfig,
 		}
 
 		// Configure the container restart policy.
-		if restart, err := GetRestartPolicy(name, service.Restart); err != nil {
-			return err
+		// @todo Prioritise kev configuration over kompose derived value for now!
+		rPol := ""
+		if customConfig.Components[name].Workload.Restart != "" {
+			rPol = customConfig.Components[name].Workload.Restart
+		} else if customConfig.Workload.Restart != "" {
+			rPol = customConfig.Workload.Restart
 		} else {
-			template.Spec.RestartPolicy = restart
+			restart, err := GetRestartPolicy(name, service.Restart)
+			if err != nil {
+				// Value derived by kompose is invalid. Default to "Always".
+				rPol = config.RestartPolicyAlways
+			} else {
+				rPol = string(restart)
+			}
 		}
+		template.Spec.RestartPolicy = v1.RestartPolicy(rPol)
 
 		// Configure hostname/domain_name settings
 		if service.HostName != "" {
