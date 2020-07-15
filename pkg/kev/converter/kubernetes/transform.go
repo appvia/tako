@@ -147,10 +147,23 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 
 // InitPodSpec creates the pod specification
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L129
-func (k *Kubernetes) InitPodSpec(name string, image string, pullSecret string) v1.PodSpec {
+func (k *Kubernetes) InitPodSpec(name string, service ServiceConfig) v1.PodSpec {
 
+	image := service.Image
 	if image == "" {
 		image = name
+	}
+
+	// @todo Prioritising kev config over kompose elements for now!
+	pullSecret := ""
+	if customConfig.Components[name].Workload.ImagePullSecret != "" {
+		pullSecret = customConfig.Components[name].Workload.ImagePullSecret
+	} else if customConfig.Workload.ImagePullSecret != "" {
+		pullSecret = customConfig.Workload.ImagePullSecret
+	} else if service.ImagePullSecret != "" {
+		pullSecret = service.ImagePullSecret
+	} else {
+		pullSecret = config.DefaultImagePullSecret
 	}
 
 	pod := v1.PodSpec{
@@ -253,7 +266,7 @@ func (k *Kubernetes) InitRC(name string, service ServiceConfig, replicas int) *v
 				ObjectMeta: meta.ObjectMeta{
 					Labels: ConfigLabels(name),
 				},
-				Spec: k.InitPodSpec(name, service.Image, service.ImagePullSecret),
+				Spec: k.InitPodSpec(name, service),
 			},
 		},
 	}
@@ -413,7 +426,7 @@ func (k *Kubernetes) InitD(name string, service ServiceConfig, replicas int) *v1
 	if len(service.Configs) > 0 {
 		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
 	} else {
-		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+		podSpec = k.InitPodSpec(name, service)
 	}
 
 	dc := &v1beta1.Deployment{
@@ -467,7 +480,7 @@ func (k *Kubernetes) InitDS(name string, service ServiceConfig) *v1beta1.DaemonS
 		},
 		Spec: v1beta1.DaemonSetSpec{
 			Template: v1.PodTemplateSpec{
-				Spec: k.InitPodSpec(name, service.Image, service.ImagePullSecret),
+				Spec: k.InitPodSpec(name, service),
 			},
 		},
 	}
@@ -483,7 +496,7 @@ func (k *Kubernetes) InitSTS(name string, service ServiceConfig, replicas int) *
 	if len(service.Configs) > 0 {
 		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
 	} else {
-		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+		podSpec = k.InitPodSpec(name, service)
 	}
 
 	sts := &v1apps.StatefulSet{
@@ -532,7 +545,7 @@ func (k *Kubernetes) InitJ(name string, service ServiceConfig, replicas int) *v1
 	if len(service.Configs) > 0 {
 		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
 	} else {
-		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+		podSpec = k.InitPodSpec(name, service)
 	}
 
 	j := &v1batch.Job{
@@ -1291,7 +1304,7 @@ func (k *Kubernetes) InitPod(name string, service ServiceConfig) *v1.Pod {
 			Name:   name,
 			Labels: ConfigLabels(name),
 		},
-		Spec: k.InitPodSpec(name, service.Image, service.ImagePullSecret),
+		Spec: k.InitPodSpec(name, service),
 	}
 	return &pod
 }
