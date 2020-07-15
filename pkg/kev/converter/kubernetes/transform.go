@@ -91,17 +91,9 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 			return nil, fmt.Errorf("image key required within build parameters in order to build and push service '%s'", name)
 		}
 
-		// Generate pod only and nothing more
-		if service.Restart == "no" || service.Restart == "on-failure" {
-			// Error out if Controller Object is specified with restart: 'on-failure'
-			if opt.IsDeploymentFlag || opt.IsDaemonSetFlag || opt.IsReplicationControllerFlag {
-				return nil, errors.New("Controller object cannot be specified with restart: 'on-failure'")
-			}
-			pod := k.InitPod(name, service)
-			objects = append(objects, pod)
-		} else {
-			objects = k.CreateKubernetesObjects(name, service, opt)
-		}
+		// @step create kubernetes object (never create a pod in isolation)
+		// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime
+		objects = k.CreateKubernetesObjects(name, service, opt)
 
 		if k.PortsExist(service) {
 			// Create a k8s service of a type defined by the service config

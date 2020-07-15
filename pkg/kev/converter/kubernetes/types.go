@@ -45,21 +45,18 @@ type KomposeObject struct {
 
 // ConvertOptions holds all options that controls transformation process
 type ConvertOptions struct {
-	ToStdout                    bool     // Display output to STDOUT
-	CreateChart                 bool     // Create K8s manifests as Chart
-	GenerateYaml                bool     // Ganerate outcome as YAML
-	GenerateJSON                bool     // Ganerate outcome as JSON
-	EmptyVols                   bool     // Treat all referenced volumes as Empty volumes
-	Volumes                     string   // Volumes to be generated ("persistentVolumeClaim"|"emptyDir"|"hostPath"|"configMap") (default "persistentVolumeClaim")
-	Replicas                    int      // Default number of Replicas per service
-	InputFiles                  []string // Compose files to be processed
-	OutFile                     string   // If Directory output will be split into individual files
-	Provider                    string   // Provider name e.g. Kubernetes
-	Controller                  string   // Default controller to be used for each service
-	IsDeploymentFlag            bool
-	IsDaemonSetFlag             bool
-	IsReplicationControllerFlag bool
-	YAMLIndent                  int // YAML Indentation in resultant K8s manifests
+	ToStdout     bool     // Display output to STDOUT
+	CreateChart  bool     // Create K8s manifests as Chart
+	GenerateYaml bool     // Ganerate outcome as YAML
+	GenerateJSON bool     // Ganerate outcome as JSON
+	EmptyVols    bool     // Treat all referenced volumes as Empty volumes
+	Volumes      string   // Volumes to be generated ("persistentVolumeClaim"|"emptyDir"|"hostPath"|"configMap") (default "persistentVolumeClaim")
+	Replicas     int      // Default number of Replicas per service
+	InputFiles   []string // Compose files to be processed
+	OutFile      string   // If Directory output will be split into individual files
+	Provider     string   // Provider name e.g. Kubernetes
+	Controller   string   // Default controller to be used for each service
+	YAMLIndent   int      // YAML Indentation in resultant K8s manifests
 }
 
 // ServiceConfig holds the basic struct of a container
