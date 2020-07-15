@@ -1599,11 +1599,22 @@ func (k *Kubernetes) UpdateKubernetesObjects(name string, service ServiceConfig,
 		template.ObjectMeta.Labels = ConfigLabelsWithNetwork(name, service.Network)
 
 		// Configure the image pull policy
-		if policy, err := GetImagePullPolicy(name, service.ImagePullPolicy); err != nil {
-			return err
+		// @todo Prioritise kev configuration over kompose derived value for now!
+		ipPol := ""
+		if customConfig.Components[name].Workload.ImagePullPolicy != "" {
+			ipPol = customConfig.Components[name].Workload.ImagePullPolicy
+		} else if customConfig.Workload.ImagePullPolicy != "" {
+			ipPol = customConfig.Workload.ImagePullPolicy
 		} else {
-			template.Spec.Containers[0].ImagePullPolicy = policy
+			policy, err := GetImagePullPolicy(name, service.ImagePullPolicy)
+			if err != nil {
+				// Value derived by kompose is invalid. Default to "Always".
+				ipPol = config.DefaultImagePullPolicy
+			} else {
+				ipPol = string(policy)
+			}
 		}
+		template.Spec.Containers[0].ImagePullPolicy = v1.PullPolicy(ipPol)
 
 		// Configure the container restart policy.
 		// @todo Prioritise kev configuration over kompose derived value for now!
