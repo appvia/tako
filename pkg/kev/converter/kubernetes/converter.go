@@ -77,7 +77,7 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 		opt := ConvertOptions{
 			InputFiles:   []string{bc.Compose.File},
 			OutFile:      outFilePath,
-			CreateD:      true,
+			Controller:   config.DeploymentWorkload,
 			Provider:     Name,
 			YAMLIndent:   2,
 			GenerateYaml: true,

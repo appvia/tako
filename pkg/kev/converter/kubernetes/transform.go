@@ -52,15 +52,6 @@ type Kubernetes struct {
 	Opt ConvertOptions
 }
 
-const (
-	// DeploymentController is controller type for Deployment
-	DeploymentController = "deployment"
-	// DaemonSetController is controller type for DaemonSet
-	DaemonSetController = "daemonset"
-	// ReplicationController is controller type for  ReplicationController
-	ReplicationController = "replicationcontroller"
-)
-
 var customConfig *config.Config
 
 // Transform maps komposeObject to k8s objects
@@ -1246,18 +1237,25 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 		objects = k.createConfigMapFromComposeConfig(name, opt, service, objects)
 	}
 
-	// @step For service marked as Deployment initiate new Deployment object
-	if opt.CreateD || opt.Controller == DeploymentController {
+	// @step Create object based on inferred / manually configured workload controller type
+	// @todo Prioritise kev config over kompose label configuration for now!
+	workloadType := ""
+	if customConfig.Components[name].Workload.Type != "" {
+		workloadType = customConfig.Components[name].Workload.Type
+	} else if customConfig.Workload.Type != "" {
+		workloadType = customConfig.Workload.Type
+	} else {
+		workloadType = opt.Controller
+	}
+
+	switch strings.ToLower(workloadType) {
+	case strings.ToLower(config.DeploymentWorkload):
 		objects = append(objects, k.InitD(name, service, replica))
-	}
-
-	// @step For service marked as DaemonSet init a new DaemonSet object
-	if opt.CreateDS || opt.Controller == DaemonSetController {
+	case strings.ToLower(config.DaemonsetWorkload):
 		objects = append(objects, k.InitDS(name, service))
-	}
-
-	// @step For service marked as ReplicationContoller init a new ReplicationController object
-	if opt.CreateRC || opt.Controller == ReplicationController {
+	case strings.ToLower(config.StatefulsetWorkload):
+		objects = append(objects, k.InitSTS(name, service, replica))
+	case "replicationcontroller":
 		objects = append(objects, k.InitRC(name, service, replica))
 	}
 
