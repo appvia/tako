@@ -52,10 +52,6 @@ type Kubernetes struct {
 	Opt ConvertOptions
 }
 
-// PVCRequestSize (Persistent Volume Claim) has default size
-// @todo take defaults from confg.defaults!
-const PVCRequestSize = config.DefaultVolumeSize
-
 const (
 	// DeploymentController is controller type for Deployment
 	DeploymentController = "deployment"
@@ -1001,7 +997,7 @@ func (k *Kubernetes) ConfigVolumes(name string, service ServiceConfig) ([]v1.Vol
 		} else {
 			volsource = k.ConfigPVCVolumeSource(volumeName, readonly)
 			if volume.VFrom == "" {
-				defaultSize := PVCRequestSize
+				defaultSize := config.DefaultVolumeSize
 
 				if len(volume.PVCSize) > 0 {
 					defaultSize = volume.PVCSize
