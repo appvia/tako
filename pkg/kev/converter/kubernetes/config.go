@@ -42,6 +42,7 @@ func (c *CombinedConfig) getKomposeComponent(name string) ServiceConfig {
 }
 
 // imagePullPolicy gets image pull policy for given service name
+// kompose currently only takes value from label, hence cascading
 func (c *CombinedConfig) imagePullPolicy(name string) string {
 	if c.getKevComponent(name).Workload.ImagePullPolicy != "" {
 		return c.getKevComponent(name).Workload.ImagePullPolicy
@@ -58,6 +59,7 @@ func (c *CombinedConfig) imagePullPolicy(name string) string {
 }
 
 // imagePullSecret returns image pull secret for a service name
+// kompose currently only takes value from label, hence cascading
 func (c *CombinedConfig) imagePullSecret(name string) string {
 	if c.getKevComponent(name).Workload.ImagePullSecret != "" {
 		return c.getKevComponent(name).Workload.ImagePullSecret
@@ -70,6 +72,8 @@ func (c *CombinedConfig) imagePullSecret(name string) string {
 }
 
 // restartPolicy gets restart policy for given service name
+// @todo make sure that we interpolate values in cascading fasion
+// 	     then, there is no need for this function!
 func (c *CombinedConfig) restartPolicy(name string) string {
 	if c.getKevComponent(name).Workload.Restart != "" {
 		return c.getKevComponent(name).Workload.Restart
@@ -86,6 +90,9 @@ func (c *CombinedConfig) restartPolicy(name string) string {
 }
 
 // replicas returns number of replicas for service name
+// @todo make sure that we interpolate values in cascading fasion
+// 	     then, there is no need for this function!
+// 	     We can also remove convertOptions.Replicas
 func (c *CombinedConfig) replicas(name string) int {
 	if c.getKevComponent(name).Workload.Replicas != 0 {
 		return int(c.getKevComponent(name).Workload.Replicas)
@@ -93,6 +100,8 @@ func (c *CombinedConfig) replicas(name string) int {
 		return int(c.kevConfig.Workload.Replicas)
 	} else if c.convertOptions.Replicas != 0 {
 		return c.convertOptions.Replicas
+	} else if c.getKomposeComponent(name).Replicas != 0 {
+		return c.getKomposeComponent(name).Replicas
 	}
 	return config.DefaultReplicaNumber
 }
@@ -115,6 +124,7 @@ func (c *CombinedConfig) isDaemonSet(name string) bool {
 }
 
 // serviceType returns type of K8s service for a given component name
+// kompose currently only takes value from label, hence cascading
 func (c *CombinedConfig) serviceType(name string) string {
 	if c.getKevComponent(name).Service.Type != "" {
 		return c.getKevComponent(name).Service.Type
@@ -134,4 +144,34 @@ func (c *CombinedConfig) serviceAccount(name string) string {
 		return c.kevConfig.Workload.ServiceAccountName
 	}
 	return config.DefaultServiceAccountName
+}
+
+// podSecurityContextRunAsUser returns pod security context RunAsUser option
+func (c *CombinedConfig) podSecurityContextRunAsUser(name string) string {
+	if c.getKevComponent(name).Workload.SecurityContextRunAsUser != "" {
+		return c.getKevComponent(name).Workload.SecurityContextRunAsUser
+	} else if c.kevConfig.Workload.SecurityContextRunAsUser != "" {
+		return c.kevConfig.Workload.SecurityContextRunAsUser
+	}
+	return config.DefaultSecurityContextRunAsUser
+}
+
+// podSecurityContextRunAsGroup returns pod security context RunAsGroup option
+func (c *CombinedConfig) podSecurityContextRunAsGroup(name string) string {
+	if c.getKevComponent(name).Workload.SecurityContextRunAsGroup != "" {
+		return c.getKevComponent(name).Workload.SecurityContextRunAsGroup
+	} else if c.kevConfig.Workload.SecurityContextRunAsGroup != "" {
+		return c.kevConfig.Workload.SecurityContextRunAsGroup
+	}
+	return config.DefaultSecurityContextRunAsGroup
+}
+
+// podSecurityContextFsGroup returns pod security context FsGroup option
+func (c *CombinedConfig) podSecurityContextFsGroup(name string) string {
+	if c.getKevComponent(name).Workload.SecurityContextFsGroup != "" {
+		return c.getKevComponent(name).Workload.SecurityContextFsGroup
+	} else if c.kevConfig.Workload.SecurityContextFsGroup != "" {
+		return c.kevConfig.Workload.SecurityContextFsGroup
+	}
+	return config.DefaultSecurityContextFsGroup
 }

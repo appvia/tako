@@ -1525,6 +1525,30 @@ func (k *Kubernetes) UpdateKubernetesObjects(name string, service ServiceConfig,
 		// Configure resource reservations
 		podSecurityContext := &v1.PodSecurityContext{}
 
+		// @step set pod security context
+		runAsUser := combinedConfig.podSecurityContextRunAsUser(name)
+		runAsGroup := combinedConfig.podSecurityContextRunAsGroup(name)
+		fsGroup := combinedConfig.podSecurityContextFsGroup(name)
+
+		if runAsUser != "" {
+			if i, err := strconv.Atoi(runAsUser); err == nil {
+				v := int64(i)
+				podSecurityContext.RunAsUser = &v
+			}
+		}
+		if runAsGroup != "" {
+			if i, err := strconv.Atoi(runAsGroup); err == nil {
+				v := int64(i)
+				podSecurityContext.RunAsGroup = &v
+			}
+		}
+		if fsGroup != "" {
+			if i, err := strconv.Atoi(fsGroup); err == nil {
+				v := int64(i)
+				podSecurityContext.FSGroup = &v
+			}
+		}
+
 		// @todo: Is it even relevant... Check and cleanup!
 		// //set pid namespace mode
 		// if service.Pid != "" {
