@@ -737,6 +737,7 @@ func (k *Kubernetes) ConfigPorts(name string, service ServiceConfig) []v1.Contai
 // ConfigServicePorts configure the container service ports.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L602
 func (k *Kubernetes) ConfigServicePorts(name string, service ServiceConfig) []v1.ServicePort {
+	serviceName := name
 	servicePorts := []v1.ServicePort{}
 	seenPorts := make(map[int]struct{}, len(service.Port))
 
@@ -766,8 +767,10 @@ func (k *Kubernetes) ConfigServicePorts(name string, service ServiceConfig) []v1
 			TargetPort: targetPort,
 		}
 
-		if service.ServiceType == string(v1.ServiceTypeNodePort) && service.NodePortPort != 0 {
-			servicePort.NodePort = service.NodePortPort
+		st := combinedConfig.serviceType(serviceName)
+		np := combinedConfig.nodePort(serviceName)
+		if st == string(v1.ServiceTypeNodePort) && np != 0 {
+			servicePort.NodePort = int32(np)
 		}
 
 		// If the default is already TCP, no need to include it.

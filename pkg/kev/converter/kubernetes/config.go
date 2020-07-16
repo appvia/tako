@@ -136,6 +136,19 @@ func (c *CombinedConfig) serviceType(name string) string {
 	return config.DefaultService
 }
 
+// nodePort returns NodePort service port value
+// kompose currently only takes value from label, hence cascading
+func (c *CombinedConfig) nodePort(name string) uint32 {
+	if c.getKevComponent(name).Service.Nodeport != 0 {
+		return c.getKevComponent(name).Service.Nodeport
+	} else if c.kevConfig.Service.Nodeport != 0 {
+		return c.kevConfig.Service.Nodeport
+	} else if c.getKomposeComponent(name).NodePortPort != 0 {
+		return uint32(c.getKomposeComponent(name).NodePortPort)
+	}
+	return 0
+}
+
 // serviceAccount returns service account for given component
 func (c *CombinedConfig) serviceAccount(name string) string {
 	if c.getKevComponent(name).Workload.ServiceAccountName != "" {
