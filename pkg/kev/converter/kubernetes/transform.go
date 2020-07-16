@@ -52,15 +52,19 @@ type Kubernetes struct {
 	Opt ConvertOptions
 }
 
-var customConfig *config.Config
+var combinedConfig CombinedConfig
 
 // Transform maps komposeObject to k8s objects
 // returns object that are already sorted in the way that Services are first
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1140
 func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, envConfig *config.Config) ([]runtime.Object, error) {
 
-	// @todo: make use of passed envConfig - this might be used to better control the outcome!
-	customConfig = envConfig
+	// combinedConfig is used to blend the configuration settings
+	combinedConfig = CombinedConfig{
+		kevConfig:      envConfig,
+		komposeObject:  komposeObject,
+		convertOptions: opt,
+	}
 
 	// this will hold all the converted data
 	var allobjects []runtime.Object
@@ -106,7 +110,7 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 			}
 		} else {
 			// No ports defined - createing headless service instead
-			if service.ServiceType == "Headless" {
+			if combinedConfig.serviceType(name) == config.HeadlessService {
 				svc := k.CreateHeadlessService(name, service, objects)
 				objects = append(objects, svc)
 			}
@@ -153,18 +157,7 @@ func (k *Kubernetes) InitPodSpec(name string, service ServiceConfig) v1.PodSpec 
 	if image == "" {
 		image = name
 	}
-
-	// @todo Prioritising kev config over kompose elements for now!
-	pullSecret := ""
-	if customConfig.Components[name].Workload.ImagePullSecret != "" {
-		pullSecret = customConfig.Components[name].Workload.ImagePullSecret
-	} else if customConfig.Workload.ImagePullSecret != "" {
-		pullSecret = customConfig.Workload.ImagePullSecret
-	} else if service.ImagePullSecret != "" {
-		pullSecret = service.ImagePullSecret
-	} else {
-		pullSecret = config.DefaultImagePullSecret
-	}
+	pullSecret := combinedConfig.imagePullSecret(name)
 
 	pod := v1.PodSpec{
 		Containers: []v1.Container{
@@ -757,7 +750,7 @@ func (k *Kubernetes) ConfigServicePorts(name string, service ServiceConfig) []v1
 		name := strconv.Itoa(int(port.HostPort))
 		if _, ok := seenPorts[int(port.HostPort)]; ok {
 			// https://github.com/kubernetes/kubernetes/issues/2995
-			if service.ServiceType == string(v1.ServiceTypeLoadBalancer) {
+			if combinedConfig.serviceType(serviceName) == string(v1.ServiceTypeLoadBalancer) {
 				fmt.Printf("Service %s of type LoadBalancer cannot use TCP and UDP for the same port", name)
 			}
 			name = fmt.Sprintf("%s-%s", name, strings.ToLower(string(port.Protocol)))
@@ -1203,28 +1196,13 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 	var replica int
 
 	// @step get number of replicas for service
-	// @todo Prioritise kev config over kompose convert option for now!
-	// @todo Remove opt.Replicas from convert options and cleanup
-	replica = 1
-	if customConfig.Components[name].Workload.Replicas != 0 {
-		replica = int(customConfig.Components[name].Workload.Replicas)
-	} else if customConfig.Workload.Replicas != 0 {
-		replica = int(customConfig.Workload.Replicas)
-	} else if opt.Replicas != 0 {
-		replica = opt.Replicas
-	}
+	replica = combinedConfig.replicas(name)
 
 	// @step Check whether compose service deploy mode is set to global (which indicates daemonset should be used!)
-	wType := ""
-	if customConfig.Components[name].Workload.Type != config.DaemonsetWorkload {
-		wType = customConfig.Components[name].Workload.Type
-	} else if customConfig.Workload.Type != config.DaemonsetWorkload {
-		wType = customConfig.Workload.Type
-	}
-
-	if service.DeployMode == "global" && wType != "" {
-		// compose service defined as global but kev configuration workload type is different than DaemonSet
-		fmt.Printf("Compose service defined as 'global' should map to K8s DaemonSet. User override forces conversion to %s", wType)
+	workloadType := combinedConfig.workloadType(name)
+	if service.DeployMode == "global" && !combinedConfig.isDaemonSet(name) {
+		// compose service defined as global but configuration workload type is different than DaemonSet
+		fmt.Printf("Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s", workloadType)
 	}
 
 	// @step Resolve kompose.controller.type label
@@ -1241,16 +1219,6 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 	}
 
 	// @step Create object based on inferred / manually configured workload controller type
-	// @todo Prioritise kev config over kompose label configuration for now!
-	workloadType := ""
-	if customConfig.Components[name].Workload.Type != "" {
-		workloadType = customConfig.Components[name].Workload.Type
-	} else if customConfig.Workload.Type != "" {
-		workloadType = customConfig.Workload.Type
-	} else {
-		workloadType = opt.Controller
-	}
-
 	switch strings.ToLower(workloadType) {
 	case strings.ToLower(config.DeploymentWorkload):
 		objects = append(objects, k.InitD(name, service, replica))
@@ -1407,20 +1375,8 @@ func (k *Kubernetes) CreateService(name string, service ServiceConfig, objects [
 	servicePorts := k.ConfigServicePorts(name, service)
 	svc.Spec.Ports = servicePorts
 
-	// @step Get the actual service type by prioritising kev config over kompose labels
-	// @todo Refactor when we figure out the configuration via labels
-	component := customConfig.Components[name]
-	serviceType := ""
-	if component.Service.Type != "" {
-		// prioritise app component service type
-		serviceType = component.Service.Type
-	} else if customConfig.Service.Type != "" {
-		// fallback to app default service type
-		serviceType = customConfig.Service.Type
-	} else {
-		// fallback to Kompose derived value
-		serviceType = service.ServiceType
-	}
+	// @step Get service type for the component
+	serviceType := combinedConfig.serviceType(name)
 
 	// @step set the service spec
 	if serviceType == config.HeadlessService {
@@ -1611,41 +1567,11 @@ func (k *Kubernetes) UpdateKubernetesObjects(name string, service ServiceConfig,
 		template.Spec.Containers[0].Ports = ports
 		template.ObjectMeta.Labels = ConfigLabelsWithNetwork(name, service.Network)
 
-		// Configure the image pull policy
-		// @todo Prioritise kev configuration over kompose derived value for now!
-		ipPol := ""
-		if customConfig.Components[name].Workload.ImagePullPolicy != "" {
-			ipPol = customConfig.Components[name].Workload.ImagePullPolicy
-		} else if customConfig.Workload.ImagePullPolicy != "" {
-			ipPol = customConfig.Workload.ImagePullPolicy
-		} else {
-			policy, err := GetImagePullPolicy(name, service.ImagePullPolicy)
-			if err != nil {
-				// Value derived by kompose is invalid. Default to "Always".
-				ipPol = config.DefaultImagePullPolicy
-			} else {
-				ipPol = string(policy)
-			}
-		}
-		template.Spec.Containers[0].ImagePullPolicy = v1.PullPolicy(ipPol)
+		// @step Configure the image pull policy
+		template.Spec.Containers[0].ImagePullPolicy = v1.PullPolicy(combinedConfig.imagePullPolicy(name))
 
-		// Configure the container restart policy.
-		// @todo Prioritise kev configuration over kompose derived value for now!
-		rPol := ""
-		if customConfig.Components[name].Workload.Restart != "" {
-			rPol = customConfig.Components[name].Workload.Restart
-		} else if customConfig.Workload.Restart != "" {
-			rPol = customConfig.Workload.Restart
-		} else {
-			restart, err := GetRestartPolicy(name, service.Restart)
-			if err != nil {
-				// Value derived by kompose is invalid. Default to "Always".
-				rPol = config.RestartPolicyAlways
-			} else {
-				rPol = string(restart)
-			}
-		}
-		template.Spec.RestartPolicy = v1.RestartPolicy(rPol)
+		// @step Configure the container restart policy.
+		template.Spec.RestartPolicy = v1.RestartPolicy(combinedConfig.restartPolicy(name))
 
 		// Configure hostname/domain_name settings
 		if service.HostName != "" {
