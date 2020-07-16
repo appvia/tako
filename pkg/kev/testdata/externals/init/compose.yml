@@ -1,0 +1,88 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    configs:
+      - source: cache-name
+    container_name: backend
+    deploy:
+      mode: replicated
+      replicas: ${backend.workload.replicas}
+      resources:
+        limits:
+          cpus: ${backend.workload.max-cpu}
+          memory: ${backend.workload.max-memory}
+        reservations:
+          cpus: ${backend.workload.cpu}
+          memory: ${backend.workload.memory}
+      update_config:
+        parallelism: ${backend.workload.rolling-update-max-surge}
+    environment:
+      CACHE_ENDPOINT: ${backend.environment.CACHE_ENDPOINT}
+      CACHE_PASSWORD: ${backend.environment.CACHE_PASSWORD}
+    healthcheck:
+      disable: ${backend.workload.liveness-probe-disable}
+      interval: ${backend.workload.liveness-probe-interval}
+      retries: ${backend.workload.liveness-probe-retries}
+      start_period: ${backend.workload.liveness-probe-initial-delay}
+      test: ${backend.workload.liveness-probe-command}
+      timeout: ${backend.workload.liveness-probe-timeout}
+    image: ezodude/backend-cok8s:prod
+    networks:
+      prod-esnet: null
+    secrets:
+      - source: cache-endpoint
+      - source: cache-password
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: frontend
+    depends_on:
+      - backend
+    deploy:
+      mode: replicated
+      replicas: ${frontend.workload.replicas}
+      resources:
+        limits:
+          cpus: ${frontend.workload.max-cpu}
+          memory: ${frontend.workload.max-memory}
+        reservations:
+          cpus: ${frontend.workload.cpu}
+          memory: ${frontend.workload.memory}
+      update_config:
+        parallelism: ${frontend.workload.rolling-update-max-surge}
+    environment:
+      PORT: ${frontend.environment.PORT}
+    healthcheck:
+      disable: ${frontend.workload.liveness-probe-disable}
+      interval: ${frontend.workload.liveness-probe-interval}
+      retries: ${frontend.workload.liveness-probe-retries}
+      start_period: ${frontend.workload.liveness-probe-initial-delay}
+      test: ${frontend.workload.liveness-probe-command}
+      timeout: ${frontend.workload.liveness-probe-timeout}
+    image: ezodude/frontend-cok8s:prod
+    networks:
+      prod-esnet: null
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: 80
+        target: 8080
+networks:
+  prod-esnet:
+    driver: bridge
+    name: prod-esnet
+secrets:
+  cache-endpoint:
+    external: true
+    name: cache-endpoint
+  cache-password:
+    external: true
+    name: cache-password
+configs:
+  cache-name:
+    external: true
+    name: cache-name

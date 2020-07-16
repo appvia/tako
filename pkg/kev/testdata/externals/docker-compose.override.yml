@@ -24,7 +24,7 @@ services:
       - cache-name
     secrets:
       - cache-endpoint
-      - redis-password
+      - cache-password
     networks:
       - prod-esnet
 
@@ -41,5 +41,3 @@ secrets:
     file: ./secret_data
   cache-password:
     external: true
-    name: redis-password
-

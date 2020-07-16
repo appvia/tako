@@ -35,7 +35,7 @@ func TestInitApp(t *testing.T) {
 		overrides    []string
 		scenario     string
 	}{
-		"simple init": {
+		"simple": {
 			[]string{
 				"testdata/in-cluster-service/docker-compose.yml",
 				"testdata/in-cluster-service/docker-compose.override.yml",
@@ -43,13 +43,37 @@ func TestInitApp(t *testing.T) {
 			[]string{},
 			"testdata/in-cluster-service/init",
 		},
-		"init with local override": {
+		"with local override": {
 			[]string{
 				"testdata/in-cluster-service/docker-compose.yml",
 				"testdata/in-cluster-service/docker-compose.override.yml",
 			},
 			[]string{"local"},
 			"testdata/in-cluster-service/init",
+		},
+		"with external secrets and configs": {
+			[]string{
+				"testdata/externals/docker-compose.yml",
+				"testdata/externals/docker-compose.override.yml",
+			},
+			[]string{},
+			"testdata/externals/init",
+		},
+		"with env file": {
+			[]string{
+				"testdata/env-file/docker-compose.yml",
+				"testdata/env-file/docker-compose.override.yml",
+			},
+			[]string{},
+			"testdata/env-file/init",
+		},
+		"with deploy attribute": {
+			[]string{
+				"testdata/deploy/docker-compose.yml",
+				"testdata/deploy/docker-compose.override.yml",
+			},
+			[]string{},
+			"testdata/deploy/init",
 		},
 	}
 
