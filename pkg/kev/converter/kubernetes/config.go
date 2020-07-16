@@ -125,3 +125,13 @@ func (c *CombinedConfig) serviceType(name string) string {
 	}
 	return config.DefaultService
 }
+
+// serviceAccount returns service account for given component
+func (c *CombinedConfig) serviceAccount(name string) string {
+	if c.getKevComponent(name).Workload.ServiceAccountName != "" {
+		return c.getKevComponent(name).Workload.ServiceAccountName
+	} else if c.kevConfig.Workload.ServiceAccountName != "" {
+		return c.kevConfig.Workload.ServiceAccountName
+	}
+	return config.DefaultServiceAccountName
+}

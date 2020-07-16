@@ -158,6 +158,7 @@ func (k *Kubernetes) InitPodSpec(name string, service ServiceConfig) v1.PodSpec 
 		image = name
 	}
 	pullSecret := combinedConfig.imagePullSecret(name)
+	serviceAccount := combinedConfig.serviceAccount(name)
 
 	pod := v1.PodSpec{
 		Containers: []v1.Container{
@@ -173,6 +174,9 @@ func (k *Kubernetes) InitPodSpec(name string, service ServiceConfig) v1.PodSpec 
 				Name: pullSecret,
 			},
 		}
+	}
+	if serviceAccount != "" {
+		pod.ServiceAccountName = serviceAccount
 	}
 	return pod
 }
