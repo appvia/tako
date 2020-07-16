@@ -18,6 +18,8 @@ package config
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/appvia/kube-devx/pkg/kev/utils"
 	compose "github.com/compose-spec/compose-go/types"
@@ -46,7 +48,7 @@ func Infer(composeVersion string, composeConfig *compose.Project) (Inferred, err
 		inferService(&s, c)
 		inferDeploymentInfo(&s, c)
 		inferHealthcheckInfo(&s, c)
-		baseConfig.Components[s.Name] = *c
+		baseConfig.Components[normalizeServiceName(s.Name)] = *c
 	}
 
 	withPlaceholders, err := injectPlaceholders(composeVersion, composeConfig)
@@ -209,7 +211,7 @@ func injectPlaceholders(composeVersion string, composeConfig *compose.Project) (
 	// Service specific placeholders
 	for name, svc := range opaqueConfig["services"].(map[string]interface{}) {
 		// placeholder prefix
-		prefix := fmt.Sprintf("%s.workload", name)
+		prefix := fmt.Sprintf("%s.workload", normalizeServiceName(name))
 
 		//== Deploy ==
 		deploy := svc.(map[string]interface{})["deploy"]
@@ -237,7 +239,7 @@ func injectPlaceholders(composeVersion string, composeConfig *compose.Project) (
 		hc.(map[string]interface{})["timeout"] = placeholder(prefix, "liveness-probe-timeout")
 
 		//== Environment ==
-		prefix = fmt.Sprintf("%s.environment", name)
+		prefix = fmt.Sprintf("%s.environment", normalizeServiceName(name))
 		environment := svc.(map[string]interface{})["environment"]
 		if environment != nil {
 			for e := range environment.(map[string]interface{}) {
@@ -260,4 +262,9 @@ func injectPlaceholders(composeVersion string, composeConfig *compose.Project) (
 // Builds config attribute value placeholder
 func placeholder(prefix, key string) string {
 	return fmt.Sprintf("${%s.%s}", prefix, key)
+}
+
+func normalizeServiceName(name string) string {
+	re := regexp.MustCompile("[._]")
+	return strings.ToLower(re.ReplaceAllString(name, "-"))
 }
