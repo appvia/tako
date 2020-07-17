@@ -22,6 +22,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/appvia/kube-devx/pkg/kev"
@@ -29,7 +30,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestInitApp(t *testing.T) {
+func TestInit(t *testing.T) {
 	tests := map[string]struct {
 		composeFiles []string
 		overrides    []string
@@ -41,7 +42,7 @@ func TestInitApp(t *testing.T) {
 				"testdata/in-cluster-service/docker-compose.override.yml",
 			},
 			[]string{},
-			"testdata/in-cluster-service/init",
+			"testdata/in-cluster-service",
 		},
 		"with local override": {
 			[]string{
@@ -49,7 +50,7 @@ func TestInitApp(t *testing.T) {
 				"testdata/in-cluster-service/docker-compose.override.yml",
 			},
 			[]string{"local"},
-			"testdata/in-cluster-service/init",
+			"testdata/in-cluster-service",
 		},
 		"with external secrets and configs": {
 			[]string{
@@ -57,7 +58,7 @@ func TestInitApp(t *testing.T) {
 				"testdata/externals/docker-compose.override.yml",
 			},
 			[]string{},
-			"testdata/externals/init",
+			"testdata/externals",
 		},
 		"with env file": {
 			[]string{
@@ -65,7 +66,7 @@ func TestInitApp(t *testing.T) {
 				"testdata/env-file/docker-compose.override.yml",
 			},
 			[]string{},
-			"testdata/env-file/init",
+			"testdata/env-file",
 		},
 		"with deploy attribute": {
 			[]string{
@@ -73,7 +74,7 @@ func TestInitApp(t *testing.T) {
 				"testdata/deploy/docker-compose.override.yml",
 			},
 			[]string{},
-			"testdata/deploy/init",
+			"testdata/deploy",
 		},
 	}
 
@@ -83,48 +84,104 @@ func TestInitApp(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unexpected error: [%s]\n", err)
 			}
-			assertEqualDef(t, def, tc.scenario, tc.overrides)
+			assertEqualDef(t, def, tc.scenario, tc.overrides, []string{"init"})
 		})
 	}
 }
 
-func assertEqualDef(tb testing.TB, actual *app.Definition, scenario string, overrides []string, v ...interface{}) {
-	expected, err := loadDefinition(scenario, overrides)
+func TestBuild(t *testing.T) {
+	tests := map[string]struct {
+		composeFiles []string
+		overrides    []string
+		scenario     string
+	}{
+		"simple": {
+			[]string{
+				"testdata/in-cluster-service/docker-compose.yml",
+				"testdata/in-cluster-service/docker-compose.override.yml",
+			},
+			[]string{},
+			"testdata/in-cluster-service",
+		},
+		"with local override": {
+			[]string{
+				"testdata/in-cluster-service/docker-compose.yml",
+				"testdata/in-cluster-service/docker-compose.override.yml",
+			},
+			[]string{"local"},
+			"testdata/in-cluster-service",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			def, err := kev.Init(tc.composeFiles, tc.overrides)
+			if err != nil {
+				t.Fatalf("Unexpected error: [%s]\n", err)
+			}
+			if err := def.DoBuild(); err != nil {
+				t.Fatalf("Unexpected error: [%s]\n", err)
+			}
+			assertEqualDef(t, def, tc.scenario, tc.overrides, []string{"init", "build"})
+		})
+	}
+}
+
+func assertEqualDef(
+	tb testing.TB,
+	actual *app.Definition,
+	scenario string,
+	overrides, ops []string,
+	v ...interface{},
+) {
+	expected, err := loadDefinition(scenario, overrides, ops)
 	if err != nil {
 		tb.Fatalf("Unexpected error: [%s]", err)
 	}
 
 	diff := cmp.Diff(actual, expected)
 	if diff != "" {
-		msg := fmt.Sprintf("actual definition does not match expected: %s", diff)
+		msg := fmt.Sprintf("actual definition does not match expected\n%s", diff)
 		_, file, line, _ := runtime.Caller(1)
 		fmt.Printf("\033[31m%s:%d: "+msg+" \033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
 		tb.FailNow()
 	}
 }
 
-func loadDefinition(scenario string, overrides []string) (*app.Definition, error) {
-	composeContent, err := ioutil.ReadFile(path.Join(scenario, "compose.yml"))
-	if err != nil {
-		return nil, err
-	}
+func loadDefinition(scenario string, overrides, ops []string) (*app.Definition, error) {
+	joined := strings.ToLower(strings.Join(ops, " "))
+	doInit := strings.Contains(joined, "init")
+	doBuild := strings.Contains(joined, "build")
 
-	configContent, err := ioutil.ReadFile(path.Join(scenario, "config.yml"))
-	if err != nil {
-		return nil, err
-	}
-
+	def := &app.Definition{}
 	loadedOverrides := map[string]app.FileConfig{}
+	loadedBuild := app.BuildConfig{}
 
-	if len(overrides) > 0 {
+	var loadedBuildOverrides map[string]app.ConfigTuple
+
+	if doInit {
+		var tuple app.ConfigTuple
+		compose := path.Join(scenario, "init", "compose.yml")
+		composeFile := ".kev/.workspace/compose.yaml"
+		config := path.Join(scenario, "init", "config.yml")
+		configFile := ".kev/config.yaml"
+
+		if err := loadConfigTuple(compose, composeFile, config, configFile, &tuple); err != nil {
+			return nil, err
+		}
+
+		def.Base = tuple
+	}
+
+	if doInit && len(overrides) > 0 {
 		for _, o := range overrides {
-			entries, err := ioutil.ReadDir(path.Join(scenario, "overrides", o))
+			entries, err := ioutil.ReadDir(path.Join(scenario, "init", "overrides", o))
 			if err != nil {
 				return nil, err
 			}
 
 			for _, f := range entries {
-				content, err := ioutil.ReadFile(path.Join(scenario, "overrides", o, f.Name()))
+				content, err := ioutil.ReadFile(path.Join(scenario, "init", "overrides", o, f.Name()))
 				if err != nil {
 					return nil, err
 				}
@@ -137,18 +194,65 @@ func loadDefinition(scenario string, overrides []string) (*app.Definition, error
 		}
 	}
 
-	return &app.Definition{
-		Base: app.ConfigTuple{
-			Compose: app.FileConfig{
-				File:    ".kev/.workspace/compose.yaml",
-				Content: composeContent,
-			},
-			Config: app.FileConfig{
-				File:    ".kev/config.yaml",
-				Content: configContent,
-			},
-		},
-		Overrides: loadedOverrides,
-		Build:     app.BuildConfig{},
-	}, nil
+	def.Overrides = loadedOverrides
+
+	if doBuild {
+		var tuple app.ConfigTuple
+		compose := path.Join(scenario, "build", "compose.yml")
+		composeFile := ".kev/.workspace/build/compose.build.yaml"
+		config := path.Join(scenario, "build", "config.yml")
+		configFile := ".kev/.workspace/build/config.build.yaml"
+
+		if err := loadConfigTuple(compose, composeFile, config, configFile, &tuple); err != nil {
+			return nil, err
+		}
+
+		loadedBuild = app.BuildConfig{
+			Base:      tuple,
+			Overrides: map[string]app.ConfigTuple{},
+		}
+	}
+
+	def.Build = loadedBuild
+
+	if doBuild && len(overrides) > 0 {
+		loadedBuildOverrides = def.Build.Overrides
+		for _, o := range overrides {
+			var tuple app.ConfigTuple
+			compose := path.Join(scenario, "build", "overrides", o, "compose.build.yml")
+			composeFile := path.Join(".kev", ".workspace", "build", o, "compose.build.yaml")
+			config := path.Join(scenario, "build", "overrides", o, "config.build.yml")
+			configFile := path.Join(".kev", ".workspace", "build", o, "config.build.yaml")
+
+			if err := loadConfigTuple(compose, composeFile, config, configFile, &tuple); err != nil {
+				return nil, err
+			}
+			loadedBuildOverrides[o] = tuple
+		}
+	}
+
+	return def, nil
+}
+
+func loadConfigTuple(compose, composeFile, config, configFile string, target *app.ConfigTuple) error {
+	composeContent, err := ioutil.ReadFile(compose)
+	if err != nil {
+		return err
+	}
+
+	configContent, err := ioutil.ReadFile(config)
+	if err != nil {
+		return err
+	}
+
+	target.Compose = app.FileConfig{
+		File:    composeFile,
+		Content: composeContent,
+	}
+	target.Config = app.FileConfig{
+		File:    configFile,
+		Content: configContent,
+	}
+
+	return nil
 }
