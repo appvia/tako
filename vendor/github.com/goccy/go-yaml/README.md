@@ -299,6 +299,49 @@ fmt.Println(authors)
 // [john ken]
 ```
 
+## 5.1 Print customized error with YAML source code
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/goccy/go-yaml"
+)
+
+func main() {
+  yml := `
+a: 1
+b: "hello"
+`
+  var v struct {
+    A int
+    B string
+  }
+  if err := yaml.Unmarshal([]byte(yml), &v); err != nil {
+    panic(err)
+  }
+  if v.A != 2 {
+    // output error with YAML source
+    path, err := yaml.PathString("$.a")
+    if err != nil {
+      panic(err)
+    }
+    source, err := path.AnnotateSource([]byte(yml), true)
+    if err != nil {
+      panic(err)
+    }
+    fmt.Printf("a value expected 2 but actual %d:\n%s\n", v.A, string(source))
+  }
+}
+```
+
+output result is the following.
+
+<img src="https://user-images.githubusercontent.com/209884/84148813-7aca8680-aa9a-11ea-8fc9-37dece2ebdac.png"></img>
+
+
 # Installation
 
 ```

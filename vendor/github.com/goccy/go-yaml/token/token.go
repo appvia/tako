@@ -340,23 +340,23 @@ const (
 	// IntegerTag `!!int` tag
 	IntegerTag ReservedTagKeyword = "!!int"
 	// FloatTag `!!float` tag
-	FloatTag = "!!float"
+	FloatTag ReservedTagKeyword = "!!float"
 	// NullTag `!!null` tag
-	NullTag = "!!null"
+	NullTag ReservedTagKeyword = "!!null"
 	// SequenceTag `!!seq` tag
-	SequenceTag = "!!seq"
+	SequenceTag ReservedTagKeyword = "!!seq"
 	// MappingTag `!!map` tag
-	MappingTag = "!!map"
+	MappingTag ReservedTagKeyword = "!!map"
 	// StringTag `!!str` tag
-	StringTag = "!!str"
+	StringTag ReservedTagKeyword = "!!str"
 	// BinaryTag `!!binary` tag
-	BinaryTag = "!!binary"
+	BinaryTag ReservedTagKeyword = "!!binary"
 	// OrderedMapTag `!!omap` tag
-	OrderedMapTag = "!!omap"
+	OrderedMapTag ReservedTagKeyword = "!!omap"
 	// SetTag `!!set` tag
-	SetTag = "!!set"
+	SetTag ReservedTagKeyword = "!!set"
 	// TimestampTag `!!timestamp` tag
-	TimestampTag = "!!timestamp"
+	TimestampTag ReservedTagKeyword = "!!timestamp"
 )
 
 var (
@@ -679,6 +679,19 @@ func (t *Token) AddColumn(col int) {
 		return
 	}
 	t.Position.Column += col
+}
+
+// Clone copy token ( preserve Prev/Next reference )
+func (t *Token) Clone() *Token {
+	if t == nil {
+		return nil
+	}
+	copied := *t
+	if t.Position != nil {
+		pos := *(t.Position)
+		copied.Position = &pos
+	}
+	return &copied
 }
 
 // Tokens type of token collection

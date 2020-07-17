@@ -92,16 +92,33 @@ func (d *Decoder) castToFloat(v interface{}) interface{} {
 	return 0
 }
 
+func (d *Decoder) mergeValueNode(value ast.Node) ast.Node {
+	if value.Type() == ast.AliasType {
+		aliasNode := value.(*ast.AliasNode)
+		aliasName := aliasNode.Value.GetToken().Value
+		return d.anchorNodeMap[aliasName]
+	}
+	return value
+}
+
+func (d *Decoder) mapKeyNodeToString(node ast.Node) string {
+	key := d.nodeToValue(node)
+	if key == nil {
+		return "null"
+	}
+	if k, ok := key.(string); ok {
+		return k
+	}
+	return fmt.Sprint(key)
+}
+
 func (d *Decoder) setToMapValue(node ast.Node, m map[string]interface{}) {
 	switch n := node.(type) {
 	case *ast.MappingValueNode:
-		if n.Key.Type() == ast.MergeKeyType && n.Value.Type() == ast.AliasType {
-			aliasNode := n.Value.(*ast.AliasNode)
-			aliasName := aliasNode.Value.GetToken().Value
-			node := d.anchorNodeMap[aliasName]
-			d.setToMapValue(node, m)
+		if n.Key.Type() == ast.MergeKeyType {
+			d.setToMapValue(d.mergeValueNode(n.Value), m)
 		} else {
-			key := n.Key.GetToken().Value
+			key := d.mapKeyNodeToString(n.Key)
 			m[key] = d.nodeToValue(n.Value)
 		}
 	case *ast.MappingNode:
@@ -114,13 +131,10 @@ func (d *Decoder) setToMapValue(node ast.Node, m map[string]interface{}) {
 func (d *Decoder) setToOrderedMapValue(node ast.Node, m *MapSlice) {
 	switch n := node.(type) {
 	case *ast.MappingValueNode:
-		if n.Key.Type() == ast.MergeKeyType && n.Value.Type() == ast.AliasType {
-			aliasNode := n.Value.(*ast.AliasNode)
-			aliasName := aliasNode.Value.GetToken().Value
-			node := d.anchorNodeMap[aliasName]
-			d.setToOrderedMapValue(node, m)
+		if n.Key.Type() == ast.MergeKeyType {
+			d.setToOrderedMapValue(d.mergeValueNode(n.Value), m)
 		} else {
-			key := n.Key.GetToken().Value
+			key := d.mapKeyNodeToString(n.Key)
 			*m = append(*m, MapItem{Key: key, Value: d.nodeToValue(n.Value)})
 		}
 	case *ast.MappingNode:
@@ -147,10 +161,13 @@ func (d *Decoder) nodeToValue(node ast.Node) interface{} {
 	case *ast.NanNode:
 		return n.GetValue()
 	case *ast.TagNode:
-		switch n.Start.Value {
+		switch token.ReservedTagKeyword(n.Start.Value) {
 		case token.TimestampTag:
 			t, _ := d.castToTime(n.Value)
 			return t
+		case token.IntegerTag:
+			i, _ := strconv.Atoi(fmt.Sprint(d.nodeToValue(n.Value)))
+			return i
 		case token.FloatTag:
 			return d.castToFloat(d.nodeToValue(n.Value))
 		case token.NullTag:
@@ -158,6 +175,10 @@ func (d *Decoder) nodeToValue(node ast.Node) interface{} {
 		case token.BinaryTag:
 			b, _ := base64.StdEncoding.DecodeString(d.nodeToValue(n.Value).(string))
 			return b
+		case token.StringTag:
+			return d.nodeToValue(n.Value)
+		case token.MappingTag:
+			return d.nodeToValue(n.Value)
 		}
 	case *ast.AnchorNode:
 		anchorName := n.Name.GetToken().Value
@@ -170,21 +191,21 @@ func (d *Decoder) nodeToValue(node ast.Node) interface{} {
 		return d.nodeToValue(node)
 	case *ast.LiteralNode:
 		return n.Value.GetValue()
+	case *ast.MappingKeyNode:
+		return d.nodeToValue(n.Value)
 	case *ast.MappingValueNode:
-		if n.Key.Type() == ast.MergeKeyType && n.Value.Type() == ast.AliasType {
-			aliasNode := n.Value.(*ast.AliasNode)
-			aliasName := aliasNode.Value.GetToken().Value
-			node := d.anchorNodeMap[aliasName]
+		if n.Key.Type() == ast.MergeKeyType {
+			value := d.mergeValueNode(n.Value)
 			if d.useOrderedMap {
 				m := MapSlice{}
-				d.setToOrderedMapValue(node, &m)
+				d.setToOrderedMapValue(value, &m)
 				return m
 			}
 			m := map[string]interface{}{}
-			d.setToMapValue(node, m)
+			d.setToMapValue(value, m)
 			return m
 		}
-		key := n.Key.GetToken().Value
+		key := d.mapKeyNodeToString(n.Key)
 		if d.useOrderedMap {
 			return MapSlice{{Key: key, Value: d.nodeToValue(n.Value)}}
 		}
@@ -212,6 +233,38 @@ func (d *Decoder) nodeToValue(node ast.Node) interface{} {
 		return v
 	}
 	return nil
+}
+
+func (d *Decoder) resolveAlias(node ast.Node) ast.Node {
+	switch n := node.(type) {
+	case *ast.MappingNode:
+		for idx, value := range n.Values {
+			n.Values[idx] = d.resolveAlias(value).(*ast.MappingValueNode)
+		}
+	case *ast.TagNode:
+		n.Value = d.resolveAlias(n.Value)
+	case *ast.MappingKeyNode:
+		n.Value = d.resolveAlias(n.Value)
+	case *ast.MappingValueNode:
+		if n.Key.Type() == ast.MergeKeyType && n.Value.Type() == ast.AliasType {
+			value := d.resolveAlias(n.Value)
+			keyColumn := n.Key.GetToken().Position.Column
+			requiredColumn := keyColumn + 2
+			value.AddColumn(requiredColumn)
+			n.Value = value
+		} else {
+			n.Key = d.resolveAlias(n.Key)
+			n.Value = d.resolveAlias(n.Value)
+		}
+	case *ast.SequenceNode:
+		for idx, value := range n.Values {
+			n.Values[idx] = d.resolveAlias(value)
+		}
+	case *ast.AliasNode:
+		aliasName := n.Value.GetToken().Value
+		return d.resolveAlias(d.anchorNodeMap[aliasName])
+	}
+	return node
 }
 
 func (d *Decoder) getMapNode(node ast.Node) (ast.MapNode, error) {
@@ -376,8 +429,8 @@ func (d *Decoder) deleteStructKeys(structType reflect.Type, unknownFields map[st
 			continue
 		}
 
-		structField, ok := structFieldMap[field.Name]
-		if !ok {
+		structField, exists := structFieldMap[field.Name]
+		if !exists {
 			continue
 		}
 
@@ -390,6 +443,51 @@ func (d *Decoder) deleteStructKeys(structType reflect.Type, unknownFields map[st
 	return nil
 }
 
+func (d *Decoder) lastNode(node ast.Node) ast.Node {
+	switch n := node.(type) {
+	case *ast.MappingNode:
+		if len(n.Values) > 0 {
+			return d.lastNode(n.Values[len(n.Values)-1])
+		}
+	case *ast.MappingValueNode:
+		return d.lastNode(n.Value)
+	case *ast.SequenceNode:
+		if len(n.Values) > 0 {
+			return d.lastNode(n.Values[len(n.Values)-1])
+		}
+	}
+	return node
+}
+
+func (d *Decoder) unmarshalableDocument(node ast.Node) []byte {
+	node = d.resolveAlias(node)
+	doc := node.String()
+	last := d.lastNode(node)
+	if last != nil && last.Type() == ast.LiteralType {
+		doc += "\n"
+	}
+	return []byte(doc)
+}
+
+func (d *Decoder) unmarshalableText(node ast.Node) ([]byte, bool) {
+	node = d.resolveAlias(node)
+	if node.Type() == ast.AnchorType {
+		node = node.(*ast.AnchorNode).Value
+	}
+	switch n := node.(type) {
+	case *ast.StringNode:
+		return []byte(n.Value), true
+	case *ast.LiteralNode:
+		return []byte(n.Value.GetToken().Value), true
+	default:
+		scalar, ok := n.(ast.ScalarNode)
+		if ok {
+			return []byte(fmt.Sprint(scalar.GetValue())), true
+		}
+	}
+	return nil, false
+}
+
 func (d *Decoder) decodeValue(dst reflect.Value, src ast.Node) error {
 	if src.Type() == ast.AnchorType {
 		anchorName := src.(*ast.AnchorNode).Name.GetToken().Value
@@ -399,13 +497,7 @@ func (d *Decoder) decodeValue(dst reflect.Value, src ast.Node) error {
 	}
 	valueType := dst.Type()
 	if unmarshaler, ok := dst.Addr().Interface().(BytesUnmarshaler); ok {
-		var b string
-		if scalar, isScalar := src.(ast.ScalarNode); isScalar {
-			b = fmt.Sprint(scalar.GetValue())
-		} else {
-			b = src.String()
-		}
-		if err := unmarshaler.UnmarshalYAML([]byte(b)); err != nil {
+		if err := unmarshaler.UnmarshalYAML(d.unmarshalableDocument(src)); err != nil {
 			return errors.Wrapf(err, "failed to UnmarshalYAML")
 		}
 		return nil
@@ -426,16 +518,13 @@ func (d *Decoder) decodeValue(dst reflect.Value, src ast.Node) error {
 	} else if _, ok := dst.Addr().Interface().(*time.Time); ok {
 		return d.decodeTime(dst, src)
 	} else if unmarshaler, isText := dst.Addr().Interface().(encoding.TextUnmarshaler); isText {
-		var b string
-		if scalar, isScalar := src.(ast.ScalarNode); isScalar {
-			b = scalar.GetValue().(string)
-		} else {
-			b = src.String()
+		b, ok := d.unmarshalableText(src)
+		if ok {
+			if err := unmarshaler.UnmarshalText(b); err != nil {
+				return errors.Wrapf(err, "failed to UnmarshalText")
+			}
+			return nil
 		}
-		if err := unmarshaler.UnmarshalText([]byte(b)); err != nil {
-			return errors.Wrapf(err, "failed to UnmarshalText")
-		}
-		return nil
 	}
 	switch valueType.Kind() {
 	case reflect.Ptr:
@@ -772,10 +861,8 @@ func (d *Decoder) decodeStruct(dst reflect.Value, src ast.Node) error {
 			}
 			mapNode := ast.Mapping(nil, false)
 			for k, v := range keyToNodeMap {
-				mapNode.Values = append(mapNode.Values, &ast.MappingValueNode{
-					Key:   &ast.StringNode{Value: k},
-					Value: v,
-				})
+				key := &ast.StringNode{BaseNode: &ast.BaseNode{}, Value: k}
+				mapNode.Values = append(mapNode.Values, ast.MappingValue(nil, key, v))
 			}
 			newFieldValue, err := d.createDecodedNewValue(fieldValue.Type(), mapNode)
 			if d.disallowUnknownField {
@@ -841,6 +928,16 @@ func (d *Decoder) decodeStruct(dst reflect.Value, src ast.Node) error {
 		}
 		fieldValue.Set(d.castToAssignableValue(newFieldValue, fieldValue.Type()))
 	}
+	if foundErr != nil {
+		return errors.Wrapf(foundErr, "failed to decode value")
+	}
+
+	if len(unknownFields) != 0 && d.disallowUnknownField {
+		for key, node := range unknownFields {
+			return errUnknownField(fmt.Sprintf(`unknown field "%s"`, key), node.GetToken())
+		}
+	}
+
 	if d.validator != nil {
 		if err := d.validator.Struct(dst.Interface()); err != nil {
 			ev := reflect.ValueOf(err)
@@ -851,7 +948,10 @@ func (d *Decoder) decodeStruct(dst reflect.Value, src ast.Node) error {
 						continue
 					}
 					fieldName := fieldErr.StructField()
-					structField := structFieldMap[fieldName]
+					structField, exists := structFieldMap[fieldName]
+					if !exists {
+						continue
+					}
 					node, exists := keyToNodeMap[structField.RenderName]
 					if exists {
 						// TODO: to make FieldError message cutomizable
@@ -860,14 +960,6 @@ func (d *Decoder) decodeStruct(dst reflect.Value, src ast.Node) error {
 				}
 			}
 		}
-	}
-	if len(unknownFields) != 0 && d.disallowUnknownField {
-		for key, node := range unknownFields {
-			return errUnknownField(fmt.Sprintf(`unknown field "%s"`, key), node.GetToken())
-		}
-	}
-	if foundErr != nil {
-		return errors.Wrapf(foundErr, "failed to decode value")
 	}
 	return nil
 }
