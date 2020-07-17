@@ -14,7 +14,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/cast v1.3.0
+	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.0.0
 	github.com/tidwall/gjson v1.6.0
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
