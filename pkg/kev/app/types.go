@@ -29,26 +29,7 @@ type Definition struct {
 	Base      ConfigTuple
 	Overrides map[string]FileConfig // maps environment name to its configuration
 	Build     BuildConfig
-}
-
-func (def *Definition) RootDir() string {
-	return baseDir
-}
-
-func (def *Definition) WorkDir() string {
-	return workDir
-}
-
-func (def *Definition) WorkPath() string {
-	return path.Join(def.RootDir(), def.WorkDir())
-}
-
-func (def *Definition) BuildDir() string {
-	return buildDir
-}
-
-func (def *Definition) BuildPath() string {
-	return path.Join(def.RootDir(), def.WorkDir(), def.BuildDir())
+	Rendered  []FileConfig
 }
 
 // BuildConfig is an app definition's build config.

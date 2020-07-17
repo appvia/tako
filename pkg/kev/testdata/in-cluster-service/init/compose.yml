@@ -50,9 +50,6 @@ services:
           memory: ${cache.workload.memory}
       update_config:
         parallelism: ${cache.workload.rolling-update-max-surge}
-    environment:
-      ALLOW_EMPTY_PASSWORD: ${cache.environment.ALLOW_EMPTY_PASSWORD}
-      REDIS_DISABLE_COMMANDS: ${cache.environment.REDIS_DISABLE_COMMANDS}
     healthcheck:
       disable: ${cache.workload.liveness-probe-disable}
       interval: ${cache.workload.liveness-probe-interval}

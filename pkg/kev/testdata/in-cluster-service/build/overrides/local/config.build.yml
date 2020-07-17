@@ -4,7 +4,7 @@ workload:
   image-pull-policy: IfNotPresent
   service-account-name: default
 volumes:
-  redis_data:
+  redis-data:
     class: standard
     size: 100Mi
 backend:
@@ -49,9 +49,6 @@ cache:
     liveness-probe-timeout: 10s
   service:
     type: LoadBalancer
-  environment:
-    ALLOW_EMPTY_PASSWORD: yes
-    REDIS_DISABLE_COMMANDS: FLUSHDB,FLUSHALL
 frontend:
   workload:
     type: Deployment

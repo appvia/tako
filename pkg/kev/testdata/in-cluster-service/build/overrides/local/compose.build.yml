@@ -50,9 +50,6 @@ services:
           memory: 10Mi
       update_config:
         parallelism: 1
-    environment:
-      ALLOW_EMPTY_PASSWORD: true
-      REDIS_DISABLE_COMMANDS: FLUSHDB,FLUSHALL
     healthcheck:
       disable: false
       interval: 1m0s

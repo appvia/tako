@@ -27,12 +27,25 @@ import (
 	"github.com/imdario/mergo"
 )
 
-// GetBuildInfo is gets a flat list for a build's config pairs (both app and overrides).
+// GetBuildInfo gets a flat list for a build's config pairs (both app and overrides).
 func (def *Definition) GetBuildInfo() []ConfigTuple {
 	var out []ConfigTuple
 	out = append(out, def.Build.Base)
 	for _, tuple := range def.Build.Overrides {
 		out = append(out, tuple)
+	}
+	return out
+}
+
+// GetMappedBuildInfo gets a map for a build's config pairs.
+// If overrides have been built then the map will only include overrides.
+// If no overrides have been built then the map will only include app config pairs.
+func (def *Definition) GetMappedBuildInfo() map[string]ConfigTuple {
+	out := make(map[string]ConfigTuple)
+	if def.HasBuiltOverrides() {
+		out = def.GetOverridesBuildInfo()
+	} else {
+		out[""] = def.GetAppBuildInfo()
 	}
 	return out
 }

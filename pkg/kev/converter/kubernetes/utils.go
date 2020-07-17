@@ -35,6 +35,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/version"
 	"github.com/docker/go-units"
 	"github.com/joho/godotenv"
@@ -155,7 +156,8 @@ func getDirName(opt ConvertOptions) string {
 
 // PrintList will take the data converted and decide on the commandline attributes given
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L153
-func PrintList(objects []runtime.Object, opt ConvertOptions) error {
+// func PrintList(objects []runtime.Object, opt ConvertOptions) error {
+func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string]app.FileConfig) error {
 
 	var f *os.File
 	dirName := getDirName(opt)
@@ -197,15 +199,22 @@ func PrintList(objects []runtime.Object, opt ConvertOptions) error {
 		if err != nil {
 			return err
 		}
+
 		data, err := marshal(convertedList, opt.GenerateJSON, opt.YAMLIndent)
 		if err != nil {
 			return fmt.Errorf("error in marshalling the List: %v", err)
 		}
+
 		printVal, err := Print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
 		if err != nil {
 			return errors.Wrap(err, "Print failed")
 		}
+
 		files = append(files, printVal)
+		rendered[printVal] = app.FileConfig{
+			Content: data,
+			File:    printVal,
+		}
 	} else {
 		// @step output directory specified - print all objects individually to that directory
 		finalDirName := dirName
@@ -260,6 +269,10 @@ func PrintList(objects []runtime.Object, opt ConvertOptions) error {
 			}
 
 			files = append(files, file)
+			rendered[file] = app.FileConfig{
+				Content: data,
+				File:    file,
+			}
 		}
 	}
 	// @step for helm output generate chart directory structure

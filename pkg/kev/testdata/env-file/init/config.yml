@@ -4,7 +4,7 @@ workload:
   image-pull-policy: IfNotPresent
   service-account-name: default
 volumes:
-  db_data:
+  db-data:
     class: standard
     size: 100Mi
 db:

@@ -90,7 +90,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 
 	fmt.Println("\n⚙️  Output format:", format)
 
-	if err := kev.Render(format, singleFile, dir, envs); err != nil {
+	if _, err := kev.Render(format, singleFile, dir, envs); err != nil {
 		return err
 	}
 
