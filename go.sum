@@ -61,6 +61,8 @@ github.com/go-playground/universal-translator v0.17.0/go.mod h1:UkSxE5sNxxRwHyU+
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/goccy/go-yaml v1.7.5 h1:dWvj+p3BG11S/GlUzwzt1WZz0lhBTzTIDtmXT/ZOaPY=
 github.com/goccy/go-yaml v1.7.5/go.mod h1:wS4gNoLalDSJxo/SpngzPQ2BN4uuZVLCmbM4S3vd4+Y=
+github.com/goccy/go-yaml v1.8.0 h1:WCe9sBiI0oZb6EC6f3kq3dv0+aEiNdstT7b4xxq4MJQ=
+github.com/goccy/go-yaml v1.8.0/go.mod h1:wS4gNoLalDSJxo/SpngzPQ2BN4uuZVLCmbM4S3vd4+Y=
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.2.1 h1:/s5zKNz0uPFCZ5hddgPdo2TK2TVrUNMn0OOX8/aZMTE=
 github.com/gogo/protobuf v1.2.1/go.mod h1:hp+jE20tsWTFYpLwKvXlhS1hjn+gTNwPg2I6zVXpSg4=
