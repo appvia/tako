@@ -188,3 +188,29 @@ func (c *CombinedConfig) podSecurityContextFsGroup(name string) string {
 	}
 	return config.DefaultSecurityContextFsGroup
 }
+
+// exposeService tells whether component service requires an ingress, and/or what domains should the ingress handle
+// kompose currently only takes value from label, hence cascading
+func (c *CombinedConfig) exposeService(name string) string {
+	if c.getKevComponent(name).Service.Expose != "" {
+		return c.getKevComponent(name).Service.Expose
+	} else if c.kevConfig.Service.Expose != "" {
+		return c.kevConfig.Service.Expose
+	} else if c.getKomposeComponent(name).ExposeService != "" {
+		return c.getKomposeComponent(name).ExposeService
+	}
+	return ""
+}
+
+// exposeServiceTLSSecretName returns name of secret containing ingress certificate
+// kompose currently only takes value from label, hence cascading
+func (c *CombinedConfig) exposeServiceTLSSecretName(name string) string {
+	if c.getKevComponent(name).Service.TLSSecret != "" {
+		return c.getKevComponent(name).Service.TLSSecret
+	} else if c.kevConfig.Service.TLSSecret != "" {
+		return c.kevConfig.Service.TLSSecret
+	} else if c.getKomposeComponent(name).ExposeServiceTLS != "" {
+		return c.getKomposeComponent(name).ExposeServiceTLS
+	}
+	return ""
+}

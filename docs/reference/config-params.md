@@ -584,12 +584,11 @@ service-a:
 
 Defines whether to expose the service to external world. This detail can't be easily extracted from the compose file and so need to be specified by the user. By default all component services aren't exposed i.e. have no ingress attached to them.
 
-### Default: `false` - No ingress will be created!
+### Default: `""` - No ingress will be created!
 
 ### Possible options:
-* `false` - ingress won't be created
-* `true` - ingress will be created with Kubernetes cluster defaults
-* `domain.com,otherdomain.com...` - comma separated list of domains for the ingress.
+* `"true"` - ingress will be created with Kubernetes cluster defaults
+* `"domain.com,otherdomain.com..."` - comma separated list of domains for the ingress.
 
 > expose:
 ```yaml

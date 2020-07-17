@@ -105,7 +105,7 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 			objects = append(objects, svc)
 
 			// For exposed service also create an ingress
-			if service.ExposeService != "" {
+			if combinedConfig.exposeService(name) != "" {
 				objects = append(objects, k.initIngress(name, service, svc.Spec.Ports[0].Port))
 			}
 		} else {
@@ -576,7 +576,7 @@ func (k *Kubernetes) InitJ(name string, service ServiceConfig, replicas int) *v1
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
 func (k *Kubernetes) initIngress(name string, service ServiceConfig, port int32) *v1beta1.Ingress {
 
-	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(service.ExposeService, -1)
+	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(combinedConfig.exposeService(name), -1)
 
 	ingress := &v1beta1.Ingress{
 		TypeMeta: meta.TypeMeta{
@@ -617,11 +617,12 @@ func (k *Kubernetes) initIngress(name string, service ServiceConfig, port int32)
 		}
 	}
 
-	if service.ExposeServiceTLS != "" {
+	tlsSecretName := combinedConfig.exposeServiceTLSSecretName(name)
+	if tlsSecretName != "" {
 		ingress.Spec.TLS = []v1beta1.IngressTLS{
 			{
 				Hosts:      hosts,
-				SecretName: service.ExposeServiceTLS,
+				SecretName: tlsSecretName,
 			},
 		}
 	}
