@@ -24,7 +24,7 @@ github.com/fatih/color
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
-# github.com/goccy/go-yaml v1.7.5
+# github.com/goccy/go-yaml v1.8.0
 ## explicit
 github.com/goccy/go-yaml
 github.com/goccy/go-yaml/ast

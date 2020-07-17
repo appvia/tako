@@ -8,7 +8,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0
-	github.com/goccy/go-yaml v1.7.5
+	github.com/goccy/go-yaml v1.8.0
 	github.com/imdario/mergo v0.3.9
 	github.com/joho/godotenv v1.3.0
 	github.com/kr/text v0.2.0 // indirect
