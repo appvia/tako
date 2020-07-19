@@ -227,3 +227,13 @@ func (c *CombinedConfig) volumeStorageClass(name string) string {
 	}
 	return ""
 }
+
+// volumeSize returns named volume storage size
+// kompose currently only takes value from label, hence cascading
+// Note: this func only gets kev config value
+func (c *CombinedConfig) volumeSize(name string) string {
+	if c.getKevVolume(name).Size != "" {
+		return c.getKevVolume(name).Size
+	}
+	return ""
+}

@@ -668,6 +668,14 @@ func (k *Kubernetes) CreateSecrets(komposeObject KomposeObject) ([]*v1.Secret, e
 // CreatePVC initializes PersistentVolumeClaim
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L534
 func (k *Kubernetes) CreatePVC(name string, mode string, size string, selectorValue string) (*v1.PersistentVolumeClaim, error) {
+
+	// @step get volume size from combined configuration first, then fall back to passed value
+	volumeSize := combinedConfig.volumeSize(name)
+	if volumeSize != "" {
+		size = volumeSize
+	}
+
+	// @step get size quantity
 	volSize, err := resource.ParseQuantity(size)
 	if err != nil {
 		return nil, errors.Wrap(err, "resource.ParseQuantity failed, Error parsing size")
@@ -1003,12 +1011,6 @@ func (k *Kubernetes) ConfigVolumes(name string, service ServiceConfig) ([]v1.Vol
 
 				if len(volume.PVCSize) > 0 {
 					defaultSize = volume.PVCSize
-				} else {
-					for key, value := range service.Labels {
-						if key == "kompose.volume.size" {
-							defaultSize = value
-						}
-					}
 				}
 
 				createdPVC, err := k.CreatePVC(volumeName, volume.Mode, defaultSize, volume.SelectorValue)
