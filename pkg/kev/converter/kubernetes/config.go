@@ -36,6 +36,11 @@ func (c *CombinedConfig) getKevComponent(name string) config.Component {
 	return c.kevConfig.Components[name]
 }
 
+// getKevVolume get Kev volume configuration
+func (c *CombinedConfig) getKevVolume(name string) config.Volume {
+	return c.kevConfig.Volumes[name]
+}
+
 // getKomposeComponent get Kompose component configuration
 func (c *CombinedConfig) getKomposeComponent(name string) ServiceConfig {
 	return c.komposeObject.ServiceConfigs[name]
@@ -211,6 +216,14 @@ func (c *CombinedConfig) exposeServiceTLSSecretName(name string) string {
 		return c.kevConfig.Service.TLSSecret
 	} else if c.getKomposeComponent(name).ExposeServiceTLS != "" {
 		return c.getKomposeComponent(name).ExposeServiceTLS
+	}
+	return ""
+}
+
+// volumeStorageClass returns named volume storage class
+func (c *CombinedConfig) volumeStorageClass(name string) string {
+	if c.getKevVolume(name).Class != "" {
+		return c.getKevVolume(name).Class
 	}
 	return ""
 }

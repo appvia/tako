@@ -53,6 +53,10 @@ const (
 	LabelImagePullSecret = "kompose.image-pull-secret"
 	// LabelImagePullPolicy defines Kubernetes PodSpec imagePullPolicy.
 	LabelImagePullPolicy = "kompose.image-pull-policy"
+	// LabelVolumeSize defines persistent volume size
+	LabelVolumeSize = "kompose.volume.size"
+	// LabelVolumeSelector defines persistent volume selector
+	LabelVolumeSelector = "kompose.volume.selector"
 )
 
 // LoadCompose loads a docker-compose file into KomposeObject
@@ -575,9 +579,9 @@ func getVolumeLabels(name string, volumes *composego.Volumes) (string, string) {
 
 	if volume, ok := (*volumes)[name]; ok {
 		for key, value := range volume.Labels {
-			if key == "kompose.volume.size" {
+			if key == LabelVolumeSize {
 				size = value
-			} else if key == "kompose.volume.selector" {
+			} else if key == LabelVolumeSelector {
 				selector = value
 			}
 		}

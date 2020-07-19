@@ -697,6 +697,11 @@ func (k *Kubernetes) CreatePVC(name string, mode string, size string, selectorVa
 		}
 	}
 
+	storageClass := combinedConfig.volumeStorageClass(name)
+	if storageClass != "" {
+		pvc.Spec.StorageClassName = &storageClass
+	}
+
 	if mode == "ro" {
 		pvc.Spec.AccessModes = []v1.PersistentVolumeAccessMode{v1.ReadOnlyMany}
 	} else {
