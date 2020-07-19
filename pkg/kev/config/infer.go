@@ -76,7 +76,7 @@ func inferVolumesInfo(composeConfig *compose.Project, appConfig *Config) {
 	vols := make(map[string]Volume)
 
 	for _, v := range composeConfig.VolumeNames() {
-		vols[v] = Volume{
+		vols[normalizeVolumeName(v)] = Volume{
 			Size:  DefaultVolumeSize,
 			Class: DefaultVolumeClass,
 		}
@@ -267,4 +267,8 @@ func placeholder(prefix, key string) string {
 func normalizeServiceName(name string) string {
 	re := regexp.MustCompile("[._]")
 	return strings.ToLower(re.ReplaceAllString(name, "-"))
+}
+
+func normalizeVolumeName(name string) string {
+	return strings.Replace(name, "_", "-", -1)
 }
