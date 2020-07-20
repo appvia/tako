@@ -1,11 +1,11 @@
 version: '3.9'
 services:
   frontend:
-    image: ezodude/frontend-cok8s
+    image: busybox:latest
     container_name: frontend
     depends_on:
       - backend
 
   backend:
-    image: ezodude/backend-cok8s
+    image: busybox:latest
     container_name: backend

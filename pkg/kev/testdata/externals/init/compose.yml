@@ -29,7 +29,7 @@ services:
       start_period: ${backend.workload.liveness-probe-initial-delay}
       test: ${backend.workload.liveness-probe-command}
       timeout: ${backend.workload.liveness-probe-timeout}
-    image: ezodude/backend-cok8s:prod
+    image: busybox:latest
     networks:
       prod-esnet: null
     secrets:
@@ -63,7 +63,7 @@ services:
       start_period: ${frontend.workload.liveness-probe-initial-delay}
       test: ${frontend.workload.liveness-probe-command}
       timeout: ${frontend.workload.liveness-probe-timeout}
-    image: ezodude/frontend-cok8s:prod
+    image: busybox:latest
     networks:
       prod-esnet: null
     ports:

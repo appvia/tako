@@ -23,6 +23,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
@@ -207,7 +208,7 @@ func assertRender(
 		tb.Fatalf("Unexpected error: [%s]", err)
 	}
 
-	diff := cmp.Diff(actual.RenderedFilenames(), expected.RenderedFilenames())
+	diff := cmp.Diff(RenderedFilenamesFromDef(actual), RenderedFilenamesFromDef(expected))
 	if diff != "" {
 		msg := fmt.Sprintf("actual definition does not match expected\n%s", diff)
 		_, file, line, _ := runtime.Caller(1)
@@ -361,4 +362,13 @@ func loadConfigTuple(compose, composeFile, config, configFile string, target *ap
 	}
 
 	return nil
+}
+
+func RenderedFilenamesFromDef(def *app.Definition) []string {
+	var out []string
+	for _, r := range def.Rendered {
+		out = append(out, path.Base(r.File))
+	}
+	sort.Strings(out)
+	return out
 }

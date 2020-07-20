@@ -28,7 +28,7 @@ services:
       start_period: 1m0s
       test: ["CMD","echo","Define healthcheck command for service backend"]
       timeout: 10s
-    image: ezodude/backend-cok8s:dev
+    image: busybox:latest
     networks:
       dev-esnet: null
     ports:
@@ -97,7 +97,7 @@ services:
       start_period: 1m0s
       test: ["CMD","echo","Define healthcheck command for service frontend"]
       timeout: 10s
-    image: ezodude/frontend-cok8s:dev
+    image: busybox:latest
     networks:
       dev-esnet: null
     ports:

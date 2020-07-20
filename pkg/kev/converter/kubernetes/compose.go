@@ -38,7 +38,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-// LoadCompose loads a composego file into KomposeObject
+// LoadCompose loads a docker-compose file into KomposeObject
 func LoadCompose(file string) (KomposeObject, error) {
 	// Load compose project
 	project, err := compose.LoadProject([]string{file})
@@ -179,7 +179,7 @@ func dockerComposeToKomposeMapping(composeObject *composego.Project) (KomposeObj
 
 		// @step log if the service name has been normalised
 		if normalizeServiceNames(name) != name {
-			fmt.Printf("Service name in docker-composego has been changed from %q to %q", name, normalizeServiceNames(name))
+			fmt.Printf("Service name in docker-compose has been changed from %q to %q", name, normalizeServiceNames(name))
 		}
 
 		// @step configs
