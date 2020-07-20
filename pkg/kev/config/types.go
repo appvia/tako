@@ -69,7 +69,7 @@ type Service struct {
 	// nodeport, Default: nil. Only taken into account when working with service.type: nodeport
 	Nodeport uint32 `yaml:",omitempty" json:"node_port,omitempty" default:"0"`
 	// expose, Default: "" (no ingress). Possible options: "true" | "domain.com,otherdomain.com" (comma separated domain names). When "true" / domain(s) - it'll set ingress object.
-	Expose string `yaml:",omitempty" json:"expose,omitempty" default:"false"`
+	Expose string `yaml:",omitempty" json:"expose,omitempty" default:""`
 	// tls-secret, Default: nil (no tls). Secret name where certs will be loaded from.
 	TLSSecret string `yaml:"tls-secret,omitempty" json:"tls_secret,omitempty" default:""`
 }
