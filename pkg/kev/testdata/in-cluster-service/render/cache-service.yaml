@@ -15,5 +15,6 @@ spec:
       targetPort: 6379
   selector:
     io.kompose.service: cache
+  type: LoadBalancer
 status:
   loadBalancer: {}

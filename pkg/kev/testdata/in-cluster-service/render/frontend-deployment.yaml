@@ -28,7 +28,8 @@ spec:
         - env:
             - name: PORT
               value: "8080"
-          image: ezodude/frontend-cok8s:dev
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
               command:
@@ -49,4 +50,5 @@ spec:
               cpu: 100m
               memory: 10Mi
       restartPolicy: Always
+      serviceAccountName: default
 status: {}

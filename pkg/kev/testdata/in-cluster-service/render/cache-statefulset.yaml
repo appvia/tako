@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   annotations:
     kompose.cmd: kev render
@@ -13,8 +13,7 @@ spec:
   selector:
     matchLabels:
       io.kompose.service: cache
-  strategy:
-    type: Recreate
+  serviceName: cache
   template:
     metadata:
       annotations:
@@ -27,6 +26,7 @@ spec:
     spec:
       containers:
         - image: docker.io/bitnami/redis:6.0-debian-10
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
               command:
@@ -50,8 +50,13 @@ spec:
             - mountPath: /bitnami/redis/data
               name: redis-data
       restartPolicy: Always
+      serviceAccountName: default
       volumes:
         - name: redis-data
           persistentVolumeClaim:
             claimName: redis-data
-status: {}
+  updateStrategy:
+    rollingUpdate: {}
+    type: RollingUpdate
+status:
+  replicas: 0
