@@ -78,7 +78,7 @@ func (c *CombinedConfig) imagePullSecret(name string) string {
 }
 
 // restartPolicy gets restart policy for given service name
-// @todo make sure that we interpolate values in cascading fasion
+// @todo make sure that we interpolate values in cascading fashion
 // 	     then, there is no need for this function!
 func (c *CombinedConfig) restartPolicy(name string) string {
 	if c.getKevComponent(name).Workload.Restart != "" {
@@ -96,7 +96,7 @@ func (c *CombinedConfig) restartPolicy(name string) string {
 }
 
 // replicas returns number of replicas for service name
-// @todo make sure that we interpolate values in cascading fasion
+// @todo make sure that we interpolate values in cascading fashion
 // 	     then, there is no need for this function!
 // 	     We can also remove convertOptions.Replicas
 func (c *CombinedConfig) replicas(name string) int {
