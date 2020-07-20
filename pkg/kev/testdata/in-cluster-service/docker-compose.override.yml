@@ -1,0 +1,46 @@
+version: '3.9'
+services:
+  frontend:
+    image: busybox:latest
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    environment:
+      PORT: 8080
+    ports:
+    - '8080:8080'
+    networks:
+     - dev-esnet
+
+  backend:
+    image: busybox:latest
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    environment:
+      CACHE_ENDPOINT: 'cache:6379'
+      CACHE_PASSWORD: ''
+    ports:
+      - '8008:8080'
+    depends_on:
+      - cache
+    networks:
+     - dev-esnet
+
+  cache:
+    image: docker.io/bitnami/redis:6.0-debian-10
+    container_name: cache
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+    networks:
+      - dev-esnet
+
+networks:
+  dev-esnet:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

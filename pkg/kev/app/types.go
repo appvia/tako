@@ -29,6 +29,7 @@ type Definition struct {
 	Base      ConfigTuple
 	Overrides map[string]FileConfig // maps environment name to its configuration
 	Build     BuildConfig
+	Rendered  []FileConfig
 }
 
 // BuildConfig is an app definition's build config.

@@ -21,8 +21,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/utils"
-	compose "github.com/compose-spec/compose-go/types"
+	"github.com/appvia/kube-devx/pkg/kev/compose"
+	kyaml "github.com/appvia/kube-devx/pkg/kev/yaml"
+	composego "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
 )
 
@@ -36,13 +37,13 @@ type Inferred struct {
 // Infer looks at resultant compose.yaml and extracts elements useful to
 // deployment in Kubernetes, replaces values of those attributes with placeholders
 // and places actual values in config.yaml for further tweaking.
-func Infer(composeVersion string, composeConfig *compose.Project) (Inferred, error) {
+func Infer(versioned *compose.VersionedProject) (Inferred, error) {
 	baseConfig := New()
 
-	inferVolumesInfo(composeConfig, baseConfig)
+	inferVolumesInfo(versioned, baseConfig)
 	setSensibleDefaults(baseConfig)
 
-	for _, s := range composeConfig.Services {
+	for _, s := range versioned.Services {
 		c := &Component{}
 		inferEnvironment(&s, c)
 		inferService(&s, c)
@@ -51,7 +52,7 @@ func Infer(composeVersion string, composeConfig *compose.Project) (Inferred, err
 		baseConfig.Components[normalizeServiceName(s.Name)] = *c
 	}
 
-	withPlaceholders, err := injectPlaceholders(composeVersion, composeConfig)
+	withPlaceholders, err := injectPlaceholders(versioned)
 	if err != nil {
 		return Inferred{}, err
 	}
@@ -65,20 +66,20 @@ func Infer(composeVersion string, composeConfig *compose.Project) (Inferred, err
 // setSensibleDefaults set common app level parameters with sensible defaults
 func setSensibleDefaults(appConfig *Config) {
 	appConfig.Workload = Workload{
-		ImagePullPolicy:    DefaultImagePullPolicy,
-		ServiceAccountName: DefaultServiceAccountName,
+		ImagePullPolicy:    defaultImagePullPolicy,
+		ServiceAccountName: defaultServiceAccountName,
 	}
 }
 
 // Extracts volumes information
-func inferVolumesInfo(composeConfig *compose.Project, appConfig *Config) {
+func inferVolumesInfo(versioned *compose.VersionedProject, appConfig *Config) {
 	// Volumes map
 	vols := make(map[string]Volume)
 
-	for _, v := range composeConfig.VolumeNames() {
+	for _, v := range versioned.VolumeNames() {
 		vols[normalizeVolumeName(v)] = Volume{
 			Size:  DefaultVolumeSize,
-			Class: DefaultVolumeClass,
+			Class: defaultVolumeClass,
 		}
 	}
 
@@ -87,7 +88,7 @@ func inferVolumesInfo(composeConfig *compose.Project, appConfig *Config) {
 }
 
 // Extracts environment variables for each compose service and parametrises them
-func inferEnvironment(s *compose.ServiceConfig, cmp *Component) {
+func inferEnvironment(s *composego.ServiceConfig, cmp *Component) {
 	serviceEnvs := make(map[string]string)
 	for k, v := range s.Environment {
 		if v == nil {
@@ -102,9 +103,9 @@ func inferEnvironment(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts information about K8s service requirements
-func inferService(s *compose.ServiceConfig, cmp *Component) {
+func inferService(s *composego.ServiceConfig, cmp *Component) {
 	if s.Ports == nil {
-		cmp.Service.Type = NoService
+		cmp.Service.Type = noService
 	} else {
 		for _, p := range s.Ports {
 			if p.Published != 0 && p.Mode == "host" {
@@ -129,7 +130,7 @@ func inferService(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts deployment information
-func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
+func inferDeploymentInfo(s *composego.ServiceConfig, cmp *Component) {
 	// get workload object
 	w := cmp.Workload
 
@@ -183,7 +184,7 @@ func inferDeploymentInfo(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // Extracts service healthcheck information
-func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
+func inferHealthcheckInfo(s *composego.ServiceConfig, cmp *Component) {
 	w := cmp.Workload
 	w.LivenessProbeDisable = &s.HealthCheck.Disable
 	w.LivenessProbeCommand = s.HealthCheck.Test
@@ -196,15 +197,14 @@ func inferHealthcheckInfo(s *compose.ServiceConfig, cmp *Component) {
 }
 
 // injectPlaceholders substitutes key attribute values with placeholders
-func injectPlaceholders(composeVersion string, composeConfig *compose.Project) ([]byte, error) {
-	data, err := yaml.Marshal(composeConfig)
+func injectPlaceholders(versioned *compose.VersionedProject) ([]byte, error) {
+	data, err := yaml.Marshal(versioned.Project)
 	if err != nil {
 		return nil, err
 	}
 
-	// Unmarshal compose config to map[string]interface{}
-	opaqueConfig, err := utils.UnmarshallGeneral(data)
-	if err != nil {
+	var opaqueConfig map[string]interface{}
+	if err := yaml.Unmarshal(data, &opaqueConfig); err != nil {
 		return nil, err
 	}
 
@@ -249,14 +249,14 @@ func injectPlaceholders(composeVersion string, composeConfig *compose.Project) (
 	}
 
 	out := ShallowComposeConfig{
-		Version:  composeVersion,
+		Version:  versioned.Version,
 		Services: opaqueConfig["services"],
 		Networks: opaqueConfig["networks"],
 		Volumes:  opaqueConfig["volumes"],
 		Secrets:  opaqueConfig["secrets"],
 		Configs:  opaqueConfig["configs"],
 	}
-	return utils.MarshallAndFormat(out, 2)
+	return kyaml.MarshalIndent(out, 2)
 }
 
 // Builds config attribute value placeholder

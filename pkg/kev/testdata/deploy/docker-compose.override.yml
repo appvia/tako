@@ -1,0 +1,32 @@
+version: '3.9'
+services:
+  frontend:
+    image: busybox:latest
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    environment:
+      PORT: 8080
+    deploy:
+      replicas: 3
+    ports:
+    - '80:8080'
+    networks:
+     - prod-esnet
+
+  backend:
+    image: busybox:latest
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    deploy:
+      replicas: 2
+    environment:
+      - CACHE_ENDPOINT
+      - CACHE_PASSWORD
+    networks:
+      - prod-esnet
+
+networks:
+  prod-esnet:
+    driver: bridge

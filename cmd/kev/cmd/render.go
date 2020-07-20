@@ -19,8 +19,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/converter"
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/spf13/cobra"
 )
 
@@ -85,27 +84,13 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	dir, err := cmd.Flags().GetString("dir")
 	envs, err := cmd.Flags().GetStringSlice("environment")
 
-	fmt.Println("\n⚙️  Output format:", format)
-
-	switch count := len(envs); {
-	case count == 0:
-		envs, err = app.GetEnvs()
-		if err != nil {
-			return fmt.Errorf("render failed, %s", err)
-		}
-	case count > 0:
-		if err := app.ValidateHasEnvs(envs); err != nil {
-			return fmt.Errorf("render failed, %s", err)
-		}
-	}
-
-	def, err := app.LoadDefinition(envs)
 	if err != nil {
 		return err
 	}
 
-	c := converter.Factory(format)
-	if err := c.Render(singleFile, dir, def); err != nil {
+	fmt.Println("\n⚙️  Output format:", format)
+
+	if _, err := kev.Render(format, singleFile, dir, envs); err != nil {
 		return err
 	}
 

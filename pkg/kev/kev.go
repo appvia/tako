@@ -16,15 +16,95 @@
 
 package kev
 
-const (
-	// BaseDir is a top level directory for Kev files
-	BaseDir = ".kev"
-
-	// WorkDir is kev workspace directory and contains interim artefacts and compiled configuration
-	// If defined it must start with "." to differentiate from environment directories
-	WorkDir = ".workspace"
-
-	// BuildDir is the build directory for a Kev app
-	// It must start with "." if InternalsDir is not specified
-	BuildDir = "build"
+import (
+	"github.com/appvia/kube-devx/pkg/kev/app"
+	"github.com/appvia/kube-devx/pkg/kev/compose"
+	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kube-devx/pkg/kev/converter"
 )
+
+// Init inits a kev app returning app definition
+func Init(composeFiles, envs []string) (*app.Definition, error) {
+	versionedProject, err := compose.LoadAndPrepVersionedProject(composeFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	inferred, err := config.Infer(versionedProject)
+	if err != nil {
+		return nil, err
+	}
+
+	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
+}
+
+// Build builds a kev app. It returns an app definition with the build info
+func Build(envs []string) (*app.Definition, error) {
+	envs, err := app.ValidateEnvsOrGetAll(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	def, err := app.LoadDefinition(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := def.DoBuild(); err != nil {
+		return nil, err
+	}
+
+	return def, nil
+}
+
+// BuildFromDefinition is like Build, but builds a kev app from an already loaded app definition
+func BuildFromDefinition(def *app.Definition, envs []string) error {
+	envs, err := app.ValidateDefEnvsOrGetAll(def, envs)
+	if err != nil {
+		return err
+	}
+
+	def.ExcludeOtherOverrides(envs)
+
+	if err := def.DoBuild(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info
+func Render(format string, singleFile bool, dir string, envs []string) (*app.Definition, error) {
+	envs, err := app.ValidateEnvsOrGetAll(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	def, err := app.LoadDefinition(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	c := converter.Factory(format)
+	if err := c.Render(singleFile, dir, def); err != nil {
+		return nil, err
+	}
+
+	return def, nil
+}
+
+// RenderFromDefinition is like Render, but renders a kev app from an already loaded app definition
+func RenderFromDefinition(def *app.Definition, format string, singleFile bool, dir string, envs []string) error {
+	envs, err := app.ValidateDefEnvsOrGetAll(def, envs)
+	if err != nil {
+		return err
+	}
+
+	def.ExcludeOtherOverrides(envs)
+	c := converter.Factory(format)
+	if err := c.Render(singleFile, dir, def); err != nil {
+		return err
+	}
+
+	return nil
+}

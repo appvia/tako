@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kev render
+    kompose.version: 1.21.0 ()
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend
+  name: backend
+spec:
+  ports:
+    - name: "8008"
+      port: 8008
+      targetPort: 8080
+  selector:
+    io.kompose.service: backend
+status:
+  loadBalancer: {}

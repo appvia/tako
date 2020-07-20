@@ -21,7 +21,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 )
@@ -43,18 +42,8 @@ func New() *K8s {
 
 // Render generates outcome
 func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error {
-
-	envs := make(map[string]app.ConfigTuple)
-
-	if appDef.HasBuiltOverrides() {
-		envs = appDef.GetOverridesBuildInfo()
-	} else {
-		// default build configuration
-		envs[""] = appDef.GetAppBuildInfo()
-	}
-
-	for env, bc := range envs {
-
+	rendered := map[string]app.FileConfig{}
+	for env, bc := range appDef.GetMappedBuildInfo() {
 		fmt.Printf("\n🖨️  Rendering %s environment\n", env)
 
 		// @todo: extract detail from app definition config and set the converter options
@@ -65,7 +54,7 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			// adding env name suffix to the custom directory to differentiate
 			outDirPath = path.Join(dir, env)
 		} else {
-			outDirPath = path.Join(kev.BaseDir, multiFileSubDir, env)
+			outDirPath = path.Join(appDef.RootDir(), multiFileSubDir, env)
 		}
 
 		// @step Create output directory
@@ -84,7 +73,7 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			outFilePath = outDirPath
 		}
 
-		// @step Kuberentes manifests output options
+		// @step Kubernetes manifests output options
 		opt := ConvertOptions{
 			InputFiles:   []string{bc.Compose.File},
 			OutFile:      outFilePath,
@@ -118,12 +107,15 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 		}
 
 		// Produce objects
-		err = PrintList(objects, opt)
+		err = PrintList(objects, opt, rendered)
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
 		}
 	}
 
+	for _, fileConfig := range rendered {
+		appDef.Rendered = append(appDef.Rendered, fileConfig)
+	}
 	return nil
 }

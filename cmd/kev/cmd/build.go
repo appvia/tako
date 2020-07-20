@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/appvia/kube-devx/pkg/kev"
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/spf13/cobra"
 )
@@ -58,45 +59,36 @@ func init() {
 	rootCmd.AddCommand(buildCmd)
 }
 
-// RunBuildCmd prepares build artefacts. Conditionally invoked by `render`.
+// RunBuildCmd prepares build artifacts.
 func RunBuildCmd(cmd *cobra.Command, _ []string) error {
 	envs, err := cmd.Flags().GetStringSlice("environment")
 
-	switch count := len(envs); {
-	case count == 0:
-		envs, err = app.GetEnvs()
-		if err != nil {
-			return fmt.Errorf("builds failed, %s", err)
-		}
-	case count > 0:
-		if err := app.ValidateHasEnvs(envs); err != nil {
-			return fmt.Errorf("builds failed, %s", err)
-		}
-	}
-
-	def, err := app.LoadDefinition(envs)
+	def, err := kev.Build(envs)
 	if err != nil {
 		return err
 	}
 
-	if err := def.DoBuild(); err != nil {
+	if err := writeBuildFileSystem(def); err != nil {
 		return err
 	}
+	displayBuild(def)
 
-	for _, build := range def.GetInternalBuildInfo() {
+	return nil
+}
+
+func writeBuildFileSystem(def *app.Definition) error {
+	for _, build := range def.GetBuildInfo() {
 		if err := os.MkdirAll(build.Config.Path(), os.ModePerm); err != nil {
 			return err
 		}
 
-		if err = ioutil.WriteFile(build.Config.File, build.Config.Content, os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(build.Config.File, build.Config.Content, os.ModePerm); err != nil {
 			return err
 		}
-		if err = ioutil.WriteFile(build.Compose.File, build.Compose.Content, os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(build.Compose.File, build.Compose.Content, os.ModePerm); err != nil {
 			return err
 		}
 	}
-
-	displayBuild(def)
 	return nil
 }
 
