@@ -19,6 +19,7 @@ package kubernetes
 import (
 	"strings"
 
+	compose "github.com/appvia/kube-devx/pkg/kev/compose"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 )
 
@@ -108,7 +109,7 @@ func (c *CombinedConfig) replicas(name string) int {
 	} else if c.getKomposeComponent(name).Replicas != 0 {
 		return c.getKomposeComponent(name).Replicas
 	}
-	return config.DefaultReplicaNumber
+	return compose.DefaultReplicaNumber
 }
 
 // workloadType returns type of workload for a given service name
@@ -224,6 +225,8 @@ func (c *CombinedConfig) exposeServiceTLSSecretName(name string) string {
 func (c *CombinedConfig) volumeStorageClass(name string) string {
 	if c.getKevVolume(name).Class != "" {
 		return c.getKevVolume(name).Class
+	} else if config.DefaultVolumeClass != "" {
+		return config.DefaultVolumeClass
 	}
 	return ""
 }
