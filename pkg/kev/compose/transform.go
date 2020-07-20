@@ -112,7 +112,7 @@ func ExternaliseConfigs(x *VersionedProject) error {
 
 // createDeploy returns a deploy block with configured presets.
 func createDeploy() compose.DeployConfig {
-	replica := uint64(defaultReplicaNumber)
+	replica := uint64(DefaultReplicaNumber)
 	parallelism := uint64(defaultRollingUpdateMaxSurge)
 
 	lm, _ := resource.ParseQuantity(defaultResourceLimitMem)

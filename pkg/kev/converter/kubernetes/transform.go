@@ -52,28 +52,19 @@ type Kubernetes struct {
 	Opt ConvertOptions
 }
 
-// PVCRequestSize (Persistent Volume Claim) has default size
-// @todo take defaults from confg.defaults!
-const PVCRequestSize = config.DefaultVolumeSize
-
-const (
-	// DeploymentController is controller type for Deployment
-	DeploymentController = "deployment"
-	// DaemonSetController is controller type for DaemonSet
-	DaemonSetController = "daemonset"
-	// ReplicationController is controller type for  ReplicationController
-	ReplicationController = "replicationcontroller"
-)
-
-// LabelControllerType def controller type label
-const LabelControllerType string = "kompose.controller.type"
+var combinedConfig CombinedConfig
 
 // Transform maps komposeObject to k8s objects
 // returns object that are already sorted in the way that Services are first
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1140
 func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, envConfig *config.Config) ([]runtime.Object, error) {
 
-	// @todo: make use of passed envConfig - this might be used to better control the outcome!
+	// combinedConfig is used to blend the configuration settings
+	combinedConfig = CombinedConfig{
+		kevConfig:      envConfig,
+		komposeObject:  komposeObject,
+		convertOptions: opt,
+	}
 
 	// this will hold all the converted data
 	var allobjects []runtime.Object
@@ -104,17 +95,9 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 			return nil, fmt.Errorf("image key required within build parameters in order to build and push service '%s'", name)
 		}
 
-		// Generate pod only and nothing more
-		if service.Restart == "no" || service.Restart == "on-failure" {
-			// Error out if Controller Object is specified with restart: 'on-failure'
-			if opt.IsDeploymentFlag || opt.IsDaemonSetFlag || opt.IsReplicationControllerFlag {
-				return nil, errors.New("Controller object cannot be specified with restart: 'on-failure'")
-			}
-			pod := k.InitPod(name, service)
-			objects = append(objects, pod)
-		} else {
-			objects = k.CreateKubernetesObjects(name, service, opt)
-		}
+		// @step create kubernetes object (never create a pod in isolation)
+		// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime
+		objects = k.CreateKubernetesObjects(name, service, opt)
 
 		if k.PortsExist(service) {
 			// Create a k8s service of a type defined by the service config
@@ -122,12 +105,12 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 			objects = append(objects, svc)
 
 			// For exposed service also create an ingress
-			if service.ExposeService != "" {
+			if combinedConfig.exposeService(name) != "" {
 				objects = append(objects, k.initIngress(name, service, svc.Spec.Ports[0].Port))
 			}
 		} else {
 			// No ports defined - createing headless service instead
-			if service.ServiceType == "Headless" {
+			if combinedConfig.serviceType(name) == config.HeadlessService {
 				svc := k.CreateHeadlessService(name, service, objects)
 				objects = append(objects, svc)
 			}
@@ -168,11 +151,14 @@ func (k *Kubernetes) Transform(komposeObject KomposeObject, opt ConvertOptions, 
 
 // InitPodSpec creates the pod specification
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L129
-func (k *Kubernetes) InitPodSpec(name string, image string, pullSecret string) v1.PodSpec {
+func (k *Kubernetes) InitPodSpec(name string, service ServiceConfig) v1.PodSpec {
 
+	image := service.Image
 	if image == "" {
 		image = name
 	}
+	pullSecret := combinedConfig.imagePullSecret(name)
+	serviceAccount := combinedConfig.serviceAccount(name)
 
 	pod := v1.PodSpec{
 		Containers: []v1.Container{
@@ -188,6 +174,9 @@ func (k *Kubernetes) InitPodSpec(name string, image string, pullSecret string) v
 				Name: pullSecret,
 			},
 		}
+	}
+	if serviceAccount != "" {
+		pod.ServiceAccountName = serviceAccount
 	}
 	return pod
 }
@@ -274,7 +263,7 @@ func (k *Kubernetes) InitRC(name string, service ServiceConfig, replicas int) *v
 				ObjectMeta: meta.ObjectMeta{
 					Labels: ConfigLabels(name),
 				},
-				Spec: k.InitPodSpec(name, service.Image, service.ImagePullSecret),
+				Spec: k.InitPodSpec(name, service),
 			},
 		},
 	}
@@ -434,7 +423,7 @@ func (k *Kubernetes) InitD(name string, service ServiceConfig, replicas int) *v1
 	if len(service.Configs) > 0 {
 		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
 	} else {
-		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+		podSpec = k.InitPodSpec(name, service)
 	}
 
 	dc := &v1beta1.Deployment{
@@ -488,7 +477,7 @@ func (k *Kubernetes) InitDS(name string, service ServiceConfig) *v1beta1.DaemonS
 		},
 		Spec: v1beta1.DaemonSetSpec{
 			Template: v1.PodTemplateSpec{
-				Spec: k.InitPodSpec(name, service.Image, service.ImagePullSecret),
+				Spec: k.InitPodSpec(name, service),
 			},
 		},
 	}
@@ -504,7 +493,7 @@ func (k *Kubernetes) InitSTS(name string, service ServiceConfig, replicas int) *
 	if len(service.Configs) > 0 {
 		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
 	} else {
-		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+		podSpec = k.InitPodSpec(name, service)
 	}
 
 	sts := &v1apps.StatefulSet{
@@ -553,7 +542,7 @@ func (k *Kubernetes) InitJ(name string, service ServiceConfig, replicas int) *v1
 	if len(service.Configs) > 0 {
 		podSpec = k.InitPodSpecWithConfigMap(name, service.Image, service)
 	} else {
-		podSpec = k.InitPodSpec(name, service.Image, service.ImagePullSecret)
+		podSpec = k.InitPodSpec(name, service)
 	}
 
 	j := &v1batch.Job{
@@ -587,7 +576,7 @@ func (k *Kubernetes) InitJ(name string, service ServiceConfig, replicas int) *v1
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
 func (k *Kubernetes) initIngress(name string, service ServiceConfig, port int32) *v1beta1.Ingress {
 
-	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(service.ExposeService, -1)
+	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(combinedConfig.exposeService(name), -1)
 
 	ingress := &v1beta1.Ingress{
 		TypeMeta: meta.TypeMeta{
@@ -628,11 +617,12 @@ func (k *Kubernetes) initIngress(name string, service ServiceConfig, port int32)
 		}
 	}
 
-	if service.ExposeServiceTLS != "" {
+	tlsSecretName := combinedConfig.exposeServiceTLSSecretName(name)
+	if tlsSecretName != "" {
 		ingress.Spec.TLS = []v1beta1.IngressTLS{
 			{
 				Hosts:      hosts,
-				SecretName: service.ExposeServiceTLS,
+				SecretName: tlsSecretName,
 			},
 		}
 	}
@@ -678,6 +668,14 @@ func (k *Kubernetes) CreateSecrets(komposeObject KomposeObject) ([]*v1.Secret, e
 // CreatePVC initializes PersistentVolumeClaim
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L534
 func (k *Kubernetes) CreatePVC(name string, mode string, size string, selectorValue string) (*v1.PersistentVolumeClaim, error) {
+
+	// @step get volume size from combined configuration first, then fall back to passed value
+	volumeSize := combinedConfig.volumeSize(name)
+	if volumeSize != "" {
+		size = volumeSize
+	}
+
+	// @step get size quantity
 	volSize, err := resource.ParseQuantity(size)
 	if err != nil {
 		return nil, errors.Wrap(err, "resource.ParseQuantity failed, Error parsing size")
@@ -705,6 +703,11 @@ func (k *Kubernetes) CreatePVC(name string, mode string, size string, selectorVa
 		pvc.Spec.Selector = &meta.LabelSelector{
 			MatchLabels: ConfigLabels(selectorValue),
 		}
+	}
+
+	storageClass := combinedConfig.volumeStorageClass(name)
+	if storageClass != "" {
+		pvc.Spec.StorageClassName = &storageClass
 	}
 
 	if mode == "ro" {
@@ -748,6 +751,7 @@ func (k *Kubernetes) ConfigPorts(name string, service ServiceConfig) []v1.Contai
 // ConfigServicePorts configure the container service ports.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L602
 func (k *Kubernetes) ConfigServicePorts(name string, service ServiceConfig) []v1.ServicePort {
+	serviceName := name
 	servicePorts := []v1.ServicePort{}
 	seenPorts := make(map[int]struct{}, len(service.Port))
 
@@ -765,7 +769,7 @@ func (k *Kubernetes) ConfigServicePorts(name string, service ServiceConfig) []v1
 		name := strconv.Itoa(int(port.HostPort))
 		if _, ok := seenPorts[int(port.HostPort)]; ok {
 			// https://github.com/kubernetes/kubernetes/issues/2995
-			if service.ServiceType == string(v1.ServiceTypeLoadBalancer) {
+			if combinedConfig.serviceType(serviceName) == string(v1.ServiceTypeLoadBalancer) {
 				fmt.Printf("Service %s of type LoadBalancer cannot use TCP and UDP for the same port", name)
 			}
 			name = fmt.Sprintf("%s-%s", name, strings.ToLower(string(port.Protocol)))
@@ -777,8 +781,10 @@ func (k *Kubernetes) ConfigServicePorts(name string, service ServiceConfig) []v1
 			TargetPort: targetPort,
 		}
 
-		if service.ServiceType == string(v1.ServiceTypeNodePort) && service.NodePortPort != 0 {
-			servicePort.NodePort = service.NodePortPort
+		st := combinedConfig.serviceType(serviceName)
+		np := combinedConfig.nodePort(serviceName)
+		if st == string(v1.ServiceTypeNodePort) && np != 0 {
+			servicePort.NodePort = int32(np)
 		}
 
 		// If the default is already TCP, no need to include it.
@@ -930,7 +936,7 @@ func (k *Kubernetes) ConfigVolumes(name string, service ServiceConfig) ([]v1.Vol
 	var cms []*v1.ConfigMap
 	var volumeName string
 
-	// Set a var based on if the user wants to use empty volumes
+	// Set volumes configuration based on user preference, e.g. to use empty volumes
 	// as opposed to persistent volumes and volume claims
 	useEmptyVolumes := k.Opt.EmptyVols
 	useHostPath := k.Opt.Volumes == "hostPath"
@@ -1001,16 +1007,10 @@ func (k *Kubernetes) ConfigVolumes(name string, service ServiceConfig) ([]v1.Vol
 		} else {
 			volsource = k.ConfigPVCVolumeSource(volumeName, readonly)
 			if volume.VFrom == "" {
-				defaultSize := PVCRequestSize
+				defaultSize := config.DefaultVolumeSize
 
 				if len(volume.PVCSize) > 0 {
 					defaultSize = volume.PVCSize
-				} else {
-					for key, value := range service.Labels {
-						if key == "kompose.volume.size" {
-							defaultSize = value
-						}
-					}
 				}
 
 				createdPVC, err := k.CreatePVC(volumeName, volume.Mode, defaultSize, volume.SelectorValue)
@@ -1211,36 +1211,19 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 	var replica int
 
 	// @step get number of replicas for service
-	if opt.IsReplicaSetFlag || service.Replicas == 0 {
-		// @todo: reference kev configuration as we already have infered that detail, and user can override per environment?
-		replica = opt.Replicas
-	} else {
-		replica = service.Replicas
+	replica = combinedConfig.replicas(name)
+
+	// @step Check whether compose service deploy mode is set to global (which indicates daemonset should be used!)
+	workloadType := combinedConfig.workloadType(name)
+	if service.DeployMode == "global" && !combinedConfig.isDaemonSet(name) {
+		// compose service defined as global but configuration workload type is different than DaemonSet
+		fmt.Printf("Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s", workloadType)
 	}
 
-	// @step Check to see if Docker Compose v3 Deploy.Mode has been set to "global"
-	// @todo: Could use already infered data instead?
-	if service.DeployMode == "global" {
-		//default use daemonset
-		if opt.Controller == "" {
-			opt.CreateD = false
-			opt.CreateDS = true
-		} else if opt.Controller != "daemonset" {
-			fmt.Printf("Global deploy mode service is best converted to daemonset, now it convert to %s", opt.Controller)
-		}
-
-	}
-
-	// @step Resolve labels first
-	// @todo: We could still support label overrides for workload types potentially, or
-	// 		  just refer to infered configuration - as user will be able to set their workload
-	// 		  controller preference in environment config.
+	// @step Resolve kompose.controller.type label
 	if val, ok := service.Labels[LabelControllerType]; ok {
-		opt.CreateD = false
-		opt.CreateDS = false
-		opt.CreateRC = false
 		if opt.Controller != "" {
-			fmt.Printf("Use label %s type %s for service %s, ignore %s flags", LabelControllerType, val, name, opt.Controller)
+			fmt.Printf("Use controller type %s for service %s", val, name)
 		}
 		opt.Controller = val
 	}
@@ -1250,18 +1233,15 @@ func (k *Kubernetes) CreateKubernetesObjects(name string, service ServiceConfig,
 		objects = k.createConfigMapFromComposeConfig(name, opt, service, objects)
 	}
 
-	// @step For service marked as Deployment initiate new Deployment object
-	if opt.CreateD || opt.Controller == DeploymentController {
+	// @step Create object based on inferred / manually configured workload controller type
+	switch strings.ToLower(workloadType) {
+	case strings.ToLower(config.DeploymentWorkload):
 		objects = append(objects, k.InitD(name, service, replica))
-	}
-
-	// @step For service marked as DaemonSet init a new DaemonSet object
-	if opt.CreateDS || opt.Controller == DaemonSetController {
+	case strings.ToLower(config.DaemonsetWorkload):
 		objects = append(objects, k.InitDS(name, service))
-	}
-
-	// @step For service marked as ReplicationContoller init a new ReplicationController object
-	if opt.CreateRC || opt.Controller == ReplicationController {
+	case strings.ToLower(config.StatefulsetWorkload):
+		objects = append(objects, k.InitSTS(name, service, replica))
+	case "replicationcontroller":
 		objects = append(objects, k.InitRC(name, service, replica))
 	}
 
@@ -1307,7 +1287,7 @@ func (k *Kubernetes) InitPod(name string, service ServiceConfig) *v1.Pod {
 			Name:   name,
 			Labels: ConfigLabels(name),
 		},
-		Spec: k.InitPodSpec(name, service.Image, service.ImagePullSecret),
+		Spec: k.InitPodSpec(name, service),
 	}
 	return &pod
 }
@@ -1410,11 +1390,15 @@ func (k *Kubernetes) CreateService(name string, service ServiceConfig, objects [
 	servicePorts := k.ConfigServicePorts(name, service)
 	svc.Spec.Ports = servicePorts
 
-	if service.ServiceType == "Headless" {
+	// @step Get service type for the component
+	serviceType := combinedConfig.serviceType(name)
+
+	// @step set the service spec
+	if serviceType == config.HeadlessService {
 		svc.Spec.Type = v1.ServiceTypeClusterIP
 		svc.Spec.ClusterIP = "None"
 	} else {
-		svc.Spec.Type = v1.ServiceType(service.ServiceType)
+		svc.Spec.Type = v1.ServiceType(serviceType)
 	}
 
 	// Configure annotations
@@ -1552,6 +1536,30 @@ func (k *Kubernetes) UpdateKubernetesObjects(name string, service ServiceConfig,
 		// Configure resource reservations
 		podSecurityContext := &v1.PodSecurityContext{}
 
+		// @step set pod security context
+		runAsUser := combinedConfig.podSecurityContextRunAsUser(name)
+		runAsGroup := combinedConfig.podSecurityContextRunAsGroup(name)
+		fsGroup := combinedConfig.podSecurityContextFsGroup(name)
+
+		if runAsUser != "" {
+			if i, err := strconv.Atoi(runAsUser); err == nil {
+				v := int64(i)
+				podSecurityContext.RunAsUser = &v
+			}
+		}
+		if runAsGroup != "" {
+			if i, err := strconv.Atoi(runAsGroup); err == nil {
+				v := int64(i)
+				podSecurityContext.RunAsGroup = &v
+			}
+		}
+		if fsGroup != "" {
+			if i, err := strconv.Atoi(fsGroup); err == nil {
+				v := int64(i)
+				podSecurityContext.FSGroup = &v
+			}
+		}
+
 		// @todo: Is it even relevant... Check and cleanup!
 		// //set pid namespace mode
 		// if service.Pid != "" {
@@ -1598,19 +1606,11 @@ func (k *Kubernetes) UpdateKubernetesObjects(name string, service ServiceConfig,
 		template.Spec.Containers[0].Ports = ports
 		template.ObjectMeta.Labels = ConfigLabelsWithNetwork(name, service.Network)
 
-		// Configure the image pull policy
-		if policy, err := GetImagePullPolicy(name, service.ImagePullPolicy); err != nil {
-			return err
-		} else {
-			template.Spec.Containers[0].ImagePullPolicy = policy
-		}
+		// @step Configure the image pull policy
+		template.Spec.Containers[0].ImagePullPolicy = v1.PullPolicy(combinedConfig.imagePullPolicy(name))
 
-		// Configure the container restart policy.
-		if restart, err := GetRestartPolicy(name, service.Restart); err != nil {
-			return err
-		} else {
-			template.Spec.RestartPolicy = restart
-		}
+		// @step Configure the container restart policy.
+		template.Spec.RestartPolicy = v1.RestartPolicy(combinedConfig.restartPolicy(name))
 
 		// Configure hostname/domain_name settings
 		if service.HostName != "" {

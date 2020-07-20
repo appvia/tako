@@ -17,8 +17,8 @@
 package compose
 
 const (
-	// defaultReplicaNumber default number of replicas per workload
-	defaultReplicaNumber = 1
+	// DefaultReplicaNumber default number of replicas per workload
+	DefaultReplicaNumber = 1
 
 	// defaultRollingUpdateMaxSurge default number of containers to be updated at a time
 	defaultRollingUpdateMaxSurge = 1

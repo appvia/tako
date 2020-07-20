@@ -424,6 +424,7 @@ func GetImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
 
 // GetRestartPolicy ...
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L645
+// @todo Make RestartPolicy type consistent across the codebase!
 func GetRestartPolicy(name, restart string) (v1.RestartPolicy, error) {
 	switch restart {
 	case "", "always", "any":

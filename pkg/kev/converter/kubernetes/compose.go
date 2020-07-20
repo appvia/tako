@@ -38,6 +38,27 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	// LabelServiceType defines the type of service to be created
+	LabelServiceType = "kompose.service.type"
+	// LabelNodePortPort defines the port value for NodePort service
+	LabelNodePortPort = "kompose.service.nodeport.port"
+	// LabelServiceExpose defines if the service needs to be made accessible from outside the cluster or not
+	LabelServiceExpose = "kompose.service.expose"
+	// LabelServiceExposeTLSSecret  provides the name of the TLS secret to use with the Kubernetes ingress controller
+	LabelServiceExposeTLSSecret = "kompose.service.expose.tls-secret"
+	// LabelControllerType defines the type of controller to be created
+	LabelControllerType = "kompose.controller.type"
+	// LabelImagePullSecret defines a secret name for kubernetes ImagePullSecrets
+	LabelImagePullSecret = "kompose.image-pull-secret"
+	// LabelImagePullPolicy defines Kubernetes PodSpec imagePullPolicy.
+	LabelImagePullPolicy = "kompose.image-pull-policy"
+	// LabelVolumeSize defines persistent volume size
+	LabelVolumeSize = "kompose.volume.size"
+	// LabelVolumeSelector defines persistent volume selector
+	LabelVolumeSelector = "kompose.volume.selector"
+)
+
 // LoadCompose loads a docker-compose file into KomposeObject
 func LoadCompose(file string) (KomposeObject, error) {
 	// Load compose project
@@ -467,25 +488,23 @@ func parseKomposeLabels(labels map[string]string, serviceConfig *ServiceConfig) 
 	}
 
 	// @todo: See how we could use existing & additional labels to better control outcome.
-	// 		  Check why keys are like LabelServiceType etc?
 	for key, value := range labels {
 		switch key {
-		case "LabelServiceType":
+		case LabelServiceType:
 			serviceType, err := handleServiceType(value)
 			if err != nil {
 				return errors.Wrap(err, "handleServiceType failed")
 			}
-
 			serviceConfig.ServiceType = serviceType
-		case "LabelServiceExpose":
+		case LabelServiceExpose:
 			serviceConfig.ExposeService = strings.Trim(strings.ToLower(value), " ,")
-		case "LabelNodePortPort":
+		case LabelNodePortPort:
 			serviceConfig.NodePortPort = cast.ToInt32(value)
-		case "LabelServiceExposeTLSSecret":
+		case LabelServiceExposeTLSSecret:
 			serviceConfig.ExposeServiceTLS = value
-		case "LabelImagePullSecret":
+		case LabelImagePullSecret:
 			serviceConfig.ImagePullSecret = value
-		case "LabelImagePullPolicy":
+		case LabelImagePullPolicy:
 			serviceConfig.ImagePullPolicy = value
 		default:
 			serviceConfig.Labels[key] = value
@@ -560,9 +579,9 @@ func getVolumeLabels(name string, volumes *composego.Volumes) (string, string) {
 
 	if volume, ok := (*volumes)[name]; ok {
 		for key, value := range volume.Labels {
-			if key == "kompose.volume.size" {
+			if key == LabelVolumeSize {
 				size = value
-			} else if key == "kompose.volume.selector" {
+			} else if key == LabelVolumeSelector {
 				selector = value
 			}
 		}
