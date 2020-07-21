@@ -83,8 +83,8 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			GenerateYaml: true,
 		}
 
-		// @step Load a single Compose file (opt.InputFiles[0]) and convert it into interim KomposeObject
-		komposeObject, err := LoadCompose(opt.InputFiles[0])
+		// @step Load a Compose file(s) and convert it into interim KomposeObject
+		komposeObject, err := LoadCompose(opt.InputFiles)
 		if err != nil {
 			fmt.Println(err.Error())
 			return err

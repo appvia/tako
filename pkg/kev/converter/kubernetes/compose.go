@@ -60,9 +60,9 @@ const (
 )
 
 // LoadCompose loads a docker-compose file into KomposeObject
-func LoadCompose(file string) (KomposeObject, error) {
+func LoadCompose(files []string) (KomposeObject, error) {
 	// Load compose project
-	project, err := compose.LoadProject([]string{file})
+	project, err := compose.LoadProject(files)
 	if err != nil {
 		return KomposeObject{}, err
 	}
