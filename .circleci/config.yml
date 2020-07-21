@@ -1,46 +1,21 @@
 ---
 version: 2.1
 
+orbs:
+  go: circleci/go@1.14
+
 jobs:
-  test:
-    docker:
-      - image: circleci/golang:1.14
-
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
-
-    environment: # environment variables for the build itself
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
-
+  build:
+    executor:
+      name: go/default
+      tag: '1.14'
     steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS # create the test results directory
-
-      - restore_cache: # restores saved cache if no changes are detected since last run
-          keys:
-            - go-mod-v4-{{ checksum "go.sum" }}
-
-      - run:
-          name: Run tests
-
-          # store the results of our tests in the $TEST_RESULTS directory
-          command: |
-            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report.xml -- $PACKAGE_NAMES
-
-      - save_cache:
-          key: go-mod-v4-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
-
-      - store_artifacts: # upload test summary for display in Artifacts
-          path: /tmp/test-results
-          destination: raw-test-output
-
-      - store_test_results: # upload test results for display in Test Summary
-          path: /tmp/test-results
-
+     - checkout
+     - go/test:
+        covermode: atomic
+        failfast: true
+        race: true
 workflows:
-  version: 2
-  build-workflow:
+  main:
     jobs:
-      - test
+      - build
