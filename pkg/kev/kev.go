@@ -17,10 +17,15 @@
 package kev
 
 import (
+	"io/ioutil"
+	"os"
+	"path"
+
 	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/compose"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/converter"
+	"github.com/appvia/kube-devx/pkg/kev/yaml"
 )
 
 // Init inits a kev app returning app definition
@@ -107,4 +112,15 @@ func RenderFromDefinition(def *app.Definition, format string, singleFile bool, d
 	}
 
 	return nil
+}
+
+func Overlay(composeFiles []string, configFile string, outFile string) error {
+	files := append(composeFiles, configFile)
+	project, err := compose.LoadProject(files)
+	if err != nil {
+		return err
+	}
+
+	data, err := yaml.MarshalIndent(project, 2)
+	return ioutil.WriteFile(path.Join(outFile), data, os.ModePerm)
 }

@@ -70,7 +70,7 @@ func init() {
 		"environment",
 		"e",
 		[]string{},
-		"Deployment environments in addition to application base (optional) ",
+		"Deployment environments, a default `local` environment is added if non are supplied",
 	)
 
 	rootCmd.AddCommand(initCmd)
