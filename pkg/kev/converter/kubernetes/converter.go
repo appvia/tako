@@ -22,7 +22,7 @@ import (
 	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	compose "github.com/appvia/kube-devx/pkg/kev/compose"
 )
 
 const (
@@ -45,8 +45,6 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 	rendered := map[string]app.FileConfig{}
 	for env, bc := range appDef.GetMappedBuildInfo() {
 		fmt.Printf("\n🖨️  Rendering %s environment\n", env)
-
-		// @todo: extract detail from app definition config and set the converter options
 
 		// @step Override output directory if specified
 		outDirPath := ""
@@ -74,40 +72,33 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 		}
 
 		// @step Kubernetes manifests output options
-		opt := ConvertOptions{
+		convertOpts := ConvertOptions{
 			InputFiles:   []string{bc.Compose.File},
 			OutFile:      outFilePath,
-			Controller:   config.DeploymentWorkload,
 			Provider:     Name,
 			YAMLIndent:   2,
 			GenerateYaml: true,
 		}
 
-		// @step Load a Compose file(s) and convert it into interim KomposeObject
-		komposeObject, err := LoadCompose(opt.InputFiles)
+		// @step Load compose file(s) as compose project
+		project, err := compose.LoadProject(convertOpts.InputFiles)
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
 		}
 
-		// @step Get Kubernete transformer that maps KomposeObject to Kubernetes primitives
-		k := &Kubernetes{Opt: opt}
-
-		// @step get deployment environment configuration
-		envConfig, err := config.Unmarshal(bc.Config.Content)
-		if err != nil {
-			return err
-		}
+		// @step Get Kubernete transformer that maps compose project to Kubernetes primitives
+		k := &Kubernetes{Opt: convertOpts, Project: project}
 
 		// @step Do the transformation
-		objects, err := k.Transform(komposeObject, opt, envConfig)
+		objects, err := k.Transform()
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
 		}
 
-		// Produce objects
-		err = PrintList(objects, opt, rendered)
+		// @step Produce objects
+		err = PrintList(objects, convertOpts, rendered)
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
