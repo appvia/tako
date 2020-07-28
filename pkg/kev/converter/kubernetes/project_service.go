@@ -1,0 +1,568 @@
+/**
+ * Copyright 2020 Appvia Ltd <info@appvia.io>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package kubernetes
+
+import (
+	"fmt"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
+
+	"github.com/appvia/kube-devx/pkg/kev.v2"
+	compose "github.com/appvia/kube-devx/pkg/kev/compose"
+	"github.com/appvia/kube-devx/pkg/kev/config"
+	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
+	v1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+// replicas returns number of replicas for given project service
+func (p *ProjectService) replicas() int {
+	if val, ok := p.Labels[kev.LabelWorkloadReplicas]; ok {
+		replicas, err := strconv.Atoi(val)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"prefix":          WarnPrefix,
+				"project-service": p.Name,
+				"replicas":        val,
+			}).Warnf(
+				"Unable to extract integer value from %s label. Defaulting to 1 replica.",
+				kev.LabelWorkloadReplicas)
+
+			return compose.DefaultReplicaNumber
+		}
+		return replicas
+	} else if p.Deploy != nil && p.Deploy.Replicas != nil {
+		return int(*p.Deploy.Replicas)
+	}
+
+	return compose.DefaultReplicaNumber
+}
+
+// workloadType returns workload type for the project service
+func (p *ProjectService) workloadType() string {
+	workloadType := config.DefaultWorkload
+
+	if val, ok := p.Labels[kev.LabelWorkloadType]; ok {
+		workloadType = val
+	}
+
+	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
+		log.WithFields(log.Fields{
+			"prefix":          WarnPrefix,
+			"project-service": p.Name,
+			"workload-type":   workloadType,
+		}).Warnf(
+			"Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s",
+			workloadType)
+	}
+
+	return workloadType
+}
+
+// serviceType returns service type for project service workload
+func (p *ProjectService) serviceType() (string, error) {
+	sType := config.DefaultService
+
+	if val, ok := p.Labels[kev.LabelServiceType]; ok {
+		sType = val
+	} else if p.Deploy != nil && p.Deploy.EndpointMode == "vip" {
+		sType = config.NodePortService
+	}
+
+	serviceType, err := getServiceType(sType)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"prefix":          ErrorPrefix,
+			"project-service": p.Name,
+			"service-type":    sType,
+		}).Error("Unrecognised k8s service type. Compse project service will not have k8s service generated.")
+
+		return "", fmt.Errorf("`%s` workload service type `%s` not supported", p.Name, sType)
+	}
+
+	// @step validate whether service type is set properly when node port is specified
+	if !strings.EqualFold(sType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
+		log.WithFields(log.Fields{
+			"prefix":          ErrorPrefix,
+			"project-service": p.Name,
+			"service-type":    sType,
+			"nodeport":        p.nodePort(),
+		}).Errorf("%s label value must be set as `NodePort` when assiging node port value", kev.LabelServiceType)
+
+		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assiging node port value", p.Name)
+	}
+
+	if len(p.ports()) > 1 && p.nodePort() != 0 {
+		log.WithFields(log.Fields{
+			"prefix":          ErrorPrefix,
+			"project-service": p.Name,
+		}).Errorf("Cannot set %s label value when service has multiple ports specified.", kev.LabelServiceNodePortPort)
+
+		return "", fmt.Errorf("`%s` cannot set NodePort service port when project service has multiple ports defined", p.Name)
+	}
+
+	return serviceType, nil
+}
+
+// nodePort returns the port for NodePort service type
+func (p *ProjectService) nodePort() int32 {
+	if val, ok := p.Labels[kev.LabelServiceNodePortPort]; ok {
+		nodePort, _ := strconv.Atoi(val)
+		return int32(nodePort)
+	}
+
+	return 0
+}
+
+// exposeService tells whether service for project component should be exposed
+func (p *ProjectService) exposeService() (string, error) {
+	if val, ok := p.Labels[kev.LabelServiceExpose]; ok {
+		if val == "" && p.tlsSecretName() != "" {
+			log.WithFields(log.Fields{
+				"prefix":          ErrorPrefix,
+				"project-service": p.Name,
+				"tls-secret-name": p.tlsSecretName(),
+			}).Errorf(
+				"TLS secret name specified via %s label but project service not exposed!",
+				kev.LabelServiceExposeTLSSecret)
+
+			return "", fmt.Errorf("Service can't have TLS secret name when it hasn't been exposed")
+		}
+		return val, nil
+	}
+
+	return "", nil
+}
+
+// tlsSecretName returns TLS secret name for exposed service (to be used in the ingress configuration)
+func (p *ProjectService) tlsSecretName() string {
+	if val, ok := p.Labels[kev.LabelServiceExposeTLSSecret]; ok {
+		return val
+	}
+
+	return ""
+}
+
+// getKubernetesUpdateStrategy gets update strategy for compose project service
+// Note: it only supports `parallelism` and `order`
+func (p *ProjectService) getKubernetesUpdateStrategy() *v1beta1.RollingUpdateDeployment {
+	if p.Deploy == nil || p.Deploy.UpdateConfig == nil {
+		return nil
+	}
+
+	config := p.Deploy.UpdateConfig
+	r := v1beta1.RollingUpdateDeployment{}
+
+	if config.Order == "stop-first" {
+		if config.Parallelism != nil {
+			maxUnavailable := intstr.FromInt(cast.ToInt(*config.Parallelism))
+			r.MaxUnavailable = &maxUnavailable
+		}
+
+		maxSurge := intstr.FromInt(0)
+		r.MaxSurge = &maxSurge
+		return &r
+	}
+
+	if config.Order == "start-first" {
+		if config.Parallelism != nil {
+			maxSurge := intstr.FromInt(cast.ToInt(*config.Parallelism))
+			r.MaxSurge = &maxSurge
+		}
+		maxUnavailable := intstr.FromInt(0)
+		r.MaxUnavailable = &maxUnavailable
+		return &r
+	}
+
+	return nil
+}
+
+// volumes gets volumes for compose project service, respecting volume lables if specified.
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L535
+func (p *ProjectService) volumes(project *composego.Project) []Volumes {
+	vols, err := retrieveVolume(p.Name, project)
+	if err != nil {
+		errors.Wrap(err, "could not retrieve volume")
+	}
+
+	for i, vol := range vols {
+		size, selector, storageClass := getVolumeLabels(project.Volumes[vol.VolumeName])
+
+		// We can't assign value to struct field in map while iterating over it, so temporary variable `temp` is used here
+		var temp = vols[i]
+
+		// set PVC size from label if present, or default size
+		if len(size) > 0 {
+			temp.PVCSize = size
+		} else {
+			temp.PVCSize = config.DefaultVolumeSize
+		}
+
+		// set PVC selector from label if present
+		if len(selector) > 0 {
+			temp.SelectorValue = selector
+		}
+
+		// set PVC storage class from label if present, or default class
+		if len(storageClass) > 0 {
+			temp.StorageClass = storageClass
+		} else {
+			temp.StorageClass = config.DefaultVolumeClass
+		}
+
+		vols[i] = temp
+	}
+
+	return vols
+}
+
+// placement returns information regarding pod affinity
+func (p *ProjectService) placement() map[string]string {
+	if p.Deploy != nil && p.Deploy.Placement.Constraints != nil {
+		return loadPlacement(p.Deploy.Placement.Constraints)
+	}
+
+	return nil
+}
+
+// resourceRequests returns workload resource requests (memory & cpu)
+func (p *ProjectService) resourceRequests() (*composego.UnitBytes, *float64) {
+	var memRequest composego.UnitBytes
+	var cpuRequest float64
+
+	// @step extract requests from deploy block if present
+	if p.Deploy != nil && p.Deploy.Resources.Reservations != nil {
+		memRequest = p.Deploy.Resources.Reservations.MemoryBytes
+		cpuRequest, _ = strconv.ParseFloat(p.Deploy.Resources.Reservations.NanoCPUs, 64)
+	}
+
+	if val, ok := p.Labels[kev.LabelWorkloadMemory]; ok {
+		v, _ := strconv.Atoi(val)
+		memRequest = composego.UnitBytes(int64(v))
+	}
+
+	if val, ok := p.Labels[kev.LabelWorkloadCPU]; ok {
+		v, _ := strconv.ParseFloat(val, 64)
+		cpuRequest = v
+	}
+
+	return &memRequest, &cpuRequest
+}
+
+// resourceLimits returns workload resource limits (memory & cpu)
+func (p *ProjectService) resourceLimits() (*composego.UnitBytes, *float64) {
+	var memLimit composego.UnitBytes
+	var cpuLimit float64
+
+	// @step extract limits from deploy block if present
+	if p.Deploy != nil && p.Deploy.Resources.Limits != nil {
+		memLimit = p.Deploy.Resources.Limits.MemoryBytes
+		cpuLimit, _ = strconv.ParseFloat(p.Deploy.Resources.Limits.NanoCPUs, 64)
+	}
+
+	if val, ok := p.Labels[kev.LabelWorkloadMaxMemory]; ok {
+		v, _ := strconv.Atoi(val)
+		memLimit = composego.UnitBytes(int64(v))
+	}
+
+	if val, ok := p.Labels[kev.LabelWorkloadMaxCPU]; ok {
+		v, _ := strconv.ParseFloat(val, 64)
+		cpuLimit = v
+	}
+
+	return &memLimit, &cpuLimit
+}
+
+// runAsUser returns pod security context runAsUser value
+func (p *ProjectService) runAsUser() string {
+	if val, ok := p.Labels[kev.LabelWorkloadSecurityContextRunAsUser]; ok {
+		return val
+	}
+
+	return config.DefaultSecurityContextRunAsUser
+}
+
+// runAsGroup returns pod security context runAsGroup value
+func (p *ProjectService) runAsGroup() string {
+	if val, ok := p.Labels[kev.LabelWorkloadSecurityContextRunAsGroup]; ok {
+		return val
+	}
+
+	return config.DefaultSecurityContextRunAsGroup
+}
+
+// fsGroup returns pod security context fsGroup value
+func (p *ProjectService) fsGroup() string {
+	if val, ok := p.Labels[kev.LabelWorkloadSecurityContextFsGroup]; ok {
+		return val
+	}
+
+	return config.DefaultSecurityContextFsGroup
+}
+
+// imagePullPolicy returns image PullPolicy for project service
+func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
+	policy := config.DefaultImagePullPolicy
+
+	if val, ok := p.Labels[kev.LabelWorkloadImagePullPolicy]; ok {
+		policy = val
+	}
+
+	pullPolicy, err := getImagePullPolicy(p.Name, policy)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"prefix":            WarnPrefix,
+			"project-service":   p.Name,
+			"image-pull-policy": policy,
+		}).Warnf("Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.", kev.LabelWorkloadImagePullPolicy)
+
+		return v1.PullPolicy(config.DefaultImagePullPolicy)
+	}
+
+	return pullPolicy
+}
+
+// imagePullSecret returns image pull secret (for private registries)
+func (p *ProjectService) imagePullSecret() string {
+	if val, ok := p.Labels[kev.LabelWorkloadImagePullSecret]; ok {
+		return val
+	}
+
+	return config.DefaultImagePullSecret
+}
+
+// serviceAccountName returns service account name to be used by the pod
+func (p *ProjectService) serviceAccountName() string {
+	if val, ok := p.Labels[kev.LabelWorkloadServiceAccountName]; ok {
+		return val
+	}
+
+	return config.DefaultServiceAccountName
+}
+
+// restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
+func (p *ProjectService) restartPolicy() v1.RestartPolicy {
+	policy := config.RestartPolicyAlways
+
+	// @step restart policy defined on the compose service
+	if len(p.Restart) > 0 {
+		policy = p.Restart
+	}
+
+	// @step restart policy defined in deploy block
+	if p.Deploy != nil && p.Deploy.RestartPolicy != nil {
+		policy = p.Deploy.RestartPolicy.Condition
+	}
+
+	if policy == "unless-stopped" {
+		log.WithFields(log.Fields{
+			"prefix":          WarnPrefix,
+			"project-service": p.Name,
+			"restart-policy":  policy,
+		}).Warn("Restart policy 'unless-stopped' is not supported, converting it to 'always'")
+
+		policy = "always"
+	}
+
+	if val, ok := p.Labels[kev.LabelWorkloadRestartPolicy]; ok {
+		policy = val
+	}
+
+	restartPolicy, err := getRestartPolicy(p.Name, policy)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"prefix":          WarnPrefix,
+			"project-service": p.Name,
+			"restart-policy":  policy,
+		}).Warn("Restart policy is not supported, defaulting to 'Always'")
+
+		return v1.RestartPolicy(config.RestartPolicyAlways)
+	}
+
+	return restartPolicy
+}
+
+// environment returns composego project service environment variables, and evaluates ENV from OS
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L465
+func (p *ProjectService) environment() composego.MappingWithEquals {
+	// Note: empty value ENV variables will be also interpolated with ENV value defined in the OS environment
+	envs := composego.MappingWithEquals{}
+
+	for name, value := range p.Environment {
+		if value != nil {
+			envs[name] = value
+		} else {
+			result, _ := os.LookupEnv(name)
+			if result != "" {
+				envs[name] = &result
+			} else {
+				log.WithFields(log.Fields{
+					"prefix":          WarnPrefix,
+					"project-service": p.Name,
+					"env-var":         name,
+				}).Warn("Env Var has no value and will be ignored")
+
+				continue
+			}
+		}
+	}
+
+	return envs
+}
+
+// ports returns combined list of ports from both project service `Ports` and `Expose`. Docker Expose ports are treated as TCP ports.
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L185
+func (p *ProjectService) ports() []composego.ServicePortConfig {
+	prts := []composego.ServicePortConfig{}
+	exist := map[string]bool{}
+
+	for _, port := range p.Ports {
+		prts = append(prts, port)
+		exist[cast.ToString(port.Target)+strings.ToUpper(port.Protocol)] = true
+	}
+
+	// Compose Expose ports aren't published to the host - they are meant to be accessed only by linked services.
+	// We simply map them onto the list of existing ports, see above.
+	// https://docs.docker.com/compose/compose-file/#expose
+	if p.Expose != nil {
+		for _, port := range p.Expose {
+			portValue := port
+			protocol := v1.ProtocolTCP
+
+			// @todo - this seem invalid as expose can only specify individual ports
+			// if strings.Contains(portValue, "/") {
+			// 	splits := strings.Split(port, "/")
+			// 	portValue = splits[0]
+			// 	protocol = v1.Protocol(strings.ToUpper(splits[1]))
+			// }
+
+			if exist[portValue+string(protocol)] {
+				continue
+			}
+
+			prts = append(prts, composego.ServicePortConfig{
+				Target:    cast.ToUint32(portValue),
+				Published: cast.ToUint32(portValue),
+				Protocol:  string(protocol),
+			})
+		}
+	}
+
+	return prts
+}
+
+// healthcheck returns project service healthcheck probe
+func (p *ProjectService) healthcheck() (*v1.Probe, error) {
+
+	// @todo handle healthcheck configuration via labels
+
+	if p.HealthCheck != nil && p.HealthCheck.Disable == false {
+		if !reflect.DeepEqual(p.HealthCheck, composego.HealthCheckConfig{}) {
+			probe := v1.Probe{}
+
+			if len(p.HealthCheck.Test) > 0 {
+				probe.Handler = v1.Handler{
+					Exec: &v1.ExecAction{
+						// docker compose adds "CMD-SHELL" to the healthcheck test command
+						// hence removing the first element of HealthCheck.Test
+						Command: p.HealthCheck.Test[1:],
+					},
+				}
+			} else {
+				return nil, errors.New("Health check must contain a command")
+			}
+
+			timeout, _ := durationStrToSecondsInt(p.HealthCheck.Timeout.String())
+			interval, _ := durationStrToSecondsInt(p.HealthCheck.Interval.String())
+			delay, _ := durationStrToSecondsInt(p.HealthCheck.StartPeriod.String())
+
+			probe.TimeoutSeconds = *timeout
+			probe.PeriodSeconds = *interval
+			probe.InitialDelaySeconds = *delay
+			probe.FailureThreshold = int32(*p.HealthCheck.Retries)
+
+			return &probe, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// livenessProbeCommand returns liveness probe command
+func (p *ProjectService) livenessProbeCommand() string {
+	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeCommand]; ok {
+		return val
+	}
+
+	return ""
+}
+
+// livenessProbeInterval returns liveness probe interval
+func (p *ProjectService) livenessProbeInterval() *int32 {
+	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeInterval]; ok {
+		interval, _ := durationStrToSecondsInt(val)
+		return interval
+	}
+
+	return nil
+}
+
+// livenessProbeTimeout returns liveness probe timeout
+func (p *ProjectService) livenessProbeTimeout() *int32 {
+	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeTimeout]; ok {
+		to, _ := durationStrToSecondsInt(val)
+		return to
+	}
+
+	return nil
+}
+
+// livenessProbeInitialDelay returns liveness probe initial delay
+func (p *ProjectService) livenessProbeInitialDelay() *int32 {
+	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeInitialDelay]; ok {
+		to, _ := durationStrToSecondsInt(val)
+		return to
+	}
+
+	return nil
+}
+
+// livenessProbeRetries returns number of retries for the probe
+func (p *ProjectService) livenessProbeRetries() *int32 {
+	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeRetries]; ok {
+		r, _ := strconv.Atoi(val)
+		retries := int32(r)
+		return &retries
+	}
+
+	return nil
+}
+
+// livenessProbeRetries returns returns number of retries for the probe
+func (p *ProjectService) livenessProbeDisabled() bool {
+	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeDisabled]; ok {
+		return val == "true"
+	}
+
+	return false
+}
