@@ -1,43 +1,43 @@
-version: '3.7'
+version: "3.7"
 services:
   db:
     labels:
-      io.appvia.kev.workload.image-pull-policy: "IfNotPresent"
-      io.appvia.kev.workload.service-account-name: "default"
-      io.appvia.kev.workload.type: "StatefulSet"
-      io.appvia.kev.workload.replicas: "1"
-      io.appvia.kev.workload.rolling-update-max-surge: "1"
-      io.appvia.kev.workload.cpu: "0.1"
-      io.appvia.kev.workload.memory: "10Mi"
-      io.appvia.kev.workload.max-cpu: "0.5"
-      io.appvia.kev.workload.max-memory: "500Mi"
-      io.appvia.kev.workload.liveness-probe-disable: "false"
-      io.appvia.kev.workload.liveness-probe-interval: "1m0s"
-      io.appvia.kev.workload.liveness-probe-retries: "3"
-      io.appvia.kev.workload.liveness-probe-initial-delay: "1m0s"
-      io.appvia.kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      io.appvia.kev.workload.liveness-probe-timeout: "10s"
-      io.appvia.kev.service.type: "None"
+      kev.service.type: None
+      kev.workload.cpu: "0.1"
+      kev.workload.image-pull-policy: IfNotPresent
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
+      kev.workload.liveness-probe-disable: "false"
+      kev.workload.liveness-probe-initial-delay: 1m0s
+      kev.workload.liveness-probe-interval: 1m0s
+      kev.workload.liveness-probe-retries: "3"
+      kev.workload.liveness-probe-timeout: 10s
+      kev.workload.max-cpu: "0.5"
+      kev.workload.max-memory: 500Mi
+      kev.workload.memory: 10Mi
+      kev.workload.replicas: "1"
+      kev.workload.rolling-update-max-surge: "1"
+      kev.workload.service-account-name: default
+      kev.workload.type: StatefulSet
   wordpress:
     labels:
-      io.appvia.kev.workload.image-pull-policy: "IfNotPresent"
-      io.appvia.kev.workload.service-account-name: "default"
-      io.appvia.kev.workload.type: "Deployment"
-      io.appvia.kev.workload.replicas: "1"
-      io.appvia.kev.workload.rolling-update-max-surge: "1"
-      io.appvia.kev.workload.cpu: "0.1"
-      io.appvia.kev.workload.memory: "10Mi"
-      io.appvia.kev.workload.max-cpu: "0.5"
-      io.appvia.kev.workload.max-memory: "500Mi"
-      io.appvia.kev.workload.liveness-probe-disable: "false"
-      io.appvia.kev.workload.liveness-probe-interval: "1m0s"
-      io.appvia.kev.workload.liveness-probe-retries: "3"
-      io.appvia.kev.workload.liveness-probe-initial-delay: "1m0s"
-      io.appvia.kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
-      io.appvia.kev.workload.liveness-probe-timeout: "10s"
-      io.appvia.kev.service.type: "LoadBalancer"
+      kev.service.type: LoadBalancer
+      kev.workload.cpu: "0.1"
+      kev.workload.image-pull-policy: IfNotPresent
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
+      kev.workload.liveness-probe-disable: "false"
+      kev.workload.liveness-probe-initial-delay: 1m0s
+      kev.workload.liveness-probe-interval: 1m0s
+      kev.workload.liveness-probe-retries: "3"
+      kev.workload.liveness-probe-timeout: 10s
+      kev.workload.max-cpu: "0.5"
+      kev.workload.max-memory: 500Mi
+      kev.workload.memory: 10Mi
+      kev.workload.replicas: "1"
+      kev.workload.rolling-update-max-surge: "1"
+      kev.workload.service-account-name: default
+      kev.workload.type: Deployment
 volumes:
   db_data:
     labels:
-      io.appvia.kev.volumes.class: "standard"
-      io.appvia.kev.volumes.size: "100Mi"
+      kev.volumes.class: standard
+      kev.volumes.size: 100Mi
