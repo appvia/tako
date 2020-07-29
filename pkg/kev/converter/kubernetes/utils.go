@@ -544,7 +544,7 @@ func ConfigLabels(name string) map[string]string {
 	return map[string]string{Selector: name}
 }
 
-// ConfigAllLabels creates in-cluster-wordpress with service nam and deploy in-cluster-wordpress
+// ConfigAllLabels creates labels with service nam and deploy labels
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L140
 func ConfigAllLabels(name string, service *ServiceConfig) map[string]string {
 	base := ConfigLabels(name)
@@ -672,7 +672,7 @@ func CreateOutFile(out string) (*os.File, error) {
 	return f, nil
 }
 
-// ConfigLabelsWithNetwork configures label and add Network Information in in-cluster-wordpress
+// ConfigLabelsWithNetwork configures label and add Network Information in labels
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L127
 func ConfigLabelsWithNetwork(name string, net []string) map[string]string {
 

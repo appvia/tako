@@ -73,7 +73,7 @@ type ServiceConfig struct {
 	Args               []string             `compose:"args"`
 	VolList            []string             `compose:"volumes"`
 	Network            []string             `compose:"network"`
-	Labels             map[string]string    `compose:"in-cluster-wordpress"`
+	Labels             map[string]string    `compose:"labels"`
 	Annotations        map[string]string    `compose:""`
 	CPUSet             string               `compose:"cpuset"`
 	CPUShares          int64                `compose:"cpu_shares"`
@@ -96,7 +96,7 @@ type ServiceConfig struct {
 	BuildArgs          map[string]*string   `compose:"build-args"`
 	ExposeService      string               `compose:"kompose.service.expose"`
 	ExposeServicePath  string               `compose:"kompose.service.expose.path"`
-	BuildLabels        map[string]string    `compose:"build-in-cluster-wordpress"`
+	BuildLabels        map[string]string    `compose:"build-labels"`
 	ExposeServiceTLS   string               `compose:"kompose.service.expose.tls-secret"`
 	ImagePullSecret    string               `compose:"kompose.image-pull-secret"`
 	Stdin              bool                 `compose:"stdin_open"`
@@ -104,7 +104,7 @@ type ServiceConfig struct {
 	MemLimit           MemStringorInt       `compose:"mem_limit"`
 	MemReservation     MemStringorInt       `compose:""`
 	DeployMode         string               `compose:""`
-	DeployLabels       map[string]string    `compose:""` // DeployLabels mapping to kubernetes in-cluster-wordpress
+	DeployLabels       map[string]string    `compose:""` // DeployLabels mapping to kubernetes labels
 	DeployUpdateConfig compose.UpdateConfig `compose:""`
 	TmpFs              []string             `compose:"tmpfs"`
 	Dockerfile         string               `compose:"dockerfile"`

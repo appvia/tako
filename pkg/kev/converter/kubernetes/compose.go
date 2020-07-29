@@ -193,7 +193,7 @@ func dockerComposeToKomposeMapping(composeObject *composego.Project) (KomposeObj
 		// https://docs.docker.com/compose/compose-file/#long-syntax-3
 		serviceConfig.VolList = loadVolumes(composeServiceConfig.Volumes)
 
-		// @step kompose in-cluster-wordpress
+		// @step kompose labels
 		if err := parseKomposeLabels(composeServiceConfig.Labels, &serviceConfig); err != nil {
 			return KomposeObject{}, err
 		}
@@ -354,7 +354,7 @@ func parseHealthCheck(composeHealthCheck composego.HealthCheckConfig) (HealthChe
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L136
 func loadPlacement(constraints []string) map[string]string {
 	placement := make(map[string]string)
-	errMsg := "constraints in placement is not supported, only 'node.hostname', 'node.role == worker', 'node.role == manager', 'engine.in-cluster-wordpress.operatingsystem' and 'node.in-cluster-wordpress.xxx' (ex: node.in-cluster-wordpress.something == anything) is supported as a constraint"
+	errMsg := "constraints in placement is not supported, only 'node.hostname', 'node.role == worker', 'node.role == manager', 'engine.labels.operatingsystem' and 'node.labels.xxx' (ex: node.labels.something == anything) is supported as a constraint"
 	for _, j := range constraints {
 		p := strings.Split(j, " == ")
 		if len(p) < 2 {
@@ -367,10 +367,10 @@ func loadPlacement(constraints []string) map[string]string {
 			placement["node-role.kubernetes.io/master"] = "true"
 		} else if p[0] == "node.hostname" {
 			placement["kubernetes.io/hostname"] = p[1]
-		} else if p[0] == "engine.in-cluster-wordpress.operatingsystem" {
+		} else if p[0] == "engine.labels.operatingsystem" {
 			placement["beta.kubernetes.io/os"] = p[1]
-		} else if strings.HasPrefix(p[0], "node.in-cluster-wordpress.") {
-			label := strings.TrimPrefix(p[0], "node.in-cluster-wordpress.")
+		} else if strings.HasPrefix(p[0], "node.labels.") {
+			label := strings.TrimPrefix(p[0], "node.labels.")
 			placement[label] = p[1]
 		} else {
 			fmt.Println(p[0], errMsg)
@@ -476,7 +476,7 @@ func loadVolumes(volumes []composego.ServiceVolumeConfig) []string {
 	return volArray
 }
 
-// parseKomposeLabels parse kompose in-cluster-wordpress, also do some validation
+// parseKomposeLabels parse kompose labels, also do some validation
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L487
 func parseKomposeLabels(labels map[string]string, serviceConfig *ServiceConfig) error {
 	// Label handler
@@ -487,7 +487,7 @@ func parseKomposeLabels(labels map[string]string, serviceConfig *ServiceConfig) 
 		serviceConfig.Labels = make(map[string]string)
 	}
 
-	// @todo: See how we could use existing & additional in-cluster-wordpress to better control outcome.
+	// @todo: See how we could use existing & additional labels to better control outcome.
 	for key, value := range labels {
 		switch key {
 		case LabelServiceType:
@@ -511,17 +511,17 @@ func parseKomposeLabels(labels map[string]string, serviceConfig *ServiceConfig) 
 		}
 	}
 
-	// @step validate service expose in-cluster-wordpress
+	// @step validate service expose labels
 	if serviceConfig.ExposeService == "" && serviceConfig.ExposeServiceTLS != "" {
 		return errors.New("kompose.service.expose.tls-secret was specified without kompose.service.expose")
 	}
 
-	// @step validate service type in-cluster-wordpress
+	// @step validate service type labels
 	if serviceConfig.ServiceType != string(v1.ServiceTypeNodePort) && serviceConfig.NodePortPort != 0 {
 		return errors.New("kompose.service.type must be nodeport when assign node port value")
 	}
 
-	// @step validate service port in-cluster-wordpress
+	// @step validate service port labels
 	if len(serviceConfig.Port) > 1 && serviceConfig.NodePortPort != 0 {
 		return errors.New("cannot set kompose.service.nodeport.port when service has multiple ports")
 	}
@@ -572,7 +572,7 @@ func handleVolume(komposeObject *KomposeObject, volumes *composego.Volumes) {
 	}
 }
 
-// getVolumeLabels returns size and selector if present in named volume in-cluster-wordpress
+// getVolumeLabels returns size and selector if present in named volume labels
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L559
 func getVolumeLabels(name string, volumes *composego.Volumes) (string, string) {
 	size, selector := "", ""
