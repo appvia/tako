@@ -1,5 +1,8 @@
-### Generated App Definitions ###
+### kev dirs, files & stuff ###
 .kev/*
+**/kev.yaml
+**/kev.yml
+**/docker-compose.kev.*.yaml
 
 ### kev stuff ###
 *.kev.yaml
