@@ -16,12 +16,6 @@
 
 package kev
 
-import (
-	"fmt"
-	"path"
-	"path/filepath"
-)
-
 const (
 	ManifestName = "kev.yaml"
 
@@ -29,70 +23,20 @@ const (
 	configFileTemplate = "docker-compose.kev.%s.yaml"
 )
 
-var tempConfig = `version: '3.7'
-services:
-  db:
-    labels:
-      io.appvia.kev.workload.image-pull-policy: "IfNotPresent"
-      io.appvia.kev.workload.service-account-name: "default"
-      io.appvia.kev.workload.type: "StatefulSet"
-      io.appvia.kev.workload.replicas: "1"
-      io.appvia.kev.workload.rolling-update-max-surge: "1"
-      io.appvia.kev.workload.cpu: "0.1"
-      io.appvia.kev.workload.memory: "10Mi"
-      io.appvia.kev.workload.max-cpu: "0.5"
-      io.appvia.kev.workload.max-memory: "500Mi"
-      io.appvia.kev.workload.liveness-probe-disable: "false"
-      io.appvia.kev.workload.liveness-probe-interval: "1m0s"
-      io.appvia.kev.workload.liveness-probe-retries: "3"
-      io.appvia.kev.workload.liveness-probe-initial-delay: "1m0s"
-      io.appvia.kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      io.appvia.kev.workload.liveness-probe-timeout: "10s"
-      io.appvia.kev.service.type: "None"
-  wordpress:
-    labels:
-      io.appvia.kev.workload.image-pull-policy: "IfNotPresent"
-      io.appvia.kev.workload.service-account-name: "default"
-      io.appvia.kev.workload.type: "Deployment"
-      io.appvia.kev.workload.replicas: "1"
-      io.appvia.kev.workload.rolling-update-max-surge: "1"
-      io.appvia.kev.workload.cpu: "0.1"
-      io.appvia.kev.workload.memory: "10Mi"
-      io.appvia.kev.workload.max-cpu: "0.5"
-      io.appvia.kev.workload.max-memory: "500Mi"
-      io.appvia.kev.workload.liveness-probe-disable: "false"
-      io.appvia.kev.workload.liveness-probe-interval: "1m0s"
-      io.appvia.kev.workload.liveness-probe-retries: "3"
-      io.appvia.kev.workload.liveness-probe-initial-delay: "1m0s"
-      io.appvia.kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
-      io.appvia.kev.workload.liveness-probe-timeout: "10s"
-      io.appvia.kev.service.type: "LoadBalancer"
-volumes:
-  db_data:
-    labels:
-      io.appvia.kev.volumes.class: "standard"
-      io.appvia.kev.volumes.size: "100Mi"
-`
-
 // Init initialises a kev manifest including source compose files and environments.
 // A default environment will be allocated if no environments were provided.
-func Init(composeFiles, envs []string) (*Manifest, error) {
-	configWorkingDir := filepath.Dir(composeFiles[0])
-
-	environments := Environments{}
-	if len(envs) == 0 {
-		envs = append(envs, defaultEnv)
-	}
-	for _, env := range envs {
-		environments = append(environments, Environment{
-			Name:    env,
-			Content: []byte(tempConfig),
-			File:    path.Join(configWorkingDir, fmt.Sprintf(configFileTemplate, env)),
-		})
+func Init(composeSources, envs []string) (*Manifest, error) {
+	m, err := NewManifest(composeSources).
+		ExtractLabels()
+	if err != nil {
+		return nil, err
 	}
 
+	return m.MintEnvironments(envs), nil
+}
+
+func NewManifest(sources []string) *Manifest {
 	return &Manifest{
-		Sources:      composeFiles,
-		Environments: environments,
-	}, nil
+		Sources: sources,
+	}
 }
