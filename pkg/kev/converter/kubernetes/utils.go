@@ -49,7 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Selector used as in-cluster-wordpress and selector
+// Selector used as labels and selector
 const Selector = "io.kompose.service"
 
 //  Generate Helm Chart configuration

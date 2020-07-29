@@ -124,7 +124,7 @@ func dockerComposeToKomposeMapping(composeObject *composego.Project) (KomposeObj
 			return KomposeObject{}, err
 		}
 
-		// @step Deploy mode and in-cluster-wordpress
+		// @step Deploy mode and labels
 		if composeServiceConfig.Deploy != nil {
 			serviceConfig.DeployMode = composeServiceConfig.Deploy.Mode
 			serviceConfig.DeployLabels = composeServiceConfig.Deploy.Labels
