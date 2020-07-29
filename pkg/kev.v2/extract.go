@@ -27,8 +27,8 @@ import (
 
 // setDefaultLabels sets sensible workload defaults as labels.
 func setDefaultLabels(target *composego.ServiceConfig) {
-	target.Labels.Add("kev.workload.image-pull-policy", DefaultImagePullPolicy)
-	target.Labels.Add("kev.workload.service-account-name", DefaultServiceAccountName)
+	target.Labels.Add(LabelWorkloadImagePullPolicy, DefaultImagePullPolicy)
+	target.Labels.Add(LabelWorkloadServiceAccountName, DefaultServiceAccountName)
 }
 
 // extractVolumesLabels extracts volume labels into a label's Volumes attribute.
@@ -39,8 +39,8 @@ func extractVolumesLabels(c *composeProject, out *labels) {
 	for _, v := range c.VolumeNames() {
 		vols[v] = composego.VolumeConfig{
 			Labels: map[string]string{
-				"kev.volumes.class": DefaultVolumeClass,
-				"kev.volumes.size":  DefaultVolumeSize,
+				LabelVolumeStorageClass: DefaultVolumeClass,
+				LabelVolumeSize:         DefaultVolumeSize,
 			},
 		}
 	}
@@ -50,17 +50,17 @@ func extractVolumesLabels(c *composeProject, out *labels) {
 // extractServiceTypeLabels extracts service type labels into a label's Service.
 func extractServiceTypeLabels(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Ports == nil {
-		target.Labels.Add("kev.service.type", NoService)
+		target.Labels.Add(LabelServiceType, NoService)
 	} else {
 		for _, p := range source.Ports {
 			if p.Published != 0 && p.Mode == "host" {
-				target.Labels.Add("kev.service.type", NodePortService)
+				target.Labels.Add(LabelServiceType, NodePortService)
 			} else if p.Published != 0 && p.Mode == "ingress" {
-				target.Labels.Add("kev.service.type", LoadBalancerService)
+				target.Labels.Add(LabelServiceType, LoadBalancerService)
 			} else if p.Published != 0 || (p.Published == 0 && p.Target != 0) {
-				target.Labels.Add("kev.service.type", ClusterIPService)
+				target.Labels.Add(LabelServiceType, ClusterIPService)
 			} else if p.Published == 0 {
-				target.Labels.Add("kev.service.type", HeadlessService)
+				target.Labels.Add(LabelServiceType, HeadlessService)
 			}
 			// @todo: Processing just the first port for now!
 			break
@@ -82,27 +82,27 @@ func extractDeploymentLabels(source composego.ServiceConfig, target *composego.S
 func extractWorkloadRollingUpdatePolicy(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.UpdateConfig != nil {
 		value := strconv.FormatUint(*source.Deploy.UpdateConfig.Parallelism, 10)
-		target.Labels.Add("kev.workload.rolling-update-max-surge", value)
+		target.Labels.Add(LabelWorkloadRollingUpdateMaxSurge, value)
 	}
 }
 
 // extractWorkloadResourceLimits extracts deployment's resource limits.
 func extractWorkloadResourceLimits(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Resources.Limits != nil {
-		target.Labels.Add("kev.workload.max-cpu", source.Deploy.Resources.Limits.NanoCPUs)
+		target.Labels.Add(LabelWorkloadMaxCPU, source.Deploy.Resources.Limits.NanoCPUs)
 
 		value := getMemoryQuantity(int64(source.Deploy.Resources.Limits.MemoryBytes))
-		target.Labels.Add("kev.workload.max-memory", value)
+		target.Labels.Add(LabelWorkloadMaxMemory, value)
 	}
 }
 
 // extractWorkloadResourceRequests extracts deployment's resource requests.
 func extractWorkloadResourceRequests(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Resources.Reservations != nil {
-		target.Labels.Add("kev.workload.cpu", source.Deploy.Resources.Reservations.NanoCPUs)
+		target.Labels.Add(LabelWorkloadCPU, source.Deploy.Resources.Reservations.NanoCPUs)
 
 		value := getMemoryQuantity(int64(source.Deploy.Resources.Reservations.MemoryBytes))
-		target.Labels.Add("kev.workload.memory", value)
+		target.Labels.Add(LabelWorkloadMemory, value)
 	}
 }
 
@@ -110,12 +110,12 @@ func extractWorkloadResourceRequests(source composego.ServiceConfig, target *com
 func extractWorkloadRestartPolicy(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.RestartPolicy != nil {
 		if source.Deploy.RestartPolicy.Condition == "on-failure" {
-			target.Labels.Add("kev.workload.restart", RestartPolicyOnFailure)
+			target.Labels.Add(LabelWorkloadRestartPolicy, RestartPolicyOnFailure)
 		} else if source.Deploy.RestartPolicy.Condition == "none" {
-			target.Labels.Add("kev.workload.restart", RestartPolicyNever)
+			target.Labels.Add(LabelWorkloadRestartPolicy, RestartPolicyNever)
 		} else {
 			// Always restart by default
-			target.Labels.Add("kev.workload.restart", RestartPolicyAlways)
+			target.Labels.Add(LabelWorkloadRestartPolicy, RestartPolicyAlways)
 		}
 	}
 }
@@ -124,37 +124,37 @@ func extractWorkloadRestartPolicy(source composego.ServiceConfig, target *compos
 func extractWorkloadReplicas(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil {
 		value := strconv.FormatUint(*source.Deploy.Replicas, 10)
-		target.Labels.Add("kev.workload.replicas", value)
+		target.Labels.Add(LabelWorkloadReplicas, value)
 	}
 }
 
 // extractWorkloadType extracts deployment's workload type.
 func extractWorkloadType(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Mode == "global" {
-		target.Labels.Add("kev.workload.type", DaemonsetWorkload)
+		target.Labels.Add(LabelWorkloadType, DaemonsetWorkload)
 	} else {
 		// replicated
 		if source.Volumes != nil {
 			// Volumes in use so likely a Statefulset
-			target.Labels.Add("kev.workload.type", StatefulsetWorkload)
+			target.Labels.Add(LabelWorkloadType, StatefulsetWorkload)
 		} else {
 			// default to deployment
-			target.Labels.Add("kev.workload.type", DeploymentWorkload)
+			target.Labels.Add(LabelWorkloadType, DeploymentWorkload)
 		}
 	}
 }
 
 // extractHealthcheckLabels extracts health check labels into a label's Service.
 func extractHealthcheckLabels(source composego.ServiceConfig, target *composego.ServiceConfig) {
-	target.Labels.Add("kev.workload.liveness-probe-disable", strconv.FormatBool(source.HealthCheck.Disable))
-	target.Labels.Add("kev.workload.liveness-probe-interval", source.HealthCheck.Interval.String())
+	target.Labels.Add(LabelWorkloadLivenessProbeDisabled, strconv.FormatBool(source.HealthCheck.Disable))
+	target.Labels.Add(LabelWorkloadLivenessProbeInterval, source.HealthCheck.Interval.String())
 
 	retries := strconv.FormatUint(*source.HealthCheck.Retries, 10)
-	target.Labels.Add("kev.workload.liveness-probe-retries", retries)
+	target.Labels.Add(LabelWorkloadLivenessProbeRetries, retries)
 
-	target.Labels.Add("kev.workload.liveness-probe-initial-delay", source.HealthCheck.StartPeriod.String())
-	target.Labels.Add("kev.workload.liveness-probe-command", formatSlice(source.HealthCheck.Test))
-	target.Labels.Add("kev.workload.liveness-probe-timeout", source.HealthCheck.Timeout.String())
+	target.Labels.Add(LabelWorkloadLivenessProbeInitialDelay, source.HealthCheck.StartPeriod.String())
+	target.Labels.Add(LabelWorkloadLivenessProbeCommand, formatSlice(source.HealthCheck.Test))
+	target.Labels.Add(LabelWorkloadLivenessProbeTimeout, source.HealthCheck.Timeout.String())
 }
 
 // formatSlice formats a string slice as '["value1", "value2", "value3"]'
