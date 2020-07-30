@@ -23,6 +23,7 @@ import (
 
 	"github.com/appvia/kube-devx/pkg/kev.v2"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestManifestMarshalsCorrectly(t *testing.T) {
@@ -70,6 +71,30 @@ func TestInitProvidesEnvironmentConfig(t *testing.T) {
 	}
 
 	diff := cmp.Diff(actual.Bytes(), expected)
+	if diff != "" {
+		t.Fatalf("actual does not match expected:\n%s", diff)
+	}
+}
+
+func TestCanLoadAManifest(t *testing.T) {
+	expected := &kev.Manifest{
+		Sources: []string{
+			"testdata/in-cluster-wordpress/docker-compose.yaml",
+		},
+		Environments: kev.Environments{
+			kev.Environment{
+				Name: "dev",
+				File: "testdata/in-cluster-wordpress/docker-compose.kev.dev.yaml",
+			},
+		},
+	}
+	workingDir := "testdata/in-cluster-wordpress"
+	actual, err := kev.LoadManifest(workingDir)
+	if err != nil {
+		t.Fatalf("Unexpected error:\n%s", err)
+	}
+
+	diff := cmp.Diff(actual, expected, cmpopts.IgnoreUnexported(kev.Manifest{}, kev.Environment{}))
 	if diff != "" {
 		t.Fatalf("actual does not match expected:\n%s", diff)
 	}
