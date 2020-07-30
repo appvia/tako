@@ -17,15 +17,15 @@
 package converter
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/converter/dummy"
 	"github.com/appvia/kube-devx/pkg/kev/converter/kubernetes"
+	composego "github.com/compose-spec/compose-go/types"
 )
 
 // Converter is an interface implemented by each converter kind
 type Converter interface {
 	// Render builds an output for an app
-	Render(singleFile bool, dir string, app *app.Definition) error
+	Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) error
 }
 
 // Factory returns a converter

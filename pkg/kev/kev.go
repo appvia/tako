@@ -17,110 +17,86 @@
 package kev
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/compose"
-	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/converter"
-	"github.com/appvia/kube-devx/pkg/kev/yaml"
+	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
-// Init inits a kev app returning app definition
-func Init(composeFiles, envs []string) (*app.Definition, error) {
-	versionedProject, err := compose.LoadAndPrepVersionedProject(composeFiles)
+const (
+	// ManifestName main application manifest
+	ManifestName = "kev.yaml"
+
+	defaultEnv         = "dev"
+	configFileTemplate = "docker-compose.kev.%s.yaml"
+)
+
+// Init initialises a kev manifest including source compose files and environments.
+// A default environment will be allocated if no environments were provided.
+func Init(composeSources, envs []string) (*Manifest, error) {
+	m, err := NewManifest(composeSources).
+		ExtractLabels()
 	if err != nil {
 		return nil, err
 	}
 
-	inferred, err := config.Infer(versionedProject)
-	if err != nil {
-		return nil, err
-	}
-
-	return app.Init(inferred.ComposeWithPlaceholders, inferred.BaseConfig, envs)
-}
-
-// Build builds a kev app. It returns an app definition with the build info
-func Build(envs []string) (*app.Definition, error) {
-	envs, err := app.ValidateEnvsOrGetAll(envs)
-	if err != nil {
-		return nil, err
-	}
-
-	def, err := app.LoadDefinition(envs)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := def.DoBuild(); err != nil {
-		return nil, err
-	}
-
-	return def, nil
-}
-
-// BuildFromDefinition is like Build, but builds a kev app from an already loaded app definition
-func BuildFromDefinition(def *app.Definition, envs []string) error {
-	envs, err := app.ValidateDefEnvsOrGetAll(def, envs)
-	if err != nil {
-		return err
-	}
-
-	def.ExcludeOtherOverrides(envs)
-
-	if err := def.DoBuild(); err != nil {
-		return err
-	}
-
-	return nil
+	return m.MintEnvironments(envs), nil
 }
 
 // Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info
-func Render(format string, singleFile bool, dir string, envs []string) (*app.Definition, error) {
-	envs, err := app.ValidateEnvsOrGetAll(envs)
+func Render(format string, singleFile bool, dir string, envs []string) error {
+	// @todo filter specified envs, or all if none provided
+	workDir, err := os.Getwd()
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "Couldn't get working directory")
 	}
 
-	def, err := app.LoadDefinition(envs)
+	manifest, err := LoadManifest(workDir)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "Unable to load app manifest")
+	}
+
+	rendered := map[string][]byte{}
+	projects := map[string]*composego.Project{}
+	files := map[string][]string{}
+
+	for _, env := range manifest.Environments {
+		inputFiles := append(manifest.Sources, env.File)
+		if p, err := RawProjectFromSources(inputFiles); err != nil {
+			return errors.Wrap(err, "Couldn't calculate compose project representation")
+		} else {
+			projects[env.Name] = p
+			files[env.Name] = inputFiles
+		}
 	}
 
 	c := converter.Factory(format)
-	if err := c.Render(singleFile, dir, def); err != nil {
-		return nil, err
-	}
-
-	return def, nil
-}
-
-// RenderFromDefinition is like Render, but renders a kev app from an already loaded app definition
-func RenderFromDefinition(def *app.Definition, format string, singleFile bool, dir string, envs []string) error {
-	envs, err := app.ValidateDefEnvsOrGetAll(def, envs)
-	if err != nil {
-		return err
-	}
-
-	def.ExcludeOtherOverrides(envs)
-	c := converter.Factory(format)
-	if err := c.Render(singleFile, dir, def); err != nil {
+	if err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func Overlay(composeFiles []string, configFile string, outFile string) error {
-	files := append(composeFiles, configFile)
-	project, err := compose.LoadProject(files)
-	if err != nil {
-		return err
+// NewManifest returns a new Manifest struct
+func NewManifest(sources []string) *Manifest {
+	return &Manifest{
+		Sources: sources,
 	}
+}
 
-	data, err := yaml.MarshalIndent(project, 2)
-	return ioutil.WriteFile(path.Join(outFile), data, os.ModePerm)
+// LoadManifest returns application manifests
+func LoadManifest(workingDir string) (*Manifest, error) {
+	fmt.Println("working dir:", workingDir)
+	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
+	if err != nil {
+		return nil, err
+	}
+	var m *Manifest
+	return m, yaml.Unmarshal(data, &m)
 }

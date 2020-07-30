@@ -1,4 +1,0 @@
-compose:
-  - testdata/in-cluster-wordpress/docker-compose.yaml
-environments:
-  dev: testdata/in-cluster-wordpress/docker-compose.kev.dev.yaml

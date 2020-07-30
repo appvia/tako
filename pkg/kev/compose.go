@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package compose
+package kev
 
 import (
 	"io/ioutil"
 
 	"github.com/compose-spec/compose-go/cli"
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/goccy/go-yaml"
+	"gopkg.in/yaml.v2"
 )
 
-// LoadAndPrepVersionedProject loads and parses a set of input compose files and returns a VersionedProject object
-func LoadAndPrepVersionedProject(paths []string) (*VersionedProject, error) {
-	composeProject, err := LoadProject(paths)
+// newComposeProject loads and parses a set of input compose files and returns a composeProject object
+func newComposeProject(paths []string) (*composeProject, error) {
+	raw, err := RawProjectFromSources(paths)
 	if err != nil {
 		return nil, err
 	}
@@ -35,25 +35,24 @@ func LoadAndPrepVersionedProject(paths []string) (*VersionedProject, error) {
 		return nil, err
 	}
 
-	project := &VersionedProject{version, composeProject}
+	return (&composeProject{version, raw}).transform()
+}
 
-	transforms := []Transform{
-		AugmentOrAddDeploy,
-		HealthCheckBase,
-		ExternaliseSecrets,
-		ExternaliseConfigs,
+func (p *composeProject) transform() (*composeProject, error) {
+	transforms := []transform{
+		augmentOrAddDeploy,
+		healthCheckBase,
 	}
 	for _, t := range transforms {
-		if err := t(project); err != nil {
+		if err := t(p); err != nil {
 			return nil, err
 		}
 	}
-
-	return project, nil
+	return p, nil
 }
 
-// LoadProject loads and parses a set of input compose files and returns a compose VersionedProject object
-func LoadProject(paths []string) (*composego.Project, error) {
+// RawProjectFromSources loads and parses a compose-go project from multiple docker-compose source files.
+func RawProjectFromSources(paths []string) (*composego.Project, error) {
 	projectOptions, err := cli.ProjectOptions{
 		ConfigPaths: paths,
 	}.
@@ -77,11 +76,9 @@ func LoadProject(paths []string) (*composego.Project, error) {
 
 // getComposeVersion extracts version from compose file and returns a string
 func getComposeVersion(file string) (string, error) {
-	type ComposeVersion struct {
+	version := struct {
 		Version string `json:"version"` // This affects YAML as well
-	}
-
-	version := ComposeVersion{}
+	}{}
 
 	compose, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -91,6 +88,5 @@ func getComposeVersion(file string) (string, error) {
 	if err = yaml.Unmarshal(compose, &version); err != nil {
 		return "", err
 	}
-
 	return version.Version, nil
 }

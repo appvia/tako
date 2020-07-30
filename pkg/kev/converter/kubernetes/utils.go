@@ -35,8 +35,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/appvia/kube-devx/pkg/kev.v2"
-	"github.com/appvia/kube-devx/pkg/kev/app"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/joho/godotenv"
@@ -77,7 +75,7 @@ func (env EnvSort) Swap(i, j int) {
 
 // PrintList prints k8s objects
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L153
-func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string]app.FileConfig) error {
+func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string][]byte) error {
 
 	var f *os.File
 	dirName := getDirName(opt)
@@ -131,10 +129,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 		}
 
 		files = append(files, printVal)
-		rendered[printVal] = app.FileConfig{
-			Content: data,
-			File:    printVal,
-		}
+		rendered[printVal] = data
 	} else {
 		// @step output directory specified - print all objects individually to that directory
 		finalDirName := dirName
@@ -189,10 +184,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			}
 
 			files = append(files, file)
-			rendered[file] = app.FileConfig{
-				Content: data,
-				File:    file,
-			}
+			rendered[file] = data
 		}
 	}
 	// @step for helm output generate chart directory structure
@@ -869,11 +861,11 @@ func checkVolDependent(dv Volumes, volumes []Volumes) bool {
 func getVolumeLabels(volume composego.VolumeConfig) (string, string, string) {
 	size, selector, storageClass := "", "", ""
 	for key, value := range volume.Labels {
-		if key == kev.LabelVolumeSize {
+		if key == config.LabelVolumeSize {
 			size = value
-		} else if key == kev.LabelVolumeSelector {
+		} else if key == config.LabelVolumeSelector {
 			selector = value
-		} else if key == kev.LabelVolumeStorageClass {
+		} else if key == config.LabelVolumeStorageClass {
 			storageClass = value
 		}
 	}

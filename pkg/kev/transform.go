@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-package compose
+package kev
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/appvia/kube-devx/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-type Transform func(*VersionedProject) error
+type transform func(*composeProject) error
 
-// AugmentOrAddDeploy augments a service's existing deploy block or attaches a new one with default presets.
-func AugmentOrAddDeploy(x *VersionedProject) error {
+// augmentOrAddDeploy augments a service's existing deploy block or attaches a new one with default presets.
+func augmentOrAddDeploy(x *composeProject) error {
 	var updated composego.Services
 	err := x.WithServices(x.ServiceNames(), func(svc composego.ServiceConfig) error {
 		var deploy = createDeploy()
@@ -52,9 +53,9 @@ func AugmentOrAddDeploy(x *VersionedProject) error {
 	return nil
 }
 
-// HealthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
+// healthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
 // to any service missing a healthcheck block.
-func HealthCheckBase(x *VersionedProject) error {
+func healthCheckBase(x *composeProject) error {
 	var updated composego.Services
 	err := x.WithServices(x.ServiceNames(), func(svc composego.ServiceConfig) error {
 		if svc.HealthCheck == nil {
@@ -72,51 +73,13 @@ func HealthCheckBase(x *VersionedProject) error {
 	return nil
 }
 
-// ExternaliseSecrets ensures that all top level secrets are set to external
-// to specify that the secrets have already been created.
-func ExternaliseSecrets(x *VersionedProject) error {
-	noSecrets := len(x.Secrets) < 1
-	if noSecrets {
-		return nil
-	}
-
-	updated := make(map[string]composego.SecretConfig)
-	for key, config := range x.Secrets {
-		config.File = ""
-		config.External.External = true
-		updated[key] = config
-	}
-
-	x.Secrets = updated
-	return nil
-}
-
-// ExternaliseConfigs ensures that all top level configs are set to external
-// to specify that the configs have already been created.
-func ExternaliseConfigs(x *VersionedProject) error {
-	noConfigs := len(x.Configs) < 1
-	if noConfigs {
-		return nil
-	}
-
-	updated := make(map[string]composego.ConfigObjConfig)
-	for key, config := range x.Configs {
-		config.File = ""
-		config.External.External = true
-		updated[key] = config
-	}
-
-	x.Configs = updated
-	return nil
-}
-
 // createDeploy returns a deploy block with configured presets.
 func createDeploy() composego.DeployConfig {
-	replica := uint64(DefaultReplicaNumber)
-	parallelism := uint64(defaultRollingUpdateMaxSurge)
+	replica := uint64(config.DefaultReplicaNumber)
+	parallelism := uint64(config.DefaultRollingUpdateMaxSurge)
 
-	lm, _ := resource.ParseQuantity(defaultResourceLimitMem)
-	rm, _ := resource.ParseQuantity(defaultResourceRequestMem)
+	lm, _ := resource.ParseQuantity(config.DefaultResourceLimitMem)
+	rm, _ := resource.ParseQuantity(config.DefaultResourceRequestMem)
 
 	defaultMemLimit, _ := lm.AsInt64()
 	defaultMemReq, _ := rm.AsInt64()
@@ -126,11 +89,11 @@ func createDeploy() composego.DeployConfig {
 		Mode:     "replicated",
 		Resources: composego.Resources{
 			Limits: &composego.Resource{
-				NanoCPUs:    defaultResourceLimitCPU,
+				NanoCPUs:    config.DefaultResourceLimitCPU,
 				MemoryBytes: composego.UnitBytes(defaultMemLimit),
 			},
 			Reservations: &composego.Resource{
-				NanoCPUs:    defaultResourceRequestCPU,
+				NanoCPUs:    config.DefaultResourceRequestCPU,
 				MemoryBytes: composego.UnitBytes(defaultMemReq),
 			},
 		},
@@ -142,21 +105,21 @@ func createDeploy() composego.DeployConfig {
 
 // createHealthCheck returns a healthcheck block with configured placeholders.
 func createHealthCheck(svcName string) composego.HealthCheckConfig {
-	testMsg := fmt.Sprintf(defaultLivenessProbeCommand, svcName)
-	to, _ := time.ParseDuration(defaultLivenessProbeTimeout)
-	iv, _ := time.ParseDuration(defaultLivenessProbeInterval)
-	sp, _ := time.ParseDuration(defaultLivenessProbeInitialDelay)
+	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand, svcName)
+	to, _ := time.ParseDuration(config.DefaultLivenessProbeTimeout)
+	iv, _ := time.ParseDuration(config.DefaultLivenessProbeInterval)
+	sp, _ := time.ParseDuration(config.DefaultLivenessProbeInitialDelay)
 	timeout := composego.Duration(to)
 	interval := composego.Duration(iv)
 	startPeriod := composego.Duration(sp)
-	retries := uint64(defaultLivenessProbeRetries)
+	retries := uint64(config.DefaultLivenessProbeRetries)
 
 	return composego.HealthCheckConfig{
-		Test:        []string{"\"CMD\"", "\"echo\"", testMsg},
+		Test:        []string{"CMD", "echo", testMsg},
 		Timeout:     &timeout,
 		Interval:    &interval,
 		Retries:     &retries,
 		StartPeriod: &startPeriod,
-		Disable:     defaultLivenessProbeDisable,
+		Disable:     config.DefaultLivenessProbeDisable,
 	}
 }

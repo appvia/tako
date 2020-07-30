@@ -21,15 +21,14 @@ import (
 	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev/app"
-	compose "github.com/appvia/kube-devx/pkg/kev/compose"
+	composego "github.com/compose-spec/compose-go/types"
 )
 
 const (
 	// Name of the converter
 	Name                  = "kubernetes"
 	singleFileDefaultName = "k8s.yaml"
-	multiFileSubDir       = ".k8s"
+	multiFileSubDir       = "k8s"
 )
 
 // K8s is a native kubernetes manifests converter
@@ -41,21 +40,21 @@ func New() *K8s {
 }
 
 // Render generates outcome
-func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error {
-	rendered := map[string]app.FileConfig{}
-	for env, bc := range appDef.GetMappedBuildInfo() {
+func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) error {
+
+	for env, project := range projects {
 		fmt.Printf("\n🖨️  Rendering %s environment\n", env)
 
-		// @step Override output directory if specified
+		// @step override output directory if specified
 		outDirPath := ""
 		if dir != "" {
 			// adding env name suffix to the custom directory to differentiate
 			outDirPath = path.Join(dir, env)
 		} else {
-			outDirPath = path.Join(appDef.RootDir(), multiFileSubDir, env)
+			outDirPath = path.Join(workDir, multiFileSubDir, env)
 		}
 
-		// @step Create output directory
+		// @step create output directory
 		// To generate outcome as a set of separate manifests first must create out directory
 		// as Kompose logic checks for this and only will do that for existing directories,
 		// otherwise will treat OutFile as regular file and output all manifests to that single file.
@@ -63,7 +62,7 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			return err
 		}
 
-		// @step Generate multiple / single file
+		// @step generate multiple / single file
 		outFilePath := ""
 		if singleFile {
 			outFilePath = path.Join(outDirPath, singleFileDefaultName)
@@ -71,20 +70,13 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 			outFilePath = outDirPath
 		}
 
-		// @step Kubernetes manifests output options
+		// @step kubernetes manifests output options
 		convertOpts := ConvertOptions{
-			InputFiles:   []string{bc.Compose.File},
+			InputFiles:   files[env],
 			OutFile:      outFilePath,
 			Provider:     Name,
 			YAMLIndent:   2,
 			GenerateYaml: true,
-		}
-
-		// @step Load compose file(s) as compose project
-		project, err := compose.LoadProject(convertOpts.InputFiles)
-		if err != nil {
-			fmt.Println(err.Error())
-			return err
 		}
 
 		// @step Get Kubernete transformer that maps compose project to Kubernetes primitives
@@ -105,8 +97,8 @@ func (c *K8s) Render(singleFile bool, dir string, appDef *app.Definition) error 
 		}
 	}
 
-	for _, fileConfig := range rendered {
-		appDef.Rendered = append(appDef.Rendered, fileConfig)
-	}
+	// for _, fileConfig := range rendered {
+	// 	appDef.Rendered = append(appDef.Rendered, fileConfig)
+	// }
 	return nil
 }
