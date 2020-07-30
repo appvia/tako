@@ -1,6 +1,10 @@
 ### Generated App Definitions ###
 .kev/*
 
+### kev stuff ###
+*.kev.yaml
+*.kev.yml
+
 ### IDEs ###
 .idea/*
 /bin/
