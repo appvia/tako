@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package kev
+package config
 
 const (
 	// LabelWorkloadType defines type of workload controller
