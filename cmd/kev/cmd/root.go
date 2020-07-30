@@ -33,9 +33,9 @@ o  o o-o   o
 
 `
 
-var errSilent = errors.New("errSilent")
+var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
-	Use:   "kev",
+	Use:   "kev2",
 	Short: "Reuse and run your Docker Compose applications on Kubernetes",
 	Long: `(kev) transforms your Docker Compose applications
                   into Cloud Native applications you can run on Kubernetes.`,
@@ -55,14 +55,14 @@ func init() {
 	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		cmd.Println(err)
 		cmd.Println(cmd.UsageString())
-		return errSilent
+		return silentErr
 	})
 }
 
 // Execute command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		if err != errSilent {
+		if err != silentErr {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		os.Exit(1)
