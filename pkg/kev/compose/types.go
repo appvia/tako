@@ -16,9 +16,10 @@
 
 package compose
 
-import compose "github.com/compose-spec/compose-go/types"
+import composego "github.com/compose-spec/compose-go/types"
 
+// VersionedProject returns compose project with version
 type VersionedProject struct {
 	Version string
-	*compose.Project
+	*composego.Project
 }

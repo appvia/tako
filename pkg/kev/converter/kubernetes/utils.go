@@ -26,23 +26,23 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/appvia/kube-devx/pkg/kev.v2"
 	"github.com/appvia/kube-devx/pkg/kev/app"
-	"github.com/appvia/kube-devx/pkg/kev/version"
-	"github.com/docker/go-units"
+	"github.com/appvia/kube-devx/pkg/kev/config"
+	composego "github.com/compose-spec/compose-go/types"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,7 +50,189 @@ import (
 )
 
 // Selector used as labels and selector
-const Selector = "io.kompose.service"
+const (
+	Selector     = "io.kev.service"
+	NetworkLabel = "io.kev.network"
+)
+
+// EnvSort struct
+type EnvSort []v1.EnvVar
+
+// Len returns the number of elements in the collection.
+// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L214-L228
+func (env EnvSort) Len() int {
+	return len(env)
+}
+
+// Less returns whether the element with index i should sort before
+// the element with index j.
+func (env EnvSort) Less(i, j int) bool {
+	return env[i].Name < env[j].Name
+}
+
+// swaps the elements with indexes i and j.
+func (env EnvSort) Swap(i, j int) {
+	env[i], env[j] = env[j], env[i]
+}
+
+// PrintList prints k8s objects
+// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L153
+func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string]app.FileConfig) error {
+
+	var f *os.File
+	dirName := getDirName(opt)
+	fmt.Printf("Target Dir: %s\n", dirName)
+
+	// Check if output file is a directory
+	isDirVal, err := isDir(opt.OutFile)
+	if err != nil {
+		return errors.Wrap(err, "isDir failed")
+	}
+	if opt.CreateChart {
+		isDirVal = true
+	}
+	if !isDirVal {
+		f, err = createOutFile(opt.OutFile)
+		if err != nil {
+			return errors.Wrap(err, "CreateOutFile failed")
+		}
+		defer f.Close()
+	}
+
+	var files []string
+
+	// @step print to stdout, or to a single file - it will return a list object
+	if opt.ToStdout || f != nil {
+		list := &v1.List{}
+		// convert objects to versioned and add them to list
+		for _, object := range objects {
+			versionedObject, err := convertToVersion(object, schema.GroupVersion{})
+			if err != nil {
+				return err
+			}
+
+			list.Items = append(list.Items, runtime.RawExtension{Object: versionedObject})
+		}
+		// version list itself
+		listVersion := schema.GroupVersion{Group: "", Version: "v1"}
+		convertedList, err := convertToVersion(list, listVersion)
+		if err != nil {
+			return err
+		}
+
+		data, err := marshal(convertedList, opt.GenerateJSON, opt.YAMLIndent)
+		if err != nil {
+			return fmt.Errorf("error in marshalling the List: %v", err)
+		}
+
+		printVal, err := print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
+		if err != nil {
+			return errors.Wrap(err, "Print failed")
+		}
+
+		files = append(files, printVal)
+		rendered[printVal] = app.FileConfig{
+			Content: data,
+			File:    printVal,
+		}
+	} else {
+		// @step output directory specified - print all objects individually to that directory
+		finalDirName := dirName
+
+		// if that's a chart it'll spit things out to "templates" subdir
+		if opt.CreateChart {
+			finalDirName = path.Join(dirName, "templates")
+		}
+
+		if err := os.MkdirAll(finalDirName, 0755); err != nil {
+			return err
+		}
+
+		var file string
+		// create a separate file for each provider
+		for _, v := range objects {
+			versionedObject, err := convertToVersion(v, schema.GroupVersion{})
+			if err != nil {
+				return err
+			}
+			data, err := marshal(versionedObject, opt.GenerateJSON, opt.YAMLIndent)
+			if err != nil {
+				return err
+			}
+
+			var typeMeta meta.TypeMeta
+			var objectMeta meta.ObjectMeta
+
+			if us, ok := v.(*unstructured.Unstructured); ok {
+				typeMeta = meta.TypeMeta{
+					Kind:       us.GetKind(),
+					APIVersion: us.GetAPIVersion(),
+				}
+				objectMeta = meta.ObjectMeta{
+					Name: us.GetName(),
+				}
+			} else {
+				val := reflect.ValueOf(v).Elem()
+				// Use reflect to access TypeMeta struct inside runtime.Object.
+				// cast it to correct type - meta.TypeMeta
+				typeMeta = val.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
+
+				// Use reflect to access ObjectMeta struct inside runtime.Object.
+				// cast it to correct type - meta.ObjectMeta
+				objectMeta = val.FieldByName("ObjectMeta").Interface().(meta.ObjectMeta)
+
+			}
+
+			file, err = print(objectMeta.Name, finalDirName, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
+			if err != nil {
+				return errors.Wrap(err, "Print failed")
+			}
+
+			files = append(files, file)
+			rendered[file] = app.FileConfig{
+				Content: data,
+				File:    file,
+			}
+		}
+	}
+	// @step for helm output generate chart directory structure
+	if opt.CreateChart {
+		err = generateHelm(dirName)
+		if err != nil {
+			return errors.Wrap(err, "generateHelm failed")
+		}
+	}
+	return nil
+}
+
+// print either renders to stdout or to file/s
+// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L176
+func print(name, path string, trailing string, data []byte, toStdout, generateJSON bool, f *os.File, provider string) (string, error) {
+	file := ""
+	if generateJSON {
+		file = fmt.Sprintf("%s-%s.json", name, trailing)
+	} else {
+		file = fmt.Sprintf("%s-%s.yaml", name, trailing)
+	}
+	if toStdout {
+		fmt.Fprintf(os.Stdout, "%s\n", string(data))
+		return "", nil
+	} else if f != nil {
+		// Write all content to a single file f
+		if _, err := f.WriteString(fmt.Sprintf("%s\n", string(data))); err != nil {
+			return "", errors.Wrap(err, "f.WriteString failed, Failed to write %s to file: "+trailing)
+		}
+		f.Sync()
+	} else {
+		// Write content separately to each file
+		file = filepath.Join(path, file)
+		if err := ioutil.WriteFile(file, []byte(data), 0644); err != nil {
+			return "", errors.Wrap(err, "Failed to write %s: "+trailing)
+		}
+		fmt.Printf("⎈  %s file %q created\n", Name, file)
+	}
+	return file, nil
+}
 
 //  Generate Helm Chart configuration
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L54
@@ -118,7 +300,6 @@ home:
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L115
 func isDir(name string) (bool, error) {
 
-	// Open file to get stat later
 	f, err := os.Open(name)
 	if err != nil {
 		return false, nil
@@ -138,7 +319,9 @@ func isDir(name string) (bool, error) {
 	return false, nil
 }
 
+// getDirName gets directory name
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L137
+// @todo: UNUSED yet but could use it to determine output directory
 func getDirName(opt ConvertOptions) string {
 	dirName := opt.OutFile
 	if dirName == "" {
@@ -154,138 +337,7 @@ func getDirName(opt ConvertOptions) string {
 	return dirName
 }
 
-// PrintList will take the data converted and decide on the commandline attributes given
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L153
-// func PrintList(objects []runtime.Object, opt ConvertOptions) error {
-func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string]app.FileConfig) error {
-
-	var f *os.File
-	dirName := getDirName(opt)
-	fmt.Printf("Target Dir: %s\n", dirName)
-
-	// Check if output file is a directory
-	isDirVal, err := isDir(opt.OutFile)
-	if err != nil {
-		return errors.Wrap(err, "isDir failed")
-	}
-	if opt.CreateChart {
-		isDirVal = true
-	}
-	if !isDirVal {
-		f, err = CreateOutFile(opt.OutFile)
-		if err != nil {
-			return errors.Wrap(err, "CreateOutFile failed")
-		}
-		defer f.Close()
-	}
-
-	var files []string
-
-	// @step print to stdout, or to a single file - it will return a list object
-	if opt.ToStdout || f != nil {
-		list := &v1.List{}
-		// convert objects to versioned and add them to list
-		for _, object := range objects {
-			versionedObject, err := convertToVersion(object, schema.GroupVersion{})
-			if err != nil {
-				return err
-			}
-
-			list.Items = append(list.Items, runtime.RawExtension{Object: versionedObject})
-		}
-		// version list itself
-		listVersion := schema.GroupVersion{Group: "", Version: "v1"}
-		convertedList, err := convertToVersion(list, listVersion)
-		if err != nil {
-			return err
-		}
-
-		data, err := marshal(convertedList, opt.GenerateJSON, opt.YAMLIndent)
-		if err != nil {
-			return fmt.Errorf("error in marshalling the List: %v", err)
-		}
-
-		printVal, err := Print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
-		if err != nil {
-			return errors.Wrap(err, "Print failed")
-		}
-
-		files = append(files, printVal)
-		rendered[printVal] = app.FileConfig{
-			Content: data,
-			File:    printVal,
-		}
-	} else {
-		// @step output directory specified - print all objects individually to that directory
-		finalDirName := dirName
-
-		// if that's a chart it'll spit things out to "templates" subdir
-		if opt.CreateChart {
-			finalDirName = path.Join(dirName, "templates")
-		}
-
-		if err := os.MkdirAll(finalDirName, 0755); err != nil {
-			return err
-		}
-
-		var file string
-		// create a separate file for each provider
-		for _, v := range objects {
-			versionedObject, err := convertToVersion(v, schema.GroupVersion{})
-			if err != nil {
-				return err
-			}
-			data, err := marshal(versionedObject, opt.GenerateJSON, opt.YAMLIndent)
-			if err != nil {
-				return err
-			}
-
-			var typeMeta meta.TypeMeta
-			var objectMeta meta.ObjectMeta
-
-			if us, ok := v.(*unstructured.Unstructured); ok {
-				typeMeta = meta.TypeMeta{
-					Kind:       us.GetKind(),
-					APIVersion: us.GetAPIVersion(),
-				}
-				objectMeta = meta.ObjectMeta{
-					Name: us.GetName(),
-				}
-			} else {
-				val := reflect.ValueOf(v).Elem()
-				// Use reflect to access TypeMeta struct inside runtime.Object.
-				// cast it to correct type - meta.TypeMeta
-				typeMeta = val.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
-
-				// Use reflect to access ObjectMeta struct inside runtime.Object.
-				// cast it to correct type - meta.ObjectMeta
-				objectMeta = val.FieldByName("ObjectMeta").Interface().(meta.ObjectMeta)
-
-			}
-
-			file, err = Print(objectMeta.Name, finalDirName, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
-			if err != nil {
-				return errors.Wrap(err, "Print failed")
-			}
-
-			files = append(files, file)
-			rendered[file] = app.FileConfig{
-				Content: data,
-				File:    file,
-			}
-		}
-	}
-	// @step for helm output generate chart directory structure
-	if opt.CreateChart {
-		err = generateHelm(dirName)
-		if err != nil {
-			return errors.Wrap(err, "generateHelm failed")
-		}
-	}
-	return nil
-}
-
-// marshal object runtime.Object and return byte array
+// marshal marshals a runtime.Object and return byte array
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L269
 func marshal(obj runtime.Object, jsonFormat bool, indent int) (data []byte, err error) {
 	// convert data to yaml or json
@@ -300,7 +352,7 @@ func marshal(obj runtime.Object, jsonFormat bool, indent int) (data []byte, err 
 	return
 }
 
-// Convert JSON to YAML.
+// jsonToYaml converts JSON to YAML
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L283
 func jsonToYaml(j []byte, spaces int) ([]byte, error) {
 	// Convert the JSON to an object.
@@ -324,6 +376,7 @@ func jsonToYaml(j []byte, spaces int) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// marshalWithIndent marshals with specified indentation size
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L308
 func marshalWithIndent(o interface{}, indent int) ([]byte, error) {
 	j, err := json.Marshal(o)
@@ -339,12 +392,12 @@ func marshalWithIndent(o interface{}, indent int) ([]byte, error) {
 	return y, nil
 }
 
-// Convert object to versioned object
+// convertToVersion onverts object to a versioned object
 // if groupVersion is  empty (schema.GroupVersion{}), use version from original object (obj)
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L324
 func convertToVersion(obj runtime.Object, groupVersion schema.GroupVersion) (runtime.Object, error) {
 
-	// ignore unstruct object
+	// ignore unstructured object
 	if _, ok := obj.(*unstructured.Unstructured); ok {
 		return obj, nil
 	}
@@ -367,46 +420,9 @@ func convertToVersion(obj runtime.Object, groupVersion schema.GroupVersion) (run
 	return convertedObject, nil
 }
 
-// TranslatePodResource config pod resources
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L592
-func TranslatePodResource(service *ServiceConfig, template *v1.PodTemplateSpec) {
-	// Configure the resource limits
-	if service.MemLimit != 0 || service.CPULimit != 0 {
-		resourceLimit := v1.ResourceList{}
-
-		if service.MemLimit != 0 {
-			resourceLimit[v1.ResourceMemory] = *resource.NewQuantity(int64(service.MemLimit), resource.BinarySI)
-		}
-
-		if service.CPULimit != 0 {
-			resourceLimit[v1.ResourceCPU] = *resource.NewMilliQuantity(service.CPULimit, resource.DecimalSI)
-		}
-
-		template.Spec.Containers[0].Resources.Limits = resourceLimit
-	}
-
-	// Configure the resource requests
-	if service.MemReservation != 0 || service.CPUReservation != 0 {
-		resourceRequests := v1.ResourceList{}
-
-		if service.MemReservation != 0 {
-			resourceRequests[v1.ResourceMemory] = *resource.NewQuantity(int64(service.MemReservation), resource.BinarySI)
-		}
-
-		if service.CPUReservation != 0 {
-			resourceRequests[v1.ResourceCPU] = *resource.NewMilliQuantity(service.CPUReservation, resource.DecimalSI)
-		}
-
-		template.Spec.Containers[0].Resources.Requests = resourceRequests
-	}
-
-	return
-
-}
-
-// GetImagePullPolicy get image pull settings
+// getImagePullPolicy returns image pull policy based on the string input
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L628
-func GetImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
+func getImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
 	switch policy {
 	case "":
 	case "Always":
@@ -419,25 +435,43 @@ func GetImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
 		return "", errors.New("Unknown image-pull-policy " + policy + " for service " + name)
 	}
 	return "", nil
-
 }
 
-// GetRestartPolicy ...
+// getRestartPolicy returns K8s RestartPolicy
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L645
-// @todo Make RestartPolicy type consistent across the codebase!
-func GetRestartPolicy(name, restart string) (v1.RestartPolicy, error) {
-	switch restart {
+func getRestartPolicy(name, restart string) (v1.RestartPolicy, error) {
+	switch strings.ToLower(restart) {
 	case "", "always", "any":
 		return v1.RestartPolicyAlways, nil
-	case "no", "none":
+	case "no", "none", "never":
 		return v1.RestartPolicyNever, nil
-	case "on-failure":
+	case "on-failure", "onfailure":
 		return v1.RestartPolicyOnFailure, nil
 	default:
 		return "", errors.New("Unknown restart policy " + restart + " for service " + name)
 	}
 }
 
+// getServiceType returns service type based on passed string value
+// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L108
+func getServiceType(serviceType string) (string, error) {
+	switch strings.ToLower(serviceType) {
+	case "", "clusterip":
+		return string(v1.ServiceTypeClusterIP), nil
+	case "nodeport":
+		return string(v1.ServiceTypeNodePort), nil
+	case "loadbalancer":
+		return string(v1.ServiceTypeLoadBalancer), nil
+	case "headless":
+		return config.HeadlessService, nil
+	case "none":
+		return config.NoService, nil
+	default:
+		return "", errors.New("Unknown value " + serviceType + " , supported values are 'nodeport, clusterip, headless or loadbalancer'")
+	}
+}
+
+// resetWorkloadAPIVersion sets group, version & kind on passed runtime object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L700
 func resetWorkloadAPIVersion(d runtime.Object) runtime.Object {
 	data, err := json.Marshal(d)
@@ -455,20 +489,16 @@ func resetWorkloadAPIVersion(d runtime.Object) runtime.Object {
 	return d
 }
 
-// SortedKeys Ensure the kubernetes objects are in a consistent order
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L734
-func SortedKeys(komposeObject KomposeObject) []string {
-	var sortedKeys []string
-	for name := range komposeObject.ServiceConfigs {
-		sortedKeys = append(sortedKeys, name)
-	}
-	sort.Strings(sortedKeys)
-	return sortedKeys
+// sortServices sorts all compose project services by name
+func sortServices(project *composego.Project) {
+	sort.Slice(project.Services, func(i, j int) bool {
+		return project.Services[i].Name < project.Services[j].Name
+	})
 }
 
-// DurationStrToSecondsInt converts duration string to *int64 in seconds
+// durationStrToSecondsInt converts duration string to *int32 in seconds
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L744
-func DurationStrToSecondsInt(s string) (*int64, error) {
+func durationStrToSecondsInt(s string) (*int32, error) {
 	if s == "" {
 		return nil, nil
 	}
@@ -476,15 +506,15 @@ func DurationStrToSecondsInt(s string) (*int64, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := (int64)(duration.Seconds())
+	r := (int32)(duration.Seconds())
 	return &r, nil
 }
 
-// GetEnvsFromFile get env vars from env_file
+// getEnvsFromFile get env vars from env_file
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L757
-func GetEnvsFromFile(file string, opt ConvertOptions) (map[string]string, error) {
+func getEnvsFromFile(file string, inputFiles []string) (map[string]string, error) {
 	// Get the correct file context / directory
-	composeDir, err := GetComposeFileDir(opt.InputFiles)
+	composeDir, err := getComposeFileDir(inputFiles)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to load file context")
 	}
@@ -499,9 +529,9 @@ func GetEnvsFromFile(file string, opt ConvertOptions) (map[string]string, error)
 	return envLoad, nil
 }
 
-// GetContentFromFile gets the content from the file..
+// getContentFromFile gets the content from the file..
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L775
-func GetContentFromFile(file string) (string, error) {
+func getContentFromFile(file string) (string, error) {
 	fileBytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return "", errors.Wrap(err, "Unable to read file")
@@ -509,18 +539,18 @@ func GetContentFromFile(file string) (string, error) {
 	return string(fileBytes), nil
 }
 
-// FormatEnvName format env name
+// formatEnvName format env name
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L784
-func FormatEnvName(name string) string {
+func formatEnvName(name string) string {
 	envName := strings.Trim(name, "./")
 	envName = strings.Replace(envName, ".", "-", -1)
 	envName = strings.Replace(envName, "/", "-", -1)
 	return envName
 }
 
-// FormatFileName format file name
+// formatFileName format file name
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L792
-func FormatFileName(name string) string {
+func formatFileName(name string) string {
 	// Split the filepath name so that we use the
 	// file name (after the base) for ConfigMap,
 	// it shouldn't matter whether it has special characters or not
@@ -530,62 +560,63 @@ func FormatFileName(name string) string {
 	return strings.Replace(file, "_", "-", -1)
 }
 
-//FormatContainerName format Container name
+// normalizeServiceNames normalises service name
+// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L127
+func normalizeServiceNames(svcName string) string {
+	re := regexp.MustCompile("[._]")
+	return strings.ToLower(re.ReplaceAllString(svcName, "-"))
+}
+
+// normalizeVolumes normalises volume name
+// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L132
+func normalizeVolumes(svcName string) string {
+	return strings.Replace(svcName, "_", "-", -1)
+}
+
+//formatContainerName format Container name
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L803
-func FormatContainerName(name string) string {
+func formatContainerName(name string) string {
 	name = strings.Replace(name, "_", "-", -1)
 	return name
 
 }
 
-// ConfigLabels configures label name alone
+// configLabels configures selector label for project service passed
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L122
-func ConfigLabels(name string) map[string]string {
+func configLabels(name string) map[string]string {
 	return map[string]string{Selector: name}
 }
 
-// ConfigAllLabels creates labels with service nam and deploy labels
+// configAllLabels creates labels with service name and deploy labels
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L140
-func ConfigAllLabels(name string, service *ServiceConfig) map[string]string {
-	base := ConfigLabels(name)
-	if service.DeployLabels != nil {
-		for k, v := range service.DeployLabels {
+func configAllLabels(projectService ProjectService) map[string]string {
+	base := configLabels(projectService.Name)
+	if projectService.Deploy != nil && projectService.Deploy.Labels != nil {
+		for k, v := range projectService.Deploy.Labels {
 			base[k] = v
 		}
 	}
 	return base
-
 }
 
-// ConfigAnnotations configures annotations
+// configAnnotations configures annotations - they are effectively compose project service labels,
+// but will exclude all Kev configuration labels by default.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L152
-func ConfigAnnotations(service ServiceConfig) map[string]string {
-
+func configAnnotations(projectService ProjectService) map[string]string {
 	annotations := map[string]string{}
-	for key, value := range service.Annotations {
-		annotations[key] = value
+	for key, value := range projectService.Labels {
+		// don't turn kev configuration labels into kubernetes annotations!
+		if !strings.HasPrefix(key, "kev.") {
+			annotations[key] = value
+		}
 	}
-	annotations["kompose.cmd"] = strings.Join(os.Args, " ")
-	versionCmd := exec.Command("kompose", "version")
-	out, err := versionCmd.Output()
-	if err != nil {
-		errors.Wrap(err, "Failed to get kompose version")
-
-	}
-	annotations["kompose.version"] = strings.Trim(string(out), " \n")
-
-	// If the version is blank (couldn't retrieve the kompose version for whatever reason)
-	if annotations["kompose.version"] == "" {
-		annotations["kompose.version"] = version.Version()
-	}
-
 	return annotations
 }
 
-// ParseIngressPath parse path for ingress.
+// parseIngressPath parses the path for ingress.
 // eg. example.com/org -> example.com org
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L109
-func ParseIngressPath(url string) (string, string) {
+func parseIngressPath(url string) (string, string) {
 	if strings.Contains(url, "/") {
 		splits := strings.Split(url, "/")
 		return splits[0], "/" + splits[1]
@@ -593,9 +624,9 @@ func ParseIngressPath(url string) (string, string) {
 	return url, ""
 }
 
-// GetComposeFileDir returns compose file directory
+// getComposeFileDir returns compose file directory
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L233
-func GetComposeFileDir(inputFiles []string) (string, error) {
+func getComposeFileDir(inputFiles []string) (string, error) {
 	// This assumes all the docker-compose files are in the same directory
 	inputFile := inputFiles[0]
 	if strings.Index(inputFile, "/") != 0 {
@@ -609,58 +640,9 @@ func GetComposeFileDir(inputFiles []string) (string, error) {
 	return filepath.Dir(inputFile), nil
 }
 
-// EnvSort struct
-type EnvSort []v1.EnvVar
-
-// Len returns the number of elements in the collection.
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L214-L228
-func (env EnvSort) Len() int {
-	return len(env)
-}
-
-// Less returns whether the element with index i should sort before
-// the element with index j.
-func (env EnvSort) Less(i, j int) bool {
-	return env[i].Name < env[j].Name
-}
-
-// swaps the elements with indexes i and j.
-func (env EnvSort) Swap(i, j int) {
-	env[i], env[j] = env[j], env[i]
-}
-
-// Print either prints to stdout or to file/s
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L176
-func Print(name, path string, trailing string, data []byte, toStdout, generateJSON bool, f *os.File, provider string) (string, error) {
-	file := ""
-	if generateJSON {
-		file = fmt.Sprintf("%s-%s.json", name, trailing)
-	} else {
-		file = fmt.Sprintf("%s-%s.yaml", name, trailing)
-	}
-	if toStdout {
-		fmt.Fprintf(os.Stdout, "%s\n", string(data))
-		return "", nil
-	} else if f != nil {
-		// Write all content to a single file f
-		if _, err := f.WriteString(fmt.Sprintf("%s\n", string(data))); err != nil {
-			return "", errors.Wrap(err, "f.WriteString failed, Failed to write %s to file: "+trailing)
-		}
-		f.Sync()
-	} else {
-		// Write content separately to each file
-		file = filepath.Join(path, file)
-		if err := ioutil.WriteFile(file, []byte(data), 0644); err != nil {
-			return "", errors.Wrap(err, "Failed to write %s: "+trailing)
-		}
-		fmt.Printf("⎈  %s file %q created\n", Name, file)
-	}
-	return file, nil
-}
-
-// CreateOutFile creates the file to write to if --out is specified
+// createOutFile creates the file to write to if --out is specified
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L45
-func CreateOutFile(out string) (*os.File, error) {
+func createOutFile(out string) (*os.File, error) {
 	var f *os.File
 	var err error
 	if len(out) != 0 {
@@ -672,43 +654,270 @@ func CreateOutFile(out string) (*os.File, error) {
 	return f, nil
 }
 
-// ConfigLabelsWithNetwork configures label and add Network Information in labels
+// configLabelsWithNetwork configures label and add Network Information in labels
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L127
-func ConfigLabelsWithNetwork(name string, net []string) map[string]string {
-
+func configLabelsWithNetwork(projectService ProjectService) map[string]string {
 	labels := map[string]string{}
-	labels[Selector] = name
+	labels[Selector] = projectService.Name
 
-	for _, n := range net {
-		labels["io.kompose.network/"+n] = "true"
+	for n := range projectService.Networks {
+		labels[NetworkLabel+"/"+n] = "true"
 	}
 	return labels
 }
 
-// MemStringorInt represents a string or an integer
-// the String supports notations like 10m for ten Megabytes of memory
-// NOTE: Extacted from https://github.com/docker/libcompose/blob/master/yaml/types_yaml.go#L38-L62
-// 		 as we use github.com/compose-spec/compose-go and want to avoid potential conflicts.
-type MemStringorInt int64
-
-// UnmarshalYAML implements the Unmarshaller interface.
-func (s *MemStringorInt) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var intType int64
-	if err := unmarshal(&intType); err == nil {
-		*s = MemStringorInt(intType)
-		return nil
-	}
-
-	var stringType string
-	if err := unmarshal(&stringType); err == nil {
-		intType, err := units.RAMInBytes(stringType)
-
-		if err != nil {
-			return err
+// findByName selects compose project service by name
+func findByName(projectServices composego.Services, name string) *composego.ServiceConfig {
+	for _, ps := range projectServices {
+		if ps.Name == name {
+			return &ps
 		}
-		*s = MemStringorInt(intType)
-		return nil
+	}
+	return nil
+}
+
+// retrieveVolume returns all volumes associated with service.
+// If `volumes_from` key is used, we also retrieve volumes used by those services. Hence, recursive function call.
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L341
+func retrieveVolume(projectServiceName string, project *composego.Project) (volume []Volumes, err error) {
+
+	// @step find service by name passed in args
+	projectService := findByName(project.Services, projectServiceName)
+	if projectService == nil {
+		return nil, errors.Wrapf(err, "could not find a project service with name %s", projectServiceName)
 	}
 
-	return errors.New("Failed to unmarshal MemStringorInt")
+	// @step if volumes-from key is present
+	if projectService.VolumesFrom != nil {
+		// iterating over services from `volumes-from`
+		for _, depSvc := range projectService.VolumesFrom {
+			// recursive call for retrieving volumes from `volumes-from` services
+			dVols, err := retrieveVolume(depSvc, project)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not retrieve the volume")
+			}
+			var cVols []Volumes
+			cVols, err = parseVols(loadVolumes(projectService.Volumes), projectService.Name)
+			if err != nil {
+				return nil, errors.Wrapf(err, "error generating current volumes")
+			}
+
+			for _, cv := range cVols {
+				// check whether volumes of current service is the same (or not) as that of dependent volumes coming from `volumes-from`
+				ok, dv := getVol(cv, dVols)
+				if ok {
+					// change current volumes service name to dependent service name
+					if dv.VFrom == "" {
+						cv.VFrom = dv.SvcName
+						cv.SvcName = dv.SvcName
+					} else {
+						cv.VFrom = dv.VFrom
+						cv.SvcName = dv.SvcName
+					}
+					cv.PVCName = dv.PVCName
+				}
+				volume = append(volume, cv)
+			}
+			// iterating over dependent volumes
+			for _, dv := range dVols {
+				// check whether dependent volume is already present or not
+				if checkVolDependent(dv, volume) {
+					// if found, add service name to `VFrom`
+					dv.VFrom = dv.SvcName
+					volume = append(volume, dv)
+				}
+			}
+		}
+	} else {
+		// @step if `volumes-from` is not present
+		volume, err = parseVols(loadVolumes(projectService.Volumes), projectService.Name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error generating current volumes")
+		}
+	}
+	// @todo: this should probably return volumes?
+	return
+}
+
+// parseVols parse volumes
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L406
+func parseVols(volNames []string, svcName string) ([]Volumes, error) {
+	var volumes []Volumes
+	var err error
+
+	for i, vn := range volNames {
+		var v Volumes
+		v.VolumeName, v.Host, v.Container, v.Mode, err = parseVolume(vn)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse volume %q: %v", vn, err)
+		}
+		v.VolumeName = normalizeVolumes(v.VolumeName)
+		v.SvcName = svcName
+		v.MountPath = fmt.Sprintf("%s:%s", v.Host, v.Container)
+		v.PVCName = fmt.Sprintf("%s-claim%d", v.SvcName, i)
+		volumes = append(volumes, v)
+	}
+
+	return volumes, nil
+}
+
+// parseVolume parses a given volume, which might be [name:][host:]container[:access_mode]
+// @orig: https://github.com/kubernetes/kompose/blob/ca75c31df8257206d4c50d1cca23f78040bb98ca/pkg/transformer/utils.go#L58
+func parseVolume(volume string) (name, host, container, mode string, err error) {
+	separator := ":"
+
+	// @step Parse based on separator
+	volumeStrings := strings.Split(volume, separator)
+	if len(volumeStrings) == 0 {
+		return
+	}
+
+	// @step Set name if existed
+	if !isPath(volumeStrings[0]) {
+		name = volumeStrings[0]
+		volumeStrings = volumeStrings[1:]
+	}
+
+	// @step For empty volume strings
+	if len(volumeStrings) == 0 {
+		err = fmt.Errorf("invalid volume format: %s", volume)
+		return
+	}
+
+	// @step Get the last ":" passed which is presumably the "access mode"
+	possibleAccessMode := volumeStrings[len(volumeStrings)-1]
+
+	// @step Check to see if :Z or :z exists. We do not support SELinux relabeling at the moment.
+	// See https://github.com/kubernetes/kompose/issues/176
+	// Otherwise, check to see if "rw" or "ro" has been passed
+	if possibleAccessMode == "z" || possibleAccessMode == "Z" {
+		fmt.Printf("Volume mount \"%s\" will be mounted without labeling support. :z or :Z not supported", volume)
+		mode = ""
+		volumeStrings = volumeStrings[:len(volumeStrings)-1]
+	} else if possibleAccessMode == "rw" || possibleAccessMode == "ro" {
+		mode = possibleAccessMode
+		volumeStrings = volumeStrings[:len(volumeStrings)-1]
+	}
+
+	// @step Check the volume format as well as host
+	container = volumeStrings[len(volumeStrings)-1]
+	volumeStrings = volumeStrings[:len(volumeStrings)-1]
+	if len(volumeStrings) == 1 {
+		host = volumeStrings[0]
+	}
+	if !isPath(container) || (len(host) > 0 && !isPath(host)) || len(volumeStrings) > 1 {
+		err = fmt.Errorf("invalid volume format: %s", volume)
+		return
+	}
+	return
+}
+
+// isPath determines whether supplied strings has a path format
+// @orig: https://github.com/kubernetes/kompose/blob/ca75c31df8257206d4c50d1cca23f78040bb98ca/pkg/transformer/utils.go#L117
+func isPath(substring string) bool {
+	return strings.Contains(substring, "/") || substring == "."
+}
+
+// loadVolumes Convert the Docker Compose v3 volumes to []string (the old way)
+// TODO: Check to see if it's a "bind" or "volume". Ignore for now.
+// TODO: Refactor it similar to loadV3Ports
+// See: https://docs.docker.com/compose/compose-file/#long-syntax-3
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L163
+func loadVolumes(volumes []composego.ServiceVolumeConfig) []string {
+	var volArray []string
+	for _, vol := range volumes {
+		// There will *always* be Source when parsing
+		v := vol.Source
+
+		if vol.Target != "" {
+			v = v + ":" + vol.Target
+		}
+
+		if vol.ReadOnly {
+			v = v + ":ro"
+		}
+
+		volArray = append(volArray, v)
+	}
+	return volArray
+}
+
+// getVol for dependent volumes, returns true and the respective volume if mountpath are same
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L427
+func getVol(v Volumes, volumes []Volumes) (bool, Volumes) {
+	for _, dv := range volumes {
+		if dv.MountPath == v.MountPath {
+			return true, dv
+		}
+	}
+	return false, Volumes{}
+}
+
+// checkVolDependent checks whether volume
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L395
+func checkVolDependent(dv Volumes, volumes []Volumes) bool {
+	for _, vol := range volumes {
+		if vol.PVCName == dv.PVCName {
+			return false
+		}
+	}
+	return true
+}
+
+// getVolumeLabels returns size and selector if present in volume labels
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L559
+func getVolumeLabels(volume composego.VolumeConfig) (string, string, string) {
+	size, selector, storageClass := "", "", ""
+	for key, value := range volume.Labels {
+		if key == kev.LabelVolumeSize {
+			size = value
+		} else if key == kev.LabelVolumeSelector {
+			selector = value
+		} else if key == kev.LabelVolumeStorageClass {
+			storageClass = value
+		}
+	}
+	return size, selector, storageClass
+}
+
+// useSubPathMount check if a configmap should be mounted as subpath
+// in this situation, this configmap will only contains 1 key in data
+// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L339
+func useSubPathMount(cm *v1.ConfigMap) bool {
+	if cm.Annotations == nil {
+		return false
+	}
+	if cm.Annotations["use-subpath"] != "true" {
+		return false
+	}
+	return true
+}
+
+// loadPlacement parses placement information from composego
+// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L136
+func loadPlacement(constraints []string) map[string]string {
+	placement := make(map[string]string)
+	errMsg := "constraints in placement is not supported, only 'node.hostname', 'node.role == worker', 'node.role == manager', 'engine.labels.operatingsystem' and 'node.labels.xxx' (ex: node.labels.something == anything) is supported as a constraint"
+	for _, j := range constraints {
+		p := strings.Split(j, " == ")
+		if len(p) < 2 {
+			fmt.Println(p[0], errMsg)
+			continue
+		}
+		if p[0] == "node.role" && p[1] == "worker" {
+			placement["node-role.kubernetes.io/worker"] = "true"
+		} else if p[0] == "node.role" && p[1] == "manager" {
+			placement["node-role.kubernetes.io/master"] = "true"
+		} else if p[0] == "node.hostname" {
+			placement["kubernetes.io/hostname"] = p[1]
+		} else if p[0] == "engine.labels.operatingsystem" {
+			placement["beta.kubernetes.io/os"] = p[1]
+		} else if strings.HasPrefix(p[0], "node.labels.") {
+			label := strings.TrimPrefix(p[0], "node.labels.")
+			placement[label] = p[1]
+		} else {
+			fmt.Println(p[0], errMsg)
+		}
+	}
+	return placement
 }
