@@ -19,7 +19,7 @@ package dummy
 import (
 	"fmt"
 
-	"github.com/appvia/kube-devx/pkg/kev/app"
+	composego "github.com/compose-spec/compose-go/types"
 )
 
 // Name of the converter
@@ -34,7 +34,7 @@ func New() *Dummy {
 }
 
 // Render generates outcome
-func (c *Dummy) Render(singleFile bool, dir string, app *app.Definition) error {
+func (c *Dummy) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) error {
 	fmt.Printf("Hello from %s adapter Render()\n", Name)
 	return nil
 }

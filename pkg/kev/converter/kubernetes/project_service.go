@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev.v2"
-	compose "github.com/appvia/kube-devx/pkg/kev/compose"
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
@@ -37,7 +35,7 @@ import (
 
 // replicas returns number of replicas for given project service
 func (p *ProjectService) replicas() int {
-	if val, ok := p.Labels[kev.LabelWorkloadReplicas]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadReplicas]; ok {
 		replicas, err := strconv.Atoi(val)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -46,23 +44,23 @@ func (p *ProjectService) replicas() int {
 				"replicas":        val,
 			}).Warnf(
 				"Unable to extract integer value from %s label. Defaulting to 1 replica.",
-				kev.LabelWorkloadReplicas)
+				config.LabelWorkloadReplicas)
 
-			return compose.DefaultReplicaNumber
+			return config.DefaultReplicaNumber
 		}
 		return replicas
 	} else if p.Deploy != nil && p.Deploy.Replicas != nil {
 		return int(*p.Deploy.Replicas)
 	}
 
-	return compose.DefaultReplicaNumber
+	return config.DefaultReplicaNumber
 }
 
 // workloadType returns workload type for the project service
 func (p *ProjectService) workloadType() string {
 	workloadType := config.DefaultWorkload
 
-	if val, ok := p.Labels[kev.LabelWorkloadType]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadType]; ok {
 		workloadType = val
 	}
 
@@ -83,7 +81,7 @@ func (p *ProjectService) workloadType() string {
 func (p *ProjectService) serviceType() (string, error) {
 	sType := config.DefaultService
 
-	if val, ok := p.Labels[kev.LabelServiceType]; ok {
+	if val, ok := p.Labels[config.LabelServiceType]; ok {
 		sType = val
 	} else if p.Deploy != nil && p.Deploy.EndpointMode == "vip" {
 		sType = config.NodePortService
@@ -107,7 +105,7 @@ func (p *ProjectService) serviceType() (string, error) {
 			"project-service": p.Name,
 			"service-type":    sType,
 			"nodeport":        p.nodePort(),
-		}).Errorf("%s label value must be set as `NodePort` when assiging node port value", kev.LabelServiceType)
+		}).Errorf("%s label value must be set as `NodePort` when assiging node port value", config.LabelServiceType)
 
 		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assiging node port value", p.Name)
 	}
@@ -116,7 +114,7 @@ func (p *ProjectService) serviceType() (string, error) {
 		log.WithFields(log.Fields{
 			"prefix":          ErrorPrefix,
 			"project-service": p.Name,
-		}).Errorf("Cannot set %s label value when service has multiple ports specified.", kev.LabelServiceNodePortPort)
+		}).Errorf("Cannot set %s label value when service has multiple ports specified.", config.LabelServiceNodePortPort)
 
 		return "", fmt.Errorf("`%s` cannot set NodePort service port when project service has multiple ports defined", p.Name)
 	}
@@ -126,7 +124,7 @@ func (p *ProjectService) serviceType() (string, error) {
 
 // nodePort returns the port for NodePort service type
 func (p *ProjectService) nodePort() int32 {
-	if val, ok := p.Labels[kev.LabelServiceNodePortPort]; ok {
+	if val, ok := p.Labels[config.LabelServiceNodePortPort]; ok {
 		nodePort, _ := strconv.Atoi(val)
 		return int32(nodePort)
 	}
@@ -136,7 +134,7 @@ func (p *ProjectService) nodePort() int32 {
 
 // exposeService tells whether service for project component should be exposed
 func (p *ProjectService) exposeService() (string, error) {
-	if val, ok := p.Labels[kev.LabelServiceExpose]; ok {
+	if val, ok := p.Labels[config.LabelServiceExpose]; ok {
 		if val == "" && p.tlsSecretName() != "" {
 			log.WithFields(log.Fields{
 				"prefix":          ErrorPrefix,
@@ -144,7 +142,7 @@ func (p *ProjectService) exposeService() (string, error) {
 				"tls-secret-name": p.tlsSecretName(),
 			}).Errorf(
 				"TLS secret name specified via %s label but project service not exposed!",
-				kev.LabelServiceExposeTLSSecret)
+				config.LabelServiceExposeTLSSecret)
 
 			return "", fmt.Errorf("Service can't have TLS secret name when it hasn't been exposed")
 		}
@@ -156,7 +154,7 @@ func (p *ProjectService) exposeService() (string, error) {
 
 // tlsSecretName returns TLS secret name for exposed service (to be used in the ingress configuration)
 func (p *ProjectService) tlsSecretName() string {
-	if val, ok := p.Labels[kev.LabelServiceExposeTLSSecret]; ok {
+	if val, ok := p.Labels[config.LabelServiceExposeTLSSecret]; ok {
 		return val
 	}
 
@@ -256,12 +254,12 @@ func (p *ProjectService) resourceRequests() (*composego.UnitBytes, *float64) {
 		cpuRequest, _ = strconv.ParseFloat(p.Deploy.Resources.Reservations.NanoCPUs, 64)
 	}
 
-	if val, ok := p.Labels[kev.LabelWorkloadMemory]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadMemory]; ok {
 		v, _ := strconv.Atoi(val)
 		memRequest = composego.UnitBytes(int64(v))
 	}
 
-	if val, ok := p.Labels[kev.LabelWorkloadCPU]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadCPU]; ok {
 		v, _ := strconv.ParseFloat(val, 64)
 		cpuRequest = v
 	}
@@ -280,12 +278,12 @@ func (p *ProjectService) resourceLimits() (*composego.UnitBytes, *float64) {
 		cpuLimit, _ = strconv.ParseFloat(p.Deploy.Resources.Limits.NanoCPUs, 64)
 	}
 
-	if val, ok := p.Labels[kev.LabelWorkloadMaxMemory]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadMaxMemory]; ok {
 		v, _ := strconv.Atoi(val)
 		memLimit = composego.UnitBytes(int64(v))
 	}
 
-	if val, ok := p.Labels[kev.LabelWorkloadMaxCPU]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadMaxCPU]; ok {
 		v, _ := strconv.ParseFloat(val, 64)
 		cpuLimit = v
 	}
@@ -295,7 +293,7 @@ func (p *ProjectService) resourceLimits() (*composego.UnitBytes, *float64) {
 
 // runAsUser returns pod security context runAsUser value
 func (p *ProjectService) runAsUser() string {
-	if val, ok := p.Labels[kev.LabelWorkloadSecurityContextRunAsUser]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadSecurityContextRunAsUser]; ok {
 		return val
 	}
 
@@ -304,7 +302,7 @@ func (p *ProjectService) runAsUser() string {
 
 // runAsGroup returns pod security context runAsGroup value
 func (p *ProjectService) runAsGroup() string {
-	if val, ok := p.Labels[kev.LabelWorkloadSecurityContextRunAsGroup]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadSecurityContextRunAsGroup]; ok {
 		return val
 	}
 
@@ -313,7 +311,7 @@ func (p *ProjectService) runAsGroup() string {
 
 // fsGroup returns pod security context fsGroup value
 func (p *ProjectService) fsGroup() string {
-	if val, ok := p.Labels[kev.LabelWorkloadSecurityContextFsGroup]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadSecurityContextFsGroup]; ok {
 		return val
 	}
 
@@ -324,7 +322,7 @@ func (p *ProjectService) fsGroup() string {
 func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
 	policy := config.DefaultImagePullPolicy
 
-	if val, ok := p.Labels[kev.LabelWorkloadImagePullPolicy]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadImagePullPolicy]; ok {
 		policy = val
 	}
 
@@ -334,7 +332,7 @@ func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
 			"prefix":            WarnPrefix,
 			"project-service":   p.Name,
 			"image-pull-policy": policy,
-		}).Warnf("Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.", kev.LabelWorkloadImagePullPolicy)
+		}).Warnf("Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.", config.LabelWorkloadImagePullPolicy)
 
 		return v1.PullPolicy(config.DefaultImagePullPolicy)
 	}
@@ -344,7 +342,7 @@ func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
 
 // imagePullSecret returns image pull secret (for private registries)
 func (p *ProjectService) imagePullSecret() string {
-	if val, ok := p.Labels[kev.LabelWorkloadImagePullSecret]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadImagePullSecret]; ok {
 		return val
 	}
 
@@ -353,7 +351,7 @@ func (p *ProjectService) imagePullSecret() string {
 
 // serviceAccountName returns service account name to be used by the pod
 func (p *ProjectService) serviceAccountName() string {
-	if val, ok := p.Labels[kev.LabelWorkloadServiceAccountName]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadServiceAccountName]; ok {
 		return val
 	}
 
@@ -384,7 +382,7 @@ func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 		policy = "always"
 	}
 
-	if val, ok := p.Labels[kev.LabelWorkloadRestartPolicy]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadRestartPolicy]; ok {
 		policy = val
 	}
 
@@ -510,7 +508,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 
 // livenessProbeCommand returns liveness probe command
 func (p *ProjectService) livenessProbeCommand() string {
-	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeCommand]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeCommand]; ok {
 		return val
 	}
 
@@ -519,7 +517,7 @@ func (p *ProjectService) livenessProbeCommand() string {
 
 // livenessProbeInterval returns liveness probe interval
 func (p *ProjectService) livenessProbeInterval() *int32 {
-	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeInterval]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeInterval]; ok {
 		interval, _ := durationStrToSecondsInt(val)
 		return interval
 	}
@@ -529,7 +527,7 @@ func (p *ProjectService) livenessProbeInterval() *int32 {
 
 // livenessProbeTimeout returns liveness probe timeout
 func (p *ProjectService) livenessProbeTimeout() *int32 {
-	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeTimeout]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeTimeout]; ok {
 		to, _ := durationStrToSecondsInt(val)
 		return to
 	}
@@ -539,7 +537,7 @@ func (p *ProjectService) livenessProbeTimeout() *int32 {
 
 // livenessProbeInitialDelay returns liveness probe initial delay
 func (p *ProjectService) livenessProbeInitialDelay() *int32 {
-	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeInitialDelay]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeInitialDelay]; ok {
 		to, _ := durationStrToSecondsInt(val)
 		return to
 	}
@@ -549,7 +547,7 @@ func (p *ProjectService) livenessProbeInitialDelay() *int32 {
 
 // livenessProbeRetries returns number of retries for the probe
 func (p *ProjectService) livenessProbeRetries() *int32 {
-	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeRetries]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeRetries]; ok {
 		r, _ := strconv.Atoi(val)
 		retries := int32(r)
 		return &retries
@@ -560,7 +558,7 @@ func (p *ProjectService) livenessProbeRetries() *int32 {
 
 // livenessProbeRetries returns returns number of retries for the probe
 func (p *ProjectService) livenessProbeDisabled() bool {
-	if val, ok := p.Labels[kev.LabelWorkloadLivenessProbeDisabled]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeDisabled]; ok {
 		return val == "true"
 	}
 

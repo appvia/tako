@@ -21,14 +21,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/appvia/kube-devx/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // setDefaultLabels sets sensible workload defaults as labels.
 func setDefaultLabels(target *composego.ServiceConfig) {
-	target.Labels.Add(LabelWorkloadImagePullPolicy, DefaultImagePullPolicy)
-	target.Labels.Add(LabelWorkloadServiceAccountName, DefaultServiceAccountName)
+	target.Labels.Add(config.LabelWorkloadImagePullPolicy, config.DefaultImagePullPolicy)
+	target.Labels.Add(config.LabelWorkloadServiceAccountName, config.DefaultServiceAccountName)
 }
 
 // extractVolumesLabels extracts volume labels into a label's Volumes attribute.
@@ -39,8 +40,8 @@ func extractVolumesLabels(c *composeProject, out *labels) {
 	for _, v := range c.VolumeNames() {
 		vols[v] = composego.VolumeConfig{
 			Labels: map[string]string{
-				LabelVolumeStorageClass: DefaultVolumeClass,
-				LabelVolumeSize:         DefaultVolumeSize,
+				config.LabelVolumeStorageClass: config.DefaultVolumeClass,
+				config.LabelVolumeSize:         config.DefaultVolumeSize,
 			},
 		}
 	}
@@ -50,17 +51,17 @@ func extractVolumesLabels(c *composeProject, out *labels) {
 // extractServiceTypeLabels extracts service type labels into a label's Service.
 func extractServiceTypeLabels(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Ports == nil {
-		target.Labels.Add(LabelServiceType, NoService)
+		target.Labels.Add(config.LabelServiceType, config.NoService)
 	} else {
 		for _, p := range source.Ports {
 			if p.Published != 0 && p.Mode == "host" {
-				target.Labels.Add(LabelServiceType, NodePortService)
+				target.Labels.Add(config.LabelServiceType, config.NodePortService)
 			} else if p.Published != 0 && p.Mode == "ingress" {
-				target.Labels.Add(LabelServiceType, LoadBalancerService)
+				target.Labels.Add(config.LabelServiceType, config.LoadBalancerService)
 			} else if p.Published != 0 || (p.Published == 0 && p.Target != 0) {
-				target.Labels.Add(LabelServiceType, ClusterIPService)
+				target.Labels.Add(config.LabelServiceType, config.ClusterIPService)
 			} else if p.Published == 0 {
-				target.Labels.Add(LabelServiceType, HeadlessService)
+				target.Labels.Add(config.LabelServiceType, config.HeadlessService)
 			}
 			// @todo: Processing just the first port for now!
 			break
@@ -82,27 +83,27 @@ func extractDeploymentLabels(source composego.ServiceConfig, target *composego.S
 func extractWorkloadRollingUpdatePolicy(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.UpdateConfig != nil {
 		value := strconv.FormatUint(*source.Deploy.UpdateConfig.Parallelism, 10)
-		target.Labels.Add(LabelWorkloadRollingUpdateMaxSurge, value)
+		target.Labels.Add(config.LabelWorkloadRollingUpdateMaxSurge, value)
 	}
 }
 
 // extractWorkloadResourceLimits extracts deployment's resource limits.
 func extractWorkloadResourceLimits(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Resources.Limits != nil {
-		target.Labels.Add(LabelWorkloadMaxCPU, source.Deploy.Resources.Limits.NanoCPUs)
+		target.Labels.Add(config.LabelWorkloadMaxCPU, source.Deploy.Resources.Limits.NanoCPUs)
 
 		value := getMemoryQuantity(int64(source.Deploy.Resources.Limits.MemoryBytes))
-		target.Labels.Add(LabelWorkloadMaxMemory, value)
+		target.Labels.Add(config.LabelWorkloadMaxMemory, value)
 	}
 }
 
 // extractWorkloadResourceRequests extracts deployment's resource requests.
 func extractWorkloadResourceRequests(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Resources.Reservations != nil {
-		target.Labels.Add(LabelWorkloadCPU, source.Deploy.Resources.Reservations.NanoCPUs)
+		target.Labels.Add(config.LabelWorkloadCPU, source.Deploy.Resources.Reservations.NanoCPUs)
 
 		value := getMemoryQuantity(int64(source.Deploy.Resources.Reservations.MemoryBytes))
-		target.Labels.Add(LabelWorkloadMemory, value)
+		target.Labels.Add(config.LabelWorkloadMemory, value)
 	}
 }
 
@@ -110,12 +111,12 @@ func extractWorkloadResourceRequests(source composego.ServiceConfig, target *com
 func extractWorkloadRestartPolicy(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.RestartPolicy != nil {
 		if source.Deploy.RestartPolicy.Condition == "on-failure" {
-			target.Labels.Add(LabelWorkloadRestartPolicy, RestartPolicyOnFailure)
+			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyOnFailure)
 		} else if source.Deploy.RestartPolicy.Condition == "none" {
-			target.Labels.Add(LabelWorkloadRestartPolicy, RestartPolicyNever)
+			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyNever)
 		} else {
 			// Always restart by default
-			target.Labels.Add(LabelWorkloadRestartPolicy, RestartPolicyAlways)
+			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyAlways)
 		}
 	}
 }
@@ -124,37 +125,37 @@ func extractWorkloadRestartPolicy(source composego.ServiceConfig, target *compos
 func extractWorkloadReplicas(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil {
 		value := strconv.FormatUint(*source.Deploy.Replicas, 10)
-		target.Labels.Add(LabelWorkloadReplicas, value)
+		target.Labels.Add(config.LabelWorkloadReplicas, value)
 	}
 }
 
 // extractWorkloadType extracts deployment's workload type.
 func extractWorkloadType(source composego.ServiceConfig, target *composego.ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Mode == "global" {
-		target.Labels.Add(LabelWorkloadType, DaemonsetWorkload)
+		target.Labels.Add(config.LabelWorkloadType, config.DaemonsetWorkload)
 	} else {
 		// replicated
 		if source.Volumes != nil {
 			// Volumes in use so likely a Statefulset
-			target.Labels.Add(LabelWorkloadType, StatefulsetWorkload)
+			target.Labels.Add(config.LabelWorkloadType, config.StatefulsetWorkload)
 		} else {
 			// default to deployment
-			target.Labels.Add(LabelWorkloadType, DeploymentWorkload)
+			target.Labels.Add(config.LabelWorkloadType, config.DeploymentWorkload)
 		}
 	}
 }
 
 // extractHealthcheckLabels extracts health check labels into a label's Service.
 func extractHealthcheckLabels(source composego.ServiceConfig, target *composego.ServiceConfig) {
-	target.Labels.Add(LabelWorkloadLivenessProbeDisabled, strconv.FormatBool(source.HealthCheck.Disable))
-	target.Labels.Add(LabelWorkloadLivenessProbeInterval, source.HealthCheck.Interval.String())
+	target.Labels.Add(config.LabelWorkloadLivenessProbeDisabled, strconv.FormatBool(source.HealthCheck.Disable))
+	target.Labels.Add(config.LabelWorkloadLivenessProbeInterval, source.HealthCheck.Interval.String())
 
 	retries := strconv.FormatUint(*source.HealthCheck.Retries, 10)
-	target.Labels.Add(LabelWorkloadLivenessProbeRetries, retries)
+	target.Labels.Add(config.LabelWorkloadLivenessProbeRetries, retries)
 
-	target.Labels.Add(LabelWorkloadLivenessProbeInitialDelay, source.HealthCheck.StartPeriod.String())
-	target.Labels.Add(LabelWorkloadLivenessProbeCommand, formatSlice(source.HealthCheck.Test))
-	target.Labels.Add(LabelWorkloadLivenessProbeTimeout, source.HealthCheck.Timeout.String())
+	target.Labels.Add(config.LabelWorkloadLivenessProbeInitialDelay, source.HealthCheck.StartPeriod.String())
+	target.Labels.Add(config.LabelWorkloadLivenessProbeCommand, formatSlice(source.HealthCheck.Test))
+	target.Labels.Add(config.LabelWorkloadLivenessProbeTimeout, source.HealthCheck.Timeout.String())
 }
 
 // formatSlice formats a string slice as '["value1", "value2", "value3"]'

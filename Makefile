@@ -21,14 +21,13 @@ else
 	VERSION ?= $(GIT_LAST_TAG)
 endif
 LFLAGS ?= -X github.com/appvia/kube-devx/pkg/${NAME}/version.Tag=${GIT_LAST_TAG} -X github.com/appvia/kube-devx/pkg/${NAME}/version.GitSHA=${GIT_SHA} -X github.com/appvia/kube-devx/pkg/${NAME}/version.Compiled=${BUILD_TIME} -X github.com/appvia/kube-devx/pkg/${NAME}/version.Release=${VERSION} -X github.com/appvia/kube-devx/pkg/${NAME}/version.GitBranch=${GIT_BRANCH}
-LFLAGSV2 ?= -X github.com/appvia/kube-devx/pkg/kev.v2/version.Tag=${GIT_LAST_TAG} -X github.com/appvia/kube-devx/pkg/kev.v2/version.GitSHA=${GIT_SHA} -X github.com/appvia/kube-devx/pkg/kev.v2/version.Compiled=${BUILD_TIME} -X github.com/appvia/kube-devx/pkg/kev.v2/version.Release=${VERSION} -X github.com/appvia/kube-devx/pkg/kev.v2/version.GitBranch=${GIT_BRANCH}
 CLI_PLATFORMS=darwin linux windows
 CLI_ARCHITECTURES=386 amd64
 export GOFLAGS = -mod=vendor
 
 .PHONY: test authors changelog build release check vet golangci-lint
 
-default: buildv2
+default: build
 
 golang:
 	@echo "--> Go Version"
@@ -39,11 +38,6 @@ build: golang
 	@echo "--> Compiling the project ($(VERSION))"
 	@mkdir -p bin
 	go build -ldflags "${LFLAGS}" -tags=jsoniter -o bin/${NAME} cmd/${NAME}/*.go || exit 1;
-
-buildv2: golang
-	@echo "--> Compiling the project ($(VERSION))"
-	@mkdir -p bin
-	go build -ldflags "${LFLAGSV2}" -tags=jsoniter -o bin/kev2 cmd/kev.v2/*.go || exit 1;
 
 package:
 	@rm -rf ./release

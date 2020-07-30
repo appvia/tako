@@ -3,10 +3,7 @@
 **/kev.yaml
 **/kev.yml
 **/docker-compose.kev.*.yaml
-
-### kev stuff ###
-*.kev.yaml
-*.kev.yml
+!/pkg/kev/testdata/**/*.yaml
 
 ### IDEs ###
 .idea/*

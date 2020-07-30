@@ -1,6 +1,0 @@
-workload: {} # Override global workload settings here.
-service: {} # Override global service settings here.
-volumes: {} # Override global volumes settings here.
-backend: {} # Override the backend service settings here.
-cache: {} # Override the cache service settings here.
-frontend: {} # Override the frontend service settings here.
