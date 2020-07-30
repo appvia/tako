@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 
 	composego "github.com/compose-spec/compose-go/types"
+	"gopkg.in/yaml.v3"
 )
 
 type composeProject struct {
@@ -129,6 +130,17 @@ func (e Environments) MarshalYAML() (interface{}, error) {
 		out[env.Name] = env.File
 	}
 	return out, nil
+}
+
+// UnmarshalYAML makes Environments implement yaml.UnmarshalYAML.
+func (e *Environments) UnmarshalYAML(value *yaml.Node) error {
+	for i := 0; i < len(value.Content); i += 2 {
+		*e = append(*e, Environment{
+			Name: value.Content[i].Value,
+			File: value.Content[i+1].Value,
+		})
+	}
+	return nil
 }
 
 // MarshalJSON makes Environments implement json.Marshaler.

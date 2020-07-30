@@ -39,6 +39,7 @@ github.com/gogo/protobuf/sortkeys
 # github.com/google/go-cmp v0.5.0
 ## explicit
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
