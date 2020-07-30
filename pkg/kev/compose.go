@@ -26,7 +26,7 @@ import (
 
 // newComposeProject loads and parses a set of input compose files and returns a composeProject object
 func newComposeProject(paths []string) (*composeProject, error) {
-	raw, err := RawProjectFromSources(paths)
+	raw, err := rawProjectFromSources(paths)
 	if err != nil {
 		return nil, err
 	}
@@ -51,8 +51,8 @@ func (p *composeProject) transform() (*composeProject, error) {
 	return p, nil
 }
 
-// RawProjectFromSources loads and parses a compose-go project from multiple docker-compose source files.
-func RawProjectFromSources(paths []string) (*composego.Project, error) {
+// rawProjectFromSources loads and parses a compose-go project from multiple docker-compose source files.
+func rawProjectFromSources(paths []string) (*composego.Project, error) {
 	projectOptions, err := cli.ProjectOptions{
 		ConfigPaths: paths,
 	}.

@@ -17,7 +17,6 @@
 package kev
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -67,7 +66,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 
 	for _, env := range manifest.Environments {
 		inputFiles := append(manifest.Sources, env.File)
-		if p, err := RawProjectFromSources(inputFiles); err != nil {
+		if p, err := rawProjectFromSources(inputFiles); err != nil {
 			return errors.Wrap(err, "Couldn't calculate compose project representation")
 		} else {
 			projects[env.Name] = p
@@ -92,7 +91,6 @@ func NewManifest(sources []string) *Manifest {
 
 // LoadManifest returns application manifests
 func LoadManifest(workingDir string) (*Manifest, error) {
-	fmt.Println("working dir:", workingDir)
 	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
 	if err != nil {
 		return nil, err
