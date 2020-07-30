@@ -16,6 +16,13 @@
 
 package kev
 
+import (
+	"io/ioutil"
+	"path"
+
+	"gopkg.in/yaml.v3"
+)
+
 const (
 	ManifestName = "kev.yaml"
 
@@ -39,4 +46,13 @@ func NewManifest(sources []string) *Manifest {
 	return &Manifest{
 		Sources: sources,
 	}
+}
+
+func LoadManifest(workingDir string) (*Manifest, error) {
+	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
+	if err != nil {
+		return nil, err
+	}
+	var m *Manifest
+	return m, yaml.Unmarshal(data, &m)
 }

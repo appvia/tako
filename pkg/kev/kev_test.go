@@ -129,7 +129,7 @@ func TestBuild(t *testing.T) {
 	}
 }
 
-func TestRender(t *testing.T) {
+func XTestRender(t *testing.T) {
 	tests := map[string]struct {
 		composeFiles []string
 		overrides    []string
