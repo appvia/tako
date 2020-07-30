@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/compose-spec/compose-go v0.0.0-20200629133725-59b25574fd55
 	github.com/disiqueira/gotree v1.0.0
-	github.com/docker/go-units v0.4.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/goccy/go-yaml v1.8.0
@@ -14,12 +13,16 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.0.0
 	github.com/tidwall/gjson v1.6.0
+	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	k8s.io/api v0.18.4
 	k8s.io/apimachinery v0.18.4

@@ -33,7 +33,7 @@ o  o o-o   o
 
 `
 
-var silentErr = errors.New("silentErr")
+var errSilent = errors.New("errSilent")
 var rootCmd = &cobra.Command{
 	Use:   "kev",
 	Short: "Reuse and run your Docker Compose applications on Kubernetes",
@@ -55,14 +55,14 @@ func init() {
 	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		cmd.Println(err)
 		cmd.Println(cmd.UsageString())
-		return silentErr
+		return errSilent
 	})
 }
 
 // Execute command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		if err != silentErr {
+		if err != errSilent {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		os.Exit(1)

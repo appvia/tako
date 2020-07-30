@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 
 	"github.com/compose-spec/compose-go/cli"
-	compose "github.com/compose-spec/compose-go/types"
+	composego "github.com/compose-spec/compose-go/types"
 	"github.com/goccy/go-yaml"
 )
 
@@ -53,7 +53,7 @@ func LoadAndPrepVersionedProject(paths []string) (*VersionedProject, error) {
 }
 
 // LoadProject loads and parses a set of input compose files and returns a compose VersionedProject object
-func LoadProject(paths []string) (*compose.Project, error) {
+func LoadProject(paths []string) (*composego.Project, error) {
 	projectOptions, err := cli.ProjectOptions{
 		ConfigPaths: paths,
 	}.
