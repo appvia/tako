@@ -2,7 +2,7 @@
 version: 2.1
 
 orbs:
-  go: circleci/go@1.14
+  go: circleci/go@1.3.0
 
 jobs:
   build:
