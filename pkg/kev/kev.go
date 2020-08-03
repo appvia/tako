@@ -20,10 +20,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/appvia/kube-devx/pkg/kev/converter"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,6 +60,26 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
 		return errors.Wrap(err, "Unable to load app manifest")
+	}
+
+	sort.Strings(envs)
+	environments := map[string]string{}
+
+	if len(envs) == 0 {
+		for _, e := range manifest.Environments {
+			environments[e.Name] = e.File
+		}
+	} else {
+		for _, e := range manifest.Environments {
+			i := sort.SearchStrings(envs, e.Name)
+			if i < len(envs) && envs[i] == e.Name {
+				environments[e.Name] = e.File
+			}
+		}
+	}
+
+	if len(environments) == 0 {
+		return errors.New("Render failed")
 	}
 
 	rendered := map[string][]byte{}
