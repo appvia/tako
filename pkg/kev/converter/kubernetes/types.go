@@ -28,14 +28,11 @@ import (
 type ConvertOptions struct {
 	ToStdout     bool     // Display output to STDOUT
 	CreateChart  bool     // Create K8s manifests as Chart
-	GenerateYaml bool     // Ganerate outcome as YAML
-	GenerateJSON bool     // Ganerate outcome as JSON
+	GenerateJSON bool     // Ganerate outcome as JSON. By defaults YAML gets generated.
 	EmptyVols    bool     // Treat all referenced volumes as Empty volumes
 	Volumes      string   // Volumes to be generated ("persistentVolumeClaim"|"emptyDir"|"hostPath"|"configMap") (default "persistentVolumeClaim")
-	Replicas     int      // Default number of Replicas per service
 	InputFiles   []string // Compose files to be processed
 	OutFile      string   // If Directory output will be split into individual files
-	Provider     string   // Provider name e.g. Kubernetes
 	YAMLIndent   int      // YAML Indentation in resultant K8s manifests
 }
 
