@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
@@ -79,12 +80,13 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 	var f *os.File
 	dirName := getDirName(opt)
-	fmt.Printf("Target Dir: %s\n", dirName)
+	log.Infof("Target Dir: %s", dirName)
 
 	// Check if output file is a directory
 	isDirVal, err := isDir(opt.OutFile)
 	if err != nil {
-		return errors.Wrap(err, "isDir failed")
+		log.Error("Directory check failed")
+		return err
 	}
 	if opt.CreateChart {
 		isDirVal = true
@@ -92,7 +94,8 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 	if !isDirVal {
 		f, err = createOutFile(opt.OutFile)
 		if err != nil {
-			return errors.Wrap(err, "CreateOutFile failed")
+			log.Error("Error creating output file")
+			return err
 		}
 		defer f.Close()
 	}
@@ -127,12 +130,14 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 		data, err := marshal(convertedList, opt.GenerateJSON, indent)
 		if err != nil {
-			return fmt.Errorf("error in marshalling the List: %v", err)
+			log.Error("Error in marshalling the List")
+			return err
 		}
 
 		printVal, err := print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f)
 		if err != nil {
-			return errors.Wrap(err, "Print failed")
+			log.Error("Printing manifests failed")
+			return err
 		}
 
 		files = append(files, printVal)
@@ -187,7 +192,8 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 			file, err = print(objectMeta.Name, finalDirName, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f)
 			if err != nil {
-				return errors.Wrap(err, "Print failed")
+				log.Error("Printing manifests failed")
+				return err
 			}
 
 			files = append(files, file)
@@ -198,7 +204,8 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 	if opt.CreateChart {
 		err = generateHelm(dirName)
 		if err != nil {
-			return errors.Wrap(err, "generateHelm failed")
+			log.Error("Couldn't generate HELM chart")
+			return err
 		}
 	}
 	return nil
@@ -219,16 +226,20 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 	} else if f != nil {
 		// Write all content to a single file f
 		if _, err := f.WriteString(fmt.Sprintf("%s\n", string(data))); err != nil {
-			return "", errors.Wrap(err, "f.WriteString failed, Failed to write %s to file: "+trailing)
+			log.Error("Couldn't write manifests content to a single file")
+			return "", err
 		}
 		f.Sync()
 	} else {
 		// Write content separately to each file
 		file = filepath.Join(path, file)
 		if err := ioutil.WriteFile(file, []byte(data), 0644); err != nil {
-			return "", errors.Wrap(err, "Failed to write %s: "+trailing)
+			log.ErrorWithFields(log.Fields{
+				"file": file,
+			}, "Failed to write content to a file")
+			return "", err
 		}
-		fmt.Printf("⎈  %s file %q created\n", Name, file)
+		log.Infof("⎈  %s file %q created", Name, file)
 	}
 	return file, nil
 }
@@ -281,7 +292,8 @@ home:
 
 	t, err := template.New("ChartTmpl").Parse(chart)
 	if err != nil {
-		return errors.Wrap(err, "Failed to generate Chart.yaml template, template.New failed")
+		log.Error("Failed to generate Chart template")
+		return err
 	}
 	var chartData bytes.Buffer
 	_ = t.Execute(&chartData, details)
@@ -291,7 +303,7 @@ home:
 		return err
 	}
 
-	fmt.Printf("chart created in %q\n", dirName+string(os.PathSeparator))
+	log.Infof("chart created in %q", dirName+string(os.PathSeparator))
 	return nil
 }
 
@@ -308,7 +320,10 @@ func isDir(name string) (bool, error) {
 	// Get file attributes and information
 	fileStat, err := f.Stat()
 	if err != nil {
-		return false, errors.Wrap(err, "error retrieving file information, f.Stat failed")
+		log.ErrorWithFields(log.Fields{
+			"file": name,
+		}, "Error retrieving file information. Stat failed.")
+		return false, err
 	}
 
 	// Check if given path is a directory
@@ -380,12 +395,14 @@ func jsonToYaml(j []byte, spaces int) ([]byte, error) {
 func marshalWithIndent(o interface{}, indent int) ([]byte, error) {
 	j, err := json.Marshal(o)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling into JSON: %s", err.Error())
+		log.Error("Error marshaling into JSON")
+		return nil, err
 	}
 
 	y, err := jsonToYaml(j, indent)
 	if err != nil {
-		return nil, fmt.Errorf("error converting JSON to YAML: %s", err.Error())
+		log.Error("Error converting JSON to YAML")
+		return nil, err
 	}
 
 	return y, nil
@@ -431,7 +448,7 @@ func getImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
 	case "IfNotPresent":
 		return v1.PullIfNotPresent, nil
 	default:
-		return "", errors.New("Unknown image-pull-policy " + policy + " for service " + name)
+		return "", fmt.Errorf("Unknown image-pull-policy %s for service %s", policy, name)
 	}
 	return "", nil
 }
@@ -447,7 +464,7 @@ func getRestartPolicy(name, restart string) (v1.RestartPolicy, error) {
 	case "on-failure", "onfailure":
 		return v1.RestartPolicyOnFailure, nil
 	default:
-		return "", errors.New("Unknown restart policy " + restart + " for service " + name)
+		return "", fmt.Errorf("Unknown restart policy %s for service %s", restart, name)
 	}
 }
 
@@ -466,7 +483,7 @@ func getServiceType(serviceType string) (string, error) {
 	case "none":
 		return config.NoService, nil
 	default:
-		return "", errors.New("Unknown value " + serviceType + " , supported values are 'nodeport, clusterip, headless or loadbalancer'")
+		return "", fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
 	}
 }
 
@@ -515,14 +532,18 @@ func getEnvsFromFile(file string, inputFiles []string) (map[string]string, error
 	// Get the correct file context / directory
 	composeDir, err := getComposeFileDir(inputFiles)
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to load file context")
+		log.Error("Unable to load file context")
+		return nil, err
 	}
 	fileLocation := path.Join(composeDir, file)
 
 	// Load environment variables from file
 	envLoad, err := godotenv.Read(fileLocation)
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to read env_file")
+		log.ErrorWithFields(log.Fields{
+			"file": file,
+		}, "Unable to read env_file")
+		return nil, err
 	}
 
 	return envLoad, nil
@@ -533,7 +554,10 @@ func getEnvsFromFile(file string, inputFiles []string) (map[string]string, error
 func getContentFromFile(file string) (string, error) {
 	fileBytes, err := ioutil.ReadFile(file)
 	if err != nil {
-		return "", errors.Wrap(err, "Unable to read file")
+		log.ErrorWithFields(log.Fields{
+			"file": file,
+		}, "Unable to read file")
+		return "", err
 	}
 	return string(fileBytes), nil
 }
@@ -635,7 +659,7 @@ func getComposeFileDir(inputFiles []string) (string, error) {
 		}
 		inputFile = filepath.Join(workDir, inputFile)
 	}
-	fmt.Printf("Compose file dir: %s", filepath.Dir(inputFile))
+	log.Infof("Compose file dir: %s", filepath.Dir(inputFile))
 	return filepath.Dir(inputFile), nil
 }
 
@@ -647,7 +671,10 @@ func createOutFile(out string) (*os.File, error) {
 	if len(out) != 0 {
 		f, err = os.Create(out)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating file, os.Create failed")
+			log.ErrorWithFields(log.Fields{
+				"file": out,
+			}, "Unable to create a file.")
+			return nil, err
 		}
 	}
 	return f, nil
@@ -668,7 +695,7 @@ func configLabelsWithNetwork(projectService ProjectService) map[string]string {
 // findByName selects compose project service by name
 func findByName(projectServices composego.Services, name string) *composego.ServiceConfig {
 	for _, ps := range projectServices {
-		if ps.Name == name {
+		if normalizeServiceNames(ps.Name) == name {
 			return &ps
 		}
 	}
@@ -683,7 +710,11 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 	// @step find service by name passed in args
 	projectService := findByName(project.Services, projectServiceName)
 	if projectService == nil {
-		return nil, errors.Wrapf(err, "could not find a project service with name %s", projectServiceName)
+		log.ErrorWithFields(log.Fields{
+			"project-service": projectServiceName,
+		}, "Could not find a project service with name")
+
+		return nil, fmt.Errorf("Could not find a project service with name %s", projectServiceName)
 	}
 
 	// @step if volumes-from key is present
@@ -693,12 +724,14 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 			// recursive call for retrieving volumes from `volumes-from` services
 			dVols, err := retrieveVolume(depSvc, project)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not retrieve the volume")
+				log.Error("Could not retrieve the volume")
+				return nil, errors.New("Could not retrieve the volume")
 			}
 			var cVols []Volumes
 			cVols, err = parseVols(loadVolumes(projectService.Volumes), projectService.Name)
 			if err != nil {
-				return nil, errors.Wrapf(err, "error generating current volumes")
+				log.Error("Error generating current volumes")
+				return nil, errors.New("Error generating current volumes")
 			}
 
 			for _, cv := range cVols {
@@ -731,7 +764,8 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 		// @step if `volumes-from` is not present
 		volume, err = parseVols(loadVolumes(projectService.Volumes), projectService.Name)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error generating current volumes")
+			log.Error("Error generating current volumes")
+			return nil, errors.New("Error generating current volumes")
 		}
 	}
 	// @todo: this should probably return volumes?
@@ -748,7 +782,11 @@ func parseVols(volNames []string, svcName string) ([]Volumes, error) {
 		var v Volumes
 		v.VolumeName, v.Host, v.Container, v.Mode, err = parseVolume(vn)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse volume %q: %v", vn, err)
+			log.ErrorWithFields(log.Fields{
+				"volume": vn,
+			}, "Could not parse volume")
+
+			return nil, err
 		}
 		v.VolumeName = normalizeVolumes(v.VolumeName)
 		v.SvcName = svcName
@@ -767,7 +805,14 @@ func parseVolume(volume string) (name, host, container, mode string, err error) 
 
 	// @step Parse based on separator
 	volumeStrings := strings.Split(volume, separator)
+
+	// @step For empty volume strings
 	if len(volumeStrings) == 0 {
+		log.ErrorWithFields(log.Fields{
+			"volume": volume,
+		}, "Invalid volume name format")
+
+		err = fmt.Errorf("Invalid volume format: %s", volume)
 		return
 	}
 
@@ -777,12 +822,6 @@ func parseVolume(volume string) (name, host, container, mode string, err error) 
 		volumeStrings = volumeStrings[1:]
 	}
 
-	// @step For empty volume strings
-	if len(volumeStrings) == 0 {
-		err = fmt.Errorf("invalid volume format: %s", volume)
-		return
-	}
-
 	// @step Get the last ":" passed which is presumably the "access mode"
 	possibleAccessMode := volumeStrings[len(volumeStrings)-1]
 
@@ -790,7 +829,7 @@ func parseVolume(volume string) (name, host, container, mode string, err error) 
 	// See https://github.com/kubernetes/kompose/issues/176
 	// Otherwise, check to see if "rw" or "ro" has been passed
 	if possibleAccessMode == "z" || possibleAccessMode == "Z" {
-		fmt.Printf("Volume mount \"%s\" will be mounted without labeling support. :z or :Z not supported", volume)
+		log.Infof("Volume mount \"%s\" will be mounted without labeling support. :z or :Z not supported", volume)
 		mode = ""
 		volumeStrings = volumeStrings[:len(volumeStrings)-1]
 	} else if possibleAccessMode == "rw" || possibleAccessMode == "ro" {
@@ -805,7 +844,11 @@ func parseVolume(volume string) (name, host, container, mode string, err error) 
 		host = volumeStrings[0]
 	}
 	if !isPath(container) || (len(host) > 0 && !isPath(host)) || len(volumeStrings) > 1 {
-		err = fmt.Errorf("invalid volume format: %s", volume)
+		log.ErrorWithFields(log.Fields{
+			"volume": volume,
+		}, "Invalid volume name format")
+
+		err = fmt.Errorf("Invalid volume format: %s", volume)
 		return
 	}
 	return
@@ -896,11 +939,13 @@ func useSubPathMount(cm *v1.ConfigMap) bool {
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L136
 func loadPlacement(constraints []string) map[string]string {
 	placement := make(map[string]string)
-	errMsg := "constraints in placement is not supported, only 'node.hostname', 'node.role == worker', 'node.role == manager', 'engine.labels.operatingsystem' and 'node.labels.xxx' (ex: node.labels.something == anything) is supported as a constraint"
+	errMsg := "Constraints in placement is not supported, only 'node.hostname', 'node.role == worker', 'node.role == manager', 'engine.labels.operatingsystem' and 'node.labels.xxx' (ex: node.labels.something == anything) is supported as a constraint"
 	for _, j := range constraints {
 		p := strings.Split(j, " == ")
 		if len(p) < 2 {
-			fmt.Println(p[0], errMsg)
+			log.WarnWithFields(log.Fields{
+				"placement": p[0],
+			}, errMsg)
 			continue
 		}
 		if p[0] == "node.role" && p[1] == "worker" {
@@ -915,7 +960,9 @@ func loadPlacement(constraints []string) map[string]string {
 			label := strings.TrimPrefix(p[0], "node.labels.")
 			placement[label] = p[1]
 		} else {
-			fmt.Println(p[0], errMsg)
+			log.WarnWithFields(log.Fields{
+				"placement": p[0],
+			}, errMsg)
 		}
 	}
 	return placement

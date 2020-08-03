@@ -40,7 +40,7 @@ type labels struct {
 	Volumes  composego.Volumes
 }
 
-// Manifest holds application manifest
+// Manifest contains application metadata
 type Manifest struct {
 	Sources      []string     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
@@ -117,7 +117,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	return m
 }
 
-// GetWorkingDir gets compose file(s) working directory
+// GetWorkingDir returns working directory based on the location of first configuration file
 func (m *Manifest) GetWorkingDir() string {
 	if len(m.Sources) < 1 {
 		return ""
@@ -151,7 +151,7 @@ func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error)
 	return environments, nil
 }
 
-// Environments holds a slice of Environment objects
+// Environments is a slice of environment elements
 type Environments []Environment
 
 // MarshalYAML makes Environments implement yaml.Marshaler.

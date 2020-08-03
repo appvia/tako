@@ -17,8 +17,7 @@
 package dummy
 
 import (
-	"fmt"
-
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -35,6 +34,6 @@ func New() *Dummy {
 
 // Render generates outcome
 func (c *Dummy) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) error {
-	fmt.Printf("Hello from %s adapter Render()\n", Name)
+	log.Infof("Hello from %s adapter Render()", Name)
 	return nil
 }

@@ -18,8 +18,8 @@ package kev
 
 import (
 	"bytes"
-	"log"
 
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	yaml3 "gopkg.in/yaml.v3"
 )
 

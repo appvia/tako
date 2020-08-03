@@ -17,10 +17,10 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"github.com/appvia/kube-devx/cmd/kev/cmd"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	"github.com/spf13/cobra/doc"
 )
 

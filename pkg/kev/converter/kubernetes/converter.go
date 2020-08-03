@@ -17,10 +17,10 @@
 package kubernetes
 
 import (
-	"fmt"
 	"os"
 	"path"
 
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -43,7 +43,7 @@ func New() *K8s {
 func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) error {
 
 	for env, project := range projects {
-		fmt.Printf("\n🖨️  Rendering %s environment\n", env)
+		log.Infof("🖨️  Rendering %s environment", env)
 
 		// @step override output directory if specified
 		outDirPath := ""
@@ -82,20 +82,15 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 		// @step Do the transformation
 		objects, err := k.Transform()
 		if err != nil {
-			fmt.Println(err.Error())
 			return err
 		}
 
 		// @step Produce objects
 		err = PrintList(objects, convertOpts, rendered)
 		if err != nil {
-			fmt.Println(err.Error())
 			return err
 		}
 	}
 
-	// for _, fileConfig := range rendered {
-	// 	appDef.Rendered = append(appDef.Rendered, fileConfig)
-	// }
 	return nil
 }
