@@ -98,6 +98,13 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 	}
 
 	var files []string
+	var indent int
+
+	if opt.YAMLIndent > 0 {
+		indent = opt.YAMLIndent
+	} else {
+		indent = 2
+	}
 
 	// @step print to stdout, or to a single file - it will return a list object
 	if opt.ToStdout || f != nil {
@@ -118,12 +125,12 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			return err
 		}
 
-		data, err := marshal(convertedList, opt.GenerateJSON, opt.YAMLIndent)
+		data, err := marshal(convertedList, opt.GenerateJSON, indent)
 		if err != nil {
 			return fmt.Errorf("error in marshalling the List: %v", err)
 		}
 
-		printVal, err := print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
+		printVal, err := print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f)
 		if err != nil {
 			return errors.Wrap(err, "Print failed")
 		}
@@ -150,7 +157,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			if err != nil {
 				return err
 			}
-			data, err := marshal(versionedObject, opt.GenerateJSON, opt.YAMLIndent)
+			data, err := marshal(versionedObject, opt.GenerateJSON, indent)
 			if err != nil {
 				return err
 			}
@@ -178,7 +185,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 			}
 
-			file, err = print(objectMeta.Name, finalDirName, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f, opt.Provider)
+			file, err = print(objectMeta.Name, finalDirName, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f)
 			if err != nil {
 				return errors.Wrap(err, "Print failed")
 			}
@@ -199,7 +206,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 // print either renders to stdout or to file/s
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L176
-func print(name, path string, trailing string, data []byte, toStdout, generateJSON bool, f *os.File, provider string) (string, error) {
+func print(name, path string, trailing string, data []byte, toStdout, generateJSON bool, f *os.File) (string, error) {
 	file := ""
 	if generateJSON {
 		file = fmt.Sprintf("%s-%s.json", name, trailing)
