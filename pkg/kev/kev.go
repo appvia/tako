@@ -24,6 +24,7 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/converter"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -60,18 +61,23 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return errors.Wrap(err, "Unable to load app manifest")
 	}
 
+	filteredEnvs, err := manifest.EnvironmentsAsMap(envs)
+	if err != nil {
+		return errors.Wrap(err, "Unable to render")
+	}
+
 	rendered := map[string][]byte{}
 	projects := map[string]*composego.Project{}
 	files := map[string][]string{}
 
-	for _, env := range manifest.Environments {
-		inputFiles := append(manifest.Sources, env.File)
-		if p, err := rawProjectFromSources(inputFiles); err != nil {
+	for env, file := range filteredEnvs {
+		inputFiles := append(manifest.Sources, file)
+		p, err := rawProjectFromSources(inputFiles)
+		if err != nil {
 			return errors.Wrap(err, "Couldn't calculate compose project representation")
-		} else {
-			projects[env.Name] = p
-			files[env.Name] = inputFiles
 		}
+		projects[env] = p
+		files[env] = inputFiles
 	}
 
 	c := converter.Factory(format)
