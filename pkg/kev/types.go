@@ -22,8 +22,10 @@ import (
 	"io"
 	"path"
 	"path/filepath"
+	"sort"
 
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,6 +40,7 @@ type labels struct {
 	Volumes  composego.Volumes
 }
 
+// Manifest holds application manifest
 type Manifest struct {
 	Sources      []string     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
@@ -114,6 +117,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	return m
 }
 
+// GetWorkingDir gets compose file(s) working directory
 func (m *Manifest) GetWorkingDir() string {
 	if len(m.Sources) < 1 {
 		return ""
@@ -121,6 +125,33 @@ func (m *Manifest) GetWorkingDir() string {
 	return filepath.Dir(m.Sources[0])
 }
 
+// EnvironmentsAsMap returns filtered app environments
+// If no filter is provided all app environments will be returned
+func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error) {
+	sort.Strings(filter)
+	environments := map[string]string{}
+
+	if len(filter) == 0 {
+		for _, e := range m.Environments {
+			environments[e.Name] = e.File
+		}
+	} else {
+		for _, e := range m.Environments {
+			i := sort.SearchStrings(filter, e.Name)
+			if i < len(filter) && filter[i] == e.Name {
+				environments[e.Name] = e.File
+			}
+		}
+	}
+
+	if len(environments) == 0 {
+		return nil, errors.New("No environments found")
+	}
+
+	return environments, nil
+}
+
+// Environments holds a slice of Environment objects
 type Environments []Environment
 
 // MarshalYAML makes Environments implement yaml.Marshaler.
@@ -152,6 +183,7 @@ func (e Environments) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
+// Environment describes environment overlay
 type Environment struct {
 	Name    string `yaml:"-" json:"-"`
 	File    string `yaml:"-" json:"-"`
