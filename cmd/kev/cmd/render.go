@@ -17,9 +17,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/appvia/kube-devx/pkg/kev"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	"github.com/spf13/cobra"
 )
 
@@ -88,13 +87,13 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	fmt.Println("\n⚙️  Output format:", format)
+	log.Infof("⚙️  Output format: %s", format)
 
 	if err := kev.Render(format, singleFile, dir, envs); err != nil {
 		return err
 	}
 
-	fmt.Println("\n🧰 App render complete!")
+	log.Info("🧰 App render complete!")
 
 	return nil
 }

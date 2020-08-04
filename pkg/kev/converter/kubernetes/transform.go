@@ -33,11 +33,11 @@ import (
 	"strings"
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+
+	// log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -68,13 +68,6 @@ type Kubernetes struct {
 // returns object that are already sorted in the way that Services are first
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1140
 func (k *Kubernetes) Transform() ([]runtime.Object, error) {
-	// @todo extract the logger to top level and pass as an arg to Kubernetes obj
-	log.SetLevel(log.InfoLevel)
-	log.SetFormatter(&prefixed.TextFormatter{
-		DisableTimestamp: true,
-	})
-	log.StandardLogger().Out = os.Stdout
-
 	// holds all the converted objects
 	var allobjects []runtime.Object
 
@@ -82,7 +75,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 	if k.Project.Secrets != nil {
 		secrets, err := k.createSecrets()
 		if err != nil {
-			return nil, errors.Wrapf(err, "Unable to create Secret resource")
+			log.Error("Unable to create Secret resource")
+			return nil, err
 		}
 		for _, item := range secrets {
 			allobjects = append(allobjects, item)
@@ -100,10 +94,10 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 		// @step normalise project service name
 		if normalizeServiceNames(projectService.Name) != projectService.Name {
-			log.WithFields(log.Fields{
-				"prefix":          InfoPrefix,
+			log.InfofWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Infof("Compose service name normalised to %q", normalizeServiceNames(projectService.Name))
+			}, "Compose service name normalised to %q",
+				normalizeServiceNames(projectService.Name))
 
 			projectService.Name = normalizeServiceNames(projectService.Name)
 		}
@@ -125,7 +119,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		// @step create service / ingress
 		serviceType, err := projectService.serviceType()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not establish service type")
+			log.Error("Could not establish service type. Service hasn't been created!")
+			return nil, err
 		}
 
 		if k.portsExist(projectService) && serviceType != config.NoService {
@@ -137,7 +132,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			// For exposed service also create an ingress (Note only the first port is used for ingress!)
 			expose, err := projectService.exposeService()
 			if err != nil {
-				return nil, errors.Wrap(err, "could not expose service")
+				log.Error("Could not expose the service. Ingress hasn't been created!")
+				return nil, err
 			}
 			if expose != "" {
 				objects = append(objects, k.initIngress(projectService, svc.Spec.Ports[0].Port))
@@ -150,21 +146,22 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 		// @step updating all objects related to a current compose service
 		if err = k.updateKubernetesObjects(projectService, &objects); err != nil {
-			return nil, errors.Wrap(err, "Error transforming Kubernetes objects")
+			log.Error("Error occured while transforming Kubernetes objects")
+			return nil, err
 		}
 
 		// @step create network policies if networks defined
 		if len(projectService.Networks) > 0 {
 			for name := range projectService.Networks {
-				log.WithFields(log.Fields{
-					"prefix":          InfoPrefix,
+				log.InfoWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"network-name":    name,
-				}).Info("Network detected and will be converted to equivalent NetworkPolicy")
+				}, "Network detected and will be converted to equivalent NetworkPolicy")
 
 				np, err := k.createNetworkPolicy(projectService.Name, name)
 				if err != nil {
-					return nil, errors.Wrapf(err, "Unable to create Network Policy for network %v for service %v", name, projectService.Name)
+					log.Errorf("Unable to create Network Policy for network %v for service %v", name, projectService.Name)
+					return nil, err
 				}
 				objects = append(objects, np)
 			}
@@ -221,17 +218,17 @@ func (k *Kubernetes) initPodSpec(projectService ProjectService) v1.PodSpec {
 // getConfigMapKeyFromMeta gets configmap from project configs
 func (k *Kubernetes) getConfigMapKeyFromMeta(configName string) (string, error) {
 	if k.Project.Configs == nil {
-		return "", errors.Errorf("config %s not found", configName)
+		return "", fmt.Errorf("config %s not found", configName)
 	}
 
 	if _, ok := k.Project.Configs[configName]; !ok {
-		return "", errors.Errorf("config %s not found", configName)
+		return "", fmt.Errorf("config %s not found", configName)
 	}
 
 	config := k.Project.Configs[configName]
 
 	if config.External.External {
-		return "", errors.Errorf("config %s is external", configName)
+		return "", fmt.Errorf("config %s is external", configName)
 	}
 
 	return filepath.Base(config.File), nil
@@ -258,11 +255,10 @@ func (k *Kubernetes) initPodSpecWithConfigMap(projectService ProjectService) v1.
 		key, err := k.getConfigMapKeyFromMeta(value.Source)
 		if err != nil {
 			// config is most likely defined as external
-			log.WithFields(log.Fields{
-				"prefix":          WarnPrefix,
+			log.WarnfWithFields(log.Fields{
 				"project-service": projectService.Name,
 				"config":          value.Source,
-			}).Warnf("Cannot parse config: %s", err.Error())
+			}, "Cannot parse config: %s", err.Error())
 
 			continue
 		}
@@ -357,13 +353,12 @@ func (k *Kubernetes) initSvc(projectService ProjectService) *v1.Service {
 func (k *Kubernetes) initConfigMapForEnv(projectService ProjectService, envFile string) (*v1.ConfigMap, error) {
 	envs, err := getEnvsFromFile(envFile, k.Opt.InputFiles)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"prefix":          ErrorPrefix,
+		log.ErrorfWithFields(log.Fields{
 			"project-service": projectService.Name,
 			"env-file":        envFile,
-		}).Errorf("Unable to retrieve env file to initialise ConfigMap from: %s", err.Error())
+		}, "Unable to retrieve env file to initialise ConfigMap from: %s", err.Error())
 
-		return nil, errors.Wrap(err, "Unable to update supported k8s object")
+		return nil, err
 	}
 
 	// Remove root path & replace all other slashes / periods
@@ -414,11 +409,10 @@ func (k *Kubernetes) intiConfigMapFromFileOrDir(projectService ProjectService, c
 
 		for _, file := range files {
 			if !file.IsDir() {
-				log.WithFields(log.Fields{
-					"prefix":          InfoPrefix,
+				log.InfoWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"file":            file.Name(),
-				}).Info("Read file to ConfigMap")
+				}, "Read file to ConfigMap")
 
 				data, err := getContentFromFile(filePath + "/" + file.Name())
 				if err != nil {
@@ -445,11 +439,10 @@ func (k *Kubernetes) intiConfigMapFromFileOrDir(projectService ProjectService, c
 func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileName string) *v1.ConfigMap {
 	content, err := getContentFromFile(fileName)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"prefix":          ErrorPrefix,
+		log.ErrorfWithFields(log.Fields{
 			"project-service": projectService.Name,
 			"file":            fileName,
-		}).Errorf("Unable to retrieve file to initialise ConfigMap from: %s", err.Error())
+		}, "Unable to retrieve file to initialise ConfigMap from: %s", err.Error())
 	}
 
 	dataMap := make(map[string]string)
@@ -519,12 +512,12 @@ func (k *Kubernetes) initD(projectService ProjectService, replicas int) *v1beta1
 			Type:          v1beta1.RollingUpdateDeploymentStrategyType,
 			RollingUpdate: update,
 		}
-		log.WithFields(log.Fields{
-			"prefix":          InfoPrefix,
+
+		log.InfoWithFields(log.Fields{
 			"project-service": projectService.Name,
 			"max-surge":       update.MaxSurge.String(),
 			"max-unavailable": update.MaxUnavailable.String(),
-		}).Info("Set deployment rolling update")
+		}, "Set deployment rolling update")
 	}
 
 	return dc
@@ -704,12 +697,11 @@ func (k *Kubernetes) createSecrets() ([]*v1.Secret, error) {
 		if config.File != "" {
 			dataString, err := getContentFromFile(config.File)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"prefix": ErrorPrefix,
-					"file":   config.File,
-				}).Error("Unable to read secret(s) from file")
+				log.ErrorWithFields(log.Fields{
+					"file": config.File,
+				}, "Unable to read secret(s) from file")
 
-				return nil, errors.Wrapf(err, "Unable to read secret from file %s", config.File)
+				return nil, err
 			}
 			data := []byte(dataString)
 			secret := &v1.Secret{
@@ -726,10 +718,9 @@ func (k *Kubernetes) createSecrets() ([]*v1.Secret, error) {
 			}
 			objects = append(objects, secret)
 		} else {
-			log.WithFields(log.Fields{
-				"prefix":      WarnPrefix,
+			log.WarnWithFields(log.Fields{
 				"secret-name": name,
-			}).Warn("Your deployment(s) expects secret to exist in the target K8s cluster namespace.")
+			}, "Your deployment(s) expects secret to exist in the target K8s cluster namespace.")
 			log.Warn("Follow the official guidelines on how to create K8s secrets manually")
 			log.Warn("https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/")
 		}
@@ -744,7 +735,8 @@ func (k *Kubernetes) createPVC(volume Volumes) (*v1.PersistentVolumeClaim, error
 	// @step get size quantity
 	volSize, err := resource.ParseQuantity(volume.PVCSize)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error parsing volume size")
+		log.Error("Error parsing volume size")
+		return nil, err
 	}
 
 	pvc := &v1.PersistentVolumeClaim{
@@ -832,11 +824,10 @@ func (k *Kubernetes) configServicePorts(serviceType string, projectService Proje
 		if _, ok := seenPorts[int(port.Published)]; ok {
 			// https://github.com/kubernetes/kubernetes/issues/2995
 			if strings.EqualFold(serviceType, string(v1.ServiceTypeLoadBalancer)) {
-				log.WithFields(log.Fields{
-					"prefix":          WarnPrefix,
+				log.WarnWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"port":            port.Published,
-				}).Warn("LoadBalancer service type cannot use TCP and UDP for the same port")
+				}, "LoadBalancer service type cannot use TCP and UDP for the same port")
 			}
 			name = fmt.Sprintf("%s-%s", name, strings.ToLower(string(port.Protocol)))
 		}
@@ -927,16 +918,14 @@ func (k *Kubernetes) configSecretVolumes(projectService ProjectService) ([]v1.Vo
 	if len(projectService.Secrets) > 0 {
 		for _, secretConfig := range projectService.Secrets {
 			if secretConfig.UID != "" {
-				log.WithFields(log.Fields{
-					"prefix":          WarnPrefix,
+				log.WarnWithFields(log.Fields{
 					"project-service": projectService.Name,
-				}).Warn("Ignoring `uid` field on compose project service secret")
+				}, "Ignoring `uid` field on compose project service secret")
 			}
 			if secretConfig.GID != "" {
-				log.WithFields(log.Fields{
-					"prefix":          WarnPrefix,
+				log.WarnWithFields(log.Fields{
 					"project-service": projectService.Name,
-				}).Warn("Ignoring `gid` field on compose project service secret")
+				}, "Ignoring `gid` field on compose project service secret")
 			}
 
 			var itemPath string // should be the filename
@@ -1028,7 +1017,11 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 
 	var count int
 	// @step iterate over project service volumes
-	for _, volume := range projectService.volumes(k.Project) {
+	projectServiceVolumes, err := projectService.volumes(k.Project)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	for _, volume := range projectServiceVolumes {
 
 		// check if ro/rw mode is defined, default rw
 		readonly := len(volume.Mode) > 0 && volume.Mode == "ro"
@@ -1059,30 +1052,29 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 		var volsource *v1.VolumeSource
 
 		if useEmptyVolumes {
-			log.WithFields(log.Fields{
-				"prefix":          InfoPrefix,
+			log.InfoWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Info("Use empty volume")
+			}, "Use empty volume")
 
 			volsource = k.configEmptyVolumeSource("volume")
 		} else if useHostPath {
-			log.WithFields(log.Fields{
-				"prefix":          InfoPrefix,
+			log.InfoWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Info("Use HostPath volume")
+			}, "Use HostPath volume")
 
 			source, err := k.configHostPathVolumeSource(volume.Host)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "k.ConfigHostPathVolumeSource failed")
+				log.Error("Couldn't create HostPath volume source")
+				return nil, nil, nil, nil, err
 			}
 			volsource = source
 		} else if useConfigMap {
-			log.WithFields(log.Fields{
-				"prefix":          InfoPrefix,
+			log.InfoWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Info("Use configmap volume")
+			}, "Use configmap volume")
 
 			if cm, err := k.intiConfigMapFromFileOrDir(projectService, volumeName, volume.Host); err != nil {
+				log.Error("Couldn't create ConfigMap volume source")
 				return nil, nil, nil, nil, err
 			} else {
 				cms = append(cms, cm)
@@ -1093,10 +1085,9 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 				}
 			}
 		} else {
-			log.WithFields(log.Fields{
-				"prefix":          InfoPrefix,
+			log.InfoWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Info("Use PVC volume")
+			}, "Use PVC volume")
 
 			volsource = k.configPVCVolumeSource(volumeName, readonly)
 
@@ -1104,7 +1095,8 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 				createdPVC, err := k.createPVC(volume)
 
 				if err != nil {
-					return nil, nil, nil, nil, errors.Wrap(err, "k.CreatePVC failed")
+					log.Error("Couldn't create PVC volume source")
+					return nil, nil, nil, nil, err
 				}
 
 				PVCs = append(PVCs, createdPVC)
@@ -1121,11 +1113,10 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 		volumes = append(volumes, vol)
 
 		if len(volume.Host) > 0 && (!useHostPath && !useConfigMap) {
-			log.WithFields(log.Fields{
-				"prefix":          WarnPrefix,
+			log.WarnWithFields(log.Fields{
 				"project-service": projectService.Name,
 				"host":            volume.Host,
-			}).Warn("Volume mount on the host isn't supported. Ignoring path on the host")
+			}, "Volume mount on the host isn't supported. Ignoring path on the host")
 		}
 	}
 
@@ -1218,7 +1209,8 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			// @step load environment variables from file
 			envLoad, err := getEnvsFromFile(file, k.Opt.InputFiles)
 			if err != nil {
-				return envs, errors.Wrap(err, "Unable to read env_file")
+				log.Error("Unable to read env_file")
+				return envs, err
 			}
 
 			// @step add configMapKeyRef to each environment variable
@@ -1341,11 +1333,10 @@ func (k *Kubernetes) createConfigMapFromComposeConfig(projectService ProjectServ
 		currentConfigObj := k.Project.Configs[currentConfigName]
 
 		if currentConfigObj.External.External {
-			log.WithFields(log.Fields{
-				"prefix":          WarnPrefix,
+			log.WarnWithFields(log.Fields{
 				"project-service": projectService.Name,
 				"config-name":     currentConfigName,
-			}).Warn("Your deployment expects configmap to exist in the target K8s cluster namespace.")
+			}, "Your deployment expects configmap to exist in the target K8s cluster namespace.")
 			log.Warn("Follow the official guidelines on how to create K8s configmap manually")
 			log.Warn("https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/")
 
@@ -1419,27 +1410,32 @@ func (k *Kubernetes) updateController(obj runtime.Object, updateTemplate func(*v
 			t.Spec.Template = &v1.PodTemplateSpec{}
 		}
 		if err = updateTemplate(t.Spec.Template); err != nil {
-			return errors.Wrap(err, "updateTemplate failed")
+			log.Error("Unable to update ReplicationController template")
+			return err
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1beta1.Deployment:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
-			return errors.Wrap(err, "updateTemplate failed")
+			log.Error("Unable to update Deployment template")
+			return err
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1apps.StatefulSet:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
-			return errors.Wrap(err, "updateTemplate failed")
+			log.Error("Unable to update StatefulSet template")
+			return err
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1beta1.DaemonSet:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
-			return errors.Wrap(err, "updateTemplate failed")
+			log.Error("Unable to update DaemonSet template")
+			return err
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1batch.Job:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
-			return errors.Wrap(err, "updateTemplate failed")
+			log.Error("Unable to update Job template")
+			return err
 		}
 		updateMeta(&t.ObjectMeta)
 	case *v1.Pod:
@@ -1448,7 +1444,8 @@ func (k *Kubernetes) updateController(obj runtime.Object, updateTemplate func(*v
 			Spec:       t.Spec,
 		}
 		if err = updateTemplate(&p); err != nil {
-			return errors.Wrap(err, "updateTemplate failed")
+			log.Error("Unable to update Pod template")
+			return err
 		}
 		t.Spec = p.Spec
 		t.ObjectMeta = p.ObjectMeta
@@ -1514,13 +1511,15 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step configure the environment variables
 	envs, err := k.configEnvs(projectService)
 	if err != nil {
-		return errors.Wrap(err, "Unable to load env variables")
+		log.Error("Unable to load env variables")
+		return err
 	}
 
 	// @step configure the container volumes
 	volumesMounts, volumes, pvcs, cms, err := k.configVolumes(projectService)
 	if err != nil {
-		return errors.Wrap(err, "Unable to configure container volumes")
+		log.Error("Unable to configure container volumes")
+		return err
 	}
 
 	// @step configure Tmpfs
@@ -1574,12 +1573,11 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		// @step configure the HealthCheck
 		healthCheck, err := projectService.healthcheck()
 		if err != nil {
-			log.WithFields(log.Fields{
-				"prefix":          ErrorPrefix,
+			log.ErrorWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Error("Healthcheck definition has errors")
+			}, "Healthcheck definition has errors")
 
-			return errors.Wrap(err, "Unable to process healthcheck")
+			return err
 		}
 		if healthCheck != nil {
 			template.Spec.Containers[0].LivenessProbe = healthCheck
@@ -1589,13 +1587,12 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		if projectService.StopGracePeriod != nil && len(projectService.StopGracePeriod.String()) > 0 {
 			sgp, err := durationStrToSecondsInt(projectService.StopGracePeriod.String())
 			if err != nil {
-				log.WithFields(log.Fields{
-					"prefix":          ErrorPrefix,
+				log.ErrorWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"duration":        projectService.StopGracePeriod.String(),
-				}).Error("Failed to parse pod termination grace period duration")
+				}, "Failed to parse pod termination grace period duration")
 
-				return errors.Wrap(err, "Unable to set pod termination grace period")
+				return err
 			}
 			gracePeriod := int64(*sgp)
 			template.Spec.TerminationGracePeriodSeconds = &gracePeriod
@@ -1653,15 +1650,15 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step update supported k8s workload objects
 	for _, obj := range *objects {
 		if err = k.updateController(obj, fillTemplate, fillObjectMeta); err != nil {
-			log.WithFields(log.Fields{
-				"prefix":          ErrorPrefix,
+			log.ErrorWithFields(log.Fields{
 				"project-service": projectService.Name,
-			}).Error("Couldn't update k8s object")
+			}, "Couldn't update k8s object")
 
-			return errors.Wrap(err, "Unable to update supported k8s object")
+			return err
 		}
 
-		if len(projectService.volumes(k.Project)) > 0 {
+		projectServiceVolumes, _ := projectService.volumes(k.Project)
+		if len(projectServiceVolumes) > 0 {
 			switch objType := obj.(type) {
 			// @todo Check if applicable to other object types
 			case *v1beta1.Deployment:
@@ -1704,10 +1701,9 @@ func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 		if us, ok := obj.(*v1.ConfigMap); ok {
 			k := us.GroupVersionKind().String() + us.GetNamespace() + us.GetName()
 			if exist[k] {
-				log.WithFields(log.Fields{
-					"prefix":    InfoPrefix,
+				log.InfoWithFields(log.Fields{
 					"configmap": us.GetName(),
-				}).Info("Remove duplicate configmap")
+				}, "Remove duplicate configmap")
 
 				continue
 			} else {
@@ -1819,11 +1815,10 @@ func (k *Kubernetes) setPodSecurityContext(projectService ProjectService, podSec
 		for _, g := range projectService.GroupAdd {
 			gid, err := strconv.ParseInt(g, 10, 64)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"prefix":             WarnPrefix,
+				log.WarnWithFields(log.Fields{
 					"project-service":    projectService.Name,
 					"supplemental-group": g,
-				}).Warn("Ignoring supplemental group as it's not numeric. Supplemental groups must be specified as a GID (numeric).")
+				}, "Ignoring supplemental group as it's not numeric. Supplemental groups must be specified as a GID (numeric).")
 			} else {
 				groups = append(groups, gid)
 			}
@@ -1843,11 +1838,10 @@ func (k *Kubernetes) setSecurityContext(projectService ProjectService, capabilit
 	if projectService.User != "" {
 		uid, err := strconv.ParseInt(projectService.User, 10, 64)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"prefix":          WarnPrefix,
+			log.WarnWithFields(log.Fields{
 				"project-service": projectService.Name,
 				"user":            projectService.User,
-			}).Warn("Ignoring `user` directive value. User must be specified as a UID (numeric).")
+			}, "Ignoring `user` directive value. User must be specified as a UID (numeric).")
 		} else {
 			securityContext.RunAsUser = &uid
 		}

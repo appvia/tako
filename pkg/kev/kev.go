@@ -22,9 +22,9 @@ import (
 	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/converter"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -53,12 +53,14 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	// @todo filter specified envs, or all if none provided
 	workDir, err := os.Getwd()
 	if err != nil {
-		return errors.Wrap(err, "Couldn't get working directory")
+		log.Error("Couldn't get working directory")
+		return err
 	}
 
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
-		return errors.Wrap(err, "Unable to load app manifest")
+		log.Error("Unable to load app manifest")
+		return err
 	}
 
 	filteredEnvs, err := manifest.EnvironmentsAsMap(envs)
@@ -82,6 +84,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 
 	c := converter.Factory(format)
 	if err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered); err != nil {
+		log.Errorf("Couldn't render manifests")
 		return err
 	}
 
