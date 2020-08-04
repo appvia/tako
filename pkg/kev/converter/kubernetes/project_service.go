@@ -24,9 +24,9 @@ import (
 	"strings"
 
 	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
@@ -38,12 +38,10 @@ func (p *ProjectService) replicas() int {
 	if val, ok := p.Labels[config.LabelWorkloadReplicas]; ok {
 		replicas, err := strconv.Atoi(val)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"prefix":          WarnPrefix,
+			log.WarnfWithFields(log.Fields{
 				"project-service": p.Name,
 				"replicas":        val,
-			}).Warnf(
-				"Unable to extract integer value from %s label. Defaulting to 1 replica.",
+			}, "Unable to extract integer value from %s label. Defaulting to 1 replica.",
 				config.LabelWorkloadReplicas)
 
 			return config.DefaultReplicaNumber
@@ -65,12 +63,10 @@ func (p *ProjectService) workloadType() string {
 	}
 
 	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
-		log.WithFields(log.Fields{
-			"prefix":          WarnPrefix,
+		log.WarnfWithFields(log.Fields{
 			"project-service": p.Name,
 			"workload-type":   workloadType,
-		}).Warnf(
-			"Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s",
+		}, "Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s",
 			workloadType)
 	}
 
@@ -89,32 +85,29 @@ func (p *ProjectService) serviceType() (string, error) {
 
 	serviceType, err := getServiceType(sType)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"prefix":          ErrorPrefix,
+		log.ErrorWithFields(log.Fields{
 			"project-service": p.Name,
 			"service-type":    sType,
-		}).Error("Unrecognised k8s service type. Compse project service will not have k8s service generated.")
+		}, "Unrecognised k8s service type. Compose project service will not have k8s service generated.")
 
 		return "", fmt.Errorf("`%s` workload service type `%s` not supported", p.Name, sType)
 	}
 
 	// @step validate whether service type is set properly when node port is specified
 	if !strings.EqualFold(sType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
-		log.WithFields(log.Fields{
-			"prefix":          ErrorPrefix,
+		log.ErrorfWithFields(log.Fields{
 			"project-service": p.Name,
 			"service-type":    sType,
 			"nodeport":        p.nodePort(),
-		}).Errorf("%s label value must be set as `NodePort` when assiging node port value", config.LabelServiceType)
+		}, "%s label value must be set as `NodePort` when assiging node port value", config.LabelServiceType)
 
 		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assiging node port value", p.Name)
 	}
 
 	if len(p.ports()) > 1 && p.nodePort() != 0 {
-		log.WithFields(log.Fields{
-			"prefix":          ErrorPrefix,
+		log.ErrorfWithFields(log.Fields{
 			"project-service": p.Name,
-		}).Errorf("Cannot set %s label value when service has multiple ports specified.", config.LabelServiceNodePortPort)
+		}, "Cannot set %s label value when service has multiple ports specified.", config.LabelServiceNodePortPort)
 
 		return "", fmt.Errorf("`%s` cannot set NodePort service port when project service has multiple ports defined", p.Name)
 	}
@@ -136,12 +129,10 @@ func (p *ProjectService) nodePort() int32 {
 func (p *ProjectService) exposeService() (string, error) {
 	if val, ok := p.Labels[config.LabelServiceExpose]; ok {
 		if val == "" && p.tlsSecretName() != "" {
-			log.WithFields(log.Fields{
-				"prefix":          ErrorPrefix,
+			log.ErrorfWithFields(log.Fields{
 				"project-service": p.Name,
 				"tls-secret-name": p.tlsSecretName(),
-			}).Errorf(
-				"TLS secret name specified via %s label but project service not exposed!",
+			}, "TLS secret name specified via %s label but project service not exposed!",
 				config.LabelServiceExposeTLSSecret)
 
 			return "", fmt.Errorf("Service can't have TLS secret name when it hasn't been exposed")
@@ -197,10 +188,11 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1beta1.RollingUpdateDep
 
 // volumes gets volumes for compose project service, respecting volume lables if specified.
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L535
-func (p *ProjectService) volumes(project *composego.Project) []Volumes {
+func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) {
 	vols, err := retrieveVolume(p.Name, project)
 	if err != nil {
-		errors.Wrap(err, "could not retrieve volume")
+		log.Error("Could not retrieve volume")
+		return nil, err
 	}
 
 	for i, vol := range vols {
@@ -231,7 +223,7 @@ func (p *ProjectService) volumes(project *composego.Project) []Volumes {
 		vols[i] = temp
 	}
 
-	return vols
+	return vols, nil
 }
 
 // placement returns information regarding pod affinity
@@ -328,11 +320,11 @@ func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
 
 	pullPolicy, err := getImagePullPolicy(p.Name, policy)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"prefix":            WarnPrefix,
+		log.WarnfWithFields(log.Fields{
 			"project-service":   p.Name,
 			"image-pull-policy": policy,
-		}).Warnf("Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.", config.LabelWorkloadImagePullPolicy)
+		}, "Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.",
+			config.LabelWorkloadImagePullPolicy)
 
 		return v1.PullPolicy(config.DefaultImagePullPolicy)
 	}
@@ -373,11 +365,10 @@ func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 	}
 
 	if policy == "unless-stopped" {
-		log.WithFields(log.Fields{
-			"prefix":          WarnPrefix,
+		log.WarnWithFields(log.Fields{
 			"project-service": p.Name,
 			"restart-policy":  policy,
-		}).Warn("Restart policy 'unless-stopped' is not supported, converting it to 'always'")
+		}, "Restart policy 'unless-stopped' is not supported, converting it to 'always'")
 
 		policy = "always"
 	}
@@ -388,11 +379,10 @@ func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 
 	restartPolicy, err := getRestartPolicy(p.Name, policy)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"prefix":          WarnPrefix,
+		log.WarnWithFields(log.Fields{
 			"project-service": p.Name,
 			"restart-policy":  policy,
-		}).Warn("Restart policy is not supported, defaulting to 'Always'")
+		}, "Restart policy is not supported, defaulting to 'Always'")
 
 		return v1.RestartPolicy(config.RestartPolicyAlways)
 	}
@@ -414,11 +404,10 @@ func (p *ProjectService) environment() composego.MappingWithEquals {
 			if result != "" {
 				envs[name] = &result
 			} else {
-				log.WithFields(log.Fields{
-					"prefix":          WarnPrefix,
+				log.WarnWithFields(log.Fields{
 					"project-service": p.Name,
 					"env-var":         name,
-				}).Warn("Env Var has no value and will be ignored")
+				}, "Env Var has no value and will be ignored")
 
 				continue
 			}
@@ -487,6 +476,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 					},
 				}
 			} else {
+				log.Error("Health check must contain a command")
 				return nil, errors.New("Health check must contain a command")
 			}
 

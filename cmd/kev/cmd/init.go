@@ -18,11 +18,11 @@ package cmd
 
 import (
 	"io"
-	"log"
 	"os"
 	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev"
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	"github.com/spf13/cobra"
 )
 
