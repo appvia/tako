@@ -72,11 +72,8 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 
 		// @step kubernetes manifests output options
 		convertOpts := ConvertOptions{
-			InputFiles:   files[env],
-			OutFile:      outFilePath,
-			Provider:     Name,
-			YAMLIndent:   2,
-			GenerateYaml: true,
+			InputFiles: files[env],
+			OutFile:    outFilePath,
 		}
 
 		// @step Get Kubernete transformer that maps compose project to Kubernetes primitives
