@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -236,48 +237,60 @@ func (p *ProjectService) placement() map[string]string {
 }
 
 // resourceRequests returns workload resource requests (memory & cpu)
-func (p *ProjectService) resourceRequests() (*composego.UnitBytes, *float64) {
-	var memRequest composego.UnitBytes
-	var cpuRequest float64
+// It parses CPU & Memory as k8s resource.Quantity regardless
+// of how values are supplied (via deploy block or labels).
+// It supports resource notations:
+// - CPU: 0.1, 100m (which is the same as 0.1), 1
+// - Memory: 1, 1M, 1m, 1G, 1Gi
+func (p *ProjectService) resourceRequests() (*int64, *int64) {
+	var memRequest int64
+	var cpuRequest int64
 
 	// @step extract requests from deploy block if present
 	if p.Deploy != nil && p.Deploy.Resources.Reservations != nil {
-		memRequest = p.Deploy.Resources.Reservations.MemoryBytes
-		cpuRequest, _ = strconv.ParseFloat(p.Deploy.Resources.Reservations.NanoCPUs, 64)
+		memRequest = int64(p.Deploy.Resources.Reservations.MemoryBytes)
+		cpu, _ := resource.ParseQuantity(p.Deploy.Resources.Reservations.NanoCPUs)
+		cpuRequest = cpu.ToDec().MilliValue()
 	}
 
 	if val, ok := p.Labels[config.LabelWorkloadMemory]; ok {
-		v, _ := strconv.Atoi(val)
-		memRequest = composego.UnitBytes(int64(v))
+		v, _ := resource.ParseQuantity(val)
+		memRequest, _ = v.AsInt64()
 	}
 
 	if val, ok := p.Labels[config.LabelWorkloadCPU]; ok {
-		v, _ := strconv.ParseFloat(val, 64)
-		cpuRequest = v
+		v, _ := resource.ParseQuantity(val)
+		cpuRequest = v.ToDec().MilliValue()
 	}
 
 	return &memRequest, &cpuRequest
 }
 
 // resourceLimits returns workload resource limits (memory & cpu)
-func (p *ProjectService) resourceLimits() (*composego.UnitBytes, *float64) {
-	var memLimit composego.UnitBytes
-	var cpuLimit float64
+// It parses CPU & Memory as k8s resource.Quantity regardless
+// of how values are supplied (via deploy block or labels).
+// It supports resource notations:
+// - CPU: 0.1, 100m (which is the same as 0.1), 1
+// - Memory: 1, 1M, 1m, 1G, 1Gi
+func (p *ProjectService) resourceLimits() (*int64, *int64) {
+	var memLimit int64
+	var cpuLimit int64
 
 	// @step extract limits from deploy block if present
 	if p.Deploy != nil && p.Deploy.Resources.Limits != nil {
-		memLimit = p.Deploy.Resources.Limits.MemoryBytes
-		cpuLimit, _ = strconv.ParseFloat(p.Deploy.Resources.Limits.NanoCPUs, 64)
+		memLimit = int64(p.Deploy.Resources.Limits.MemoryBytes)
+		cpu, _ := resource.ParseQuantity(p.Deploy.Resources.Limits.NanoCPUs)
+		cpuLimit = cpu.ToDec().MilliValue()
 	}
 
 	if val, ok := p.Labels[config.LabelWorkloadMaxMemory]; ok {
-		v, _ := strconv.Atoi(val)
-		memLimit = composego.UnitBytes(int64(v))
+		v, _ := resource.ParseQuantity(val)
+		memLimit, _ = v.AsInt64()
 	}
 
 	if val, ok := p.Labels[config.LabelWorkloadMaxCPU]; ok {
-		v, _ := strconv.ParseFloat(val, 64)
-		cpuLimit = v
+		v, _ := resource.ParseQuantity(val)
+		cpuLimit = v.ToDec().MilliValue()
 	}
 
 	return &memLimit, &cpuLimit
