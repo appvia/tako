@@ -155,6 +155,7 @@ func (p *ProjectService) tlsSecretName() string {
 
 // getKubernetesUpdateStrategy gets update strategy for compose project service
 // Note: it only supports `parallelism` and `order`
+// @todo add label support for update strategy!
 func (p *ProjectService) getKubernetesUpdateStrategy() *v1beta1.RollingUpdateDeployment {
 	if p.Deploy == nil || p.Deploy.UpdateConfig == nil {
 		return nil
@@ -228,6 +229,7 @@ func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) 
 }
 
 // placement returns information regarding pod affinity
+// @todo Add placement support via labels!
 func (p *ProjectService) placement() map[string]string {
 	if p.Deploy != nil && p.Deploy.Placement.Constraints != nil {
 		return loadPlacement(p.Deploy.Placement.Constraints)
@@ -472,9 +474,8 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 }
 
 // healthcheck returns project service healthcheck probe
+// @todo handle healthcheck configuration via labels, and use defaults if none specified!
 func (p *ProjectService) healthcheck() (*v1.Probe, error) {
-
-	// @todo handle healthcheck configuration via labels
 
 	if p.HealthCheck != nil && p.HealthCheck.Disable == false {
 		if !reflect.DeepEqual(p.HealthCheck, composego.HealthCheckConfig{}) {

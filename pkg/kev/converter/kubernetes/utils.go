@@ -438,6 +438,7 @@ func convertToVersion(obj runtime.Object, groupVersion schema.GroupVersion) (run
 
 // getImagePullPolicy returns image pull policy based on the string input
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L628
+// @todo Make it case insensitive?
 func getImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
 	switch policy {
 	case "":
