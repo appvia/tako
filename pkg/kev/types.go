@@ -74,8 +74,7 @@ type changeset struct {
 type changeGroup map[interface{}][]change
 
 type change struct {
-	parent, target, value string
-	// index                  int
+	parent, target, value  string
 	index                  interface{}
 	update, create, delete bool
 }
