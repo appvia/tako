@@ -92,7 +92,6 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		Context("when a new compose service has been added", func() {
-
 			Context("and the service has no deploy or healthcheck config", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
