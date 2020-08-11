@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		buffer       bytes.Buffer
+		reporter     bytes.Buffer
 		workingDir   string
 		source       *kev.ComposeProject
 		overlayFiles []string
@@ -25,21 +25,27 @@ var _ = Describe("Reconcile", func() {
 		if len(overlayFiles) > 0 {
 			overlay, _ = kev.NewComposeProject(overlayFiles)
 		}
-		manifest, mErr = kev.Reconcile(workingDir, &buffer)
+		manifest, mErr = kev.Reconcile(workingDir, &reporter)
 		env, _ = manifest.GetEnvironment("dev")
 	})
 
 	Describe("Reconciling changes from sources", func() {
-		// Adding environment vars??
 
 		Context("when the compose version has been updated", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-version"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				reporter = bytes.Buffer{}
 			})
 
 			It("should update all environments with the new version", func() {
 				Expect(env.GetVersion()).To(Equal(source.GetVersion()))
+			})
+
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("3.7"))
+				Expect(reporter.String()).To(ContainSubstring(env.GetVersion()))
 			})
 
 			It("should not error", func() {
@@ -51,6 +57,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-removal"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of services pre reconciliation", func() {
@@ -60,7 +67,13 @@ var _ = Describe("Reconcile", func() {
 
 			It("should remove the service from all environments", func() {
 				Expect(env.GetServices()).To(HaveLen(1))
-				Expect(env.GetServices()[0].Name).To(Equal("wordpress"))
+				Expect(env.GetServices()[0].Name).To(Equal("db"))
+			})
+
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("wordpress"))
+				Expect(reporter.String()).To(ContainSubstring("deleted"))
 			})
 
 			It("should not error", func() {
@@ -72,6 +85,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-edit"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			Context("and it changes port mode to host", func() {
@@ -85,6 +99,15 @@ var _ = Describe("Reconcile", func() {
 					Expect(s.Labels["kev.service.type"]).To(Equal("NodePort"))
 				})
 
+				It("should create a change summary", func() {
+					Expect(reporter.String()).To(ContainSubstring(env.Name))
+					Expect(reporter.String()).To(ContainSubstring("wordpress"))
+					Expect(reporter.String()).To(ContainSubstring("updated"))
+					Expect(reporter.String()).To(ContainSubstring(config.LabelServiceType))
+					Expect(reporter.String()).To(ContainSubstring("LoadBalancer"))
+					Expect(reporter.String()).To(ContainSubstring("NodePort"))
+				})
+
 				It("should not error", func() {
 					Expect(mErr).NotTo(HaveOccurred())
 				})
@@ -96,6 +119,7 @@ var _ = Describe("Reconcile", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
 					overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+					reporter = bytes.Buffer{}
 				})
 
 				It("confirms the number of services pre reconciliation", func() {
@@ -112,6 +136,12 @@ var _ = Describe("Reconcile", func() {
 				It("should configure the added service labels with defaults", func() {
 					expected := newDefaultServiceLabels("wordpress", "LoadBalancer")
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
+				})
+
+				It("should create a change summary", func() {
+					Expect(reporter.String()).To(ContainSubstring(env.Name))
+					Expect(reporter.String()).To(ContainSubstring("added"))
+					Expect(reporter.String()).To(ContainSubstring("wordpress"))
 				})
 
 				It("should not error", func() {
@@ -157,6 +187,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -167,8 +198,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetVolumes()).To(HaveLen(1))
 
 				v, _ := env.GetVolume("db_data")
-				Expect(v.Labels["kev.volume.size"]).To(Equal("100Mi"))
-				Expect(v.Labels["kev.volume.storage-class"]).To(Equal("standard"))
+				Expect(v.Labels[config.LabelVolumeSize]).To(Equal("100Mi"))
+				Expect(v.Labels[config.LabelVolumeStorageClass]).To(Equal("standard"))
+			})
+
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("added"))
+				Expect(reporter.String()).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -180,6 +217,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-removal"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -188,6 +226,12 @@ var _ = Describe("Reconcile", func() {
 
 			It("should remove the volume from all environments", func() {
 				Expect(env.GetVolumes()).To(HaveLen(0))
+			})
+
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("deleted"))
+				Expect(reporter.String()).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -199,6 +243,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-edit"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the volume name pre reconciliation", func() {
@@ -211,6 +256,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.VolumeNames()).To(ContainElements("mysql_data"))
 			})
 
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("deleted"))
+				Expect(reporter.String()).To(ContainSubstring("db_data"))
+				Expect(reporter.String()).To(ContainSubstring("added"))
+				Expect(reporter.String()).To(ContainSubstring("mysql_data"))
+			})
+
 			It("should not error", func() {
 				Expect(mErr).NotTo(HaveOccurred())
 			})
@@ -220,6 +273,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-removal"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the env vars pre reconciliation", func() {
@@ -237,6 +291,13 @@ var _ = Describe("Reconcile", func() {
 			It("confirms environment labels post reconciliation", func() {
 				s, _ := env.GetService("wordpress")
 				Expect(s.GetLabels()).To(HaveLen(16))
+			})
+
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("deleted"))
+				Expect(reporter.String()).To(ContainSubstring("WORDPRESS_CACHE_USER"))
+				Expect(reporter.String()).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
 			})
 
 			It("should not error", func() {

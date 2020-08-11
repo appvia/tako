@@ -17,6 +17,8 @@
 package kev
 
 import (
+	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/r3labs/diff"
@@ -79,7 +81,11 @@ func newChangeset(clog diff.Changelog) (changeset, error) {
 
 		case "volumes":
 			volName := e.Path[1]
-			_, ok := volChgGroup[volName]
+			group, ok := volChgGroup[volName]
+			deletionIsSet := ok == true && group[0].delete
+			if deletionIsSet {
+				continue
+			}
 
 			change := change{
 				parent: e.Path[len(e.Path)-2],
@@ -104,78 +110,103 @@ func isServiceAlreadyMarkedForDeletion(chgGroup changeGroup, index int) bool {
 	return ok == true && group[0].delete && group[0].target == "name"
 }
 
-func (c changeset) applyVersionChangesIfAny(l *composeOverlay) {
+func (c changeset) HasNoChanges() bool {
+	return len(c.version) == 0 && len(c.services) == 0 && len(c.volumes) == 0
+}
+
+func (c changeset) applyVersionChangesIfAny(l *composeOverlay, reporter io.Writer) {
 	for _, change := range c.version {
-		change.applyVersion(l)
+		change.applyVersion(l, reporter)
 	}
 }
 
-func (c changeset) applyServicesChangesIfAny(l *composeOverlay) {
+func (c changeset) applyServicesChangesIfAny(l *composeOverlay, reporter io.Writer) {
 	for _, group := range c.services {
+
 		for _, change := range group {
-			change.applyService(l)
+			change.applyService(l, reporter)
 		}
 	}
 }
 
-func (c changeset) applyVolumesChangesIfAny(l *composeOverlay) {
+func (c changeset) applyVolumesChangesIfAny(l *composeOverlay, reporter io.Writer) {
 	for _, group := range c.volumes {
 		for _, change := range group {
-			change.applyVolume(l)
+			change.applyVolume(l, reporter)
 		}
 	}
 }
 
-func (c change) applyVersion(l *composeOverlay) {
+func (c change) applyVersion(l *composeOverlay, reporter io.Writer) {
 	if !c.update {
 		return
 	}
+	pre := l.Version
 	l.Version = c.value
+	_, _ = reporter.Write([]byte(fmt.Sprintf(" → version updated, from:[%s] to:[%s]\n", pre, c.value)))
 }
 
-func (c change) applyService(l *composeOverlay) {
+func (c change) applyService(l *composeOverlay, reporter io.Writer) {
 	if c.create {
 		l.Services = append(l.Services, ServiceConfig{
 			Labels: map[string]string{},
 		})
+		_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] added\n", c.value)))
 	}
 
 	if c.delete {
 		switch {
 		case c.parent == "environment":
 			delete(l.Services[c.index.(int)].Environment, c.target)
+			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], env var [%s] deleted\n", l.Services[c.index.(int)].Name, c.target)))
 		default:
+			deletedSvcName := l.Services[c.index.(int)].Name
 			l.Services = append(l.Services[:c.index.(int)], l.Services[c.index.(int)+1:]...)
+			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] deleted\n", deletedSvcName)))
 		}
 	}
 
 	if c.update {
 		switch {
 		case c.target == "name":
+			isUpdate := len(l.Services[c.index.(int)].Name) > 0
 			l.Services[c.index.(int)].Name = c.value
+			if isUpdate {
+				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service name updated to: [%s]\n", c.value)))
+			}
 		case c.parent == "labels":
+			pre, isUpdate := l.Services[c.index.(int)].Labels[c.target]
 			l.Services[c.index.(int)].Labels[c.target] = c.value
+			if isUpdate {
+				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], label [%s] updated, from:[%s] to:[%s]\n", l.Services[c.index.(int)].Name, c.target, pre, c.value)))
+			}
 		}
 	}
 }
 
-func (c change) applyVolume(l *composeOverlay) {
+func (c change) applyVolume(l *composeOverlay, reporter io.Writer) {
 	if c.create {
 		l.Volumes = Volumes{
 			c.index.(string): VolumeConfig{
 				Labels: map[string]string{},
 			},
 		}
+		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] added\n", c.index.(string))))
 	}
 
 	if c.delete {
 		delete(l.Volumes, c.index.(string))
+		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] deleted\n", c.index.(string))))
 	}
 
 	if c.update {
 		switch {
 		case c.parent == "labels":
+			pre, isUpdate := l.Volumes[c.index.(string)].Labels[c.target]
 			l.Volumes[c.index.(string)].Labels[c.target] = c.value
+			if isUpdate {
+				_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s], label [%s] updated, from:[%s] to:[%s]\n", c.index.(string), c.target, pre, c.value)))
+			}
 		}
 	}
 }

@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"bytes"
 	"os"
 	"path"
 
@@ -32,11 +31,13 @@ func runReconcileCmd(_ *cobra.Command, _ []string) error {
 	}
 
 	// TODO: Summarise and report on reconciliation
-	var reporter bytes.Buffer
-	manifest, err := kev.Reconcile(workingDir, &reporter)
+	// var reporter bytes.Buffer
+	manifest, err := kev.Reconcile(workingDir, os.Stdout)
 	if err != nil {
 		return err
 	}
+
+	os.Stdout.WriteString("\n...............................\n\n")
 
 	for _, environment := range manifest.Environments {
 		filePath := path.Join(workingDir, environment.File)

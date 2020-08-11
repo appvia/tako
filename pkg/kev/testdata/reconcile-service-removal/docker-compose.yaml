@@ -1,21 +1,15 @@
 version: '3.7'
 services:
-  wordpress:
-    image: wordpress:latest
-    ports:
-      - 80:80
+  db:
+    image: mysql:8.0.19
+    command: '--default-authentication-plugin=mysql_native_password'
     restart: always
-    healthcheck:
-      disable: true
-      interval: 5m0s
-      retries: 10
-      start_period: 2m0s
-      test: ["CMD", "curl", "localhost:80/healthy"]
-      timeout: 30s
+    volumes:
+      - db_data:/var/lib/mysql
     environment:
-      - WORDPRESS_DB_HOST=db
-      - WORDPRESS_DB_USER=wordpress
-      - WORDPRESS_DB_PASSWORD=wordpress
-      - WORDPRESS_DB_NAME=wordpress
+      - MYSQL_ROOT_PASSWORD=somewordpress
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress
 volumes:
   db_data:

@@ -85,7 +85,7 @@ func (e *Environment) GetVolumes() Volumes {
 
 // VolumeNames return names for all volumes in this Compose config
 func (e *Environment) VolumeNames() []string {
-	out := []string{}
+	var out []string
 	for k := range e.GetVolumes() {
 		out = append(out, k)
 	}
@@ -132,8 +132,13 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var services Services
-	for _, s := range p.Services {
+	for _, name := range p.ServiceNames() {
+		s, err := p.GetService(name)
+		if err != nil {
+			return nil, err
+		}
 		services = append(services, ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment})
 	}
 	e.overlay = &composeOverlay{
@@ -145,22 +150,24 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 }
 
 func (e *Environment) reconcile(l *composeOverlay, reporter io.Writer) error {
-	msg := fmt.Sprintf("Reconciling environment %s\n", e.Name)
-	if _, err := reporter.Write([]byte(msg)); err != nil {
-		return err
-	}
+	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
 
 	cset, err := l.diff(e.overlay)
 	if err != nil {
 		return err
 	}
 
-	e.patch(cset)
+	if cset.HasNoChanges() {
+		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
+		return nil
+	}
+
+	e.patch(cset, reporter)
 	return nil
 }
 
-func (e *Environment) patch(cset changeset) {
-	e.overlay.patch(cset)
+func (e *Environment) patch(cset changeset, reporter io.Writer) {
+	e.overlay.patch(cset, reporter)
 }
 
 func loadEnvironment(name, file string) (*Environment, error) {

@@ -24,15 +24,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const banner = `
-o
-| /
-OO   o-o o   o
-| \  |-'  \ /
-o  o o-o   o
-
-`
-
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
 	Use:           "kev",
@@ -47,7 +38,7 @@ func NewRootCmd() *cobra.Command {
 }
 
 func init() {
-	fmt.Print(banner)
+	fmt.Println()
 
 	// This is required to help with error handling from RunE , https://github.com/spf13/cobra/issues/914#issuecomment-548411337
 	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
