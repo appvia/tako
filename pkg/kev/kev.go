@@ -17,15 +17,13 @@
 package kev
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
-	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/converter"
 	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -40,12 +38,23 @@ const (
 // A default environment will be allocated if no environments were provided.
 func Init(composeSources, envs []string) (*Manifest, error) {
 	m, err := NewManifest(composeSources).
-		ExtractLabels()
+		ExtractSourcesLabels()
 	if err != nil {
 		return nil, err
 	}
 
 	return m.MintEnvironments(envs), nil
+}
+
+func Reconcile(workingDir string, reporter io.Writer) (*Manifest, error) {
+	m, err := LoadManifest(workingDir)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := m.ReconcileConfig(reporter); err != nil {
+		return nil, errors.Wrap(err, "Could not reconcile project latest")
+	}
+	return m, err
 }
 
 // Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info
@@ -73,7 +82,8 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	files := map[string][]string{}
 
 	for env, file := range filteredEnvs {
-		inputFiles := append(manifest.Sources, file)
+		sourcesFiles := manifest.GetSourcesFiles()
+		inputFiles := append(sourcesFiles, file)
 		p, err := rawProjectFromSources(inputFiles)
 		if err != nil {
 			return errors.Wrap(err, "Couldn't calculate compose project representation")
@@ -89,21 +99,4 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	}
 
 	return nil
-}
-
-// NewManifest returns a new Manifest struct
-func NewManifest(sources []string) *Manifest {
-	return &Manifest{
-		Sources: sources,
-	}
-}
-
-// LoadManifest returns application manifests
-func LoadManifest(workingDir string) (*Manifest, error) {
-	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
-	if err != nil {
-		return nil, err
-	}
-	var m *Manifest
-	return m, yaml.Unmarshal(data, &m)
 }

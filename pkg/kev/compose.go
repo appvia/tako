@@ -24,8 +24,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// newComposeProject loads and parses a set of input compose files and returns a composeProject object
-func newComposeProject(paths []string) (*composeProject, error) {
+type ComposeOpts func(project *ComposeProject) (*ComposeProject, error)
+
+// NewComposeProject loads and parses a set of input compose files and returns a ComposeProject object
+func NewComposeProject(paths []string, opts ...ComposeOpts) (*ComposeProject, error) {
 	raw, err := rawProjectFromSources(paths)
 	if err != nil {
 		return nil, err
@@ -35,13 +37,28 @@ func newComposeProject(paths []string) (*composeProject, error) {
 		return nil, err
 	}
 
-	return (&composeProject{version, raw}).transform()
+	p := &ComposeProject{version: version, Project: raw}
+	for _, opt := range opts {
+		_, err := opt(p)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return p, nil
 }
 
-func (p *composeProject) transform() (*composeProject, error) {
+func (p *ComposeProject) GetVersion() string {
+	return p.version
+}
+
+func WithApplyTransforms(p *ComposeProject) (*ComposeProject, error) {
+	return p.transform()
+}
+
+func (p *ComposeProject) transform() (*ComposeProject, error) {
 	transforms := []transform{
 		augmentOrAddDeploy,
-		healthCheckBase,
+		augmentOrAddHealthCheck,
 	}
 	for _, t := range transforms {
 		if err := t(p); err != nil {

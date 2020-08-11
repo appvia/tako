@@ -1,0 +1,4 @@
+compose:
+  - testdata/reconcile-service-removal/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-service-removal/docker-compose.kev.dev.yaml

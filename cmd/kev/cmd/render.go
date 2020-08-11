@@ -36,9 +36,9 @@ var renderCmd = &cobra.Command{
 	Use:   "render",
 	Short: "Render an application deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
-	// PreRunE: func(cmd *cobra.Command, args []string) error {
-	// 	return RunInitCmd(cmd, args)
-	// },
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return runReconcileCmd(cmd, args)
+	},
 	RunE: runRenderCmd,
 }
 
@@ -63,8 +63,8 @@ func init() {
 	flags.StringP(
 		"dir",
 		"d",
-		"", // default: will output kubernetes manifests in .kev/.build/<env>/k8s/...
-		"Override default Kubernetes manifests output directory. Default: .kev/.build/<env>/k8s/",
+		"", // default: will output kubernetes manifests in k8s/<env>...
+		"Override default Kubernetes manifests output directory. Default: k8s/<env>",
 	)
 
 	flags.StringSliceP(

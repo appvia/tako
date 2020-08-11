@@ -43,7 +43,7 @@ func TestManifestMarshalsCorrectly(t *testing.T) {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}
 
-	diff := cmp.Diff(actual.Bytes(), expected)
+	diff := cmp.Diff(expected, actual.Bytes())
 	if diff != "" {
 		t.Fatalf("actual does not match expected\n%s", diff)
 	}
@@ -70,7 +70,7 @@ func TestInitProvidesEnvironmentConfig(t *testing.T) {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}
 
-	diff := cmp.Diff(actual.Bytes(), expected)
+	diff := cmp.Diff(expected, actual.Bytes())
 	if diff != "" {
 		t.Fatalf("actual does not match expected:\n%s", diff)
 	}
@@ -78,11 +78,13 @@ func TestInitProvidesEnvironmentConfig(t *testing.T) {
 
 func TestCanLoadAManifest(t *testing.T) {
 	expected := &kev.Manifest{
-		Sources: []string{
-			"testdata/in-cluster-wordpress/docker-compose.yaml",
+		Sources: &kev.Sources{
+			Files: []string{
+				"testdata/in-cluster-wordpress/docker-compose.yaml",
+			},
 		},
 		Environments: kev.Environments{
-			kev.Environment{
+			&kev.Environment{
 				Name: "dev",
 				File: "testdata/in-cluster-wordpress/docker-compose.kev.dev.yaml",
 			},
@@ -94,7 +96,7 @@ func TestCanLoadAManifest(t *testing.T) {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}
 
-	diff := cmp.Diff(actual, expected, cmpopts.IgnoreUnexported(kev.Manifest{}, kev.Environment{}))
+	diff := cmp.Diff(expected, actual, cmpopts.IgnoreUnexported(kev.Sources{}, kev.Environment{}))
 	if diff != "" {
 		t.Fatalf("actual does not match expected:\n%s", diff)
 	}

@@ -151,6 +151,10 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			finalDirName = path.Join(dirName, "templates")
 		}
 
+		if err := os.RemoveAll(finalDirName); err != nil {
+			return err
+		}
+
 		if err := os.MkdirAll(finalDirName, 0755); err != nil {
 			return err
 		}
