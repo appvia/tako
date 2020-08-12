@@ -28,12 +28,12 @@ import (
 )
 
 // NewManifest returns a new Manifest struct
-func NewManifest(files []string) *Manifest {
-	return &Manifest{
-		Sources: &Sources{
-			Files: files,
-		},
+func NewManifest(files []string, workingDir string) (*Manifest, error) {
+	s, err := newSources(files, workingDir)
+	if err != nil {
+		return nil, err
 	}
+	return &Manifest{Sources: s}, nil
 }
 
 // LoadManifest returns application manifests

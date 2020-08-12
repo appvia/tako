@@ -30,8 +30,6 @@ func runReconcileCmd(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// TODO: Summarise and report on reconciliation
-	// var reporter bytes.Buffer
 	manifest, err := kev.Reconcile(workingDir, os.Stdout)
 	if err != nil {
 		return err

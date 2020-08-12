@@ -18,11 +18,33 @@ package kev
 
 import (
 	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/appvia/kube-devx/pkg/kev/log"
 	"github.com/compose-spec/compose-go/cli"
+	"github.com/compose-spec/compose-go/errdefs"
 	composego "github.com/compose-spec/compose-go/types"
-	"gopkg.in/yaml.v2"
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
+
+// defaultComposeFileNames defines the Compose file names for auto-discovery (in order of preference)
+var defaultComposeFileNames = []string{
+	"compose.yaml",
+	"compose.yml",
+	"docker-compose.yml",
+	"docker-compose.yaml",
+}
+
+// defaultComposeOverrideFileNames defines the Compose file names for auto-discovery (in order of preference)
+var defaultComposeOverrideFileNames = []string{
+	"compose.override.yaml",
+	"compose.override.yml",
+	"docker-compose.override.yml",
+	"docker-compose.override.yaml",
+}
 
 type ComposeOpts func(project *ComposeProject) (*ComposeProject, error)
 
@@ -108,4 +130,73 @@ func getComposeVersion(file string) (string, error) {
 		return "", err
 	}
 	return version.Version, nil
+}
+
+// findDefaultComposeFiles scans the workingDir to find a root docker-compose file
+// and its optional override file.
+func findDefaultComposeFiles(workingDir string) ([]string, error) {
+	var defaults []string
+
+	composeFile, err := findDefaultComposeIn(workingDir)
+	if err != nil {
+		return nil, err
+	}
+	defaults = append(defaults, composeFile)
+
+	if overrideFile := findOptionalOverrideComposeIn(filepath.Dir(composeFile)); len(overrideFile) > 0 {
+		defaults = append(defaults, overrideFile)
+	}
+
+	return defaults, nil
+}
+
+func findDefaultComposeIn(workingDir string) (string, error) {
+	pwd := workingDir
+	if pwd == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		pwd = wd
+	}
+
+	for {
+		found := findFirstFileFromFilesInDir(defaultComposeFileNames, pwd)
+		if len(found) > 0 {
+			return found, nil
+		}
+
+		parent := filepath.Dir(pwd)
+		noParents := parent == pwd
+		if noParents {
+			return "", errors.Wrap(errdefs.ErrNotFound, "can't find a suitable configuration file in this directory or any parent")
+		}
+		pwd = parent
+	}
+}
+
+func findOptionalOverrideComposeIn(composeFileDir string) string {
+	return findFirstFileFromFilesInDir(defaultComposeOverrideFileNames, composeFileDir)
+}
+
+func findFirstFileFromFilesInDir(files []string, dir string) string {
+	var candidates []string
+
+	for _, n := range files {
+		f := filepath.Join(dir, n)
+		if _, err := os.Stat(f); err == nil {
+			candidates = append(candidates, f)
+		}
+	}
+
+	if len(candidates) > 0 {
+		winner := candidates[0]
+		if len(candidates) > 1 {
+			log.Warnf("Found multiple override config files with supported names: %s", strings.Join(candidates, ", "))
+			log.Warnf("Using %s", winner)
+		}
+		return winner
+	}
+
+	return ""
 }
