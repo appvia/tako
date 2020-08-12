@@ -408,7 +408,7 @@ func marshalWithIndent(o interface{}, indent int) ([]byte, error) {
 	return y, nil
 }
 
-// convertToVersion onverts object to a versioned object
+// convertToVersion converts object to a versioned object
 // if groupVersion is  empty (schema.GroupVersion{}), use version from original object (obj)
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L324
 func convertToVersion(obj runtime.Object, groupVersion schema.GroupVersion) (runtime.Object, error) {
@@ -433,29 +433,28 @@ func convertToVersion(obj runtime.Object, groupVersion schema.GroupVersion) (run
 	if err != nil {
 		return nil, err
 	}
+
 	return convertedObject, nil
 }
 
 // getImagePullPolicy returns image pull policy based on the string input
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L628
-func getImagePullPolicy(name, policy string) (v1.PullPolicy, error) {
-	switch policy {
-	case "":
-	case "Always":
+func getImagePullPolicy(projectServiceName, policy string) (v1.PullPolicy, error) {
+	switch strings.ToLower(policy) {
+	case "", "always":
 		return v1.PullAlways, nil
-	case "Never":
+	case "never":
 		return v1.PullNever, nil
-	case "IfNotPresent":
+	case "ifnotpresent":
 		return v1.PullIfNotPresent, nil
 	default:
-		return "", fmt.Errorf("Unknown image-pull-policy %s for service %s", policy, name)
+		return "", fmt.Errorf("Unknown image-pull-policy %s for service %s", policy, projectServiceName)
 	}
-	return "", nil
 }
 
 // getRestartPolicy returns K8s RestartPolicy
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L645
-func getRestartPolicy(name, restart string) (v1.RestartPolicy, error) {
+func getRestartPolicy(projectServiceName, restart string) (v1.RestartPolicy, error) {
 	switch strings.ToLower(restart) {
 	case "", "always", "any":
 		return v1.RestartPolicyAlways, nil
@@ -464,7 +463,7 @@ func getRestartPolicy(name, restart string) (v1.RestartPolicy, error) {
 	case "on-failure", "onfailure":
 		return v1.RestartPolicyOnFailure, nil
 	default:
-		return "", fmt.Errorf("Unknown restart policy %s for service %s", restart, name)
+		return "", fmt.Errorf("Unknown restart policy %s for service %s", restart, projectServiceName)
 	}
 }
 
@@ -489,6 +488,7 @@ func getServiceType(serviceType string) (string, error) {
 
 // resetWorkloadAPIVersion sets group, version & kind on passed runtime object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L700
+// @todo Check if this is still required
 func resetWorkloadAPIVersion(d runtime.Object) runtime.Object {
 	data, err := json.Marshal(d)
 	if err == nil {
@@ -535,6 +535,7 @@ func getEnvsFromFile(file string, inputFiles []string) (map[string]string, error
 		log.Error("Unable to load file context")
 		return nil, err
 	}
+
 	fileLocation := path.Join(composeDir, file)
 
 	// Load environment variables from file
@@ -562,13 +563,33 @@ func getContentFromFile(file string) (string, error) {
 	return string(fileBytes), nil
 }
 
-// formatEnvName format env name
+// rfc1123dns
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+func rfc1123dns(s string) string {
+	re := regexp.MustCompile("[^A-Za-z0-9.]+")
+	s = strings.ToLower(re.ReplaceAllString(s, "-"))
+	if len(s) > 253 {
+		return s[0:252]
+	}
+	return s
+}
+
+// rfc1123label
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+func rfc1123label(s string) string {
+	re := regexp.MustCompile("[^A-Za-z0-9]+")
+	s = strings.ToLower(re.ReplaceAllString(s, "-"))
+	if len(s) > 63 {
+		return s[0:62]
+	}
+	return s
+}
+
+// formatEnvFileName format env file name
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L784
-func formatEnvName(name string) string {
+func formatEnvFileName(name string) string {
 	envName := strings.Trim(name, "./")
-	envName = strings.Replace(envName, ".", "-", -1)
-	envName = strings.Replace(envName, "/", "-", -1)
-	return envName
+	return rfc1123dns(envName)
 }
 
 // formatFileName format file name
@@ -580,7 +601,7 @@ func formatFileName(name string) string {
 	_, file := path.Split(name)
 
 	// Make it DNS-1123 compliant for Kubernetes
-	return strings.Replace(file, "_", "-", -1)
+	return strings.ToLower(strings.Replace(file, "_", "-", -1))
 }
 
 // normalizeServiceNames normalises service name
@@ -599,9 +620,7 @@ func normalizeVolumes(svcName string) string {
 //formatContainerName format Container name
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L803
 func formatContainerName(name string) string {
-	name = strings.Replace(name, "_", "-", -1)
-	return name
-
+	return strings.Replace(name, "_", "-", -1)
 }
 
 // configLabels configures selector label for project service passed
@@ -659,7 +678,7 @@ func getComposeFileDir(inputFiles []string) (string, error) {
 		}
 		inputFile = filepath.Join(workDir, inputFile)
 	}
-	log.Infof("Compose file dir: %s", filepath.Dir(inputFile))
+	log.Debugf("Compose file dir: %s", filepath.Dir(inputFile))
 	return filepath.Dir(inputFile), nil
 }
 
@@ -689,6 +708,7 @@ func configLabelsWithNetwork(projectService ProjectService) map[string]string {
 	for n := range projectService.Networks {
 		labels[NetworkLabel+"/"+n] = "true"
 	}
+
 	return labels
 }
 
@@ -719,14 +739,17 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 
 	// @step if volumes-from key is present
 	if projectService.VolumesFrom != nil {
+
 		// iterating over services from `volumes-from`
 		for _, depSvc := range projectService.VolumesFrom {
+
 			// recursive call for retrieving volumes from `volumes-from` services
 			dVols, err := retrieveVolume(depSvc, project)
 			if err != nil {
 				log.Error("Could not retrieve the volume")
 				return nil, errors.New("Could not retrieve the volume")
 			}
+
 			var cVols []Volumes
 			cVols, err = parseVols(loadVolumes(projectService.Volumes), projectService.Name)
 			if err != nil {
@@ -736,6 +759,7 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 
 			for _, cv := range cVols {
 				// check whether volumes of current service is the same (or not) as that of dependent volumes coming from `volumes-from`
+				// check is done based on the MountPath
 				ok, dv := getVol(cv, dVols)
 				if ok {
 					// change current volumes service name to dependent service name
@@ -750,15 +774,18 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 				}
 				volume = append(volume, cv)
 			}
+
 			// iterating over dependent volumes
 			for _, dv := range dVols {
 				// check whether dependent volume is already present or not
+				// check is done based on volume PVCName
 				if checkVolDependent(dv, volume) {
 					// if found, add service name to `VFrom`
 					dv.VFrom = dv.SvcName
 					volume = append(volume, dv)
 				}
 			}
+
 		}
 	} else {
 		// @step if `volumes-from` is not present
@@ -768,11 +795,11 @@ func retrieveVolume(projectServiceName string, project *composego.Project) (volu
 			return nil, errors.New("Error generating current volumes")
 		}
 	}
-	// @todo: this should probably return volumes?
+
 	return
 }
 
-// parseVols parse volumes
+// parseVols parses slice of volume strings for a project service and returns slice of Volumes objects
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L406
 func parseVols(volNames []string, svcName string) ([]Volumes, error) {
 	var volumes []Volumes
@@ -780,6 +807,7 @@ func parseVols(volNames []string, svcName string) ([]Volumes, error) {
 
 	for i, vn := range volNames {
 		var v Volumes
+
 		v.VolumeName, v.Host, v.Container, v.Mode, err = parseVolume(vn)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
@@ -788,10 +816,12 @@ func parseVols(volNames []string, svcName string) ([]Volumes, error) {
 
 			return nil, err
 		}
+
 		v.VolumeName = normalizeVolumes(v.VolumeName)
 		v.SvcName = svcName
 		v.MountPath = fmt.Sprintf("%s:%s", v.Host, v.Container)
 		v.PVCName = fmt.Sprintf("%s-claim%d", v.SvcName, i)
+
 		volumes = append(volumes, v)
 	}
 
@@ -822,6 +852,16 @@ func parseVolume(volume string) (name, host, container, mode string, err error) 
 		volumeStrings = volumeStrings[1:]
 	}
 
+	// @step Ensure volume name is not the only thing provided
+	if len(volumeStrings) == 0 {
+		log.ErrorWithFields(log.Fields{
+			"volume": volume,
+		}, "Invalid volume name format")
+
+		err = fmt.Errorf("Invalid volume format: %s", volume)
+		return
+	}
+
 	// @step Get the last ":" passed which is presumably the "access mode"
 	possibleAccessMode := volumeStrings[len(volumeStrings)-1]
 
@@ -829,7 +869,7 @@ func parseVolume(volume string) (name, host, container, mode string, err error) 
 	// See https://github.com/kubernetes/kompose/issues/176
 	// Otherwise, check to see if "rw" or "ro" has been passed
 	if possibleAccessMode == "z" || possibleAccessMode == "Z" {
-		log.Infof("Volume mount \"%s\" will be mounted without labeling support. :z or :Z not supported", volume)
+		log.Debugf("Volume mount \"%s\" will be mounted without labeling support. :z or :Z not supported", volume)
 		mode = ""
 		volumeStrings = volumeStrings[:len(volumeStrings)-1]
 	} else if possibleAccessMode == "rw" || possibleAccessMode == "ro" {
@@ -862,7 +902,6 @@ func isPath(substring string) bool {
 
 // loadVolumes Convert the Docker Compose v3 volumes to []string (the old way)
 // TODO: Check to see if it's a "bind" or "volume". Ignore for now.
-// TODO: Refactor it similar to loadV3Ports
 // See: https://docs.docker.com/compose/compose-file/#long-syntax-3
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L163
 func loadVolumes(volumes []composego.ServiceVolumeConfig) []string {
@@ -881,10 +920,11 @@ func loadVolumes(volumes []composego.ServiceVolumeConfig) []string {
 
 		volArray = append(volArray, v)
 	}
+
 	return volArray
 }
 
-// getVol for dependent volumes, returns true and the respective volume if mountpath are same
+// getVol for dependent volumes, returns true and the respective volume if mountpath are the same
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L427
 func getVol(v Volumes, volumes []Volumes) (bool, Volumes) {
 	for _, dv := range volumes {
@@ -895,7 +935,7 @@ func getVol(v Volumes, volumes []Volumes) (bool, Volumes) {
 	return false, Volumes{}
 }
 
-// checkVolDependent checks whether volume
+// checkVolDependent checks whether dependent volume is already defined
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v1v2.go#L395
 func checkVolDependent(dv Volumes, volumes []Volumes) bool {
 	for _, vol := range volumes {
@@ -903,6 +943,7 @@ func checkVolDependent(dv Volumes, volumes []Volumes) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -910,6 +951,7 @@ func checkVolDependent(dv Volumes, volumes []Volumes) bool {
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L559
 func getVolumeLabels(volume composego.VolumeConfig) (string, string, string) {
 	size, selector, storageClass := "", "", ""
+
 	for key, value := range volume.Labels {
 		if key == config.LabelVolumeSize {
 			size = value
@@ -919,6 +961,7 @@ func getVolumeLabels(volume composego.VolumeConfig) (string, string, string) {
 			storageClass = value
 		}
 	}
+
 	return size, selector, storageClass
 }
 
@@ -929,9 +972,11 @@ func useSubPathMount(cm *v1.ConfigMap) bool {
 	if cm.Annotations == nil {
 		return false
 	}
+
 	if cm.Annotations["use-subpath"] != "true" {
 		return false
 	}
+
 	return true
 }
 
@@ -939,15 +984,17 @@ func useSubPathMount(cm *v1.ConfigMap) bool {
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L136
 func loadPlacement(constraints []string) map[string]string {
 	placement := make(map[string]string)
-	errMsg := "Constraints in placement is not supported, only 'node.hostname', 'node.role == worker', 'node.role == manager', 'engine.labels.operatingsystem' and 'node.labels.xxx' (ex: node.labels.something == anything) is supported as a constraint"
-	for _, j := range constraints {
-		p := strings.Split(j, " == ")
+
+	errMsg := "Constraint in placement is not supported. Only 'node.hostname==...', 'node.role==worker', 'node.role==manager', 'engine.labels.operatingsystem' and 'node.labels.(...)' (ex: node.labels.something==anything) is supported as a constraint"
+
+	for _, c := range constraints {
+		p := strings.Split(strings.Replace(c, " ", "", -1), "==")
+
 		if len(p) < 2 {
-			log.WarnWithFields(log.Fields{
-				"placement": p[0],
-			}, errMsg)
+			log.WarnWithFields(log.Fields{"placement": p[0]}, errMsg)
 			continue
 		}
+
 		if p[0] == "node.role" && p[1] == "worker" {
 			placement["node-role.kubernetes.io/worker"] = "true"
 		} else if p[0] == "node.role" && p[1] == "manager" {
@@ -960,10 +1007,9 @@ func loadPlacement(constraints []string) map[string]string {
 			label := strings.TrimPrefix(p[0], "node.labels.")
 			placement[label] = p[1]
 		} else {
-			log.WarnWithFields(log.Fields{
-				"placement": p[0],
-			}, errMsg)
+			log.WarnWithFields(log.Fields{"placement": p[0]}, errMsg)
 		}
 	}
+
 	return placement
 }

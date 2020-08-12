@@ -49,15 +49,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const (
-	// InfoPrefix info log level prefix
-	InfoPrefix = "💡"
-	// WarnPrefix warn log level prefix
-	WarnPrefix = "⚠️ "
-	// ErrorPrefix error log level prefix
-	ErrorPrefix = "✋ "
-)
-
 // Kubernetes transformer
 type Kubernetes struct {
 	Opt     ConvertOptions // user provided options from the command line
@@ -94,7 +85,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 		// @step normalise project service name
 		if normalizeServiceNames(projectService.Name) != projectService.Name {
-			log.InfofWithFields(log.Fields{
+			log.DebugfWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Compose service name normalised to %q",
 				normalizeServiceNames(projectService.Name))
@@ -126,7 +117,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		if k.portsExist(projectService) && serviceType != config.NoService {
 			// Create a k8s service of a type specified by the compose service config,
 			// only if ports are defined and service type is different than NoService
-			svc := k.createService(serviceType, projectService, objects)
+			svc := k.createService(serviceType, projectService)
 			objects = append(objects, svc)
 
 			// For exposed service also create an ingress (Note only the first port is used for ingress!)
@@ -140,7 +131,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			}
 		} else if serviceType == config.HeadlessService {
 			// No ports defined - creating headless service instead
-			svc := k.createHeadlessService(projectService, objects)
+			svc := k.createHeadlessService(projectService)
 			objects = append(objects, svc)
 		}
 
@@ -153,7 +144,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		// @step create network policies if networks defined
 		if len(projectService.Networks) > 0 {
 			for name := range projectService.Networks {
-				log.InfoWithFields(log.Fields{
+				log.DebugWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"network-name":    name,
 				}, "Network detected and will be converted to equivalent NetworkPolicy")
@@ -212,6 +203,7 @@ func (k *Kubernetes) initPodSpec(projectService ProjectService) v1.PodSpec {
 	if serviceAccount != "" {
 		pod.ServiceAccountName = serviceAccount
 	}
+
 	return pod
 }
 
@@ -288,23 +280,22 @@ func (k *Kubernetes) initPodSpecWithConfigMap(projectService ProjectService) v1.
 		volumes = append(volumes, cmVol)
 	}
 
-	pod := v1.PodSpec{
-		Containers: []v1.Container{
-			{
-				Name:         projectService.Name,
-				Image:        projectService.Image,
-				VolumeMounts: volumeMounts,
-			},
+	pod := k.initPodSpec(projectService)
+	pod.Containers = []v1.Container{
+		{
+			Name:         projectService.Name,
+			Image:        projectService.Image,
+			VolumeMounts: volumeMounts,
 		},
-		Volumes: volumes,
 	}
+	pod.Volumes = volumes
 
 	return pod
 }
 
-// initRC initializes Kubernetes ReplicationController object
+// initReplicationController initializes Kubernetes ReplicationController object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L216
-func (k *Kubernetes) initRC(projectService ProjectService, replicas int) *v1.ReplicationController {
+func (k *Kubernetes) initReplicationController(projectService ProjectService, replicas int) *v1.ReplicationController {
 	repl := int32(replicas)
 
 	rc := &v1.ReplicationController{
@@ -348,9 +339,24 @@ func (k *Kubernetes) initSvc(projectService ProjectService) *v1.Service {
 	return svc
 }
 
-// initConfigMapForEnv initializes a ConfigMap object
+// initConfigMap initialises ConfigMap object
+func (k *Kubernetes) initConfigMap(projectService ProjectService, configMapName string, data map[string]string) *v1.ConfigMap {
+	return &v1.ConfigMap{
+		TypeMeta: meta.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name:   rfc1123dns(configMapName),
+			Labels: configLabels(projectService.Name),
+		},
+		Data: data,
+	}
+}
+
+// initConfigMapFromEnvFile initializes a ConfigMap object from env_file
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L258
-func (k *Kubernetes) initConfigMapForEnv(projectService ProjectService, envFile string) (*v1.ConfigMap, error) {
+func (k *Kubernetes) initConfigMapFromEnvFile(projectService ProjectService, envFile string) (*v1.ConfigMap, error) {
 	envs, err := getEnvsFromFile(envFile, k.Opt.InputFiles)
 	if err != nil {
 		log.ErrorfWithFields(log.Fields{
@@ -362,38 +368,19 @@ func (k *Kubernetes) initConfigMapForEnv(projectService ProjectService, envFile 
 	}
 
 	// Remove root path & replace all other slashes / periods
-	envName := formatEnvName(envFile)
+	configMapName := formatEnvFileName(envFile)
 
 	// In order to differentiate files, we append to the name and remove '.env' if applicable from the file name
-	configMap := &v1.ConfigMap{
-		TypeMeta: meta.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name:   envName,
-			Labels: configLabels(projectService.Name + "-" + envName),
-		},
-		Data: envs,
-	}
+	configMap := k.initConfigMap(projectService, configMapName, envs)
+	configMap.Labels = configLabels(projectService.Name + "-" + configMapName)
 
 	return configMap, nil
 }
 
-// intiConfigMapFromFileOrDir will create a configmap from dir or file
+// initConfigMapFromFileOrDir will create a configmap from dir or file
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L288
-func (k *Kubernetes) intiConfigMapFromFileOrDir(projectService ProjectService, cmName, filePath string) (*v1.ConfigMap, error) {
-	configMap := &v1.ConfigMap{
-		TypeMeta: meta.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name:   cmName,
-			Labels: configLabels(projectService.Name),
-		},
-	}
-	dataMap := make(map[string]string)
+func (k *Kubernetes) initConfigMapFromFileOrDir(projectService ProjectService, configMapName, filePath string) (*v1.ConfigMap, error) {
+	configMap := &v1.ConfigMap{}
 
 	fi, err := os.Stat(filePath)
 	if err != nil {
@@ -402,30 +389,17 @@ func (k *Kubernetes) intiConfigMapFromFileOrDir(projectService ProjectService, c
 
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		files, err := ioutil.ReadDir(filePath)
+		configMap, err = k.initConfigMapFromDir(projectService, configMapName, filePath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Couldn't initiate ConfigMap from directory: %s", err)
 		}
-
-		for _, file := range files {
-			if !file.IsDir() {
-				log.InfoWithFields(log.Fields{
-					"project-service": projectService.Name,
-					"file":            file.Name(),
-				}, "Read file to ConfigMap")
-
-				data, err := getContentFromFile(filePath + "/" + file.Name())
-				if err != nil {
-					return nil, err
-				}
-				dataMap[file.Name()] = data
-			}
-		}
-		configMap.Data = dataMap
 
 	case mode.IsRegular():
-		configMap = k.initConfigMapFromFile(projectService, filePath)
-		configMap.Name = cmName
+		configMap, err = k.initConfigMapFromFile(projectService, filePath)
+		if err != nil {
+			return nil, fmt.Errorf("Couldn't initiate ConfigMap from file: %s", err)
+		}
+		configMap.Name = rfc1123dns(configMapName) // always override name with passed value
 		configMap.Annotations = map[string]string{
 			"use-subpath": "true",
 		}
@@ -434,15 +408,44 @@ func (k *Kubernetes) intiConfigMapFromFileOrDir(projectService ProjectService, c
 	return configMap, nil
 }
 
-// initConfigMapFromFile initializes a ConfigMap object
+// initConfigMapFromDir initialised ConfigMap from a directory
+func (k *Kubernetes) initConfigMapFromDir(projectService ProjectService, configMapName, dir string) (*v1.ConfigMap, error) {
+	dataMap := make(map[string]string)
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		if !file.IsDir() {
+			log.DebugWithFields(log.Fields{
+				"project-service": projectService.Name,
+				"file":            file.Name(),
+			}, "Read file to ConfigMap")
+
+			data, err := getContentFromFile(dir + "/" + file.Name())
+			if err != nil {
+				return nil, err
+			}
+			dataMap[file.Name()] = data
+		}
+	}
+
+	return k.initConfigMap(projectService, configMapName, dataMap), nil
+}
+
+// initConfigMapFromFile initializes a ConfigMap object from a single file
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L350
-func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileName string) *v1.ConfigMap {
+func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileName string) (*v1.ConfigMap, error) {
 	content, err := getContentFromFile(fileName)
 	if err != nil {
 		log.ErrorfWithFields(log.Fields{
 			"project-service": projectService.Name,
 			"file":            fileName,
 		}, "Unable to retrieve file to initialise ConfigMap from: %s", err.Error())
+
+		return nil, err
 	}
 
 	dataMap := make(map[string]string)
@@ -454,24 +457,17 @@ func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileNa
 			configMapName = key
 		}
 	}
-	configMap := &v1.ConfigMap{
-		TypeMeta: meta.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name:   formatFileName(configMapName),
-			Labels: configLabels(projectService.Name),
-		},
-		Data: dataMap,
+
+	if configMapName == "" {
+		return nil, fmt.Errorf("No config found matching the file name")
 	}
 
-	return configMap
+	return k.initConfigMap(projectService, configMapName, dataMap), nil
 }
 
-// initD initializes Kubernetes Deployment object
+// initDeployment initializes Kubernetes Deployment object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L380
-func (k *Kubernetes) initD(projectService ProjectService, replicas int) *v1beta1.Deployment {
+func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int) *v1beta1.Deployment {
 	repl := int32(replicas)
 
 	var podSpec v1.PodSpec
@@ -498,14 +494,14 @@ func (k *Kubernetes) initD(projectService ProjectService, replicas int) *v1beta1
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
 					Annotations: configAnnotations(projectService),
+					Labels:      configLabels(projectService.Name),
 				},
 				Spec: podSpec,
 			},
 		},
 	}
-	dc.Spec.Template.Labels = configLabels(projectService.Name)
 
-	// @step derives service update strategy and adds to the deployment configuration spec
+	// @step add update strategy if present
 	update := projectService.getKubernetesUpdateStrategy()
 	if update != nil {
 		dc.Spec.Strategy = v1beta1.DeploymentStrategy{
@@ -513,7 +509,7 @@ func (k *Kubernetes) initD(projectService ProjectService, replicas int) *v1beta1
 			RollingUpdate: update,
 		}
 
-		log.InfoWithFields(log.Fields{
+		log.DebugWithFields(log.Fields{
 			"project-service": projectService.Name,
 			"max-surge":       update.MaxSurge.String(),
 			"max-unavailable": update.MaxUnavailable.String(),
@@ -523,9 +519,9 @@ func (k *Kubernetes) initD(projectService ProjectService, replicas int) *v1beta1
 	return dc
 }
 
-// initDS initializes Kubernetes DaemonSet object
+// initDaemonSet initializes Kubernetes DaemonSet object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L427
-func (k *Kubernetes) initDS(projectService ProjectService) *v1beta1.DaemonSet {
+func (k *Kubernetes) initDaemonSet(projectService ProjectService) *v1beta1.DaemonSet {
 	ds := &v1beta1.DaemonSet{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "DaemonSet",
@@ -544,8 +540,8 @@ func (k *Kubernetes) initDS(projectService ProjectService) *v1beta1.DaemonSet {
 	return ds
 }
 
-// initSTS initialises a new StatefulSet
-func (k *Kubernetes) initSTS(projectService ProjectService, replicas int) *v1apps.StatefulSet {
+// initStatefulSet initialises a new StatefulSet
+func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int) *v1apps.StatefulSet {
 	repl := int32(replicas)
 
 	var podSpec v1.PodSpec
@@ -572,28 +568,23 @@ func (k *Kubernetes) initSTS(projectService ProjectService, replicas int) *v1app
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
 					Annotations: configAnnotations(projectService),
+					Labels:      configLabels(projectService.Name),
 				},
 				Spec: podSpec,
 			},
+			ServiceName: projectService.Name,
+			UpdateStrategy: v1apps.StatefulSetUpdateStrategy{
+				Type:          v1apps.RollingUpdateStatefulSetStrategyType,
+				RollingUpdate: &v1apps.RollingUpdateStatefulSetStrategy{},
+			},
 		},
-	}
-	sts.Spec.Template.Labels = configLabels(projectService.Name)
-
-	// @step define service name responsible for governing the StatefulSet
-	sts.Spec.ServiceName = projectService.Name
-
-	// @step derives service update strategy and adds to the deployment configuration spec
-	update := &v1apps.RollingUpdateStatefulSetStrategy{}
-	sts.Spec.UpdateStrategy = v1apps.StatefulSetUpdateStrategy{
-		Type:          v1apps.RollingUpdateStatefulSetStrategyType,
-		RollingUpdate: update,
 	}
 
 	return sts
 }
 
-// initJ initialises a new Kubernetes Job
-func (k *Kubernetes) initJ(projectService ProjectService, replicas int) *v1batch.Job {
+// initJob initialises a new Kubernetes Job
+func (k *Kubernetes) initJob(projectService ProjectService, replicas int) *v1batch.Job {
 	repl := int32(replicas)
 
 	var podSpec v1.PodSpec
@@ -621,12 +612,12 @@ func (k *Kubernetes) initJ(projectService ProjectService, replicas int) *v1batch
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
 					Annotations: configAnnotations(projectService),
+					Labels:      configLabels(projectService.Name),
 				},
 				Spec: podSpec,
 			},
 		},
 	}
-	j.Spec.Template.Labels = configLabels(projectService.Name)
 
 	return j
 }
@@ -635,6 +626,9 @@ func (k *Kubernetes) initJ(projectService ProjectService, replicas int) *v1batch
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
 func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *v1beta1.Ingress {
 	expose, _ := projectService.exposeService()
+	if expose == "" {
+		return nil
+	}
 	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(expose, -1)
 
 	ingress := &v1beta1.Ingress{
@@ -649,6 +643,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *v1b
 		},
 		Spec: v1beta1.IngressSpec{
 			Rules: make([]v1beta1.IngressRule, len(hosts)),
+			// Rules: []v1beta1.IngressRule{},
 		},
 	}
 
@@ -1052,13 +1047,13 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 		var volsource *v1.VolumeSource
 
 		if useEmptyVolumes {
-			log.InfoWithFields(log.Fields{
+			log.DebugWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Use empty volume")
 
 			volsource = k.configEmptyVolumeSource("volume")
 		} else if useHostPath {
-			log.InfoWithFields(log.Fields{
+			log.DebugWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Use HostPath volume")
 
@@ -1069,11 +1064,11 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 			}
 			volsource = source
 		} else if useConfigMap {
-			log.InfoWithFields(log.Fields{
+			log.DebugWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Use configmap volume")
 
-			if cm, err := k.intiConfigMapFromFileOrDir(projectService, volumeName, volume.Host); err != nil {
+			if cm, err := k.initConfigMapFromFileOrDir(projectService, volumeName, volume.Host); err != nil {
 				log.Error("Couldn't create ConfigMap volume source")
 				return nil, nil, nil, nil, err
 			} else {
@@ -1085,7 +1080,7 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 				}
 			}
 		} else {
-			log.InfoWithFields(log.Fields{
+			log.DebugWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Use PVC volume")
 
@@ -1193,7 +1188,9 @@ func (k *Kubernetes) configPVCVolumeSource(name string, readonly bool) *v1.Volum
 	}
 }
 
-// configEnvs configures the environment variables
+// configEnvs compiles list of project service environment variables
+// Variables are loaded from env_files if project service is using them as well as explicit variables.
+// All loaded and resolved variables are sorted.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L961
 func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, error) {
 	envs := EnvSort{}
@@ -1204,7 +1201,7 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 
 		// @step load up env variables from env_file(s)
 		for _, file := range projectService.EnvFile {
-			envName := formatEnvName(file)
+			envName := formatEnvFileName(file)
 
 			// @step load environment variables from file
 			envLoad, err := getEnvsFromFile(file, k.Opt.InputFiles)
@@ -1304,19 +1301,19 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	// @step create object based on inferred / manually configured workload controller type
 	switch strings.ToLower(workloadType) {
 	case strings.ToLower(config.DeploymentWorkload):
-		objects = append(objects, k.initD(projectService, replicas))
+		objects = append(objects, k.initDeployment(projectService, replicas))
 	case strings.ToLower(config.DaemonsetWorkload):
-		objects = append(objects, k.initDS(projectService))
+		objects = append(objects, k.initDaemonSet(projectService))
 	case strings.ToLower(config.StatefulsetWorkload):
-		objects = append(objects, k.initSTS(projectService, replicas))
+		objects = append(objects, k.initStatefulSet(projectService, replicas))
 	case "replicationcontroller":
-		objects = append(objects, k.initRC(projectService, replicas))
+		objects = append(objects, k.initReplicationController(projectService, replicas))
 	}
 
 	// @step for service referencing Env_file(s) init a new ConfigMap
 	if len(projectService.EnvFile) > 0 {
 		for _, envFile := range projectService.EnvFile {
-			if configMap, err := k.initConfigMapForEnv(projectService, envFile); err == nil {
+			if configMap, err := k.initConfigMapFromEnvFile(projectService, envFile); err == nil {
 				objects = append(objects, configMap)
 			}
 		}
@@ -1344,10 +1341,16 @@ func (k *Kubernetes) createConfigMapFromComposeConfig(projectService ProjectServ
 		}
 
 		currentFileName := currentConfigObj.File
-		configMap := k.initConfigMapFromFile(projectService, currentFileName)
-		objects = append(objects, configMap)
+		configMap, err := k.initConfigMapFromFile(projectService, currentFileName)
+		if err != nil {
+			log.ErrorfWithFields(log.Fields{
+				"project-service": projectService.Name,
+				"config":          currentFileName,
+			}, "Unable to initialise ConfigMap from file: %s", currentFileName)
+		} else {
+			objects = append(objects, configMap)
+		}
 	}
-
 	return objects
 }
 
@@ -1462,7 +1465,7 @@ func (k *Kubernetes) portsExist(projectService ProjectService) bool {
 
 // createService creates a k8s service
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L352
-func (k *Kubernetes) createService(serviceType string, projectService ProjectService, objects []runtime.Object) *v1.Service {
+func (k *Kubernetes) createService(serviceType string, projectService ProjectService) *v1.Service {
 	svc := k.initSvc(projectService)
 
 	// @step configure the service ports.
@@ -1487,7 +1490,7 @@ func (k *Kubernetes) createService(serviceType string, projectService ProjectSer
 // Instead of regular Kubernetes Service we create Headless Service. DNS of such service points directly to Pod IP address.
 // You can find more about Headless Services in Kubernetes documentation https://kubernetes.io/docs/user-guide/services/#headless-services
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L378
-func (k *Kubernetes) createHeadlessService(projectService ProjectService, objects []runtime.Object) *v1.Service {
+func (k *Kubernetes) createHeadlessService(projectService ProjectService) *v1.Service {
 	svc := k.initSvc(projectService)
 
 	servicePorts := []v1.ServicePort{}
@@ -1599,7 +1602,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		}
 
 		// @step configure pod resource requests and limits
-		k.translatePodResource(projectService, template)
+		k.setPodResources(projectService, template)
 
 		// @step configure pod security context
 		podSecurityContext := &v1.PodSecurityContext{}
@@ -1701,7 +1704,7 @@ func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 		if us, ok := obj.(*v1.ConfigMap); ok {
 			k := us.GroupVersionKind().String() + us.GetNamespace() + us.GetName()
 			if exist[k] {
-				log.InfoWithFields(log.Fields{
+				log.DebugWithFields(log.Fields{
 					"configmap": us.GetName(),
 				}, "Remove duplicate configmap")
 
@@ -1720,7 +1723,7 @@ func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 
 // fixWorkloadVersion force reset deployment/daemonset's apiversion to apps/v1
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L717
-// @todo check whether it should cover other object types
+// @todo check whether it should cover other object types and if needed at all?
 func (k *Kubernetes) fixWorkloadVersion(objs *[]runtime.Object) {
 	var result []runtime.Object
 
@@ -1739,43 +1742,41 @@ func (k *Kubernetes) fixWorkloadVersion(objs *[]runtime.Object) {
 	*objs = result
 }
 
-// translatePodResource configures pod resources
+// setPodResources configures pod resources
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L592
-func (k *Kubernetes) translatePodResource(projectService ProjectService, template *v1.PodTemplateSpec) {
-	if projectService.Deploy != nil {
-		// @step resource limits
-		memLimit, cpuLimit := projectService.resourceLimits()
+func (k *Kubernetes) setPodResources(projectService ProjectService, template *v1.PodTemplateSpec) {
+	// @step resource limits
+	memLimit, cpuLimit := projectService.resourceLimits()
 
-		if *memLimit > 0 || *cpuLimit > 0 {
-			resourceLimits := v1.ResourceList{}
+	if *memLimit > 0 || *cpuLimit > 0 {
+		resourceLimits := v1.ResourceList{}
 
-			if *memLimit > 0 {
-				resourceLimits[v1.ResourceMemory] = *resource.NewQuantity(int64(*memLimit), resource.BinarySI)
-			}
-
-			if *cpuLimit > 0 {
-				resourceLimits[v1.ResourceCPU] = *resource.NewMilliQuantity(int64(*cpuLimit*1000), resource.DecimalSI)
-			}
-
-			template.Spec.Containers[0].Resources.Limits = resourceLimits
+		if *memLimit > 0 {
+			resourceLimits[v1.ResourceMemory] = *resource.NewQuantity(*memLimit, resource.BinarySI)
 		}
 
-		// @step resource requests
-		memRequest, cpuRequest := projectService.resourceRequests()
-
-		if *memRequest > 0 || *cpuRequest > 0 {
-			resourceRequests := v1.ResourceList{}
-
-			if *memRequest > 0 {
-				resourceRequests[v1.ResourceMemory] = *resource.NewQuantity(int64(*memRequest), resource.BinarySI)
-			}
-
-			if *cpuRequest > 0 {
-				resourceRequests[v1.ResourceCPU] = *resource.NewMilliQuantity(int64(*cpuRequest*1000), resource.DecimalSI)
-			}
-
-			template.Spec.Containers[0].Resources.Requests = resourceRequests
+		if *cpuLimit > 0 {
+			resourceLimits[v1.ResourceCPU] = *resource.NewMilliQuantity(*cpuLimit, resource.DecimalSI)
 		}
+
+		template.Spec.Containers[0].Resources.Limits = resourceLimits
+	}
+
+	// @step resource requests
+	memRequest, cpuRequest := projectService.resourceRequests()
+
+	if *memRequest > 0 || *cpuRequest > 0 {
+		resourceRequests := v1.ResourceList{}
+
+		if *memRequest > 0 {
+			resourceRequests[v1.ResourceMemory] = *resource.NewQuantity(*memRequest, resource.BinarySI)
+		}
+
+		if *cpuRequest > 0 {
+			resourceRequests[v1.ResourceCPU] = *resource.NewMilliQuantity(*cpuRequest, resource.DecimalSI)
+		}
+
+		template.Spec.Containers[0].Resources.Requests = resourceRequests
 	}
 }
 

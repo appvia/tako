@@ -18,6 +18,7 @@ package log
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -49,13 +50,18 @@ var logger = &logrus.Logger{
 		DisableTimestamp: true,
 	},
 	Hooks: make(logrus.LevelHooks),
-	Level: logrus.DebugLevel,
+	Level: logrus.InfoLevel,
 }
 
 var enableFileInfo = false
 
 // Fields wraps logrus.Fields
 type Fields logrus.Fields
+
+// GetLogger returns underlying logrus logger
+func GetLogger() *logrus.Logger {
+	return logger
+}
 
 // SetLogLevel sets logging level
 func SetLogLevel(level logrus.Level) {
@@ -65,6 +71,11 @@ func SetLogLevel(level logrus.Level) {
 // SetLogFormatter sets logging formatter
 func SetLogFormatter(formatter logrus.Formatter) {
 	logger.Formatter = formatter
+}
+
+// SetOutput sets logger output
+func SetOutput(out io.Writer) {
+	logger.SetOutput(out)
 }
 
 // EnableFileInfo enables file information in log entry
