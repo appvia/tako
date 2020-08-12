@@ -1467,6 +1467,58 @@ var _ = Describe("Transform", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
+
+		Context("for env vars with symbolic values", func() {
+
+			Context("as secret.secret-name.secret-key", func() {
+				secretRef := "secret.my-secret-name.my-secret-key"
+
+				BeforeEach(func() {
+					projectService.Environment = composego.MappingWithEquals{
+						"MY_SECRET": &secretRef,
+					}
+				})
+
+				It("expands that env variable to reference secret key", func() {
+					vars, err := k.configEnvs(projectService)
+
+					Expect(vars[0].ValueFrom).To(Equal(&v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: "my-secret-name",
+							},
+							Key: "my-secret-key",
+						},
+					}))
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			Context("as config.config-name.config-key", func() {
+				configRef := "config.my-config-name.my-config-key"
+
+				BeforeEach(func() {
+					projectService.Environment = composego.MappingWithEquals{
+						"MY_CONFIG": &configRef,
+					}
+				})
+
+				It("expands that env variable to reference config key", func() {
+					vars, err := k.configEnvs(projectService)
+
+					Expect(vars[0].ValueFrom).To(Equal(&v1.EnvVarSource{
+						ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: "my-config-name",
+							},
+							Key: "my-config-key",
+						},
+					}))
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+		})
 	})
 
 	// @todo
