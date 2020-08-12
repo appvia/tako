@@ -176,15 +176,50 @@ func extractWorkloadType(source composego.ServiceConfig, target *ServiceConfig) 
 
 // extractHealthcheckLabels extracts health check labels into a label's Service.
 func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceConfig) {
-	target.Labels.Add(config.LabelWorkloadLivenessProbeDisabled, strconv.FormatBool(source.HealthCheck.Disable))
-	target.Labels.Add(config.LabelWorkloadLivenessProbeInterval, source.HealthCheck.Interval.String())
+	var (
+		interval     string
+		retries      string
+		initialDelay string
+		command      string
+		timeout      string
+	)
 
-	retries := strconv.FormatUint(*source.HealthCheck.Retries, 10)
+	target.Labels.Add(config.LabelWorkloadLivenessProbeDisabled, strconv.FormatBool(source.HealthCheck.Disable))
+
+	if source.HealthCheck != nil && source.HealthCheck.Interval != nil {
+		interval = source.HealthCheck.Interval.String()
+	} else {
+		interval = config.DefaultLivenessProbeInterval
+	}
+	target.Labels.Add(config.LabelWorkloadLivenessProbeInterval, interval)
+
+	if source.HealthCheck != nil && source.HealthCheck.Retries != nil {
+		retries = strconv.FormatUint(*source.HealthCheck.Retries, 10)
+	} else {
+		retries = strconv.FormatUint(config.DefaultLivenessProbeRetries, 10)
+	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeRetries, retries)
 
-	target.Labels.Add(config.LabelWorkloadLivenessProbeInitialDelay, source.HealthCheck.StartPeriod.String())
-	target.Labels.Add(config.LabelWorkloadLivenessProbeCommand, formatSlice(source.HealthCheck.Test))
-	target.Labels.Add(config.LabelWorkloadLivenessProbeTimeout, source.HealthCheck.Timeout.String())
+	if source.HealthCheck != nil && source.HealthCheck.StartPeriod != nil {
+		initialDelay = source.HealthCheck.StartPeriod.String()
+	} else {
+		initialDelay = config.DefaultLivenessProbeInitialDelay
+	}
+	target.Labels.Add(config.LabelWorkloadLivenessProbeInitialDelay, initialDelay)
+
+	if source.HealthCheck != nil && len(source.HealthCheck.Test) > 0 {
+		command = formatSlice(source.HealthCheck.Test)
+	} else {
+		command = config.DefaultLivenessProbeCommand
+	}
+	target.Labels.Add(config.LabelWorkloadLivenessProbeCommand, command)
+
+	if source.HealthCheck != nil && source.HealthCheck.Timeout != nil {
+		timeout = source.HealthCheck.Timeout.String()
+	} else {
+		timeout = config.DefaultLivenessProbeTimeout
+	}
+	target.Labels.Add(config.LabelWorkloadLivenessProbeTimeout, timeout)
 }
 
 // formatSlice formats a string slice as '["value1", "value2", "value3"]'
