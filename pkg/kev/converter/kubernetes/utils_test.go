@@ -263,7 +263,7 @@ var _ = Describe("Utils", func() {
 			}
 		})
 
-		It("loads environment variabled defined in the referenced env_file and returns a map", func() {
+		It("loads environment variables defined in the referenced env_file and returns a map", func() {
 			env, err := getEnvsFromFile(file, inputFilePaths)
 			Expect(env).To(HaveKeyWithValue("FOO", "BAR"))
 			Expect(env).To(HaveKeyWithValue("BAR", "BAZ"))
