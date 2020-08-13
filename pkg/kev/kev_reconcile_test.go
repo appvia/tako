@@ -13,15 +13,18 @@ var _ = Describe("Reconcile", func() {
 	var (
 		buffer       bytes.Buffer
 		workingDir   string
-		composeFiles []string
-		project      *kev.ComposeProject
+		source       *kev.ComposeProject
+		overlayFiles []string
+		overlay      *kev.ComposeProject
 		manifest     *kev.Manifest
 		env          *kev.Environment
 		mErr         error
 	)
 
 	JustBeforeEach(func() {
-		project, _ = kev.NewComposeProject(composeFiles)
+		if len(overlayFiles) > 0 {
+			overlay, _ = kev.NewComposeProject(overlayFiles)
+		}
 		manifest, mErr = kev.Reconcile(workingDir, &buffer)
 		env, _ = manifest.GetEnvironment("dev")
 	})
@@ -32,11 +35,11 @@ var _ = Describe("Reconcile", func() {
 		Context("when the version has been updated", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-version"
-				composeFiles = []string{workingDir + "/docker-compose.yaml"}
+				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
 			})
 
 			It("should update all environments with the new version", func() {
-				Expect(env.GetVersion()).To(Equal(project.GetVersion()))
+				Expect(env.GetVersion()).To(Equal(source.GetVersion()))
 			})
 
 			It("should not error", func() {
@@ -47,12 +50,12 @@ var _ = Describe("Reconcile", func() {
 		Context("when a service has been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-removal"
-				composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
 			It("confirms the number of services pre reconciliation", func() {
-				Expect(project.Services).To(HaveLen(2))
-				Expect(project.ServiceNames()).To(ContainElements("db", "wordpress"))
+				Expect(overlay.Services).To(HaveLen(2))
+				Expect(overlay.ServiceNames()).To(ContainElements("db", "wordpress"))
 			})
 
 			It("should remove the service from all environments", func() {
@@ -68,11 +71,11 @@ var _ = Describe("Reconcile", func() {
 		Context("when a service has edited attributes", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-edit"
-				composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
 			It("confirms the edit pre reconciliation", func() {
-				s, _ := project.GetService("wordpress")
+				s, _ := overlay.GetService("wordpress")
 				Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
 			})
 
@@ -91,12 +94,12 @@ var _ = Describe("Reconcile", func() {
 			Context("and the service has no deploy or healthcheck config", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
-					composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+					overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				})
 
 				It("confirms the number of services pre reconciliation", func() {
-					Expect(project.Services).To(HaveLen(1))
-					Expect(project.ServiceNames()).To(ContainElements("db"))
+					Expect(overlay.Services).To(HaveLen(1))
+					Expect(overlay.ServiceNames()).To(ContainElements("db"))
 				})
 
 				It("should add the new service labels to all environments", func() {
@@ -118,7 +121,6 @@ var _ = Describe("Reconcile", func() {
 			Context("and the service has deploy config", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-deploy"
-					composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				})
 
 				It("should configure the added service labels from deploy config", func() {
@@ -135,7 +137,6 @@ var _ = Describe("Reconcile", func() {
 			Context("and the service has healthcheck config", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-healthcheck"
-					composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				})
 
 				It("should configure the added service labels from healthcheck config", func() {
@@ -154,11 +155,11 @@ var _ = Describe("Reconcile", func() {
 		Context("when a new volume has been added", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
-				composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
-				Expect(project.Volumes).To(HaveLen(0))
+				Expect(overlay.Volumes).To(HaveLen(0))
 			})
 
 			It("should add the new volume labels to all environments", func() {
@@ -177,11 +178,11 @@ var _ = Describe("Reconcile", func() {
 		Context("when a volume has been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-removal"
-				composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
-				Expect(project.Volumes).To(HaveLen(1))
+				Expect(overlay.Volumes).To(HaveLen(1))
 			})
 
 			It("should remove the volume from all environments", func() {
@@ -196,12 +197,12 @@ var _ = Describe("Reconcile", func() {
 		Context("when a volume has been edited", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-edit"
-				composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
 			It("confirms the volume name pre reconciliation", func() {
-				Expect(project.VolumeNames()).To(HaveLen(1))
-				Expect(project.VolumeNames()).To(ContainElements("db_data"))
+				Expect(overlay.VolumeNames()).To(HaveLen(1))
+				Expect(overlay.VolumeNames()).To(ContainElements("db_data"))
 			})
 
 			It("should update the volume in all environments", func() {
@@ -217,11 +218,11 @@ var _ = Describe("Reconcile", func() {
 		Context("when env vars have been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-removal"
-				composeFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
 			It("confirms the env vars pre reconciliation", func() {
-				s, _ := project.GetService("wordpress")
+				s, _ := overlay.GetService("wordpress")
 				Expect(s.Environment).To(HaveLen(2))
 				Expect(s.Environment).To(HaveKey("WORDPRESS_CACHE_USER"))
 				Expect(s.Environment).To(HaveKey("WORDPRESS_CACHE_PASSWORD"))
