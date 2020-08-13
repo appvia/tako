@@ -22,32 +22,32 @@ import (
 	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev"
-	"github.com/appvia/kube-devx/pkg/kev/log"
 	"github.com/spf13/cobra"
 )
 
-var initLongDesc = `(init) reuses your docker-compose files to initialise cloud native app rendering.
+var initLongDesc = `Tracks compose sources & creates deployment environments.
 
 Examples:
 
-  #### Initialise project rendering with a single docker-compose file
-  $ kev init -f docker-compose.yaml
+  # Initialise kev.yaml with root docker-compose.yml and override file tracking.
+  # Adds the default dev deployment environment.
+  $ kev init
 
-  #### Initialise project rendering with multiple docker-compose files. These will be interpreted as one file.
-  $ kev init -f docker-compose.yaml -f docker-compose.other.yaml
+  # Use an alternate docker-compose.yml file.
+  $ kev init -f docker-compose.dev.yaml
+  
+  # Use multiple alternate docker-compose.yml files.
+  $ kev init -f docker-compose.alternate.yaml -f docker-compose.other.yaml
 
-  #### Initialise project rendering with a default deployment environment.
-  $ kev init -f docker-compose.yaml
+  # Use a specified environment.
+  $ kev init -e staging
 
-  #### Initialise project rendering with a deployment environment.
-  $ kev init -e staging -f docker-compose.yaml
-
-  #### Initialise project rendering with multiple deployment environments.
-  $ kev init -e staging -e dev -e prod -f docker-compose.yaml`
+  # Use multiple specified environments.
+  $ kev init -e staging`
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Reuses project docker-compose file(s) to initialise project rendering.",
+	Short: "Tracks compose sources & creates deployment environments.",
 	Long:  initLongDesc,
 	RunE:  runInitCmd,
 }
@@ -56,23 +56,18 @@ func init() {
 	flags := initCmd.Flags()
 	flags.SortFlags = false
 
-	// TODO: add defaults behaviour similar to docker-compose.
-	//  Defaults: docker-compose.yml & docker-compose.override.yml
 	flags.StringSliceP(
 		"file",
 		"f",
 		[]string{},
-		"Specify a compose file",
+		"Specify an alternate compose file\n(default: docker-compose.yml or docker-compose.yaml)",
 	)
-	if err := initCmd.MarkFlagRequired("file"); err != nil {
-		log.Fatal(err)
-	}
 
 	flags.StringSliceP(
 		"environment",
 		"e",
-		[]string{"dev"},
-		"Specify a deployment environment (default: dev)",
+		[]string{},
+		"Specify a deployment environment\n(default: dev)",
 	)
 
 	rootCmd.AddCommand(initCmd)
@@ -82,7 +77,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 
-	manifest, err := kev.Init(files, envs)
+	manifest, err := kev.Init(files, envs, ".")
 	if err != nil {
 		return err
 	}
