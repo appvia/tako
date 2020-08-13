@@ -94,9 +94,9 @@ func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error)
 	return environments, nil
 }
 
-// ExtractSourcesLabels extracts the base set of labels from the manifest's docker-compose source files.
-func (m *Manifest) ExtractSourcesLabels() (*Manifest, error) {
-	if err := m.Sources.ExtractLabels(); err != nil {
+// CalculateSourcesBaseOverlay extracts the base overlay from the manifest's docker-compose source files.
+func (m *Manifest) CalculateSourcesBaseOverlay() (*Manifest, error) {
+	if err := m.Sources.CalculateBaseOverlay(); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -111,9 +111,9 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	}
 	for _, env := range candidates {
 		m.Environments = append(m.Environments, &Environment{
-			Name:   env,
-			labels: m.GetSourcesLabels(),
-			File:   path.Join(m.GetWorkingDir(), fmt.Sprintf(configFileTemplate, env)),
+			Name:    env,
+			overlay: m.GetSourcesLabels(),
+			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(configFileTemplate, env)),
 		})
 	}
 	return m
@@ -123,15 +123,15 @@ func (m *Manifest) GetWorkingDir() string {
 	return m.Sources.GetWorkingDir()
 }
 
-func (m *Manifest) GetSourcesLabels() *labels {
-	return m.Sources.labels
+func (m *Manifest) GetSourcesLabels() *composeOverlay {
+	return m.Sources.overlay
 }
 func (m *Manifest) GetSourcesFiles() []string {
 	return m.Sources.Files
 }
 
 func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
-	if _, err := m.ExtractSourcesLabels(); err != nil {
+	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
 		return nil, err
 	}
 

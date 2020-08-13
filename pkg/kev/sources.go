@@ -23,12 +23,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func (s *Sources) ExtractLabels() error {
+// CalculateBaseOverlay calculates the base set of labels deduced from a group of compose sources.
+func (s *Sources) CalculateBaseOverlay() error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
 		return err
 	}
-	s.labels = extractLabels(ready)
+	s.overlay = extractLabels(ready)
 	return nil
 }
 

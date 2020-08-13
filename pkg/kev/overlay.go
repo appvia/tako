@@ -40,22 +40,22 @@ func (s Services) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
-// MarshalJSON makes Services implement json.Marshaler
+// GetLabels gets a service's labels
 func (sc ServiceConfig) GetLabels() map[string]string {
 	return sc.Labels
 }
 
-func (l *labels) diff(other *labels) (changeset, error) {
+func (o *composeOverlay) diff(other *composeOverlay) (changeset, error) {
 	d, _ := diff.NewDiffer()
-	clog, err := d.Diff(other, l)
+	clog, err := d.Diff(other, o)
 	if err != nil {
 		return changeset{}, err
 	}
 	return newChangeset(clog)
 }
 
-func (l *labels) patch(cset changeset) {
-	cset.applyVersionChangesIfAny(l)
-	cset.applyServicesChangesIfAny(l)
-	cset.applyVolumesChangesIfAny(l)
+func (o *composeOverlay) patch(cset changeset) {
+	cset.applyVersionChangesIfAny(o)
+	cset.applyServicesChangesIfAny(o)
+	cset.applyVolumesChangesIfAny(o)
 }

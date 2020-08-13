@@ -28,8 +28,8 @@ type Manifest struct {
 
 // Sources tracks a project's docker-compose sources
 type Sources struct {
-	Files  []string `yaml:"-" json:"-"`
-	labels *labels
+	Files   []string `yaml:"-" json:"-"`
+	overlay *composeOverlay
 }
 
 // Environments tracks a project's deployment environments
@@ -37,12 +37,14 @@ type Environments []*Environment
 
 // Environment is a deployment environment
 type Environment struct {
-	Name   string `yaml:"-" json:"-"`
-	File   string `yaml:"-" json:"-"`
-	labels *labels
+	Name    string `yaml:"-" json:"-"`
+	File    string `yaml:"-" json:"-"`
+	overlay *composeOverlay
 }
 
-type labels struct {
+// composeOverlay augments a compose project with labels and env vars to produce
+// k8s deployment config
+type composeOverlay struct {
 	Version  string   `yaml:"version,omitempty" json:"version,omitempty" diff:"version"`
 	Services Services `json:"services" diff:"services"`
 	Volumes  Volumes  `yaml:",omitempty" json:"volumes,omitempty" diff:"volumes"`

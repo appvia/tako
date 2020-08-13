@@ -56,12 +56,12 @@ func (e Environments) MarshalJSON() ([]byte, error) {
 }
 
 func (e *Environment) GetVersion() string {
-	return e.labels.Version
+	return e.overlay.Version
 }
 
 func (e *Environment) GetServices() Services {
-	var out = make([]ServiceConfig, len(e.labels.Services))
-	copy(out, e.labels.Services)
+	var out = make([]ServiceConfig, len(e.overlay.Services))
+	copy(out, e.overlay.Services)
 	return out
 }
 
@@ -77,7 +77,7 @@ func (e *Environment) GetService(name string) (ServiceConfig, error) {
 
 func (e *Environment) GetVolumes() Volumes {
 	out := make(Volumes)
-	for k, v := range e.labels.Volumes {
+	for k, v := range e.overlay.Volumes {
 		out[k] = v
 	}
 	return out
@@ -119,7 +119,7 @@ func (e *Environment) GetEnvVars(name string) (map[string]*string, error) {
 // WriteTo writes out an environment to a writer.
 // The Environment struct implements the io.WriterTo interface.
 func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
-	data, err := MarshalIndent(e.labels, 2)
+	data, err := MarshalIndent(e.overlay, 2)
 	if err != nil {
 		return int64(0), err
 	}
@@ -127,7 +127,7 @@ func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
 	return int64(written), err
 }
 
-func (e *Environment) loadLabels() (*Environment, error) {
+func (e *Environment) loadOverlay() (*Environment, error) {
 	p, err := NewComposeProject([]string{e.File})
 	if err != nil {
 		return nil, err
@@ -136,21 +136,21 @@ func (e *Environment) loadLabels() (*Environment, error) {
 	for _, s := range p.Services {
 		services = append(services, ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment})
 	}
-	e.labels = &labels{
+	e.overlay = &composeOverlay{
 		Version:  p.GetVersion(),
 		Services: services,
 	}
-	extractVolumesLabels(p, e.labels)
+	extractVolumesLabels(p, e.overlay)
 	return e, nil
 }
 
-func (e *Environment) reconcile(l *labels, reporter io.Writer) error {
+func (e *Environment) reconcile(l *composeOverlay, reporter io.Writer) error {
 	msg := fmt.Sprintf("Reconciling environment %s\n", e.Name)
 	if _, err := reporter.Write([]byte(msg)); err != nil {
 		return err
 	}
 
-	cset, err := l.diff(e.labels)
+	cset, err := l.diff(e.overlay)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (e *Environment) reconcile(l *labels, reporter io.Writer) error {
 }
 
 func (e *Environment) patch(cset changeset) {
-	e.labels.patch(cset)
+	e.overlay.patch(cset)
 }
 
 func loadEnvironment(name, file string) (*Environment, error) {
@@ -168,5 +168,5 @@ func loadEnvironment(name, file string) (*Environment, error) {
 		Name: name,
 		File: file,
 	}
-	return e.loadLabels()
+	return e.loadOverlay()
 }

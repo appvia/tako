@@ -38,7 +38,7 @@ const (
 // A default environment will be allocated if no environments were provided.
 func Init(composeSources, envs []string) (*Manifest, error) {
 	m, err := NewManifest(composeSources).
-		ExtractSourcesLabels()
+		CalculateSourcesBaseOverlay()
 	if err != nil {
 		return nil, err
 	}

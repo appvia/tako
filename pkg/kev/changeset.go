@@ -104,13 +104,13 @@ func isServiceAlreadyMarkedForDeletion(chgGroup changeGroup, index int) bool {
 	return ok == true && group[0].delete && group[0].target == "name"
 }
 
-func (c changeset) applyVersionChangesIfAny(l *labels) {
+func (c changeset) applyVersionChangesIfAny(l *composeOverlay) {
 	for _, change := range c.version {
 		change.applyVersion(l)
 	}
 }
 
-func (c changeset) applyServicesChangesIfAny(l *labels) {
+func (c changeset) applyServicesChangesIfAny(l *composeOverlay) {
 	for _, group := range c.services {
 		for _, change := range group {
 			change.applyService(l)
@@ -118,7 +118,7 @@ func (c changeset) applyServicesChangesIfAny(l *labels) {
 	}
 }
 
-func (c changeset) applyVolumesChangesIfAny(l *labels) {
+func (c changeset) applyVolumesChangesIfAny(l *composeOverlay) {
 	for _, group := range c.volumes {
 		for _, change := range group {
 			change.applyVolume(l)
@@ -126,14 +126,14 @@ func (c changeset) applyVolumesChangesIfAny(l *labels) {
 	}
 }
 
-func (c change) applyVersion(l *labels) {
+func (c change) applyVersion(l *composeOverlay) {
 	if !c.update {
 		return
 	}
 	l.Version = c.value
 }
 
-func (c change) applyService(l *labels) {
+func (c change) applyService(l *composeOverlay) {
 	if c.create {
 		l.Services = append(l.Services, ServiceConfig{
 			Labels: map[string]string{},
@@ -159,7 +159,7 @@ func (c change) applyService(l *labels) {
 	}
 }
 
-func (c change) applyVolume(l *labels) {
+func (c change) applyVolume(l *composeOverlay) {
 	if c.create {
 		l.Volumes = Volumes{
 			c.index.(string): VolumeConfig{
