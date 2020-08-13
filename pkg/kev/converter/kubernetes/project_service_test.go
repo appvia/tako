@@ -1025,9 +1025,9 @@ var _ = Describe("ProjectService", func() {
 	Describe("healthcheck", func() {
 
 		Context("when valid healthcheck is defined in deploy block", func() {
-			timeout := composego.Duration(time.Duration(0))
-			interval := composego.Duration(time.Duration(0))
-			startPeriod := composego.Duration(time.Duration(0))
+			timeout := composego.Duration(time.Duration(10) * time.Second)
+			interval := composego.Duration(time.Duration(10) * time.Second)
+			startPeriod := composego.Duration(time.Duration(10) * time.Second)
 			retries := uint64(3)
 
 			BeforeEach(func() {
@@ -1050,9 +1050,9 @@ var _ = Describe("ProjectService", func() {
 							Command: healthcheck.Test[1:],
 						},
 					},
-					TimeoutSeconds:      0,
-					PeriodSeconds:       0,
-					InitialDelaySeconds: 0,
+					TimeoutSeconds:      10,
+					PeriodSeconds:       10,
+					InitialDelaySeconds: 10,
 					FailureThreshold:    3,
 				}))
 			})
@@ -1060,18 +1060,41 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 
-			Context("when Test command is not defined on a healthcheck", func() {
+			Context("when Test command is not defined", func() {
 				BeforeEach(func() {
-					healthcheck = composego.HealthCheckConfig{}
+					healthcheck = composego.HealthCheckConfig{
+						Test: composego.HealthCheckTest{
+							"",
+						},
+					}
 				})
 
 				It("logs and returns error", func() {
 					_, err := projectService.healthcheck()
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Health check must contain a command"))
+					Expect(err).To(MatchError("Health check misconfigured"))
 
 					assertLog(logrus.ErrorLevel,
-						"Health check must contain a command",
+						"Health check misconfigured",
+						map[string]string{},
+					)
+				})
+			})
+
+			When("any of time based paramaters is set to 0", func() {
+				JustBeforeEach(func() {
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeTimeout: "0",
+					}
+				})
+
+				It("logs and returns error", func() {
+					_, err := projectService.healthcheck()
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("Health check misconfigured"))
+
+					assertLog(logrus.ErrorLevel,
+						"Health check misconfigured",
 						map[string]string{},
 					)
 				})
@@ -1080,7 +1103,7 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("livenessProbeCommand", func() {
-		Context("when defined via labels", func() {
+		When("defined via labels", func() {
 			cmd := "my test command"
 
 			BeforeEach(func() {
@@ -1090,19 +1113,38 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				Expect(projectService.livenessProbeCommand()).To(Equal(cmd))
+				Expect(projectService.livenessProbeCommand()).To(ContainElement(cmd))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		When("defined via healthcheck block only", func() {
+			cmd := []string{
+				"CMD-SHELL",
+				"/my-test/command.sh",
+				"some-args",
+			}
+
+			JustBeforeEach(func() {
+				projectService.HealthCheck = &composego.HealthCheckConfig{
+					Test: composego.HealthCheckTest(cmd),
+				}
+			})
+
+			It("returns project service healthcheck test command", func() {
+				Expect(projectService.livenessProbeCommand()).To(HaveLen(2))
+				Expect(projectService.livenessProbeCommand()).To(ContainElements(cmd[1:]))
+			})
+		})
+
+		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				Expect(projectService.livenessProbeCommand()).To(Equal(""))
+				Expect(projectService.livenessProbeCommand()).To(ContainElements(config.DefaultLivenessProbeCommand))
 			})
 		})
 	})
 
 	Describe("livenessProbeInterval", func() {
-		Context("when defined via labels", func() {
+		When("defined via labels", func() {
 			interval := "30s"
 
 			BeforeEach(func() {
@@ -1112,20 +1154,35 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				expected := int32(30)
-				Expect(projectService.livenessProbeInterval()).To(Equal(&expected))
+				Expect(projectService.livenessProbeInterval()).To(BeEquivalentTo(30))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		When("defined via healthcheck block only", func() {
+			seconds := 10
+			interval := composego.Duration(time.Duration(seconds) * time.Second)
+
+			JustBeforeEach(func() {
+				projectService.HealthCheck = &composego.HealthCheckConfig{
+					Interval: &interval,
+				}
+			})
+
+			It("returns project service healthcheck interval", func() {
+				Expect(projectService.livenessProbeInterval()).To(BeEquivalentTo(seconds))
+			})
+		})
+
+		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				Expect(projectService.livenessProbeInterval()).To(BeNil())
+				expected, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInterval)
+				Expect(projectService.livenessProbeInterval()).To(Equal(*expected))
 			})
 		})
 	})
 
 	Describe("livenessProbeTimeout", func() {
-		Context("when defined via labels", func() {
+		When("defined via labels", func() {
 			timeout := "30s"
 
 			BeforeEach(func() {
@@ -1135,20 +1192,35 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				expected := int32(30)
-				Expect(projectService.livenessProbeTimeout()).To(Equal(&expected))
+				Expect(projectService.livenessProbeTimeout()).To(BeEquivalentTo(30))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		When("defined via healthcheck block only", func() {
+			seconds := 3
+			timeout := composego.Duration(time.Duration(seconds) * time.Second)
+
+			JustBeforeEach(func() {
+				projectService.HealthCheck = &composego.HealthCheckConfig{
+					Timeout: &timeout,
+				}
+			})
+
+			It("returns project service healthcheck timeout", func() {
+				Expect(projectService.livenessProbeTimeout()).To(BeEquivalentTo(seconds))
+			})
+		})
+
+		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				Expect(projectService.livenessProbeTimeout()).To(BeNil())
+				expected, _ := durationStrToSecondsInt(config.DefaultLivenessProbeTimeout)
+				Expect(projectService.livenessProbeTimeout()).To(Equal(*expected))
 			})
 		})
 	})
 
 	Describe("livenessProbeInitialDelay", func() {
-		Context("when defined via labels", func() {
+		When("defined via labels", func() {
 			delay := "30s"
 
 			BeforeEach(func() {
@@ -1158,20 +1230,35 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				expected := int32(30)
-				Expect(projectService.livenessProbeInitialDelay()).To(Equal(&expected))
+				Expect(projectService.livenessProbeInitialDelay()).To(BeEquivalentTo(30))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		When("defined via healthcheck block only", func() {
+			seconds := 5
+			startPeriod := composego.Duration(time.Duration(seconds) * time.Second)
+
+			JustBeforeEach(func() {
+				projectService.HealthCheck = &composego.HealthCheckConfig{
+					StartPeriod: &startPeriod,
+				}
+			})
+
+			It("returns project service healthcheck start period", func() {
+				Expect(projectService.livenessProbeInitialDelay()).To(BeEquivalentTo(seconds))
+			})
+		})
+
+		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				Expect(projectService.livenessProbeInitialDelay()).To(BeNil())
+				expected, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInitialDelay)
+				Expect(projectService.livenessProbeInitialDelay()).To(Equal(*expected))
 			})
 		})
 	})
 
 	Describe("livenessProbeRetries", func() {
-		Context("when defined via labels", func() {
+		When("defined via labels", func() {
 			retries := "3"
 
 			BeforeEach(func() {
@@ -1181,20 +1268,34 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				expected := int32(3)
-				Expect(projectService.livenessProbeRetries()).To(Equal(&expected))
+				expected := 3
+				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(expected))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		When("defined via healthcheck block only", func() {
+			retries := uint64(5)
+
+			JustBeforeEach(func() {
+				projectService.HealthCheck = &composego.HealthCheckConfig{
+					Retries: &retries,
+				}
+			})
+
+			It("returns project service healthcheck retries", func() {
+				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(retries))
+			})
+		})
+
+		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				Expect(projectService.livenessProbeRetries()).To(BeNil())
+				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(config.DefaultLivenessProbeRetries))
 			})
 		})
 	})
 
 	Describe("livenessProbeDisabled", func() {
-		Context("when defined via labels", func() {
+		When("defined via labels", func() {
 			disabled := "true"
 
 			BeforeEach(func() {
@@ -1208,7 +1309,21 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		When("defined via healthcheck block only", func() {
+			disable := true
+
+			JustBeforeEach(func() {
+				projectService.HealthCheck = &composego.HealthCheckConfig{
+					Disable: disable,
+				}
+			})
+
+			It("returns project service healthcheck disable value", func() {
+				Expect(projectService.livenessProbeDisabled()).To(BeTrue())
+			})
+		})
+
+		When("not defined via labels", func() {
 			It("returns default value", func() {
 				Expect(projectService.livenessProbeDisabled()).To(BeFalse())
 			})
