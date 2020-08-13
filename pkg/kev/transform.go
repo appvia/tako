@@ -26,13 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-type transform func(*composeProject) error
+type transform func(*ComposeProject) error
 
 // augmentOrAddDeploy augments a service's existing deploy block or attaches a new one with default presets.
-func augmentOrAddDeploy(x *composeProject) error {
+func augmentOrAddDeploy(x *ComposeProject) error {
 	var updated composego.Services
 	err := x.WithServices(x.ServiceNames(), func(svc composego.ServiceConfig) error {
-		var deploy = createDeploy()
+		deploy := createDeploy()
 
 		if svc.Deploy != nil {
 			if err := mergo.Merge(&deploy, svc.Deploy, mergo.WithOverride); err != nil {
@@ -53,15 +53,19 @@ func augmentOrAddDeploy(x *composeProject) error {
 	return nil
 }
 
-// healthCheckBase attaches a base healthcheck  block with placeholders to be updated by users
-// to any service missing a healthcheck block.
-func healthCheckBase(x *composeProject) error {
+// augmentOrAddHealthCheck augments a service's existing healthcheck block or attaches a new one with default presets.
+func augmentOrAddHealthCheck(x *ComposeProject) error {
 	var updated composego.Services
 	err := x.WithServices(x.ServiceNames(), func(svc composego.ServiceConfig) error {
-		if svc.HealthCheck == nil {
-			check := createHealthCheck(svc.Name)
-			svc.HealthCheck = &check
+		check := createHealthCheck(svc.Name)
+
+		if svc.HealthCheck != nil {
+			if err := mergo.Merge(&check, svc.HealthCheck, mergo.WithOverride); err != nil {
+				return err
+			}
 		}
+
+		svc.HealthCheck = &check
 		updated = append(updated, svc)
 		return nil
 	})

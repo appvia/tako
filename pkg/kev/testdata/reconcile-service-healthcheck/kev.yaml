@@ -1,0 +1,4 @@
+compose:
+  - testdata/reconcile-service-healthcheck/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-service-healthcheck/docker-compose.kev.dev.yaml

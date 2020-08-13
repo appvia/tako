@@ -1,0 +1,4 @@
+compose:
+  - testdata/reconcile-volume-add/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-volume-add/docker-compose.kev.dev.yaml

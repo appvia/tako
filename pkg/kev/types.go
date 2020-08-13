@@ -17,186 +17,81 @@
 package kev
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"path"
-	"path/filepath"
-	"sort"
-
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 )
 
-type composeProject struct {
+// Manifest contains the tracked project's docker-compose sources and deployment environments
+type Manifest struct {
+	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
+	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
+}
+
+// Sources tracks a project's docker-compose sources
+type Sources struct {
+	Files   []string `yaml:"-" json:"-"`
+	overlay *composeOverlay
+}
+
+// Environments tracks a project's deployment environments
+type Environments []*Environment
+
+// Environment is a deployment environment
+type Environment struct {
+	Name    string `yaml:"-" json:"-"`
+	File    string `yaml:"-" json:"-"`
+	overlay *composeOverlay
+}
+
+// composeOverlay augments a compose project with labels and env vars to produce
+// k8s deployment config
+type composeOverlay struct {
+	Version  string   `yaml:"version,omitempty" json:"version,omitempty" diff:"version"`
+	Services Services `json:"services" diff:"services"`
+	Volumes  Volumes  `yaml:",omitempty" json:"volumes,omitempty" diff:"volumes"`
+}
+
+// ComposeProject wrapper around a compose-go Project. It also provides the original
+// compose file version.
+type ComposeProject struct {
 	version string
 	*composego.Project
 }
 
-type labels struct {
-	Version  string `yaml:"version,omitempty" json:"version,omitempty"`
-	Services composego.Services
-	Volumes  composego.Volumes
+// ServiceConfig is a shallow version of a compose-go ServiceConfig
+type ServiceConfig struct {
+	Name        string             `yaml:"-" json:"-" diff:"name"`
+	Labels      composego.Labels   `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
+	Environment map[string]*string `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
 }
 
-// Manifest contains application metadata
-type Manifest struct {
-	Sources      []string     `yaml:"compose,omitempty" json:"compose,omitempty"`
-	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
-	labels       labels
+// Services is a list of ServiceConfig
+type Services []ServiceConfig
+
+// Volumes is a mapping of volume name to VolumeConfig
+type Volumes map[string]VolumeConfig
+
+// VolumeConfig is a shallow version of a compose-go VolumeConfig
+type VolumeConfig struct {
+	Name   string           `yaml:",omitempty" json:"name,omitempty" diff:"name"`
+	Labels composego.Labels `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 }
 
-// WriteTo writes out a manifest to a writer.
-// The Manifest struct implements the io.WriterTo interface.
-func (m *Manifest) WriteTo(w io.Writer) (n int64, err error) {
-	data, err := MarshalIndent(m, 2)
-	if err != nil {
-		return int64(0), err
-	}
-
-	written, err := w.Write(data)
-	return int64(written), err
+// changeset tracks changes made to a version, services and volumes
+type changeset struct {
+	version  []change
+	services changeGroup
+	volumes  changeGroup
 }
 
-// GetEnvironment gets a specific environment.
-func (m *Manifest) GetEnvironment(name string) (Environment, error) {
-	for _, env := range m.Environments {
-		if env.Name == name {
-			return env, nil
-		}
-	}
-	return Environment{}, fmt.Errorf("no such environment: %s", name)
-}
+// changeGroup groups related changes
+type changeGroup map[interface{}][]change
 
-// ExtractLabels extracts the base set of labels from the manifest's docker-compose source files.
-func (m *Manifest) ExtractLabels() (*Manifest, error) {
-	ready, err := newComposeProject(m.Sources)
-	if err != nil {
-		return nil, err
-	}
-	m.labels = extractLabels(ready)
-	return m, nil
-}
-
-// extractLabels same as ExtractLabels but works on a compose project object.
-func extractLabels(c *composeProject) labels {
-	out := labels{
-		Version: c.version,
-	}
-	extractVolumesLabels(c, &out)
-
-	for _, s := range c.Services {
-		target := composego.ServiceConfig{
-			Name:   s.Name,
-			Labels: map[string]string{},
-		}
-		setDefaultLabels(&target)
-		extractServiceTypeLabels(s, &target)
-		extractDeploymentLabels(s, &target)
-		extractHealthcheckLabels(s, &target)
-		out.Services = append(out.Services, target)
-	}
-	return out
-}
-
-// MintEnvironments create new environments based on candidate environments and manifest base labels.
-// If no environments are provided, a default environment will be created.
-func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
-	m.Environments = Environments{}
-	if len(candidates) == 0 {
-		candidates = append(candidates, defaultEnv)
-	}
-	for _, env := range candidates {
-		m.Environments = append(m.Environments, Environment{
-			Name:    env,
-			content: m.labels,
-			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(configFileTemplate, env)),
-		})
-	}
-	return m
-}
-
-// GetWorkingDir returns working directory based on the location of first configuration file
-func (m *Manifest) GetWorkingDir() string {
-	if len(m.Sources) < 1 {
-		return ""
-	}
-	return filepath.Dir(m.Sources[0])
-}
-
-// EnvironmentsAsMap returns filtered app environments
-// If no filter is provided all app environments will be returned
-func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error) {
-	sort.Strings(filter)
-	environments := map[string]string{}
-
-	if len(filter) == 0 {
-		for _, e := range m.Environments {
-			environments[e.Name] = e.File
-		}
-	} else {
-		for _, e := range m.Environments {
-			i := sort.SearchStrings(filter, e.Name)
-			if i < len(filter) && filter[i] == e.Name {
-				environments[e.Name] = e.File
-			}
-		}
-	}
-
-	if len(environments) == 0 {
-		return nil, errors.New("No environments found")
-	}
-
-	return environments, nil
-}
-
-// Environments is a slice of environment elements
-type Environments []Environment
-
-// MarshalYAML makes Environments implement yaml.Marshaler.
-func (e Environments) MarshalYAML() (interface{}, error) {
-	out := map[string]string{}
-	for _, env := range e {
-		out[env.Name] = env.File
-	}
-	return out, nil
-}
-
-// UnmarshalYAML makes Environments implement yaml.UnmarshalYAML.
-func (e *Environments) UnmarshalYAML(value *yaml.Node) error {
-	for i := 0; i < len(value.Content); i += 2 {
-		*e = append(*e, Environment{
-			Name: value.Content[i].Value,
-			File: value.Content[i+1].Value,
-		})
-	}
-	return nil
-}
-
-// MarshalJSON makes Environments implement json.Marshaler.
-func (e Environments) MarshalJSON() ([]byte, error) {
-	data, err := e.MarshalYAML()
-	if err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(data, "", "  ")
-}
-
-// Environment describes environment overlay
-type Environment struct {
-	Name    string `yaml:"-" json:"-"`
-	File    string `yaml:"-" json:"-"`
-	content labels
-}
-
-// WriteTo writes out an environment to a writer.
-// The Environment struct implements the io.WriterTo interface.
-func (e Environment) WriteTo(w io.Writer) (n int64, err error) {
-	data, err := MarshalIndent(e.content, 2)
-	if err != nil {
-		return int64(0), err
-	}
-	written, err := w.Write(data)
-	return int64(written), err
+// change describes a create, update or delete modification
+// targeting an attribute in a version, service or volume.
+type change struct {
+	parent                 string      // the parent compose attribute for the modification (if available), e.g. labels
+	target                 string      // the target for the modification, e.g. kev.workload.liveness-probe-command
+	value                  string      // the new value, e.g. "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
+	index                  interface{} // the index in the changeset's services or volumes
+	update, create, delete bool        // the target operation - create and delete happen at a service/volume level
 }
