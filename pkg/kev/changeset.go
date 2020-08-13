@@ -81,12 +81,13 @@ func newChangeset(clog diff.Changelog) (changeset, error) {
 
 		case "volumes":
 			volName := e.Path[1]
-			group, ok := volChgGroup[volName]
-			deletionIsSet := ok == true && group[0].delete
-			if deletionIsSet {
+
+			// Do not append more changes for a volume if it's marked for deletion
+			if isVolumeAlreadyMarkedForDeletion(volChgGroup, volName) {
 				continue
 			}
 
+			_, ok := volChgGroup[volName]
 			change := change{
 				parent: e.Path[len(e.Path)-2],
 				target: e.Path[len(e.Path)-1],
@@ -108,6 +109,11 @@ func newChangeset(clog diff.Changelog) (changeset, error) {
 func isServiceAlreadyMarkedForDeletion(chgGroup changeGroup, index int) bool {
 	group, ok := chgGroup[index]
 	return ok == true && group[0].delete && group[0].target == "name"
+}
+
+func isVolumeAlreadyMarkedForDeletion(chgGroup changeGroup, key string) bool {
+	group, ok := chgGroup[key]
+	return ok == true && group[0].delete
 }
 
 func (c changeset) HasNoChanges() bool {
