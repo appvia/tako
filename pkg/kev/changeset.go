@@ -22,6 +22,20 @@ import (
 	"github.com/r3labs/diff"
 )
 
+// newChangeset creates a changeset based on a diff.Changelog.
+// A diff.Changelog is an ordered []diff.Changes slice produced from diffing two structs.
+// E.g. Here's a diff.Change that updates ["services", 0, "labels", "kev.workload.liveness-probe-command"]:
+// {
+//    Type: "update",   //string
+//    Path: {           // []string
+//      "services",
+//      "0",
+//      "labels",
+//      "kev.workload.liveness-probe-command"
+//    },
+//    From: "[\"CMD\", \"echo\", \"Define healthcheck command for service wordpress\"]",  // string
+//    To: "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"                                 // string
+// }
 func newChangeset(clog diff.Changelog) (changeset, error) {
 	var verChanges []change
 	volChgGroup := make(changeGroup)
