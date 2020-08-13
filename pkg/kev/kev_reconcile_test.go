@@ -32,7 +32,7 @@ var _ = Describe("Reconcile", func() {
 	Describe("Reconciling changes from sources", func() {
 		// Adding environment vars??
 
-		Context("when the version has been updated", func() {
+		Context("when the compose version has been updated", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-version"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
@@ -47,7 +47,7 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when a service has been removed", func() {
+		Context("when a compose service has been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-removal"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
@@ -68,28 +68,30 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when a service has edited attributes", func() {
+		Context("when the compose service is edited", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-edit"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
-			It("confirms the edit pre reconciliation", func() {
-				s, _ := overlay.GetService("wordpress")
-				Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
-			})
+			Context("and it changes port mode to host", func() {
+				It("confirms the edit pre reconciliation", func() {
+					s, _ := overlay.GetService("wordpress")
+					Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
+				})
 
-			It("should update the related label in all environments", func() {
-				s, _ := env.GetService("wordpress")
-				Expect(s.Labels["kev.service.type"]).To(Equal("NodePort"))
-			})
+				It("should update the label in all environments", func() {
+					s, _ := env.GetService("wordpress")
+					Expect(s.Labels["kev.service.type"]).To(Equal("NodePort"))
+				})
 
-			It("should not error", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				It("should not error", func() {
+					Expect(mErr).NotTo(HaveOccurred())
+				})
 			})
 		})
 
-		Context("when a new service has been added", func() {
+		Context("when a new compose service has been added", func() {
 
 			Context("and the service has no deploy or healthcheck config", func() {
 				BeforeEach(func() {
@@ -152,7 +154,7 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when a new volume has been added", func() {
+		Context("when a new compose volume has been added", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
@@ -175,7 +177,7 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when a volume has been removed", func() {
+		Context("when a compose volume has been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-removal"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
@@ -194,7 +196,7 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when a volume has been edited", func() {
+		Context("when a compose volume has been edited", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-edit"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
@@ -215,7 +217,7 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when env vars have been removed", func() {
+		Context("when compose env vars have been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-removal"
 				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
