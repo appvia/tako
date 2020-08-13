@@ -17,7 +17,7 @@ services:
       kev.workload.replicas: "1"
       kev.workload.rolling-update-max-surge: "1"
       kev.workload.service-account-name: default
-      kev.workload.type: StatefulSet
+      kev.workload.type: Deployment
   wordpress:
     labels:
       kev.service.type: LoadBalancer
