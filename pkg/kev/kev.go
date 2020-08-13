@@ -48,6 +48,7 @@ func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 	return m.MintEnvironments(envs), nil
 }
 
+// Reconcile reconciles changes with docker-compose sources against deployment environments.
 func Reconcile(workingDir string, reporter io.Writer) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)
 	if err != nil {
