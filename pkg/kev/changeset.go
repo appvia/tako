@@ -58,11 +58,12 @@ func newChangeset(clog diff.Changelog) (changeset, error) {
 				return changeset{}, err
 			}
 
-			group, ok := svcChgGroup[svcIndex]
-			deletionIsSet := ok == true && group[0].delete && group[0].target == "name"
-			if deletionIsSet {
+			// Do not append more changes for a service if the service is marked for deletion
+			if isServiceAlreadyMarkedForDeletion(svcChgGroup, svcIndex) {
 				continue
 			}
+
+			_, ok := svcChgGroup[svcIndex]
 			change := change{
 				parent: e.Path[len(e.Path)-2],
 				target: e.Path[len(e.Path)-1],
@@ -96,6 +97,11 @@ func newChangeset(clog diff.Changelog) (changeset, error) {
 	}
 
 	return changeset{version: verChanges, services: svcChgGroup, volumes: volChgGroup}, nil
+}
+
+func isServiceAlreadyMarkedForDeletion(chgGroup changeGroup, index int) bool {
+	group, ok := chgGroup[index]
+	return ok == true && group[0].delete && group[0].target == "name"
 }
 
 func (c changeset) applyVersionChangesIfAny(l *labels) {
