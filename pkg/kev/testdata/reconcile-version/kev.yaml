@@ -1,0 +1,4 @@
+compose:
+  - testdata/reconcile-version/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-version/docker-compose.kev.dev.yaml

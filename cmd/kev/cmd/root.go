@@ -35,10 +35,8 @@ o  o o-o   o
 
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
-	Use:   "kev2",
-	Short: "Reuse and run your Docker Compose applications on Kubernetes",
-	Long: `(kev) transforms your Docker Compose applications
-                  into Cloud Native applications you can run on Kubernetes.`,
+	Use:           "kev",
+	Short:         "Develop Kubernetes apps iteratively using Docker-Compose.",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
