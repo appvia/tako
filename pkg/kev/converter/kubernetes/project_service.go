@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -474,96 +473,128 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 }
 
 // healthcheck returns project service healthcheck probe
-// @todo handle healthcheck configuration via labels, and use defaults if none specified!
 func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 
-	if p.HealthCheck != nil && p.HealthCheck.Disable == false {
-		if !reflect.DeepEqual(p.HealthCheck, composego.HealthCheckConfig{}) {
-			probe := v1.Probe{}
+	if !p.livenessProbeDisabled() {
+		command := p.livenessProbeCommand()
+		timoutSeconds := p.livenessProbeTimeout()
+		periodSeconds := p.livenessProbeInterval()
+		initialDelaySeconds := p.livenessProbeInitialDelay()
+		failureThreshold := p.livenessProbeRetries()
 
-			if len(p.HealthCheck.Test) > 0 {
-				probe.Handler = v1.Handler{
-					Exec: &v1.ExecAction{
-						// docker compose adds "CMD-SHELL" to the healthcheck test command
-						// hence removing the first element of HealthCheck.Test
-						Command: p.HealthCheck.Test[1:],
-					},
-				}
-			} else {
-				log.Error("Health check must contain a command")
-				return nil, errors.New("Health check must contain a command")
-			}
-
-			timeout, _ := durationStrToSecondsInt(p.HealthCheck.Timeout.String())
-			interval, _ := durationStrToSecondsInt(p.HealthCheck.Interval.String())
-			delay, _ := durationStrToSecondsInt(p.HealthCheck.StartPeriod.String())
-
-			probe.TimeoutSeconds = *timeout
-			probe.PeriodSeconds = *interval
-			probe.InitialDelaySeconds = *delay
-			probe.FailureThreshold = int32(*p.HealthCheck.Retries)
-
-			return &probe, nil
+		if len(command) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+			initialDelaySeconds == 0 || failureThreshold == 0 {
+			log.Error("Health check misconfigured")
+			return nil, errors.New("Health check misconfigured")
 		}
+
+		probe := &v1.Probe{
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: command,
+				},
+			},
+			TimeoutSeconds:      timoutSeconds,
+			PeriodSeconds:       periodSeconds,
+			InitialDelaySeconds: initialDelaySeconds,
+			FailureThreshold:    failureThreshold,
+		}
+
+		return probe, nil
 	}
 
 	return nil, nil
 }
 
 // livenessProbeCommand returns liveness probe command
-func (p *ProjectService) livenessProbeCommand() string {
+func (p *ProjectService) livenessProbeCommand() []string {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeCommand]; ok {
-		return val
+		return []string{val}
 	}
 
-	return ""
+	if p.HealthCheck != nil && len(p.HealthCheck.Test) > 0 {
+		// test must be either a string or a list. If it’s a list,
+		// the first item must be either NONE, CMD or CMD-SHELL.
+		// If it’s a string, it’s equivalent to specifying CMD-SHELL followed by that string.
+		// Removing the first element of HealthCheck.Test
+		return p.HealthCheck.Test[1:]
+	}
+
+	return []string{
+		config.DefaultLivenessProbeCommand,
+	}
 }
 
 // livenessProbeInterval returns liveness probe interval
-func (p *ProjectService) livenessProbeInterval() *int32 {
+func (p *ProjectService) livenessProbeInterval() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeInterval]; ok {
-		interval, _ := durationStrToSecondsInt(val)
-		return interval
+		i, _ := durationStrToSecondsInt(val)
+		return *i
 	}
 
-	return nil
+	if p.HealthCheck != nil && p.HealthCheck.Interval != nil {
+		i, _ := durationStrToSecondsInt(p.HealthCheck.Interval.String())
+		return *i
+	}
+
+	i, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInterval)
+	return *i
 }
 
 // livenessProbeTimeout returns liveness probe timeout
-func (p *ProjectService) livenessProbeTimeout() *int32 {
+func (p *ProjectService) livenessProbeTimeout() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeTimeout]; ok {
 		to, _ := durationStrToSecondsInt(val)
-		return to
+		return *to
 	}
 
-	return nil
+	if p.HealthCheck != nil && p.HealthCheck.Timeout != nil {
+		to, _ := durationStrToSecondsInt(p.HealthCheck.Timeout.String())
+		return *to
+	}
+
+	to, _ := durationStrToSecondsInt(config.DefaultLivenessProbeTimeout)
+	return *to
 }
 
 // livenessProbeInitialDelay returns liveness probe initial delay
-func (p *ProjectService) livenessProbeInitialDelay() *int32 {
+func (p *ProjectService) livenessProbeInitialDelay() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeInitialDelay]; ok {
-		to, _ := durationStrToSecondsInt(val)
-		return to
+		d, _ := durationStrToSecondsInt(val)
+		return *d
 	}
 
-	return nil
+	if p.HealthCheck != nil && p.HealthCheck.StartPeriod != nil {
+		d, _ := durationStrToSecondsInt(p.HealthCheck.StartPeriod.String())
+		return *d
+	}
+
+	d, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInitialDelay)
+	return *d
 }
 
 // livenessProbeRetries returns number of retries for the probe
-func (p *ProjectService) livenessProbeRetries() *int32 {
+func (p *ProjectService) livenessProbeRetries() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeRetries]; ok {
 		r, _ := strconv.Atoi(val)
-		retries := int32(r)
-		return &retries
+		return int32(r)
 	}
 
-	return nil
+	if p.HealthCheck != nil && p.HealthCheck.Retries != nil {
+		return int32(*p.HealthCheck.Retries)
+	}
+
+	return int32(config.DefaultLivenessProbeRetries)
 }
 
-// livenessProbeRetries returns returns number of retries for the probe
+// livenessProbeDisabled tells whether liveness probe should be activated
 func (p *ProjectService) livenessProbeDisabled() bool {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeDisabled]; ok {
 		return val == "true"
+	}
+
+	if p.HealthCheck != nil && p.HealthCheck.Disable == true {
+		return true
 	}
 
 	return false
