@@ -149,10 +149,10 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 	return e, nil
 }
 
-func (e *Environment) reconcile(l *composeOverlay, reporter io.Writer) error {
+func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) error {
 	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
 
-	cset, err := l.diff(e.overlay)
+	cset, err := overlay.diff(e.overlay)
 	if err != nil {
 		return err
 	}
