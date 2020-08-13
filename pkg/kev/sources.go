@@ -24,7 +24,7 @@ import (
 )
 
 func (s *Sources) ExtractLabels() error {
-	ready, err := NewComposeProject(s.Files, WithApplyTransforms)
+	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
 		return err
 	}

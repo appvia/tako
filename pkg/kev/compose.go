@@ -47,11 +47,13 @@ func NewComposeProject(paths []string, opts ...ComposeOpts) (*ComposeProject, er
 	return p, nil
 }
 
+// GetVersion gets a project's version
 func (p *ComposeProject) GetVersion() string {
 	return p.version
 }
 
-func WithApplyTransforms(p *ComposeProject) (*ComposeProject, error) {
+// WithTransforms ensures project attributes are augmented beyond the base compose-go values
+func WithTransforms(p *ComposeProject) (*ComposeProject, error) {
 	return p.transform()
 }
 
