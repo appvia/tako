@@ -18,6 +18,7 @@ package kev
 
 import (
 	"encoding/json"
+	"io"
 
 	"github.com/r3labs/diff"
 )
@@ -54,8 +55,8 @@ func (o *composeOverlay) diff(other *composeOverlay) (changeset, error) {
 	return newChangeset(clog)
 }
 
-func (o *composeOverlay) patch(cset changeset) {
-	cset.applyVersionChangesIfAny(o)
-	cset.applyServicesChangesIfAny(o)
-	cset.applyVolumesChangesIfAny(o)
+func (o *composeOverlay) patch(cset changeset, reporter io.Writer) {
+	cset.applyVersionChangesIfAny(o, reporter)
+	cset.applyServicesChangesIfAny(o, reporter)
+	cset.applyVolumesChangesIfAny(o, reporter)
 }
