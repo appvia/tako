@@ -36,16 +36,19 @@ const (
 
 // Init initialises a kev manifest including source compose files and environments.
 // A default environment will be allocated if no environments were provided.
-func Init(composeSources, envs []string) (*Manifest, error) {
-	m, err := NewManifest(composeSources).
-		CalculateSourcesBaseOverlay()
+func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
+	m, err := NewManifest(composeSources, workingDir)
 	if err != nil {
 		return nil, err
 	}
 
+	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
+		return nil, err
+	}
 	return m.MintEnvironments(envs), nil
 }
 
+// Reconcile reconciles changes with docker-compose sources against deployment environments.
 func Reconcile(workingDir string, reporter io.Writer) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)
 	if err != nil {

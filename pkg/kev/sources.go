@@ -33,6 +33,18 @@ func (s *Sources) CalculateBaseOverlay() error {
 	return nil
 }
 
+func newSources(files []string, workingDir string) (*Sources, error) {
+	if len(files) > 0 {
+		return &Sources{Files: files}, nil
+	}
+
+	defaults, err := findDefaultComposeFiles(workingDir)
+	if err != nil {
+		return nil, err
+	}
+	return &Sources{Files: defaults}, nil
+}
+
 // MarshalYAML makes Sources implement yaml.Marshaler.
 func (s *Sources) MarshalYAML() (interface{}, error) {
 	var out []string
