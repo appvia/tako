@@ -55,16 +55,24 @@ func setDefaultLabels(target *ServiceConfig) {
 
 // extractVolumesLabels extracts volume labels into a label's Volumes attribute.
 func extractVolumesLabels(c *ComposeProject, out *composeOverlay) {
-	// Volumes map
 	vols := make(map[string]VolumeConfig)
 
 	for _, v := range c.VolumeNames() {
-		vols[v] = VolumeConfig{
-			Labels: map[string]string{
-				config.LabelVolumeStorageClass: config.DefaultVolumeClass,
-				config.LabelVolumeSize:         config.DefaultVolumeSize,
-			},
+		labels := map[string]string{}
+
+		if storageClass, ok := vols[v].Labels[config.LabelVolumeStorageClass]; ok {
+			labels[config.LabelVolumeStorageClass] = storageClass
+		} else {
+			labels[config.LabelVolumeStorageClass] = config.DefaultVolumeClass
 		}
+
+		if volSize, ok := vols[v].Labels[config.LabelVolumeSize]; ok {
+			labels[config.LabelVolumeSize] = volSize
+		} else {
+			labels[config.LabelVolumeSize] = config.DefaultVolumeSize
+		}
+
+		vols[v] = VolumeConfig{Labels: labels}
 	}
 	out.Volumes = vols
 }
