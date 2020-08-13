@@ -20,18 +20,22 @@ import (
 	composego "github.com/compose-spec/compose-go/types"
 )
 
+// Manifest contains the tracked project's docker-compose sources and deployment environments
 type Manifest struct {
 	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
 }
 
+// Sources tracks a project's docker-compose sources
 type Sources struct {
 	Files  []string `yaml:"-" json:"-"`
 	labels *labels
 }
 
+// Environments tracks a project's deployment environments
 type Environments []*Environment
 
+// Environment is a deployment environment
 type Environment struct {
 	Name   string `yaml:"-" json:"-"`
 	File   string `yaml:"-" json:"-"`
@@ -44,11 +48,14 @@ type labels struct {
 	Volumes  Volumes  `yaml:",omitempty" json:"volumes,omitempty" diff:"volumes"`
 }
 
+// ComposeProject wrapper around a compose-go Project. It also provides the original
+// compose file version.
 type ComposeProject struct {
 	version string
 	*composego.Project
 }
 
+// ServiceConfig is a shallow version of a compose-go ServiceConfig
 type ServiceConfig struct {
 	Name        string             `yaml:"-" json:"-" diff:"name"`
 	Labels      composego.Labels   `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
@@ -58,23 +65,31 @@ type ServiceConfig struct {
 // Services is a list of ServiceConfig
 type Services []ServiceConfig
 
+// Volumes is a mapping of volume name to VolumeConfig
 type Volumes map[string]VolumeConfig
 
+// VolumeConfig is a shallow version of a compose-go VolumeConfig
 type VolumeConfig struct {
 	Name   string           `yaml:",omitempty" json:"name,omitempty" diff:"name"`
 	Labels composego.Labels `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 }
 
+// changeset tracks changes made to a version, services and volumes
 type changeset struct {
 	version  []change
 	services changeGroup
 	volumes  changeGroup
 }
 
+// changeGroup groups related changes
 type changeGroup map[interface{}][]change
 
+// change describes a create, update or delete modification
+// targeting an attribute in a version, service or volume.
 type change struct {
-	parent, target, value  string
-	index                  interface{}
-	update, create, delete bool
+	parent                 string      // the parent compose attribute for the modification (if available), e.g. labels
+	target                 string      // the target for the modification, e.g. kev.workload.liveness-probe-command
+	value                  string      // the new value, e.g. "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
+	index                  interface{} // the index in the changeset's services or volumes
+	update, create, delete bool        // the target operation - create and delete happen at a service/volume level
 }
