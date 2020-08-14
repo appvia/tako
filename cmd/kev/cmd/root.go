@@ -38,8 +38,6 @@ func NewRootCmd() *cobra.Command {
 }
 
 func init() {
-	fmt.Println()
-
 	// This is required to help with error handling from RunE , https://github.com/spf13/cobra/issues/914#issuecomment-548411337
 	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		cmd.Println(err)

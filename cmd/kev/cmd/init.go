@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -77,29 +78,49 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 
+	workingDirAbs, err := os.Getwd()
+	if err != nil {
+		return displayInitError(err)
+	}
+
+	manifestPath := path.Join(workingDirAbs, kev.ManifestName)
+	if manifestExistsForPath(manifestPath) {
+		err := fmt.Errorf("kev.yaml already exists at: %s", manifestPath)
+		return displayInitError(err)
+	}
+
 	manifest, err := kev.Init(files, envs, ".")
 	if err != nil {
-		return err
+		return displayInitError(err)
 	}
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return err
+	var results []string
+	if err := writeTo(manifestPath, manifest); err != nil {
+		return displayInitError(err)
 	}
-
-	filePath := path.Join(workingDir, kev.ManifestName)
-	if err := writeTo(filePath, manifest); err != nil {
-		return err
-	}
+	results = append(results, kev.ManifestName)
 
 	for _, environment := range manifest.Environments {
-		filePath := path.Join(workingDir, environment.File)
-		if err := writeTo(filePath, environment); err != nil {
-			return err
+		envPath := path.Join(workingDirAbs, environment.File)
+		if err := writeTo(envPath, environment); err != nil {
+			return displayInitError(err)
 		}
+		results = append(results, environment.File)
 	}
 
+	displayInitSuccess(os.Stdout, results)
+
 	return nil
+}
+
+func manifestExistsForPath(manifestPath string) bool {
+	_, err := os.Stat(manifestPath)
+	return err == nil
+}
+
+func displayInitError(err error) error {
+	_, _ = os.Stdout.Write([]byte("⨯ Init\n"))
+	return fmt.Errorf(" → Error: %s", err)
 }
 
 func writeTo(filePath string, w io.WriterTo) error {
@@ -111,4 +132,12 @@ func writeTo(filePath string, w io.WriterTo) error {
 		return err
 	}
 	return file.Close()
+}
+
+func displayInitSuccess(w io.Writer, files []string) {
+	_, _ = w.Write([]byte("✓ Init\n"))
+	for _, file := range files {
+		msg := fmt.Sprintf(" → Creating %s ... Done\n", file)
+		_, _ = w.Write([]byte(msg))
+	}
 }
