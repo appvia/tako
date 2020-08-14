@@ -56,7 +56,7 @@ func (o *composeOverlay) diff(other *composeOverlay) (changeset, error) {
 }
 
 func (o *composeOverlay) patch(cset changeset, reporter io.Writer) {
-	cset.applyVersionChangesIfAny(o, reporter)
-	cset.applyServicesChangesIfAny(o, reporter)
-	cset.applyVolumesChangesIfAny(o, reporter)
+	cset.applyVersionPatchesIfAny(o, reporter)
+	cset.applyServicesPatchesIfAny(o, reporter)
+	cset.applyVolumesPatchesIfAny(o, reporter)
 }
