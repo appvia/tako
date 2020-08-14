@@ -95,8 +95,8 @@ func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error)
 }
 
 // CalculateSourcesBaseOverlay extracts the base overlay from the manifest's docker-compose source files.
-func (m *Manifest) CalculateSourcesBaseOverlay() (*Manifest, error) {
-	if err := m.Sources.CalculateBaseOverlay(); err != nil {
+func (m *Manifest) CalculateSourcesBaseOverlay(opts ...BaseOverlayOpts) (*Manifest, error) {
+	if err := m.Sources.CalculateBaseOverlay(opts...); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -131,9 +131,11 @@ func (m *Manifest) GetSourcesFiles() []string {
 }
 
 func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
-	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
+	if _, err := m.CalculateSourcesBaseOverlay(withEnvVars); err != nil {
 		return nil, err
 	}
+
+	// spew.Dump(m.Sources.overlay)
 
 	for _, e := range m.Environments {
 		if err := e.reconcile(m.GetSourcesLabels(), reporter); err != nil {

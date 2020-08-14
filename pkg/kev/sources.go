@@ -23,13 +23,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type BaseOverlayOpts func(s *Sources, c *ComposeProject) error
+
 // CalculateBaseOverlay calculates the base set of labels deduced from a group of compose sources.
-func (s *Sources) CalculateBaseOverlay() error {
+func (s *Sources) CalculateBaseOverlay(opts ...BaseOverlayOpts) error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
 		return err
 	}
 	s.overlay = extractLabels(ready)
+	for _, opt := range opts {
+		if err := opt(s, ready); err != nil {
+			return nil
+		}
+	}
+	return nil
+}
+
+// withEnvVars attaches the sources env vars to the base overlay
+func withEnvVars(s *Sources, origin *ComposeProject) error {
+	var services Services
+	for _, svc := range s.overlay.Services {
+		originSvc, err := origin.GetService(svc.Name)
+		if err != nil {
+			return err
+		}
+
+		services = append(services, ServiceConfig{
+			Name:        svc.Name,
+			Labels:      svc.Labels,
+			Environment: originSvc.Environment,
+		})
+	}
+	s.overlay.Services = services
 	return nil
 }
 
