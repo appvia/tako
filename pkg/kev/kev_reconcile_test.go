@@ -304,6 +304,35 @@ var _ = Describe("Reconcile", func() {
 				Expect(mErr).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("when compose env var is overridden in an environment", func() {
+			BeforeEach(func() {
+				workingDir = "testdata/reconcile-env-var-override"
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
+			})
+
+			It("confirms the overridden env var pre reconciliation", func() {
+				s, _ := overlay.GetService("db")
+				Expect(s.Environment).To(HaveLen(1))
+				Expect(s.Environment).To(HaveKey("TO_OVERRIDE"))
+			})
+
+			It("should keep the overridden env var in all environments", func() {
+				vars, _ := env.GetEnvVars("db")
+				Expect(vars).To(HaveLen(1))
+				Expect(vars).To(HaveKey("TO_OVERRIDE"))
+			})
+
+			It("should create a change summary", func() {
+				Expect(reporter.String()).To(ContainSubstring(env.Name))
+				Expect(reporter.String()).To(ContainSubstring("nothing to update"))
+			})
+
+			It("should not error", func() {
+				Expect(mErr).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
 

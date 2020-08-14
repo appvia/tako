@@ -157,7 +157,7 @@ func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) err
 		return err
 	}
 
-	if cset.HasNoChanges() {
+	if cset.HasNoPatches() {
 		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
 		return nil
 	}
