@@ -135,8 +135,6 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 		return nil, err
 	}
 
-	// spew.Dump(m.Sources.overlay)
-
 	for _, e := range m.Environments {
 		if err := e.reconcile(m.GetSourcesLabels(), reporter); err != nil {
 			return nil, err
