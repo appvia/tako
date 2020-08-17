@@ -30,11 +30,7 @@ fi
 
 mkdir -p ${OUTPUT_DIR}
 
-# NOTE: Hugo fails to generate static assets (css) in production environment
-#       but generate it properly when run in server mode locally (development).
-#       Starting local hugo server will also generate public site content
-#       and store in ./public directory which is gitignored!
+npm install
 
-hugo server -c ${KEV_ROOT}/docs -d ${OUTPUT_DIR} --cleanDestinationDir
-
-# -s ${STATIC_WEB_GENERATOR_DIR}
+# Generate documentation as static website to OUTPUT_DIR
+hugo server -e production -c ${KEV_ROOT}/docs -d ${OUTPUT_DIR} --cleanDestinationDir
