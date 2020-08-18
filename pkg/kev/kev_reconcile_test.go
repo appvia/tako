@@ -26,7 +26,9 @@ var _ = Describe("Reconcile", func() {
 			overlay, _ = kev.NewComposeProject(overlayFiles)
 		}
 		manifest, mErr = kev.Reconcile(workingDir, &reporter)
-		env, _ = manifest.GetEnvironment("dev")
+		if mErr == nil {
+			env, _ = manifest.GetEnvironment("dev")
+		}
 	})
 
 	Describe("Reconciling changes from sources", func() {
@@ -327,6 +329,18 @@ var _ = Describe("Reconcile", func() {
 			It("should create a change summary", func() {
 				Expect(reporter.String()).To(ContainSubstring(env.Name))
 				Expect(reporter.String()).To(ContainSubstring("nothing to update"))
+			})
+
+			It("should not error", func() {
+				Expect(mErr).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when compose or overlay env var is not assigned a value", func() {
+			BeforeEach(func() {
+				workingDir = "testdata/reconcile-env-var-unassigned"
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
 			})
 
 			It("should not error", func() {
