@@ -200,3 +200,12 @@ func findFirstFileFromFilesInDir(files []string, dir string) string {
 
 	return ""
 }
+
+func zeroValueUnassignedEnvVars(svc composego.ServiceConfig) {
+	emptyVal := ""
+	for key, val := range svc.Environment {
+		if val == nil {
+			svc.Environment[key] = &emptyVal
+		}
+	}
+}
