@@ -5,17 +5,11 @@ title: Kev configuration reference
 
 # Configuration
 
-Kev configuration consists of the following components:
-
-### Application level configuration
-
-Settings defined in the application level configuration will be applied to all application components unless they are overridden on individual component level. See examples below.
+Kev leverages Docker Compose specification to configure and prepare an application for deployment in Kubernetes. Environment configuration lives in a dedicated docker compose override file, which automatically gets applied to the project's source sdocker compose files at `render` phase.
 
 ### Component level configuration
 
-Settings defined on component level will always take presedence over the "global" application configuration. See example below on how to override specific settings.
-
-Configuration is divided into the following sections:
+Configuration is divided into the following groups of parameters:
 * [Workload](#workload)
 * [Service](#service)
 * [Volumes](#volumes)
@@ -23,159 +17,141 @@ Configuration is divided into the following sections:
 
 # Workload
 
-This configuration section contains Kubernetes workload specific settings. `workload` configuration block may be defined globally for the entire application as top level configuration attribute, or within individual app component.
+This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined via set of labels (listed below) for each application stack component.
 
-## image-pull-policy
+## kev.workload.image-pull-policy
 
-Defines docker image pull policy from the registry. This setting can be set on application level in top level `workload` block, or on individual application component level, or both. Application level setting takes precedence over the global setting.
-
-### Default: `IfNotPresent`
-
-### Possible options: `IfNotPresent`, `Always`.
-
-> image-pull-policy:
-```yaml
-name: hello-world-app
-description: hello world app.
-workload:
-  image-pull-policy: IfNotPresent # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    image-pull-policy: Always     # App component (service) specific. Takes presedence over app level workload setting!
-...
-```
-
-## image-pull-secret
-
-Defines docker image pull policy from the registry. This setting can be set on application level in top level `workload` block, or on individual application component level, or both. Application level setting takes precedence over the global setting.
+Defines docker image pull policy from the container registry. See official K8s [documentation](https://kubernetes.io/docs/concepts/containers/images/#updating-images).
 
 ### Default: `IfNotPresent`
 
 ### Possible options: `IfNotPresent`, `Always`.
 
-> image-pull-secret:
+> kev.workload.image-pull-policy:
 ```yaml
-name: hello-world-app
-workload:
-  image-pull-secret: app-wide-secret-name # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    image-pull-secret: my-secret-name     # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.image-pull-policy: IfNotPresent
 ...
 ```
 
-## restart
+## kev.workload.image-pull-secret
 
-Defines the restart policy for individual application components in the event of a container crash. Kev will do its best to try and infer that setting for each compose service defined, however in some cases manual override might be necessary.
+Defines docker image pull secret which should be used to pull images from the container registry. See official K8s [documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod).
+
+### Default: ""
+
+### Possible options: arbitrary string.
+
+> kev.workload.image-pull-secret:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.image-pull-secret: my-image-pull-secret-name
+...
+```
+
+## kev.workload.restart-policy
+
+Defines the restart policy for individual application component in the event of a container crash. Kev will attempt to infer that setting for each compose service defined, however in some cases manual override might be necessary. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy).
 
 ### Default: `Always`
 
 ### Possible options: `Always`, `OnFailure`, `Never`.
 
-> image-pull-secret:
+> kev.workload.restart-policy:
 ```yaml
-name: hello-world-app
-workload:
-  restart: OnFailure           # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    image-pull-secret: Never   # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.restart-policy: Never
 ...
 ```
 
-## service-account-name
+## kev.workload.service-account-name
 
-Defines the kubernetes Service Account name to run a workload with. Sometimes it may be necessary to run a particular Kubernetes workload with a specialised access level and this setting allow to run workloads with only level of access they require.
+Defines the kubernetes Service Account name to run a workload with. Useful when specific access level associated with a Service Account is requiered for a given workload type. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/).
 
 ### Default: `default`
 
 ### Possible options: Arbitrary string.
 
-> service-account-name:
+> kev.workload.service-account-name:
 ```yaml
-name: hello-world-app
-workload:
-  restart: default                            # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    image-pull-secret: special-svc-acc-name   # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.service-account-name: my-special-service-account-name
 ...
 ```
 
-## security-context-run-as-user
+## kev.workload.pod-security-run-as-user
 
-Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload.
-This option is concerned with setting up an appropriate User ID (`runAsUser` field) which specifies that for any Containers in the Pod, all processes will run with user ID as specified by the value.
+Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload. This option is concerned with setting up an appropriate User ID (`runAsUser` field) which specifies that for any Containers in the Pod, all processes will run with user ID as specified by the value.
 
 ### Default: nil (not specified)
 
 ### Possible options: arbitrary numeric UID, example `1000`.
 
-> security-context-run-as-user:
+> kev.workload.pod-security-run-as-user:
 ```yaml
-name: hello-world-app
-workload:
-  security-context-run-as-user: 1000     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    security-context-run-as-user: 2000   # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.pod-security-run-as-user: 1000
 ...
 ```
 
-## security-context-run-as-group
+## kev.workload.pod-security-run-as-group
 
-Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload.
-This option is concerned with setting up an appropriate Group ID (`runAsGroup` field) which specifies the primary group ID for all processes within any containers of the Pod. If this field is omitted (currently a default), the primary group ID of the containers will be root(0). Any files created will also be owned by user with specified user ID (`runAsUser` field) and group ID (`runAsGroup` field) when runAsGroup is specified.
+Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload. This option is concerned with setting up an appropriate Group ID (`runAsGroup` field) which specifies the primary group ID for all processes within any containers of the Pod. If this field is omitted (currently a default), the primary group ID of the container will be root(0). Any files created will also be owned by user with specified user ID (`runAsUser` field) and group ID (`runAsGroup` field) when runAsGroup is specified.
 
 ### Default: nil (not specified)
 
 ### Possible options: Arbitrary numeric GID. Example `1000`.
 
-> security-context-run-as-group:
+> kev.workload.pod-security-run-as-group:
 ```yaml
-name: hello-world-app
-workload:
-  security-context-run-as-group: 1000     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    security-context-run-as-group: 2000   # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.pod-security-run-as-group: 2000
 ...
 ```
 
-## security-context-fs-group
+## kev.workload.pod-security-fs-group
 
-Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload.
-This option is concerned with setting up a supplementary group `fsGroup` field. If specified, all processes of the container are also part of this supplementary group ID. The owner for attached volumes and any files created in those volume will be Group ID as specified by the value of this configuration option.
+Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload. This option is concerned with setting up a supplementary group `fsGroup` field. If specified, all processes of the container are also part of this supplementary group ID. The owner for attached volumes and any files created in those volume will be Group ID as specified by the value of this configuration option.
 
 ### Default: nil (not specified)
 
 ### Possible options: Arbitrary numeric GID. Example `1000`.
 
-> security-context-fs-group:
+> kev.workload.pod-security-fs-group:
 ```yaml
-name: hello-world-app
-workload:
-  security-context-fs-group: 1000     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    security-context-fs-group: 2000   # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.pod-security-fs-group: 3000
 ...
 ```
 
-## type
+## kev.workload.type
 
-Defines the Kubernetes workload type. Kev will attempt to infer workload type from the information specified in the compose file.
+Defines the Kubernetes workload type controller. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/). Kev will attempt to infer workload type from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve the type of workload:
 
-If compose file(s) specifies the `deploy.mode` attribute key in a service config, and it is set to "global" then Kev will assume `DaemonSet` workload type. Otherwise, workload type will default to `Deployment` unless volumes are in use in which case workload will be set as `StatefulSet`.
+If compose file(s) specifies the `deploy.mode` attribute key in a compose project service config, and it is set to "global" then `DaemonSet` workload type is assumed. Otherwise, workload type will default to `Deployment` unless volumes are in use, in which case workload will default to `StatefulSet`.
 
 ### Default: `Deployment`
 
@@ -183,24 +159,21 @@ If compose file(s) specifies the `deploy.mode` attribute key in a service config
 
 > type:
 ```yaml
-name: hello-world-app
-workload:
-  type: Deployment      # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    type: StatefulSet   # Kev will attempt to guess the value of this setting!
-                        # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.type: StatefulSet
 ...
 ```
 
-## replicas
+## kev.workload.replicas
 
-Defines the number of instances for each application component. Kev will attempt to infer number of replicas type from the information specified in the compose file.
+Defines the number of instances (replicas) for each application component. See K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas). Kev will attempt to infer number of replicas type from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve the number of replicas for each service:
 
-If compose file(s) specifies the `deploy.replicas` attribute key in a service config it will use its value.
+If compose file(s) specifies the `deploy.replicas` attribute key in a project service config it will use its value.
 Otherwise, number of replicas will default to `1`.
 
 ### Default: `1`
@@ -209,327 +182,278 @@ Otherwise, number of replicas will default to `1`.
 
 > replicas:
 ```yaml
-name: hello-world-app
-workload:
-  replicas: 1     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    replicas: 10  # Kev will attempt to guess the value of this setting!
-                  # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.replicas: 3
 ...
 ```
 
-## rolling-update-max-surge
+## kev.workload.rolling-update-max-surge
 
-Defines the number of pods that can be created above the desired amount of pods during an update.
-Kev will attempt to infer this number from the information specified in the compose file.
+Defines the number of pods that can be created above the desired amount of pods during an update. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#proportional-scaling). Kev will attempt to infer this number from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `deploy.update_config.parallelism` attribute key in a service config it will use its value.
-Otherwise defaults to `1`.
+Otherwise it will default to `1`.
 
 ### Default: `1`
 
 ### Possible options: Arbitrary integer value. Example: `10`.
 
-> rolling-update-max-surge:
+> kev.workload.rolling-update-max-surge:
 ```yaml
-name: hello-world-app
-workload:
-  rolling-update-max-surge: 1     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    rolling-update-max-surge: 10  # Kev will attempt to guess the value of this setting!
-                                  # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.rolling-update-max-surge: 2
 ...
 ```
 
-## cpu
+## kev.workload.cpu
 
-Defines the CPU share request for a given workload.
-Kev will attempt to infer CPU request from the information specified in the compose file.
+Defines the CPU share request for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer CPU request from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
-If compose file(s) specifies the `deploy.resources.reservations.cpus` attribute key in a service config it will use its value.
-Defaults to `100m`.
+If compose file(s) specifies the `deploy.resources.reservations.cpus` attribute key in a project service config it will use its value. Otherwise it'll assume sensible default of `0.1` (equivalent of 100m in Kubernetes).
 
-### Default: `100m`
+### Default: `0.1`
 
 ### Possible options: Arbitrary [CPU units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu). Examples: `0.2` == `200m`.
 
-> cpu:
+> kev.workload.cpu:
 ```yaml
-name: hello-world-app
-workload:
-  cpu: 100m   # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    cpu: 1    # Kev will attempt to guess the value of this setting!
-              # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.cpu: 1
 ...
 ```
 
-## max-cpu
+## kev.workload.max-cpu
 
-Defines the CPU share limit for a given workload.
-Kev will attempt to infer CPU request from the information specified in the compose file.
+Defines the CPU share limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer CPU request from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `deploy.resources.limits.cpus` attribute key in a service config it will use its value.
-Defaults to `200m`.
+Otherwise it'll default to a sensible default of `0.2` (equivalent of 200m in Kubernetes).
 
-### Default: `200m`
+### Default: `0.2`
 
 ### Possible options: Arbitrary [CPU units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu). Examples: `0.2` == `200m`.
 
-> max-cpu:
+> kev.workload.max-cpu:
 ```yaml
-name: hello-world-app
-workload:
-  max-cpu: 100m   # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    max-cpu: 2    # Kev will attempt to guess the value of this setting!
-                  # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.max-cpu: 2
 ...
 ```
 
-## memory
+## kev.workload.memory
 
-Defines the Memory request for a given workload.
-Kev will attempt to infer Memory request from the information specified in the compose file.
+Defines the Memory request for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer Memory request from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
-If compose file(s) specifies the `deploy.resources.reservations.memory` attribute key in a service config it will use its value.
-Defaults to `10Mi`.
+If compose file(s) specifies the `deploy.resources.reservations.memory` attribute key in a service config it will use its value. Otherwise it'll default to a sensible quantity of `10Mi`.
 
 ### Default: `10Mi`
 
 ### Possible options: Arbitrary [Memory units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory). Examples: `64Mi`, `1Gi`...
 
-> memory:
+> kev.workload.memory:
 ```yaml
-name: hello-world-app
-workload:
-  memory: 10Mi     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    memory: 200Mi  # Kev will attempt to guess the value of this setting!
-                   # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.memory: 200Mi
 ...
 ```
 
-## max-memory
+## kev.workload.max-memory
 
-Defines the Memory limit for a given workload.
-Kev will attempt to infer Memory limit from the information specified in the compose file.
+Defines the Memory limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer Memory limit from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `deploy.resources.limits.memory` attribute key in a service config it will use its value.
-Defaults to `200m`.
+Otherwise it'll default to a sensible quantity of `500Mi`.
 
-### Default: `200m`
+### Default: `500Mi`
 
 ### Possible options: Arbitrary [Memory units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory). Examples: `64Mi`, `1Gi`...
 
-> max-memory:
+> kev.workload.max-memory:
 ```yaml
-name: hello-world-app
-workload:
-  max-memory: 200m    # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    max-memory: 0.5Gi # Kev will attempt to guess the value of this setting!
-                      # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.max-memory: 0.3Gi
 ...
 ```
 
-## liveness-probe-disable
+## kev.workload.liveness-probe-disabled
 
-Defines whether workload should have a liveness probe enabled.
-Kev will attempt to infer from the information specified in the compose file.
+Defines whether workload should have a liveness probe enabled. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.disable` attribute key in a service config it will use its value.
-Defaults to `false`.
+Otherwise it'll default to `false` (liveness probe active!)
 
 ### Default: `false`
 
 ### Possible options: Bool
 
-> liveness-probe-disable:
+> kev.workload.liveness-probe-disabled:
 ```yaml
-name: hello-world-app
-workload:
-  liveness-probe-disable: false   # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    liveness-probe-disable: true  # Kev will attempt to guess the value of this setting!
-                                  # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-disabled: true
 ...
 ```
 
-## liveness-probe-command
+## kev.workload.liveness-probe-command
 
-Defines the liveness probe command to be run for the workload.
-Kev will attempt to infer the command from the information specified in the compose file.
+Defines the liveness probe command to be run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the command from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.test` attribute key in a service config it will use its value.
-If probe is not defined it will prompt the user to define one.
+If probe is not defined it will prompt the user to define one by injecting generic echo command.
 
 ### Default: echo "prompt user to define the probe"
 
 ### Possible options: shell command
 
-> liveness-probe-command:
+> kev.workload.liveness-probe-command:
 ```yaml
-name: hello-world-app
-workload:
-  liveness-probe-command: ["echo", "n/a"]  # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    liveness-probe-command: ["/is-my-service-alive.sh"] # Kev will attempt to guess the value of this setting!
-                                                        # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-command: ["/is-my-service-alive.sh"]
 ...
 ```
 
-## liveness-probe-interval
+## kev.workload.liveness-probe-interval
 
-Defines how often liveness proble should run for the workload.
-Kev will attempt to infer the interval from the information specified in the compose file.
+Defines how often liveness proble should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the interval from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.interval` attribute key in a service config it will use its value.
-Defaults to `1m` (1 minute).
+Otherwise it'll default to `1m` (1 minute).
 
 ### Default: `1m`
 
 ### Possible options: Time duration
 
-> liveness-probe-interval:
+> kev.workload.liveness-probe-interval:
 ```yaml
-name: hello-world-app
-workload:
-  liveness-probe-interval: 1m     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    liveness-probe-interval: 30s  # Kev will attempt to guess the value of this setting!
-                                  # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-interval: 30s
 ...
 ```
 
-## liveness-probe-retries
+## kev.workload.liveness-probe-retries
 
-Defines how many times liveness proble should retry upon failure for the workload.
-Kev will attempt to infer the number of retries from the information specified in the compose file.
+Defines how many times liveness proble should retry upon failure for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the number of retries from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.retries` attribute key in a service config it will use its value.
-Defaults to `3`.
+Otherwise it'll default to `3`.
 
 ### Default: `3`
 
 ### Possible options: Arbitrary integer. Example: `5`
 
-> liveness-probe-retries:
+> kev.workload.liveness-probe-retries:
 ```yaml
-name: hello-world-app
-workload:
-  liveness-probe-retries: 1m     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    liveness-probe-retries: 30s  # Kev will attempt to guess the value of this setting!
-                                 # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-retries: 10
 ...
 ```
 
-## liveness-probe-initial-delay
+## kev.workload.liveness-probe-initial-delay
 
-Defines how many how long to wait before the first liveness probe runs for the workload.
-Kev will attempt to infer the wait time from the information specified in the compose file.
+Defines how many how long to wait before the first liveness probe runs for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the wait time from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.start_period` attribute key in a service config it will use its value.
-Defaults to `1m` (1 minute).
+Otherwise it'll default to `1m` (1 minute).
 
 ### Default: `1m`
 
 ### Possible options: Arbitrary time duration. Example: `1m30s`
 
-> liveness-probe-initial-delay:
+> kev.workload.liveness-probe-initial-delay:
 ```yaml
-name: hello-world-app
-workload:
-  liveness-probe-initial-delay: 1m     # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    liveness-probe-initial-delay: 30s  # Kev will attempt to guess the value of this setting!
-                                       # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-initial-delay: 10s
 ...
 ```
 
-## liveness-probe-timeout
+## kev.workload.liveness-probe-timeout
 
-Defines how many the timeout for the liveness probe command for the workload.
-Kev will attempt to infer the timeout value from the information specified in the compose file.
+Defines how many the timeout for the liveness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.timeout` attribute key in a service config it will use its value.
-Defaults to `10s` (10 seconds).
+Otherwise it'll default to `10s` (10 seconds).
 
 ### Default: `10s`
 
 ### Possible options: Arbitrary time duration. Example: `30s`
 
-> liveness-probe-timeout:
+> kev.workload.liveness-probe-timeout:
 ```yaml
-name: hello-world-app
-workload:
-  liveness-probe-timeout: 1m      # Application level setting. Applies to all components by default.
-...
-service-a:
-  workload:
-    liveness-probe-timeout: 30s   # Kev will attempt to guess the value of this setting!
-                                  # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-timeout: 10s
 ...
 ```
 
 # Service
 
-This section contains configuration around services in Kubernetes and how they are exposed (or not) to the internet. `service` configuration block may be defined globally for the entire application as top level configuration attribute, or within an individual app component.
+The `service` group contains configuration detail around Kubernetes services and how they get exposed externally.
 
 **IMPORTANT: At this stage only the first port for each service is processed and used to infer initial configuration!**
 
-## type
+## kev.service.type
 
-Defines type of Kubernetes service for specific workload. Kev will attempt to extract that information from the compose configuration.
+Defines type of Kubernetes service for specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/). Kev will attempt to extract that information from the compose configuration.
 
 The following heuristic is used to determine service type for application component:
 
-* If compose service publishes a port (i.e. defines a port mapping between external and container ports):
+* If compose project service publishes a port (i.e. defines a port mapping between host and container ports):
     * and specifies a mode as `host`
         * It will assume `NodePort` service type
     * and specifies a mode as `ingress`
@@ -543,22 +467,19 @@ The following heuristic is used to determine service type for application compon
 
 ### Possible options: `None`, `Headless`, `ClusterIP`, `Nodeport`, `LoadBalancer`.
 
-> type:
+> kev.service.type:
 ```yaml
-name: hello-world-app
-service:
-  type: ClusterIP         # Application level setting. Applies to all components by default.
-...
-service-a:
-  service:
-    type: LoadBalancer    # Kev will attempt to guess the value of this setting!
-                          # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.service.type: LoadBalancer
 ...
 ```
 
-## nodeport
+## kev.service.nodeport.port
 
-Defines type Node Port value for Kubernetes service of `NodePort` type.
+Defines type Node Port value for Kubernetes service of `NodePort` type. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport).
 NOTE: `nodeport` attributes will be ignored for any other service type!
 Kev will attempt to extract that information from the compose configuration.
 
@@ -566,23 +487,19 @@ Kev will attempt to extract that information from the compose configuration.
 
 ### Possible options: Arbitrary integer. Example `10222`.
 
-> nodeport:
+> kev.service.nodeport.port:
 ```yaml
-name: hello-world-app
-service:
-  type: ClusterIP     # Application level setting. Applies to all components by default.
-...
-service-a:
-  service:
-    type: NodePort    # Kev will attempt to guess the value of this setting!
-    nodeport: 10222   # Kev will attempt to guess the value of this setting!
-                      # App component (service) specific. Takes presedence over app level workload setting!
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.service.nodeport.port: 5555
 ...
 ```
 
-## expose
+## kev.service.expose
 
-Defines whether to expose the service to external world. This detail can't be easily extracted from the compose file and so need to be specified by the user. By default all component services aren't exposed i.e. have no ingress attached to them.
+Defines whether to expose the service to external world. This detail can't be easily derived from the compose file and so in order to expose a service to external workld user must explicitly instruct Kev to do so. By default all component services aren't exposed i.e. have no ingress attached to them.
 
 ### Default: `""` - No ingress will be created!
 
@@ -590,78 +507,99 @@ Defines whether to expose the service to external world. This detail can't be ea
 * `"true"` - ingress will be created with Kubernetes cluster defaults
 * `"domain.com,otherdomain.com..."` - comma separated list of domains for the ingress.
 
-> expose:
+> kev.service.expose:
 ```yaml
-name: hello-world-app
-service-a:
-  service:
-    expose: "my-service.com"
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.service.expose: "my-awesome-service.com"
 ...
 ```
 
-## tls-secret
+## kev.service.expose.tls-secret
 
-Defines whether to use TLS for the exposed service and which secret name contains certificates for the service.
+Defines whether to use TLS for the exposed service and which secret name contains certificates for the service. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls).
 
-NOTE: This option is only relevant when service is exposed, see: [expose](#expose) above.
+NOTE: This option is only relevant when service is exposed, see: [kev.service.expose](#kev-service-expose) above.
 
 ### Default: `nil` - No TLS secret name specified by default!
 
 ### Possible options: Arbitrary string.
 
-> tls-secret:
+> kev.service.expose.tls-secret:
 ```yaml
-name: hello-world-app
-service-a:
-  service:
-    expose: "my-service.com"
-    tls-secret: "my-service-tls"
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.service.expose: "my-domain.com"
+      kev.service.expose.tls-secret: "my-service-tls-secret-name"
 ...
 ```
 
 # Volumes
 
-Contains information on all the volumes referenced in the compose file(s) and adds extra configuration regarding storage class and size of each volume.
+This configuration group contains Kubernetes persistent `volume` claim specific settings. Configuration parameters can be individually defined via a set of labels (see below), for each volume referenced in the project compose file(s).
 
-## class
 
-Defines the class of persitant volume.
+## kev.volume.storage-class
+
+Defines the class of persitant volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 ### Default: `standard`
 
 ### Possible options: Arbitrary string.
 
-> class:
+> kev.volume.storage-class:
 ```yaml
-name: hello-world-app
+version: 3.7
 volumes:
-  vol-1:
-    class: my-custom-storage-class
+  vol1:
+    labels:
+      kev.volume.storage-class: my-custom-storage-class
 ...
 ```
 
-## size
+## kev.volume.size
 
-Defines the size of persitant volume.
+Defines the size of persitant volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 ### Default: `1Gi`
 
 ### Possible options: Arbitrary size string. Example: `10Gi`.
 
-> size:
+> kev.volume.size:
 ```yaml
-name: hello-world-app
+version: 3.7
 volumes:
-  vol-1:
-    size: 10Gi
+  vol1:
+    labels:
+      kev.volume.size: 10Gi
+...
+```
+
+## kev.volume.selector
+
+Defines a label selector to further filter the set of volumes. Only the volumes whose labels match the selector can be bound to the PVC claim. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+
+### Default: ``
+
+### Possible options: Arbitrary string. Example: `data`.
+
+> kev.volume.selector:
+```yaml
+version: 3.7
+volumes:
+  vol1:
+    labels:
+      kev.volume.selector: my-volume-selector-label
 ...
 ```
 
 # Environment
 
-This config section describes application component environment variables and references their values.
-Environment can be configured on the "global" application level, or more commonly at each app component level.
-Variables defined on the component level will take presedence over the global settings.
+This group allows for application component `environment` variables configuration.
 
 > Environment variables can be configured in the following formats:
 
@@ -673,14 +611,14 @@ ENV_C: config.{config-name}.{config-key}  # Refer to the a value stored in a con
 
 > environment:
 ```yaml
-name: hello-world-app
-environment:
-  ENV_VAR_A: literal-value                      # Application level setting. Applies to all components by default.
-...
-service-a:
-  environment:
-    ENV_VAR_A: another-literal-value              # Local service override. Will take presedence over app level environment.
-    ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
-    ENV_VAR_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
+version: 3.7
+services:
+  my-service:
+    labels:
+      ...
+    environment:
+      ENV_VAR_A: another-literal-value              # Literal value
+      ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
+      ENV_VAR_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
 ...
 ```
