@@ -49,6 +49,8 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 			return err
 		}
 
+		zeroValueUnassignedEnvVars(originSvc)
+
 		services = append(services, ServiceConfig{
 			Name:        svc.Name,
 			Labels:      svc.Labels,

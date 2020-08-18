@@ -1,0 +1,4 @@
+compose:
+  - testdata/reconcile-env-var-unassigned/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-env-var-unassigned/docker-compose.kev.dev.yaml
