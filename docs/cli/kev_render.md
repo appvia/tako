@@ -1,6 +1,6 @@
 ## kev render
 
-Render an application deployment artefacts according to the specified output format for a given environment (ALL environments by default).
+Generates application's deployment artefacts according to the specified output format for a given environment (ALL environments by default).
 
 ### Synopsis
 
