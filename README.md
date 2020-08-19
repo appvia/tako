@@ -6,7 +6,6 @@
 ![CircleCI](https://img.shields.io/circleci/build/github/appvia/kev/master)
 ![GitHub tag (latest SemVer)](https://img.shields.io/github/v/release/appvia/kev)
 ![License: Apache-2.0](https://img.shields.io/github/license/appvia/kev)
-![Docker Repository on Quay.io](https://img.shields.io/badge/container-ready-brightgreen)
 
 
 _Kev_ helps developers port and iterate Docker Compose apps onto Kubernetes. It understands the Docker Compose application topology and prepares it for deployment in (multiple) target environments, with minimal user input.
