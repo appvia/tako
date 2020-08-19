@@ -24,7 +24,7 @@ There are some assumptions we are making about ways of working with containers, 
 5. They will push their application container to a docker repository (this could be private, public, saas, cloud or on-premise)
 6. They will put steps in their CI eventually to repeat the above processes as CI steps
 
-When it comes to then deploying their application inside of Kubernetes, there is then additional steps and knowledge required. As there is a need to work within the Kubernetes framework, new requirements come into play, the application will now need to:
+When it comes to then deploying their application inside of Kubernetes, there are additional steps and extra knowledge required. As there is a need to work within the Kubernetes framework, new requirements come into play, the application will now need to:
 
 + Have an ingress or service endpoint to talk to that routes to their application
 + Have configuration be it environment variables or a configuration file for their application to use
@@ -34,4 +34,4 @@ When it comes to then deploying their application inside of Kubernetes, there is
 + Have a domain name for CI or others to easily consume to test or access
 + Have a certificate, if encryption is required to consume the application
 
-If people go to use Kubernetes, this change can be quite time consuming for a developer to take what is running locally and port it to another framework and repeat this throughout different environments.
+If developers migrate to Kubernetes, this change can be quite time consuming for a developer to take what is running locally and port it to another framework and repeat this throughout different environments.
