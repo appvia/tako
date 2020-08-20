@@ -201,7 +201,11 @@ func findFirstFileFromFilesInDir(files []string, dir string) string {
 	return ""
 }
 
-func zeroValueUnassignedEnvVarsInService(svc composego.ServiceConfig) {
+// envVarsFromNilToBlankInService updates nil pointer env vars to empty strings.
+// It works around a quirk in the compose-go lib where env var values are defined as *string rather string.
+// It's handy for avoiding unknown type errors when diffing env vars.
+// And, if required during a merge, it ensures env vars with nil pointer values are overridden.
+func envVarsFromNilToBlankInService(svc composego.ServiceConfig) {
 	emptyVal := ""
 	for key, val := range svc.Environment {
 		if val == nil {

@@ -49,7 +49,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 			return err
 		}
 
-		zeroValueUnassignedEnvVarsInService(originSvc)
+		envVarsFromNilToBlankInService(originSvc)
 
 		services = append(services, ServiceConfig{
 			Name:        svc.Name,

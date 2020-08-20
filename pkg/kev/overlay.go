@@ -87,7 +87,7 @@ func (o *composeOverlay) mergeServicesInto(p *ComposeProject) error {
 			return err
 		}
 
-		zeroValueUnassignedEnvVarsInService(base)
+		envVarsFromNilToBlankInService(base)
 
 		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge labels for service %s", override.Name)

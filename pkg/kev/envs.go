@@ -142,7 +142,7 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 		if err != nil {
 			return nil, err
 		}
-		zeroValueUnassignedEnvVarsInService(s)
+		envVarsFromNilToBlankInService(s)
 		services = append(services, ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment})
 	}
 	e.overlay = &composeOverlay{
