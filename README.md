@@ -12,11 +12,11 @@ _Kev_ helps developers migrate their Docker Compose apps onto Kubernetes.
 
 It understands your Docker Compose app stacks, inferring config parameters and reconciling any updates. Then, prepares them for deployment in (multiple) target environments.
 
-All generated config is valid, secure and [easily adjustable](docs/reference/config-params.md) out of the box.
+All generated config is valid, secure and [easily adjustable][config] out of the box.
 
 ## Features
 
-* **Simplicity** - _Kev_ builds on top of the [Docker Compose](https://docs.docker.com/compose/compose-file/) specification. There is nothing else to learn, and the vastness of Kubernetes is reduced to a limited set of easy to follow configuration parameters.
+* **Simplicity** - _Kev_ builds on top of the [Docker Compose](https://docs.docker.com/compose/compose-file/) specification. There is nothing else to learn, and the vastness of Kubernetes is reduced to a limited set of easy to follow [configuration parameters][config].
 
 * **Multi-environment deployments** - Parameterisation is enabled with the same configuration primitives you're already familiar with. Each defined environment gets its own docker-compose override file, which is there to control the behaviour of your application in Kubernetes in a simple and consistent way.
 
@@ -99,7 +99,7 @@ Project components (aka services) are configured via a set of labels attached to
 
 Volumes come with their own set of labels to control Kubernetes storage specific parameters.
 
-See the [configuration reference](docs/reference/config-params.md) for details.
+See the [configuration reference][config] for details.
 
 ## Similar tools
 
@@ -124,3 +124,4 @@ Copyright (c) 2020 [Appvia Ltd](https://appvia.io)
 This project is distributed under the [Apache License, Version 2.0](./LICENSE).
 
 [roadmap]: https://github.com/appvia/kev/issues
+[config]: docs/reference/config-params.md
