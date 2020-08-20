@@ -55,6 +55,10 @@ func (e Environments) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
+func (e *Environment) mergeInto(p *ComposeProject) error {
+	return e.overlay.mergeInto(p)
+}
+
 func (e *Environment) GetVersion() string {
 	return e.overlay.Version
 }
@@ -103,8 +107,8 @@ func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
 	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
-// GetVolume retrieve a specific service by name
-func (e *Environment) GetEnvVars(name string) (map[string]*string, error) {
+// GetEnvVarsForService retrieves the env vars for a specific service
+func (e *Environment) GetEnvVarsForService(name string) (map[string]*string, error) {
 	s, err := e.GetService(name)
 	if err != nil {
 		return nil, err
@@ -139,7 +143,7 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 		if err != nil {
 			return nil, err
 		}
-		zeroValueUnassignedEnvVars(s)
+		zeroValueUnassignedEnvVarsInService(s)
 		services = append(services, ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment})
 	}
 	e.overlay = &composeOverlay{

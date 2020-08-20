@@ -49,7 +49,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 			return err
 		}
 
-		zeroValueUnassignedEnvVars(originSvc)
+		zeroValueUnassignedEnvVarsInService(originSvc)
 
 		services = append(services, ServiceConfig{
 			Name:        svc.Name,
@@ -59,18 +59,6 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 	}
 	s.overlay.Services = services
 	return nil
-}
-
-func newSources(files []string, workingDir string) (*Sources, error) {
-	if len(files) > 0 {
-		return &Sources{Files: files}, nil
-	}
-
-	defaults, err := findDefaultComposeFiles(workingDir)
-	if err != nil {
-		return nil, err
-	}
-	return &Sources{Files: defaults}, nil
 }
 
 // MarshalYAML makes Sources implement yaml.Marshaler.
@@ -99,9 +87,25 @@ func (s *Sources) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
-func (s *Sources) GetWorkingDir() string {
+func (s *Sources) getWorkingDir() string {
 	if len(s.Files) < 1 {
 		return ""
 	}
 	return filepath.Dir(s.Files[0])
+}
+
+func (s *Sources) toComposeProject() (*ComposeProject, error) {
+	return NewComposeProject(s.Files)
+}
+
+func newSources(files []string, workingDir string) (*Sources, error) {
+	if len(files) > 0 {
+		return &Sources{Files: files}, nil
+	}
+
+	defaults, err := findDefaultComposeFiles(workingDir)
+	if err != nil {
+		return nil, err
+	}
+	return &Sources{Files: defaults}, nil
 }

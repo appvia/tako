@@ -17,12 +17,10 @@
 package kev
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"path"
-	"sort"
 
 	"gopkg.in/yaml.v3"
 )
@@ -68,30 +66,24 @@ func (m *Manifest) GetEnvironment(name string) (*Environment, error) {
 	return nil, fmt.Errorf("no such environment: %s", name)
 }
 
-// EnvironmentsAsMap returns filtered app environments
+// GetEnvironments returns filtered app environments
 // If no filter is provided all app environments will be returned
-func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error) {
-	sort.Strings(filter)
-	environments := map[string]string{}
+func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
+	var out = make([]*Environment, len(m.Environments))
 
 	if len(filter) == 0 {
-		for _, e := range m.Environments {
-			environments[e.Name] = e.File
-		}
-	} else {
-		for _, e := range m.Environments {
-			i := sort.SearchStrings(filter, e.Name)
-			if i < len(filter) && filter[i] == e.Name {
-				environments[e.Name] = e.File
-			}
-		}
+		copy(out, m.Environments)
+		return out, nil
 	}
 
-	if len(environments) == 0 {
-		return nil, errors.New("No environments found")
+	for _, f := range filter {
+		e, err := m.GetEnvironment(f)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, e)
 	}
-
-	return environments, nil
+	return out, nil
 }
 
 // CalculateSourcesBaseOverlay extracts the base overlay from the manifest's docker-compose source files.
@@ -120,7 +112,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 }
 
 func (m *Manifest) GetWorkingDir() string {
-	return m.Sources.GetWorkingDir()
+	return m.Sources.getWorkingDir()
 }
 
 func (m *Manifest) GetSourcesLabels() *composeOverlay {
@@ -142,4 +134,15 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 	}
 
 	return m, nil
+}
+
+func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
+	p, err := m.Sources.toComposeProject()
+	if err != nil {
+		return nil, err
+	}
+	if err := e.mergeInto(p); err != nil {
+		return nil, err
+	}
+	return p, nil
 }

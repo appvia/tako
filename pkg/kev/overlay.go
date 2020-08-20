@@ -18,8 +18,12 @@ package kev
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
+	composego "github.com/compose-spec/compose-go/types"
+	"github.com/imdario/mergo"
+	"github.com/pkg/errors"
 	"github.com/r3labs/diff"
 )
 
@@ -59,4 +63,50 @@ func (o *composeOverlay) patch(cset changeset, reporter io.Writer) {
 	cset.applyVersionPatchesIfAny(o, reporter)
 	cset.applyServicesPatchesIfAny(o, reporter)
 	cset.applyVolumesPatchesIfAny(o, reporter)
+}
+
+func (o *composeOverlay) mergeInto(p *ComposeProject) error {
+	if err := o.mergeServicesInto(p); err != nil {
+		return errors.Wrap(err, "cannot merge services into project")
+	}
+	if err := o.mergeVolumesInto(p); err != nil {
+		return errors.Wrap(err, "cannot merge volumes into project")
+	}
+	return nil
+}
+
+func (o *composeOverlay) mergeServicesInto(p *ComposeProject) error {
+	var overridden composego.Services
+	for _, override := range o.Services {
+		base, err := p.GetService(override.Name)
+		if err != nil {
+			return err
+		}
+
+		zeroValueUnassignedEnvVarsInService(base)
+
+		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
+			return errors.Wrapf(err, "cannot merge labels for service %s", override.Name)
+		}
+		if err := mergo.Merge(&base.Environment, &override.Environment, mergo.WithOverride); err != nil {
+			return errors.Wrapf(err, "cannot merge env vars for service %s", override.Name)
+		}
+		overridden = append(overridden, base)
+	}
+	p.Services = overridden
+	return nil
+}
+
+func (o *composeOverlay) mergeVolumesInto(p *ComposeProject) error {
+	for name, override := range o.Volumes {
+		base, ok := p.Volumes[name]
+		if !ok {
+			return fmt.Errorf("could not find volume %s", override.Name)
+		}
+		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
+			return errors.Wrapf(err, "cannot merge labels for volume %s", name)
+		}
+		p.Volumes[name] = base
+	}
+	return nil
 }
