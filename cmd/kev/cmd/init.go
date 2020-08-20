@@ -30,20 +30,19 @@ var initLongDesc = `Tracks compose sources & creates deployment environments.
 
 Examples:
 
-  # Initialise kev.yaml with root docker-compose.yml and override file tracking.
-  # Adds the default dev deployment environment.
+  ### Initialise kev.yaml with root docker-compose.yml and override file tracking. Adds the default dev deployment environment.
   $ kev init
 
-  # Use an alternate docker-compose.yml file.
+  ### Use an alternate docker-compose.yml file.
   $ kev init -f docker-compose.dev.yaml
-  
-  # Use multiple alternate docker-compose.yml files.
+
+  ### Use multiple alternate docker-compose.yml files.
   $ kev init -f docker-compose.alternate.yaml -f docker-compose.other.yaml
 
-  # Use a specified environment.
+  ### Use a specified environment.
   $ kev init -e staging
 
-  # Use multiple specified environments.
+  ### Use multiple specified environments.
   $ kev init -e staging`
 
 var initCmd = &cobra.Command{
