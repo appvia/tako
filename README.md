@@ -43,7 +43,7 @@ Run the following command from within your project directory to initialise Kev p
 kev init
 ```
 
-The command above will auto-detect default `docker-compose.yaml` and `docker-compoe.override.yaml` files (if present) in the project directory, and tracks them as Kubernetes deployment sources.
+The command above will auto-detect default `docker-compose.yaml` and `docker-compose.override.yaml` files (if present) in the project directory, and tracks them as Kubernetes deployment sources.
 
 If you want to point _Kev_ at set of alternative compose files, simply pass them in with `-f` flag. Multiple source compose files can be specified by providing `-f` flag multiple times.
 
@@ -68,7 +68,7 @@ Your project is now ready and environment specific configuration files generated
 
 ### Render K8s manifests
 
-In order to deploy your project application to Kubernetes you will need to supply _something_ K8s can understand. Currently, _Kev_ only supports Docker Compose conversion to native Kuberentes manifests. The Community might add additional output formats at later stages. See our Roadmap for planned new features.
+In order to deploy your project application to Kubernetes you will need to supply _something_ K8s can understand. Currently, _Kev_ only supports Docker Compose conversion to native Kuberentes manifests. The Community might add additional output formats at later stages. See our [Roadmap][roadmap] for planned new features.
 
 To render manifests, simply run the following command from your project root:
 
@@ -76,7 +76,7 @@ To render manifests, simply run the following command from your project root:
 kev render
 ```
 
-`render` generates the project's Kubernetes manifests based on the tracked docker-compose files, using the desired format, specified via `-f` flag (`kubernetes` by default), and selected environments. Note that ALL environments will be rendered by default if none are specified.
+`render` generates the project's manifests based on the tracked docker-compose files, using the desired output format specified via the `-f` flag (defaults to `kubernetes`), and for selected environments. Note that ALL environments will be rendered by default if none are specified.
 
 You can control which environments to render the manifests for with `-e` flag(s).
 
@@ -86,7 +86,7 @@ To render application's manifests to a single file, pass in a `-s` flag and you 
 
 Note that all generated manifests are fully expanded i.e. they should not be treated as templates. (Quick reminder that a specific environment configuration lives in the docker compose override files.)
 
-From this point onward you're free to use whatever tool or framework you are already familiar with, to deploy your project to Kubernetes e.g `kubectl`, `skaffold` etc. Watch our roadmap for details around planned integrations.
+From this point onward you're free to use whatever tool or framework you are already familiar with, to deploy your project to Kubernetes e.g `kubectl`, `skaffold` etc. Watch our [Roadmap][roadmap] for details around planned integrations.
 
 ## Commands
 
@@ -108,20 +108,22 @@ See the [configuration reference](docs/reference/config-params.md) for details.
 
 _Kev_ is inspired by the simple, easy to use and well adopted Docker Compose specification, as well as several other tools in the Kubernetes manifests generation and templating space such as Kompose, Ksonnet and Kustomize, to name a few.
 
-Each of the solutions above, however, come with their own set challenges and are lacking in various areas. Some have been discontinued, some see very few contributions or updates, others require a great deal of prior Kubernetes expertise to find them useful.
+Each of the solutions above, however, come with their own set of challenges and are lacking in various areas. Some have been discontinued, some see very few contributions or updates, others require a great deal of prior Kubernetes expertise to find them useful.
 
 _Kev_ bridges the gaps in the existing tooling, helping developers familiar with Docker & Compose to easily get up and running with Kubernetes.
 
 ## Contributing to Kev
 
-We welcome any contributions from the community! Have a look at our [contribution](CONTRIBUTING.md) guide for more information on how to get started. If you use _Kev_, find it useful, or are generally interested in improving Developer Experience on Kubernetes then please let us know by **Staring** and **Watching** this repo. Thanks!
+We welcome any contributions from the community! Have a look at our [contribution](CONTRIBUTING.md) guide for more information on how to get started. If you use _Kev_, find it useful, or are generally interested in improving Developer Experience on Kubernetes then please let us know by **Starring** and **Watching** this repo. Thanks!
 
 ## Roadmap
 
-See our [Roadmap](https://github.com/appvia/kev/issues) for details about our plans for the project.
+See our [Roadmap][roadmap] for details about our plans for the project.
 
 ## License
 
 Copyright (c) 2020 [Appvia Ltd](https://appvia.io)
 
 This project is distributed under the [Apache License, Version 2.0](./LICENSE).
+
+[roadmap]: https://github.com/appvia/kev/issues
