@@ -8,7 +8,7 @@
 ![License: Apache-2.0](https://img.shields.io/github/license/appvia/kev)
 
 
-_Kev_ helps developers port and iterate Docker Compose apps onto Kubernetes.
+_Kev_ helps developers migrate their Docker Compose apps onto Kubernetes.
 
 It understands your Docker Compose app stacks, inferring config parameters and reconciling any updates. Then, prepares them for deployment in (multiple) target environments.
 
