@@ -55,21 +55,19 @@ func (e Environments) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
-func (e *Environment) mergeInto(p *ComposeProject) error {
-	return e.overlay.mergeInto(p)
-}
-
+// GetVersion gets the environment's overlay version.
 func (e *Environment) GetVersion() string {
 	return e.overlay.Version
 }
 
+// GetServices gets the environment's overlay services.
 func (e *Environment) GetServices() Services {
 	var out = make([]ServiceConfig, len(e.overlay.Services))
 	copy(out, e.overlay.Services)
 	return out
 }
 
-// GetService retrieve a specific service by name
+// GetService retrieves the specific service by name from the environment's overlay.
 func (e *Environment) GetService(name string) (ServiceConfig, error) {
 	for _, s := range e.GetServices() {
 		if s.Name == name {
@@ -79,35 +77,7 @@ func (e *Environment) GetService(name string) (ServiceConfig, error) {
 	return ServiceConfig{}, fmt.Errorf("no such service: %s", name)
 }
 
-func (e *Environment) GetVolumes() Volumes {
-	out := make(Volumes)
-	for k, v := range e.overlay.Volumes {
-		out[k] = v
-	}
-	return out
-}
-
-// VolumeNames return names for all volumes in this Compose config
-func (e *Environment) VolumeNames() []string {
-	var out []string
-	for k := range e.GetVolumes() {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
-}
-
-// GetVolume retrieve a specific service by name
-func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
-	for k, v := range e.GetVolumes() {
-		if k == name {
-			return v, nil
-		}
-	}
-	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
-}
-
-// GetEnvVarsForService retrieves the env vars for a specific service
+// GetEnvVarsForService retrieves the env vars for a specific service from the environment's overlay.
 func (e *Environment) GetEnvVarsForService(name string) (map[string]*string, error) {
 	s, err := e.GetService(name)
 	if err != nil {
@@ -118,6 +88,35 @@ func (e *Environment) GetEnvVarsForService(name string) (map[string]*string, err
 		out[k] = v
 	}
 	return out, nil
+}
+
+// GetVolumes gets the environment's overlay volumes.
+func (e *Environment) GetVolumes() Volumes {
+	out := make(Volumes)
+	for k, v := range e.overlay.Volumes {
+		out[k] = v
+	}
+	return out
+}
+
+// VolumeNames return names for all volumes from the environment's overlay volumes.
+func (e *Environment) VolumeNames() []string {
+	var out []string
+	for k := range e.GetVolumes() {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// GetVolume retrieves a specific volume by name from the environment's overlay volumes.
+func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
+	for k, v := range e.GetVolumes() {
+		if k == name {
+			return v, nil
+		}
+	}
+	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
 // WriteTo writes out an environment to a writer.
@@ -173,6 +172,10 @@ func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) err
 
 func (e *Environment) patch(cset changeset, reporter io.Writer) {
 	e.overlay.patch(cset, reporter)
+}
+
+func (e *Environment) mergeInto(p *ComposeProject) error {
+	return e.overlay.mergeInto(p)
 }
 
 func loadEnvironment(name, file string) (*Environment, error) {

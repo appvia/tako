@@ -27,7 +27,7 @@ import (
 	"github.com/r3labs/diff"
 )
 
-// MarshalYAML makes Services implement yaml.Marshaller
+// MarshalYAML makes Services implement yaml.Marshaller.
 func (s Services) MarshalYAML() (interface{}, error) {
 	services := map[string]ServiceConfig{}
 	for _, service := range s {
@@ -36,7 +36,7 @@ func (s Services) MarshalYAML() (interface{}, error) {
 	return services, nil
 }
 
-// MarshalJSON makes Services implement json.Marshaler
+// MarshalJSON makes Services implement json.Marshaler.
 func (s Services) MarshalJSON() ([]byte, error) {
 	data, err := s.MarshalYAML()
 	if err != nil {
@@ -50,6 +50,7 @@ func (sc ServiceConfig) GetLabels() map[string]string {
 	return sc.Labels
 }
 
+// diff detects changes between an overlay against another overlay.
 func (o *composeOverlay) diff(other *composeOverlay) (changeset, error) {
 	d, _ := diff.NewDiffer()
 	clog, err := d.Diff(other, o)
@@ -59,12 +60,15 @@ func (o *composeOverlay) diff(other *composeOverlay) (changeset, error) {
 	return newChangeset(clog)
 }
 
+// patch patches an overlay based on the supplied changeset patches.
 func (o *composeOverlay) patch(cset changeset, reporter io.Writer) {
 	cset.applyVersionPatchesIfAny(o, reporter)
 	cset.applyServicesPatchesIfAny(o, reporter)
 	cset.applyVolumesPatchesIfAny(o, reporter)
 }
 
+// mergeInto merges an overlay onto a compose project.
+// For env vars, it enforces the expected docker-compose CLI behaviour.
 func (o *composeOverlay) mergeInto(p *ComposeProject) error {
 	if err := o.mergeServicesInto(p); err != nil {
 		return errors.Wrap(err, "cannot merge services into project")

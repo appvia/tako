@@ -25,7 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// NewManifest returns a new Manifest struct
+// NewManifest returns a new Manifest struct.
 func NewManifest(files []string, workingDir string) (*Manifest, error) {
 	s, err := newSources(files, workingDir)
 	if err != nil {
@@ -34,7 +34,7 @@ func NewManifest(files []string, workingDir string) (*Manifest, error) {
 	return &Manifest{Sources: s}, nil
 }
 
-// LoadManifest returns application manifests
+// LoadManifest returns application manifests.
 func LoadManifest(workingDir string) (*Manifest, error) {
 	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
 	if err != nil {
@@ -66,8 +66,8 @@ func (m *Manifest) GetEnvironment(name string) (*Environment, error) {
 	return nil, fmt.Errorf("no such environment: %s", name)
 }
 
-// GetEnvironments returns filtered app environments
-// If no filter is provided all app environments will be returned
+// GetEnvironments returns filtered app environments.
+// If no filter is provided all app environments will be returned.
 func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
 	var out = make([]*Environment, len(m.Environments))
 
@@ -104,31 +104,21 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	for _, env := range candidates {
 		m.Environments = append(m.Environments, &Environment{
 			Name:    env,
-			overlay: m.GetSourcesLabels(),
+			overlay: m.GetSourcesOverlay(),
 			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(configFileTemplate, env)),
 		})
 	}
 	return m
 }
 
-func (m *Manifest) GetWorkingDir() string {
-	return m.Sources.getWorkingDir()
-}
-
-func (m *Manifest) GetSourcesLabels() *composeOverlay {
-	return m.Sources.overlay
-}
-func (m *Manifest) GetSourcesFiles() []string {
-	return m.Sources.Files
-}
-
+// ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
 func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverlay(withEnvVars); err != nil {
 		return nil, err
 	}
 
 	for _, e := range m.Environments {
-		if err := e.reconcile(m.GetSourcesLabels(), reporter); err != nil {
+		if err := e.reconcile(m.GetSourcesOverlay(), reporter); err != nil {
 			return nil, err
 		}
 	}
@@ -136,6 +126,8 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 	return m, nil
 }
 
+// MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
+// It returns the merged ComposeProject.
 func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
 	p, err := m.Sources.toComposeProject()
 	if err != nil {
@@ -145,4 +137,19 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 		return nil, err
 	}
 	return p, nil
+}
+
+// GetWorkingDir gets the sources working directory.
+func (m *Manifest) GetWorkingDir() string {
+	return m.Sources.getWorkingDir()
+}
+
+// GetSourcesOverlay gets the sources calculated overlay.
+func (m *Manifest) GetSourcesOverlay() *composeOverlay {
+	return m.Sources.overlay
+}
+
+// GetSourcesFiles gets the sources tracked docker-compose files.
+func (m *Manifest) GetSourcesFiles() []string {
+	return m.Sources.Files
 }
