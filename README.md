@@ -12,11 +12,11 @@ _Kev_ helps developers port and iterate Docker Compose apps onto Kubernetes.
 
 It understands your Docker Compose app stacks, inferring config parameters and reconciling any updates. Then, prepares them for deployment in (multiple) target environments.
 
-All generated config is valid, secure and [easily extendable](docs/reference/config-params.md) out of the box.
+All generated config is valid, secure and [easily adjustable](docs/reference/config-params.md) out of the box.
 
 ## Features
 
-* **Just focus on your app** - _Kev_ is created on top of the mighty [Docker Compose](https://docs.docker.com/compose/compose-file/) specification. There is nothing else to learn, and the vastness of Kubernetes is reduced to a limited set of easy to follow configuration parameters.
+* **Simplicity** - _Kev_ builds on top of the [Docker Compose](https://docs.docker.com/compose/compose-file/) specification. There is nothing else to learn, and the vastness of Kubernetes is reduced to a limited set of easy to follow configuration parameters.
 
 * **Multi-environment deployments** - Parameterisation is enabled with the same configuration primitives you're already familiar with. Each defined environment gets its own docker-compose override file, which is there to control the behaviour of your application in Kubernetes in a simple and consistent way.
 
