@@ -17,17 +17,15 @@
 package kev
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"path"
-	"sort"
 
 	"gopkg.in/yaml.v3"
 )
 
-// NewManifest returns a new Manifest struct
+// NewManifest returns a new Manifest struct.
 func NewManifest(files []string, workingDir string) (*Manifest, error) {
 	s, err := newSources(files, workingDir)
 	if err != nil {
@@ -36,7 +34,7 @@ func NewManifest(files []string, workingDir string) (*Manifest, error) {
 	return &Manifest{Sources: s}, nil
 }
 
-// LoadManifest returns application manifests
+// LoadManifest returns application manifests.
 func LoadManifest(workingDir string) (*Manifest, error) {
 	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
 	if err != nil {
@@ -68,30 +66,24 @@ func (m *Manifest) GetEnvironment(name string) (*Environment, error) {
 	return nil, fmt.Errorf("no such environment: %s", name)
 }
 
-// EnvironmentsAsMap returns filtered app environments
-// If no filter is provided all app environments will be returned
-func (m *Manifest) EnvironmentsAsMap(filter []string) (map[string]string, error) {
-	sort.Strings(filter)
-	environments := map[string]string{}
+// GetEnvironments returns filtered app environments.
+// If no filter is provided all app environments will be returned.
+func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
+	var out = make([]*Environment, len(m.Environments))
 
 	if len(filter) == 0 {
-		for _, e := range m.Environments {
-			environments[e.Name] = e.File
-		}
-	} else {
-		for _, e := range m.Environments {
-			i := sort.SearchStrings(filter, e.Name)
-			if i < len(filter) && filter[i] == e.Name {
-				environments[e.Name] = e.File
-			}
-		}
+		copy(out, m.Environments)
+		return out, nil
 	}
 
-	if len(environments) == 0 {
-		return nil, errors.New("No environments found")
+	for _, f := range filter {
+		e, err := m.GetEnvironment(f)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, e)
 	}
-
-	return environments, nil
+	return out, nil
 }
 
 // CalculateSourcesBaseOverlay extracts the base overlay from the manifest's docker-compose source files.
@@ -112,34 +104,52 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	for _, env := range candidates {
 		m.Environments = append(m.Environments, &Environment{
 			Name:    env,
-			overlay: m.GetSourcesLabels(),
+			overlay: m.GetSourcesOverlay(),
 			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(configFileTemplate, env)),
 		})
 	}
 	return m
 }
 
-func (m *Manifest) GetWorkingDir() string {
-	return m.Sources.GetWorkingDir()
-}
-
-func (m *Manifest) GetSourcesLabels() *composeOverlay {
-	return m.Sources.overlay
-}
-func (m *Manifest) GetSourcesFiles() []string {
-	return m.Sources.Files
-}
-
+// ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
 func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverlay(withEnvVars); err != nil {
 		return nil, err
 	}
 
 	for _, e := range m.Environments {
-		if err := e.reconcile(m.GetSourcesLabels(), reporter); err != nil {
+		if err := e.reconcile(m.GetSourcesOverlay(), reporter); err != nil {
 			return nil, err
 		}
 	}
 
 	return m, nil
+}
+
+// MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
+// It returns the merged ComposeProject.
+func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
+	p, err := m.Sources.toComposeProject()
+	if err != nil {
+		return nil, err
+	}
+	if err := e.mergeInto(p); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// GetWorkingDir gets the sources working directory.
+func (m *Manifest) GetWorkingDir() string {
+	return m.Sources.getWorkingDir()
+}
+
+// GetSourcesOverlay gets the sources calculated overlay.
+func (m *Manifest) GetSourcesOverlay() *composeOverlay {
+	return m.Sources.overlay
+}
+
+// GetSourcesFiles gets the sources tracked docker-compose files.
+func (m *Manifest) GetSourcesFiles() []string {
+	return m.Sources.Files
 }

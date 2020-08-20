@@ -286,7 +286,7 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should remove the env vars from all environments", func() {
-				vars, _ := env.GetEnvVars("wordpress")
+				vars, _ := env.GetEnvVarsForService("wordpress")
 				Expect(vars).To(HaveLen(0))
 			})
 
@@ -321,7 +321,7 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should keep the overridden env var in all environments", func() {
-				vars, _ := env.GetEnvVars("db")
+				vars, _ := env.GetEnvVarsForService("db")
 				Expect(vars).To(HaveLen(1))
 				Expect(vars).To(HaveKey("TO_OVERRIDE"))
 			})

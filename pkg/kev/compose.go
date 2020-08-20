@@ -69,11 +69,6 @@ func NewComposeProject(paths []string, opts ...ComposeOpts) (*ComposeProject, er
 	return p, nil
 }
 
-// GetVersion gets a project's version
-func (p *ComposeProject) GetVersion() string {
-	return p.version
-}
-
 // WithTransforms ensures project attributes are augmented beyond the base compose-go values
 func WithTransforms(p *ComposeProject) (*ComposeProject, error) {
 	return p.transform()
@@ -90,6 +85,11 @@ func (p *ComposeProject) transform() (*ComposeProject, error) {
 		}
 	}
 	return p, nil
+}
+
+// GetVersion gets a project's version
+func (p *ComposeProject) GetVersion() string {
+	return p.version
 }
 
 // rawProjectFromSources loads and parses a compose-go project from multiple docker-compose source files.
@@ -201,7 +201,11 @@ func findFirstFileFromFilesInDir(files []string, dir string) string {
 	return ""
 }
 
-func zeroValueUnassignedEnvVars(svc composego.ServiceConfig) {
+// envVarsFromNilToBlankInService updates nil pointer env vars to empty strings.
+// It works around a quirk in the compose-go lib where env var values are defined as *string rather string.
+// It's handy for avoiding unknown type errors when diffing env vars.
+// And, if required during a merge, it ensures env vars with nil pointer values are overridden.
+func envVarsFromNilToBlankInService(svc composego.ServiceConfig) {
 	emptyVal := ""
 	for key, val := range svc.Environment {
 		if val == nil {
