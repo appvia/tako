@@ -8,24 +8,21 @@
 ![License: Apache-2.0](https://img.shields.io/github/license/appvia/kev)
 
 
-_Kev_ helps developers port and iterate Docker Compose apps onto Kubernetes. It understands the Docker Compose application topology and prepares it for deployment in (multiple) target environments, with minimal user input.
+_Kev_ helps developers port and iterate Docker Compose apps onto Kubernetes.
 
-We leverage the [Docker Compose](https://docs.docker.com/compose/compose-file/) specification and allow for target-specific configurations to be applied to each component of the application stack, simply.
+It understands your Docker Compose app stacks, inferring config parameters and reconciling any updates. Then, prepares them for deployment in (multiple) target environments.
 
-_Kev_ is opinionated in its choice of Kubernetes elements you should be able to control. It automatically infers key config parameters by analysing and reconciling changes in the project source compose file(s). The configuration parameters can be manually overridden to allow for better control of a cloud application deployment on Kubernetes.
-
-_Kev_ reduces the need for Kubernetes expertise in the team. The generated Kubernetes deployment configuration follows best industry practices, with a thin layer of config options to enable further control. See [kev reference documentation](docs/reference/config-params.md) for a list of available options.
-
+All generated config is valid, secure and [easily extendable](docs/reference/config-params.md) out of the box.
 
 ## Features
 
-* **Simplicity** - Based on familiar Docker Compose specification. There is no new framework to learn, no new specification to embrace, and vastness of Kubernetes reduced to a limited set of easy to follow configuration parameters. You focus on the app development. Kev will prepare it for deployment in Kubernetes.
+* **Just focus on your app** - _Kev_ is created on top of the mighty [Docker Compose](https://docs.docker.com/compose/compose-file/) specification. There is nothing else to learn, and the vastness of Kubernetes is reduced to a limited set of easy to follow configuration parameters.
 
-* **Multi-environment support** - Parameterisation enabled with the same configuration primitives you're already familiar with. Each defined environment gets its own docker-compose override file, which is there to control the behaviour of your application in Kubernetes in a simple and consistent way.
+* **Multi-environment deployments** - Parameterisation is enabled with the same configuration primitives you're already familiar with. Each defined environment gets its own docker-compose override file, which is there to control the behaviour of your application in Kubernetes in a simple and consistent way.
 
 * **Best practice out of the box** - Best practice is codified and embedded in the translation layer, so you don't have to think about what's required to run your project application on Kubernetes.
 
-* **Secure** - _Kev_ is opinionated about the secret management. At this stage of its relatively short life it delegates that responsibility to the user, to remove the risk of potential uncontrolled secrets leak. No secrets == No leaks!
+* **Secure** - _Kev_ is opinionated about secret management. At this stage of its relatively short life it delegates that responsibility to the user, to remove the risk of potential uncontrolled secrets leak. No secrets == No leaks!
 
 * **No vendor lock-in** - Because you already use docker-compose, you can keep using it, even if _Kev_ turns out to be not your cup of tea.
 
