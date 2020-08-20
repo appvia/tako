@@ -24,13 +24,13 @@ import (
 
 var renderLongDesc = `(render) render Kubernetes manifests in selected format.
 
-   Examples:
+Examples:
 
-	 #### Render an app Kubernetes manifests (default) for all environments
-	 $ kev render
+  ### Render an app Kubernetes manifests (default) for all environments
+  $ kev render
 
-	 #### Render an app Kubernetes manifests (default) for a specific environment(s)
-	 $ kev render -e <production> [-e <dev>]`
+  ### Render an app Kubernetes manifests (default) for a specific environment(s)
+  $ kev render -e staging [-e production ...]`
 
 var renderCmd = &cobra.Command{
 	Use:   "render",
