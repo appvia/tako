@@ -13,18 +13,18 @@ Project structure:
 ```
 services:
   db:
-    image: mysql:8.0.19
+    image: mysql:5.7
     ...
   wordpress:
     image: wordpress:latest
     ports:
-      - 80:80
+      - 8000:80
     restart: always
     ...
 ```
 
 When deploying this setup, docker-compose maps the wordpress container port 80 to
-port 80 of the host as specified in the compose file.
+port 8000 of the host as specified in the Compose file.
 
 ## Deploy with docker-compose
 
@@ -43,12 +43,12 @@ Creating wordpress-mysql_wordpress_1 ... done
 Check containers are running and the port mapping:
 ```
 $ docker ps
-CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                 NAMES
-5fbb4181a069        wordpress:latest    "docker-entrypoint.s…"   35 seconds ago      Up 34 seconds       0.0.0.0:80->80/tcp    wordpress-mysql_wordpress_1
-e0884a8d444d        mysql:8.0.19        "docker-entrypoint.s…"   35 seconds ago      Up 34 seconds       3306/tcp, 33060/tcp   wordpress-mysql_db_1
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                  NAMES
+5fbb4181a069        wordpress:latest    "docker-entrypoint.s…"   35 seconds ago      Up 34 seconds       0.0.0.0:8000->80/tcp                   wordpress-mysql_wordpress_1
+e0884a8d444d        mysql:5.7           "docker-entrypoint.s…"   35 seconds ago      Up 34 seconds       33060/tcp, 0.0.0.0:32768->3306/tcp     wordpress-mysql_db_1
 ```
 
-Navigate to `http://localhost` in your web browser to access Wordpress.
+Navigate to `http://localhost:8000` in your web browser to access Wordpress.
 
 ![page](output.jpg)
 
