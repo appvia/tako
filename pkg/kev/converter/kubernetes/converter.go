@@ -28,7 +28,9 @@ const (
 	// Name of the converter
 	Name                  = "kubernetes"
 	singleFileDefaultName = "k8s.yaml"
-	multiFileSubDir       = "k8s"
+
+	// MultiFileSubDir is default output directory name for kubernetes manifests
+	MultiFileSubDir = "k8s"
 )
 
 // K8s is a native kubernetes manifests converter
@@ -51,7 +53,7 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 			// adding env name suffix to the custom directory to differentiate
 			outDirPath = path.Join(dir, env)
 		} else {
-			outDirPath = path.Join(workDir, multiFileSubDir, env)
+			outDirPath = path.Join(workDir, MultiFileSubDir, env)
 		}
 
 		// @step create output directory

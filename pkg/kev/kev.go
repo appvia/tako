@@ -19,6 +19,7 @@ package kev
 import (
 	"io"
 	"os"
+	"path"
 
 	"github.com/appvia/kube-devx/pkg/kev/converter"
 	"github.com/appvia/kube-devx/pkg/kev/log"
@@ -28,24 +29,35 @@ import (
 
 const (
 	// ManifestName main application manifest
-	ManifestName = "kev.yaml"
-
+	ManifestName       = "kev.yaml"
 	defaultEnv         = "dev"
 	configFileTemplate = "docker-compose.kev.%s.yaml"
 )
 
 // Init initialises a kev manifest including source compose files and environments.
 // A default environment will be allocated if no environments were provided.
-func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
+func Init(composeSources, envs []string, workingDir string, skaffold bool) (*Manifest, *SkaffoldManifest, error) {
 	m, err := NewManifest(composeSources, workingDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return m.MintEnvironments(envs), nil
+
+	if skaffold {
+		s, err := NewSkaffoldManifest(envs)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		m.Skaffold = path.Join(workingDir, SkaffoldFileName)
+
+		return m.MintEnvironments(envs), s, nil
+	}
+
+	return m.MintEnvironments(envs), nil, nil
 }
 
 // Reconcile reconciles changes with docker-compose sources against deployment environments.

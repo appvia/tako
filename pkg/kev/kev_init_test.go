@@ -1,6 +1,10 @@
 package kev_test
 
 import (
+	"io/ioutil"
+	"path"
+
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml"
 	"github.com/appvia/kube-devx/pkg/kev"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -8,13 +12,15 @@ import (
 
 var _ = Describe("Init", func() {
 	var (
-		workingDir string
-		manifest   *kev.Manifest
-		mErr       error
+		workingDir       string
+		manifest         *kev.Manifest
+		skaffoldManifest *kev.SkaffoldManifest
+		skaffold         bool
+		mErr             error
 	)
 
 	JustBeforeEach(func() {
-		manifest, mErr = kev.Init([]string{}, []string{}, workingDir)
+		manifest, skaffoldManifest, mErr = kev.Init([]string{}, []string{}, workingDir, skaffold)
 	})
 
 	Context("with no alternate compose files supplied", func() {
@@ -101,6 +107,49 @@ var _ = Describe("Init", func() {
 				Expect(mErr).NotTo(HaveOccurred())
 			})
 		})
+	})
 
+	Context("with --skaffold flag passed", func() {
+		BeforeEach(func() {
+			skaffold = true
+		})
+
+		When("skaffold file already exists", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-default/skaffold"
+			})
+
+			It("doesn't force override the existing manifest", func() {
+				skaffoldPath := path.Join(workingDir, kev.SkaffoldFileName)
+				existingSkaffoldContent, _ := ioutil.ReadFile(skaffoldPath)
+				skaffoldManifestContent, _ := yaml.Marshal(skaffoldManifest)
+
+				Expect(skaffoldManifest).ToNot(BeNil())
+				Expect(existingSkaffoldContent).ToNot(Equal(skaffoldManifestContent))
+
+				Expect(mErr).ToNot(HaveOccurred())
+			})
+
+			It("adds path to existing skaffold in the kev manifest", func() {
+				skaffoldPath := path.Join(workingDir, kev.SkaffoldFileName)
+				Expect(manifest.Skaffold).To(Equal(skaffoldPath))
+			})
+		})
+
+		When("skaffold file doesn't exist", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-default/compose-yaml"
+			})
+
+			It("generates skaffold manifest file", func() {
+				Expect(skaffoldManifest).ToNot(BeNil())
+				Expect(mErr).ToNot(HaveOccurred())
+			})
+
+			It("adds path to a newly created skaffold file in the kev manifest", func() {
+				skaffoldPath := path.Join(workingDir, kev.SkaffoldFileName)
+				Expect(manifest.Skaffold).To(Equal(skaffoldPath))
+			})
+		})
 	})
 })

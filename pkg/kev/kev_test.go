@@ -28,7 +28,7 @@ import (
 
 func TestManifestMarshalsCorrectly(t *testing.T) {
 	files := []string{"testdata/in-cluster-wordpress/docker-compose.yaml"}
-	manifest, err := kev.Init(files, []string{}, "")
+	manifest, _, err := kev.Init(files, []string{}, "", false)
 	if err != nil {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}
@@ -51,7 +51,7 @@ func TestManifestMarshalsCorrectly(t *testing.T) {
 
 func TestInitProvidesEnvironmentConfig(t *testing.T) {
 	files := []string{"testdata/in-cluster-wordpress/docker-compose.yaml"}
-	manifest, err := kev.Init(files, []string{}, "")
+	manifest, _, err := kev.Init(files, []string{}, "", false)
 	if err != nil {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}
