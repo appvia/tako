@@ -19,7 +19,7 @@ package kev
 import (
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/appvia/kube-devx/pkg/kev/converter"
 	"github.com/appvia/kube-devx/pkg/kev/log"
@@ -36,28 +36,30 @@ const (
 
 // Init initialises a kev manifest including source compose files and environments.
 // A default environment will be allocated if no environments were provided.
-func Init(composeSources, envs []string, workingDir string, skaffold bool) (*Manifest, *SkaffoldManifest, error) {
+func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 	m, err := NewManifest(composeSources, workingDir)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if skaffold {
-		s, err := NewSkaffoldManifest(envs)
-		if err != nil {
-			return nil, nil, err
-		}
+	return m.MintEnvironments(envs), nil
+}
 
-		m.Skaffold = path.Join(workingDir, SkaffoldFileName)
-
-		return m.MintEnvironments(envs), s, nil
+// PrepareForSkaffold initialises a skaffold manifest for kev project.
+// It'll also set the Skaffold field in kev manifest with skaffold file path passed as argument.
+func PrepareForSkaffold(manifest *Manifest, skaffoldPath string, envs []string) (*SkaffoldManifest, error) {
+	s, err := NewSkaffoldManifest(envs)
+	if err != nil {
+		return nil, err
 	}
 
-	return m.MintEnvironments(envs), nil, nil
+	manifest.Skaffold = skaffoldPath
+
+	return s, nil
 }
 
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
@@ -107,8 +109,14 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	}
 
 	c := converter.Factory(format)
-	if err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered); err != nil {
+	outputPaths, err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered)
+	if err != nil {
 		log.Errorf("Couldn't render manifests")
+		return err
+	}
+
+	if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
+		log.Errorf("Couldn't update skaffold.yaml profiles")
 		return err
 	}
 

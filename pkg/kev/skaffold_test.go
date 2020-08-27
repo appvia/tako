@@ -136,4 +136,57 @@ var _ = Describe("Skaffold", func() {
 			}))
 		})
 	})
+
+	Describe("UpdateProfiles", func() {
+		var manifest *kev.SkaffoldManifest
+
+		envName := "testenv"
+
+		BeforeEach(func() {
+			envs := []string{envName}
+			manifest = kev.BaseSkaffoldManifest()
+			manifest.SetProfiles(envs)
+		})
+
+		Context("for skaffold profile names matching rendereded environment", func() {
+
+			When("rendered manifests output path is a directory", func() {
+				outputPath := "testdata" // point at any existing directory for test!
+
+				envToOutputPath := map[string]string{
+					envName: outputPath,
+				}
+
+				It("updates the matching profile with new manifests path selecting all the files in that directory", func() {
+					manifest.UpdateProfiles(envToOutputPath)
+					Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement(filepath.Join(outputPath, "*")))
+				})
+			})
+
+			When("rendered manifests output path is a single file", func() {
+				outputPath := "testdata/init-default/skaffold/skaffold.yaml" // point at any existing file for test!
+
+				envToOutputPath := map[string]string{
+					envName: outputPath,
+				}
+
+				It("updates the matching profile with new manifests path pointing at specific file", func() {
+					manifest.UpdateProfiles(envToOutputPath)
+					Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement(outputPath))
+				})
+			})
+
+		})
+
+		Context("when skaffold profile names don't match rendered enviornment", func() {
+			envToOutputPath := map[string]string{
+				"anotherEnv": "a/new/manifests/path",
+			}
+
+			It("profile manifests path should remain unchanged", func() {
+				manifest.UpdateProfiles(envToOutputPath)
+				Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement("k8s/testenv/*"))
+			})
+		})
+	})
 })

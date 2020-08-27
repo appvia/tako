@@ -42,7 +42,9 @@ func New() *K8s {
 }
 
 // Render generates outcome
-func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) error {
+func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) (map[string]string, error) {
+
+	renderOutputPaths := map[string]string{}
 
 	for env, project := range projects {
 		log.Infof("🖨️  Rendering %s environment", env)
@@ -61,7 +63,7 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 		// as Kompose logic checks for this and only will do that for existing directories,
 		// otherwise will treat OutFile as regular file and output all manifests to that single file.
 		if err := os.MkdirAll(outDirPath, os.ModePerm); err != nil {
-			return err
+			return nil, err
 		}
 
 		// @step generate multiple / single file
@@ -78,21 +80,23 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 			OutFile:    outFilePath,
 		}
 
+		renderOutputPaths[env] = outFilePath
+
 		// @step Get Kubernete transformer that maps compose project to Kubernetes primitives
 		k := &Kubernetes{Opt: convertOpts, Project: project}
 
 		// @step Do the transformation
 		objects, err := k.Transform()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// @step Produce objects
 		err = PrintList(objects, convertOpts, rendered)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return renderOutputPaths, nil
 }

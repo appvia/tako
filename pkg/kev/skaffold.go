@@ -18,6 +18,8 @@ package kev
 
 import (
 	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
@@ -46,6 +48,57 @@ func NewSkaffoldManifest(envs []string) (*SkaffoldManifest, error) {
 	manifest.AdditionalProfiles()
 
 	return manifest, nil
+}
+
+// LoadSkaffoldManifest returns skaffold manifest.
+func LoadSkaffoldManifest(path string) (*SkaffoldManifest, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var s *SkaffoldManifest
+	return s, yaml.Unmarshal(data, &s)
+}
+
+// UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.
+// Note, it'll persist updated profiles in the skaffold.yaml file.
+// Important: This will always persist the last rendered directory as Deploy manifests source!
+func UpdateSkaffoldProfiles(path string, envToOutputPath map[string]string) error {
+	skaffold, err := LoadSkaffoldManifest(path)
+	if err != nil {
+		return err
+	}
+
+	skaffold.UpdateProfiles(envToOutputPath)
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if _, err := skaffold.WriteTo(file); err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+// UpdateProfiles updates profile for each environment with its K8s output path
+// Note, currently the only supported format is native kubernetes manifests
+func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) {
+	for _, p := range s.Profiles {
+		if outputPath, found := envToOutputPath[p.Name]; found {
+
+			manifestsPath := ""
+			if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
+				manifestsPath = filepath.Join(outputPath, "*")
+			} else if err == nil && info.Mode().IsRegular() {
+				manifestsPath = outputPath
+			}
+
+			p.Deploy.KubectlDeploy.Manifests = []string{
+				manifestsPath,
+			}
+		}
+	}
 }
 
 // BaseSkaffoldManifest returns base Skaffold manifest
