@@ -205,7 +205,7 @@ _Kubernetes_, however, is designed to help you run your application in a highly 
 
 Describing Compose services as Kubernetes services requires an extra layer that translates between these different worlds.
 
-Furthermore, since you're moving your app to Kubernetes, you're moving from a development mindset to sharing your app for testing, staging and at some publishing to a production environment.
+Furthermore, since you're moving your app to Kubernetes, you're moving from a development mindset to sharing your app for testing, staging and at some point publishing to a production environment.
 
 So, it would be great if you can capture the different toggles required beyond development for different environments from the start. 
      
@@ -469,7 +469,7 @@ This time round, _Kev_
 - It re-generated the kubernetes manifests for the `local` and `stage` deployment environments. 
 
 **Kube Notes**
-> To accommodate the `db` service _Kev_ uses the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) Kubernetes resource as it requires persistent storage.
+> To accommodate the `db` service, _Kev_ uses the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) Kubernetes resource as the `db` service requires persistent storage.
 
 > _Kev_ uses the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) resource to provide the `db` service with the required `db_data` volume it needs to store data. 
 
@@ -594,13 +594,15 @@ These are easily tracked in easy to understand Compose files.
 
 ### Conclusion
 
-We have successfully started and migrated a `wordpress` app from a local Docker Compose development flow to a multi-environment Kubernetes setup.
+We have successfully moved a `wordpress` app from a local Docker Compose development flow to a connected multi-environment Kubernetes setup.
 
-_Kev_ facilitated and enabled us to easily iterate on and manage our target environments.
+_Kev_ facilitated all the heavy lifting. It enabled us to easily iterate on and manage our target environments.
 
-Also, we have an understanding of the **gotchas** we can face when moving from Compose to Kubernetes.
+We also have an understanding of the **gotchas** we can face when moving from Compose to Kubernetes.
 
-All the base _Kev_ artefacts for this tutorial can be found under the [wordpress-mysql example](examples/wordpress-mysql/README.md). 
+All the generated manifests can be tracked in source control and shared in a team context.
+
+Finally, you can find the artefacts for this tutorial here: [wordpress-mysql example](examples/wordpress-mysql/README.md). 
 
 ## Configuration
 
