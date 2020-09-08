@@ -3,9 +3,9 @@ module github.com/appvia/kube-devx
 go 1.14
 
 require (
-	github.com/compose-spec/compose-go v0.0.0-20200629133725-59b25574fd55
-	github.com/google/go-cmp v0.5.0
-	github.com/imdario/mergo v0.3.9
+	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
+	github.com/google/go-cmp v0.5.2
+	github.com/imdario/mergo v0.3.11
 	github.com/joho/godotenv v1.3.0
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
