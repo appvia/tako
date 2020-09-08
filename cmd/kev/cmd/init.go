@@ -30,20 +30,19 @@ var initLongDesc = `Tracks compose sources & creates deployment environments.
 
 Examples:
 
-  # Initialise kev.yaml with root docker-compose.yml and override file tracking.
-  # Adds the default dev deployment environment.
+  ### Initialise kev.yaml with root docker-compose.yml and override file tracking. Adds the default dev deployment environment.
   $ kev init
 
-  # Use an alternate docker-compose.yml file.
+  ### Use an alternate docker-compose.yml file.
   $ kev init -f docker-compose.dev.yaml
-  
-  # Use multiple alternate docker-compose.yml files.
+
+  ### Use multiple alternate docker-compose.yml files.
   $ kev init -f docker-compose.alternate.yaml -f docker-compose.other.yaml
 
-  # Use a specified environment.
+  ### Use a specified environment.
   $ kev init -e staging
 
-  # Use multiple specified environments.
+  ### Use multiple specified environments.
   $ kev init -e staging`
 
 var initCmd = &cobra.Command{
@@ -51,6 +50,11 @@ var initCmd = &cobra.Command{
 	Short: "Tracks compose sources & creates deployment environments.",
 	Long:  initLongDesc,
 	RunE:  runInitCmd,
+}
+
+type skippableFile struct {
+	FileName string
+	Skipped  bool
 }
 
 func init() {
@@ -71,12 +75,15 @@ func init() {
 		"Specify a deployment environment\n(default: dev)",
 	)
 
+	flags.BoolP("skaffold", "s", false, "prepare the project for Skaffold")
+
 	rootCmd.AddCommand(initCmd)
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
+	skaffold, _ := cmd.Flags().GetBool("skaffold")
 
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
@@ -94,19 +101,52 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		return displayInitError(err)
 	}
 
-	var results []string
-	if err := writeTo(manifestPath, manifest); err != nil {
-		return displayInitError(err)
-	}
-	results = append(results, kev.ManifestName)
+	var results []skippableFile
 
 	for _, environment := range manifest.Environments {
 		envPath := path.Join(workingDirAbs, environment.File)
+
 		if err := writeTo(envPath, environment); err != nil {
 			return displayInitError(err)
 		}
-		results = append(results, environment.File)
+
+		results = append(results, skippableFile{
+			FileName: environment.File,
+		})
 	}
+
+	if skaffold {
+		skaffoldManifestPath := path.Join(workingDirAbs, kev.SkaffoldFileName)
+
+		skaffoldManifest, err := kev.PrepareForSkaffold(manifest, skaffoldManifestPath, envs)
+		if err != nil {
+			return displayInitError(err)
+		}
+
+		// don't override existing skaffold.yaml
+		if manifestExistsForPath(skaffoldManifestPath) {
+			results = append(results, skippableFile{
+				FileName: kev.SkaffoldFileName,
+				Skipped:  true,
+			})
+		} else if skaffoldManifest != nil {
+			if err := writeTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
+				return displayInitError(err)
+			}
+
+			results = append(results, skippableFile{
+				FileName: kev.SkaffoldFileName,
+			})
+		}
+	}
+
+	if err := writeTo(manifestPath, manifest); err != nil {
+		return displayInitError(err)
+	}
+
+	results = append([]skippableFile{{
+		FileName: kev.ManifestName,
+	}}, results...)
 
 	displayInitSuccess(os.Stdout, results)
 
@@ -134,10 +174,14 @@ func writeTo(filePath string, w io.WriterTo) error {
 	return file.Close()
 }
 
-func displayInitSuccess(w io.Writer, files []string) {
+func displayInitSuccess(w io.Writer, files []skippableFile) {
 	_, _ = w.Write([]byte("✓ Init\n"))
 	for _, file := range files {
-		msg := fmt.Sprintf(" → Creating %s ... Done\n", file)
+		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
+
+		if file.Skipped {
+			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", file.FileName)
+		}
 		_, _ = w.Write([]byte(msg))
 	}
 }
