@@ -1,0 +1,4 @@
+compose:
+  - testdata/merge/docker-compose.yaml
+environments:
+  dev: testdata/merge/docker-compose.kev.dev.yaml

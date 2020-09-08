@@ -37,53 +37,92 @@ type ProjectOptions struct {
 	Name        string
 	WorkingDir  string
 	ConfigPaths []string
-	Environment []string
+	Environment map[string]string
+	loadOptions []func(*loader.Options)
 }
 
-// WithOsEnv imports environment variables from OS until those have been overridden by ProjectOptions.Environment
-func (o ProjectOptions) WithOsEnv() ProjectOptions {
-	env := getAsEqualsMap(o.Environment)
-	for k, v := range getAsEqualsMap(os.Environ()) {
-		if _, ok := env[k]; !ok {
-			env[k] = v
+type ProjectOptionsFn func(*ProjectOptions) error
+
+// NewProjectOptions creates ProjectOptions
+func NewProjectOptions(configs []string, opts ...ProjectOptionsFn) (*ProjectOptions, error) {
+	options := &ProjectOptions{
+		ConfigPaths: configs,
+		Environment: map[string]string{},
+	}
+	for _, o := range opts {
+		err := o(options)
+		if err != nil {
+			return nil, err
 		}
 	}
+	return options, nil
+}
 
-	return ProjectOptions{
-		Name:        o.Name,
-		WorkingDir:  o.WorkingDir,
-		ConfigPaths: o.ConfigPaths,
-		Environment: getAsStringList(env),
+// WithName defines ProjectOptions' name
+func WithName(name string) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		o.Name = name
+		return nil
 	}
 }
 
-// WithDotEnv imports environment variables from .env file until those have been overridden by ProjectOptions.Environment
-func (o ProjectOptions) WithDotEnv() (ProjectOptions, error) {
+// WithWorkingDirectory defines ProjectOptions' working directory
+func WithWorkingDirectory(wd string) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		o.WorkingDir = wd
+		return nil
+	}
+}
+
+// WithEnv defines a key=value set of variables used for compose file interpolation
+func WithEnv(env []string) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		for k, v := range getAsEqualsMap(env) {
+			o.Environment[k] = v
+		}
+		return nil
+	}
+}
+
+// WithDiscardEnvFiles sets discards the `env_file` section after resolving to
+// the `environment` section
+func WithDiscardEnvFile(o *ProjectOptions) error {
+	o.loadOptions = append(o.loadOptions, loader.WithDiscardEnvFiles)
+	return nil
+}
+
+// WithOsEnv imports environment variables from OS
+func WithOsEnv(o *ProjectOptions) error {
+	for k, v := range getAsEqualsMap(os.Environ()) {
+		o.Environment[k] = v
+	}
+	return nil
+}
+
+// WithDotEnv imports environment variables from .env file
+func WithDotEnv(o *ProjectOptions) error {
 	dir, err := o.GetWorkingDir()
 	if err != nil {
-		return o, err
+		return err
 	}
 	dotEnvFile := filepath.Join(dir, ".env")
 	if _, err := os.Stat(dotEnvFile); os.IsNotExist(err) {
-		return o, nil
+		return nil
 	}
 	file, err := os.Open(dotEnvFile)
 	if err != nil {
-		return o, err
+		return err
 	}
 	defer file.Close()
 
 	env, err := godotenv.Parse(file)
 	if err != nil {
-		return o, err
+		return err
 	}
-
-	return ProjectOptions{
-		Name:        o.Name,
-		WorkingDir:  o.WorkingDir,
-		ConfigPaths: o.ConfigPaths,
-		Environment: getAsStringList(env),
-	}, nil
+	for k, v := range env {
+		o.Environment[k] = v
+	}
+	return nil
 }
 
 // DefaultFileNames defines the Compose file names for auto-discovery (in order of preference)
@@ -127,21 +166,28 @@ func ProjectFromOptions(options *ProjectOptions) (*types.Project, error) {
 	if err != nil {
 		return nil, err
 	}
+	absWorkingDir, err := filepath.Abs(workingDir)
+	if err != nil {
+		return nil, err
+	}
 
-	return loader.Load(types.ConfigDetails{
-		ConfigFiles: configs,
-		WorkingDir:  workingDir,
-		Environment: getAsEqualsMap(options.Environment),
-	}, func(opts *loader.Options) {
+	var nameLoadOpt = func(opts *loader.Options) {
 		if options.Name != "" {
 			opts.Name = options.Name
 		} else if nameFromEnv, ok := os.LookupEnv(ComposeProjectName); ok {
 			opts.Name = nameFromEnv
 		} else {
 			opts.Name = regexp.MustCompile(`[^a-z0-9\\-_]+`).
-				ReplaceAllString(strings.ToLower(filepath.Base(workingDir)), "")
+				ReplaceAllString(strings.ToLower(filepath.Base(absWorkingDir)), "")
 		}
-	})
+	}
+	options.loadOptions = append(options.loadOptions, nameLoadOpt)
+
+	return loader.Load(types.ConfigDetails{
+		ConfigFiles: configs,
+		WorkingDir:  workingDir,
+		Environment: options.Environment,
+	}, options.loadOptions...)
 }
 
 // getConfigPathsFromOptions retrieves the config files for project based on project options

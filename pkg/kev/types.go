@@ -59,9 +59,9 @@ type ComposeProject struct {
 
 // ServiceConfig is a shallow version of a compose-go ServiceConfig
 type ServiceConfig struct {
-	Name        string             `yaml:"-" json:"-" diff:"name"`
-	Labels      composego.Labels   `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
-	Environment map[string]*string `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
+	Name        string                      `yaml:"-" json:"-" diff:"name"`
+	Labels      composego.Labels            `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
+	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
 }
 
 // Services is a list of ServiceConfig
@@ -78,20 +78,17 @@ type VolumeConfig struct {
 
 // changeset tracks changes made to a version, services and volumes
 type changeset struct {
-	version  []change
-	services changeGroup
-	volumes  changeGroup
+	version  change
+	services []change
+	volumes  []change
 }
-
-// changeGroup groups related changes
-type changeGroup map[interface{}][]change
 
 // change describes a create, update or delete modification
 // targeting an attribute in a version, service or volume.
 type change struct {
-	parent                 string      // the parent compose attribute for the modification (if available), e.g. labels
-	target                 string      // the target for the modification, e.g. kev.workload.liveness-probe-command
-	value                  string      // the new value, e.g. "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
-	index                  interface{} // the index in the changeset's services or volumes
-	update, create, delete bool        // the target operation - create and delete happen at a service/volume level
+	Type   string
+	Value  interface{}
+	Parent string
+	Target string
+	Index  interface{}
 }

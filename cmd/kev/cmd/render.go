@@ -24,17 +24,17 @@ import (
 
 var renderLongDesc = `(render) render Kubernetes manifests in selected format.
 
-   Examples:
+Examples:
 
-	 #### Render an app Kubernetes manifests (default) for all environments
-	 $ kev render
+  ### Render an app Kubernetes manifests (default) for all environments
+  $ kev render
 
-	 #### Render an app Kubernetes manifests (default) for a specific environment(s)
-	 $ kev render -e <production> [-e <dev>]`
+  ### Render an app Kubernetes manifests (default) for a specific environment(s)
+  $ kev render -e staging [-e production ...]`
 
 var renderCmd = &cobra.Command{
 	Use:   "render",
-	Short: "Render an application deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
+	Short: "Generates application's deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return runReconcileCmd(cmd, args)
