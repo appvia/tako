@@ -69,13 +69,13 @@ func (m *Manifest) GetEnvironment(name string) (*Environment, error) {
 // GetEnvironments returns filtered app environments.
 // If no filter is provided all app environments will be returned.
 func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
-	var out = make([]*Environment, len(m.Environments))
-
 	if len(filter) == 0 {
-		copy(out, m.Environments)
-		return out, nil
+		var allOut = make([]*Environment, len(m.Environments))
+		copy(allOut, m.Environments)
+		return allOut, nil
 	}
 
+	var out Environments
 	for _, f := range filter {
 		e, err := m.GetEnvironment(f)
 		if err != nil {
