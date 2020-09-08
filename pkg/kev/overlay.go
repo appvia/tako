@@ -24,7 +24,6 @@ import (
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
-	"github.com/r3labs/diff"
 )
 
 // MarshalYAML makes Services implement yaml.Marshaller.
@@ -45,19 +44,32 @@ func (s Services) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
+// Map converts services to a map.
+func (s Services) Map() map[string]ServiceConfig {
+	out := map[string]ServiceConfig{}
+	for _, service := range s {
+		out[service.Name] = service
+	}
+	return out
+}
+
+// Set converts services to a set.
+func (s Services) Set() map[string]bool {
+	out := map[string]bool{}
+	for _, service := range s {
+		out[service.Name] = true
+	}
+	return out
+}
+
 // GetLabels gets a service's labels
 func (sc ServiceConfig) GetLabels() map[string]string {
 	return sc.Labels
 }
 
 // diff detects changes between an overlay against another overlay.
-func (o *composeOverlay) diff(other *composeOverlay) (changeset, error) {
-	d, _ := diff.NewDiffer()
-	clog, err := d.Diff(other, o)
-	if err != nil {
-		return changeset{}, err
-	}
-	return newChangeset(clog)
+func (o *composeOverlay) diff(other *composeOverlay) changeset {
+	return newChangeset(other, o)
 }
 
 // patch patches an overlay based on the supplied changeset patches.

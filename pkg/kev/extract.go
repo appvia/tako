@@ -60,13 +60,13 @@ func extractVolumesLabels(c *ComposeProject, out *composeOverlay) {
 	for _, v := range c.VolumeNames() {
 		labels := map[string]string{}
 
-		if storageClass, ok := vols[v].Labels[config.LabelVolumeStorageClass]; ok {
+		if storageClass, ok := c.Volumes[v].Labels[config.LabelVolumeStorageClass]; ok {
 			labels[config.LabelVolumeStorageClass] = storageClass
 		} else {
 			labels[config.LabelVolumeStorageClass] = config.DefaultVolumeClass
 		}
 
-		if volSize, ok := vols[v].Labels[config.LabelVolumeSize]; ok {
+		if volSize, ok := c.Volumes[v].Labels[config.LabelVolumeSize]; ok {
 			labels[config.LabelVolumeSize] = volSize
 		} else {
 			labels[config.LabelVolumeSize] = config.DefaultVolumeSize

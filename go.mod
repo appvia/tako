@@ -3,9 +3,9 @@ module github.com/appvia/kube-devx
 go 1.14
 
 require (
-	github.com/compose-spec/compose-go v0.0.0-20200629133725-59b25574fd55
-	github.com/google/go-cmp v0.5.0
-	github.com/imdario/mergo v0.3.9
+	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
+	github.com/google/go-cmp v0.5.2
+	github.com/imdario/mergo v0.3.11
 	github.com/joho/godotenv v1.3.0
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
@@ -13,10 +13,10 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
-	github.com/r3labs/diff v1.1.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.0.0
+	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect

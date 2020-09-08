@@ -1,0 +1,25 @@
+version: "3.7"
+services:
+  db:
+    labels:
+      kev.service.type: ClusterIP
+      kev.workload.cpu: "0.5"
+      kev.workload.image-pull-policy: IfNotPresent
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
+      kev.workload.liveness-probe-disabled: "false"
+      kev.workload.liveness-probe-initial-delay: 1m0s
+      kev.workload.liveness-probe-interval: 1m0s
+      kev.workload.liveness-probe-retries: "3"
+      kev.workload.liveness-probe-timeout: 10s
+      kev.workload.max-cpu: "0.75"
+      kev.workload.max-memory: 500Mi
+      kev.workload.memory: 50Mi
+      kev.workload.replicas: "5"
+      kev.workload.rolling-update-max-surge: "1"
+      kev.workload.service-account-name: overridden-service-account-name
+      kev.workload.type: StatefulSet
+volumes:
+  db_data:
+    labels:
+      kev.volume.size: 200Mi
+      kev.volume.storage-class: standard
