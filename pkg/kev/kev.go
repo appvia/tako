@@ -19,6 +19,7 @@ package kev
 import (
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/appvia/kube-devx/pkg/kev/converter"
 	"github.com/appvia/kube-devx/pkg/kev/log"
@@ -28,8 +29,7 @@ import (
 
 const (
 	// ManifestName main application manifest
-	ManifestName = "kev.yaml"
-
+	ManifestName       = "kev.yaml"
 	defaultEnv         = "dev"
 	configFileTemplate = "docker-compose.kev.%s.yaml"
 )
@@ -45,7 +45,21 @@ func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
 		return nil, err
 	}
+
 	return m.MintEnvironments(envs), nil
+}
+
+// PrepareForSkaffold initialises a skaffold manifest for kev project.
+// It'll also set the Skaffold field in kev manifest with skaffold file path passed as argument.
+func PrepareForSkaffold(manifest *Manifest, skaffoldPath string, envs []string) (*SkaffoldManifest, error) {
+	s, err := NewSkaffoldManifest(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest.Skaffold = skaffoldPath
+
+	return s, nil
 }
 
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
@@ -75,7 +89,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return err
 	}
 
-	filteredEnvs, err := manifest.EnvironmentsAsMap(envs)
+	filteredEnvs, err := manifest.GetEnvironments(envs)
 	if err != nil {
 		return errors.Wrap(err, "Unable to render")
 	}
@@ -83,21 +97,26 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	rendered := map[string][]byte{}
 	projects := map[string]*composego.Project{}
 	files := map[string][]string{}
+	sourcesFiles := manifest.GetSourcesFiles()
 
-	for env, file := range filteredEnvs {
-		sourcesFiles := manifest.GetSourcesFiles()
-		inputFiles := append(sourcesFiles, file)
-		p, err := rawProjectFromSources(inputFiles)
+	for _, env := range filteredEnvs {
+		p, err := manifest.MergeEnvIntoSources(env)
 		if err != nil {
 			return errors.Wrap(err, "Couldn't calculate compose project representation")
 		}
-		projects[env] = p
-		files[env] = inputFiles
+		projects[env.Name] = p.Project
+		files[env.Name] = append(sourcesFiles, env.File)
 	}
 
 	c := converter.Factory(format)
-	if err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered); err != nil {
+	outputPaths, err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered)
+	if err != nil {
 		log.Errorf("Couldn't render manifests")
+		return err
+	}
+
+	if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
+		log.Errorf("Couldn't update skaffold.yaml profiles")
 		return err
 	}
 

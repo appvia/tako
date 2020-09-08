@@ -1,4 +1,9 @@
-# github.com/compose-spec/compose-go v0.0.0-20200629133725-59b25574fd55
+# github.com/GoogleContainerTools/skaffold v1.14.0
+## explicit
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/util
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml
+# github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 ## explicit
 github.com/compose-spec/compose-go/cli
 github.com/compose-spec/compose-go/envfile
@@ -19,7 +24,7 @@ github.com/fsnotify/fsnotify
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/google/go-cmp v0.5.0
+# github.com/google/go-cmp v0.5.2
 ## explicit
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/cmpopts
@@ -29,7 +34,7 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
-# github.com/imdario/mergo v0.3.9
+# github.com/imdario/mergo v0.3.11
 ## explicit
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
@@ -41,10 +46,9 @@ github.com/joho/godotenv
 github.com/json-iterator/go
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kr/text v0.2.0
-## explicit
+# github.com/krishicks/yaml-patch v0.0.10
+github.com/krishicks/yaml-patch
 # github.com/mattn/go-colorable v0.1.6
-## explicit
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
@@ -53,7 +57,7 @@ github.com/mattn/go-shellwords
 # github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 ## explicit
 github.com/mgutz/ansi
-# github.com/mitchellh/mapstructure v1.3.2
+# github.com/mitchellh/mapstructure v1.3.3
 github.com/mitchellh/mapstructure
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
@@ -103,9 +107,6 @@ github.com/onsi/gomega/types
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/r3labs/diff v1.1.0
-## explicit
-github.com/r3labs/diff
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
@@ -132,9 +133,9 @@ github.com/xeipuuv/gojsonpointer
 github.com/xeipuuv/gojsonreference
 # github.com/xeipuuv/gojsonschema v1.2.0
 github.com/xeipuuv/gojsonschema
-# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
+# golang.org/x/net v0.0.0-20200625001655-4c5254603344
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
@@ -171,8 +172,6 @@ golang.org/x/text/unicode/norm
 # golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
-## explicit
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -182,7 +181,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/api v0.18.4 => k8s.io/api v0.18.4
+# k8s.io/api v0.18.4
 ## explicit
 k8s.io/api/apps/v1
 k8s.io/api/apps/v1beta1
@@ -190,7 +189,7 @@ k8s.io/api/batch/v1
 k8s.io/api/core/v1
 k8s.io/api/extensions/v1beta1
 k8s.io/api/networking/v1
-# k8s.io/apimachinery v0.18.4 => k8s.io/apimachinery v0.18.5-rc.0
+# k8s.io/apimachinery v0.18.4
 ## explicit
 k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/apis/meta/v1
@@ -218,24 +217,5 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 k8s.io/klog
 # sigs.k8s.io/structured-merge-diff/v3 v3.0.0
 sigs.k8s.io/structured-merge-diff/v3/value
-# k8s.io/api => k8s.io/api v0.18.4
-# k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.4
-# k8s.io/apimachinery => k8s.io/apimachinery v0.18.5-rc.0
-# k8s.io/apiserver => k8s.io/apiserver v0.18.4
-# k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.4
-# k8s.io/client-go => k8s.io/client-go v0.18.4
-# k8s.io/cloud-provider => k8s.io/cloud-provider v0.18.4
-# k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.18.4
-# k8s.io/code-generator => k8s.io/code-generator v0.18.5-rc.0
-# k8s.io/component-base => k8s.io/component-base v0.18.4
-# k8s.io/cri-api => k8s.io/cri-api v0.18.5-rc.0
-# k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.18.4
-# k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.4
-# k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.18.4
-# k8s.io/kube-proxy => k8s.io/kube-proxy v0.18.4
-# k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.18.4
-# k8s.io/kubectl => k8s.io/kubectl v0.18.4
-# k8s.io/kubelet => k8s.io/kubelet v0.18.4
-# k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.18.4
-# k8s.io/metrics => k8s.io/metrics v0.18.4
-# k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.18.4
+# github.com/containerd/containerd => github.com/containerd/containerd v1.4.0
+# github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200221181110-62bd5a33f707

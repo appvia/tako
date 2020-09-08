@@ -1,3 +1,19 @@
+/**
+ * Copyright 2020 Appvia Ltd <info@appvia.io>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kev_test
 
 import (
@@ -29,6 +45,65 @@ var _ = Describe("Reconcile", func() {
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}
+	})
+
+	Describe("Reconcile changes from overlays", func() {
+		When("the overlay version has been updated", func() {
+			BeforeEach(func() {
+				workingDir = "testdata/reconcile-overlay-rollback"
+				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
+			})
+
+			It("confirms the version pre reconciliation", func() {
+				Expect(overlay.GetVersion()).NotTo(Equal(source.GetVersion()))
+			})
+
+			It("should roll back the change", func() {
+				Expect(env.GetVersion()).To(Equal(source.GetVersion()))
+			})
+		})
+
+		Context("for services and volumes", func() {
+			BeforeEach(func() {
+				workingDir = "testdata/reconcile-overlay-keep"
+				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				reporter = bytes.Buffer{}
+			})
+
+			When("the overlay service label overrides have been updated", func() {
+				It("confirms the values pre reconciliation", func() {
+					s, _ := overlay.GetService("db")
+					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
+					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
+					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
+					Expect(s.Labels["kev.workload.replicas"]).To(Equal("5"))
+					Expect(s.Labels["kev.workload.service-account-name"]).To(Equal("overridden-service-account-name"))
+				})
+
+				It("keeps overridden overlay values", func() {
+					s, _ := env.GetService("db")
+					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
+					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
+					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
+					Expect(s.Labels["kev.workload.replicas"]).To(Equal("5"))
+					Expect(s.Labels["kev.workload.service-account-name"]).To(Equal("overridden-service-account-name"))
+				})
+			})
+
+			When("the overlay volume label overrides have been updated", func() {
+				It("confirms the values pre reconciliation", func() {
+					v, _ := overlay.Volumes["db_data"]
+					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
+				})
+
+				It("keeps overridden overlay values", func() {
+					v, _ := env.GetVolume("db_data")
+					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
+				})
+			})
+		})
 	})
 
 	Describe("Reconciling changes from sources", func() {
@@ -286,7 +361,7 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should remove the env vars from all environments", func() {
-				vars, _ := env.GetEnvVars("wordpress")
+				vars, _ := env.GetEnvVarsForService("wordpress")
 				Expect(vars).To(HaveLen(0))
 			})
 
@@ -321,7 +396,7 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should keep the overridden env var in all environments", func() {
-				vars, _ := env.GetEnvVars("db")
+				vars, _ := env.GetEnvVarsForService("db")
 				Expect(vars).To(HaveLen(1))
 				Expect(vars).To(HaveKey("TO_OVERRIDE"))
 			})

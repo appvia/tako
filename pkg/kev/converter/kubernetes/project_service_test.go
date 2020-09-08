@@ -1104,16 +1104,36 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("livenessProbeCommand", func() {
 		When("defined via labels", func() {
-			cmd := "my test command"
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeCommand: cmd,
-				}
+			Context("and supplied as string command", func() {
+				cmd := "my test command"
+
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeCommand: cmd,
+					}
+				})
+
+				It("returns label value", func() {
+					Expect(projectService.livenessProbeCommand()).To(HaveLen(1))
+					Expect(projectService.livenessProbeCommand()).To(ContainElement(cmd))
+				})
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.livenessProbeCommand()).To(ContainElement(cmd))
+			Context("and specified as list", func() {
+				cmd := "[\"CMD\", \"echo\", \"Hello World\"]"
+
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeCommand: cmd,
+					}
+				})
+
+				It("returns label value", func() {
+					Expect(projectService.livenessProbeCommand()).To(HaveLen(2))
+					Expect(projectService.livenessProbeCommand()).ToNot(ContainElements("CMD"))
+					Expect(projectService.livenessProbeCommand()).To(ContainElements("echo", "Hello World"))
+				})
 			})
 		})
 
