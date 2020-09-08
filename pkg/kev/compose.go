@@ -94,25 +94,12 @@ func (p *ComposeProject) GetVersion() string {
 
 // rawProjectFromSources loads and parses a compose-go project from multiple docker-compose source files.
 func rawProjectFromSources(paths []string) (*composego.Project, error) {
-	projectOptions, err := cli.ProjectOptions{
-		ConfigPaths: paths,
-	}.
-		WithOsEnv().
-		WithDotEnv()
-
+	projectOptions, err := cli.NewProjectOptions(paths, cli.WithOsEnv, cli.WithDotEnv, cli.WithDiscardEnvFile)
 	if err != nil {
 		return nil, err
 	}
 
-	project, err := cli.ProjectFromOptions(&projectOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range project.Services {
-		project.Services[i].EnvFile = nil
-	}
-	return project, nil
+	return cli.ProjectFromOptions(projectOptions)
 }
 
 // getComposeVersion extracts version from compose file and returns a string
