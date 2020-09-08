@@ -19,24 +19,32 @@ package kev
 import (
 	"fmt"
 	"io"
-	"strconv"
+	"reflect"
 
-	"github.com/r3labs/diff"
+	"github.com/appvia/kube-devx/pkg/kev/config"
 )
 
-// newChangeset creates a changeset based on a diff.Changelog.
-// A diff.Changelog is an ordered []diff.Changes slice produced from diffing two structs.
-// E.g. Here's a diff.Change that updates ["services", 0, "labels", "kev.workload.liveness-probe-command"]:
+const (
+	CREATE = "create"
+	UPDATE = "update"
+	DELETE = "delete"
+)
+
+// newChangeset detects all changes between a destination overlay and source overlay.
+// A change is either a create, update or delete event.
+// A change targets an overlay's version, services or volumes and it's properties will depend on the actual target.
+// Example: here's a Change that creates a new service:
 // {
-//    Type: "update",   //string
-//    Path: {           // []string
-//      "services",
-//      "0",
-//      "labels",
-//      "kev.workload.liveness-probe-command"
-//    },
-//    From: "[\"CMD\", \"echo\", \"Define healthcheck command for service wordpress\"]",  // string
-//    To: "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"                                 // string
+//    Type: "create",   //string
+//    Value: srcSvc,    //interface{} in this case: ServiceConfig
+// }
+// Example: here's a Change that updates a service's label:
+// {
+// 		Type:   "update",                 //string
+// 		Index:  index,                    // interface{} in this case: int
+// 		Parent: "labels",                 // string
+// 		Target: config.LabelServiceType,  // string
+// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
 // }
 //
 // ENV VARS NOTE:
@@ -45,236 +53,192 @@ import (
 // - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
 // - A changeset will NOT update or create env vars in deployment environments.
 // - To create useful diffs a project's docker-compose env vars will be taken into account.
-//
-func newChangeset(clog diff.Changelog) (changeset, error) {
-	var verChanges []change
-	volChgGroup := make(changeGroup)
-	svcChgGroup := make(changeGroup)
+func newChangeset(dst *composeOverlay, src *composeOverlay) changeset {
+	cset := changeset{}
+	detectVersionUpdate(dst, src, &cset)
+	detectServicesCreate(dst, src, &cset)
+	detectServicesDelete(dst, src, &cset)
+	detectServicesEnvironmentDelete(dst, src, &cset)
+	detectServicesUpdate(dst, src, &cset)
+	detectVolumesCreate(dst, src, &cset)
+	detectVolumesDelete(dst, src, &cset)
+	return cset
+}
 
-	for _, e := range clog {
-		switch e.Path[0] {
-		case "version":
-			change := change{
-				update: e.Type == "update",
-			}
-			if e.To != nil {
-				change.value = e.To.(string)
-			}
-			verChanges = append(verChanges, change)
+func detectVersionUpdate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	if dst.Version != src.Version {
+		cset.version = change{Value: src.Version, Type: UPDATE, Target: "version"}
+	}
+}
 
-		case "services":
-			svcIndex, err := strconv.Atoi(e.Path[1])
-			if err != nil {
-				return changeset{}, err
-			}
-
-			// Do not append more changes for a service if the service is marked for deletion
-			if isServiceAlreadyMarkedForDeletion(svcChgGroup, svcIndex) {
-				continue
-			}
-
-			change := change{
-				parent: e.Path[len(e.Path)-2],
-				target: e.Path[len(e.Path)-1],
-				index:  svcIndex,
-				update: isServiceUpdateChange(e),
-				create: isServiceCreateChange(e, svcChgGroup, svcIndex),
-				delete: e.Type == "delete",
-			}
-			if e.To != nil {
-				change.value = e.To.(string)
-			}
-			svcChgGroup[svcIndex] = append(svcChgGroup[svcIndex], change)
-
-		case "volumes":
-			volName := e.Path[1]
-
-			// Do not append more changes for a volume if it's marked for deletion
-			if isVolumeAlreadyMarkedForDeletion(volChgGroup, volName) {
-				continue
-			}
-
-			change := change{
-				parent: e.Path[len(e.Path)-2],
-				target: e.Path[len(e.Path)-1],
-				index:  volName,
-				update: isVolumeUpdateChange(e),
-				create: isVolumeCreateChange(e, volChgGroup, volName),
-				delete: e.Type == "delete",
-			}
-			if e.To != nil {
-				change.value = e.To.(string)
-			}
-			volChgGroup[volName] = append(volChgGroup[volName], change)
+func detectServicesCreate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	dstSvcSet := dst.Services.Set()
+	for _, srcSvc := range src.Services {
+		if !dstSvcSet[srcSvc.Name] {
+			cset.services = append(cset.services, change{
+				Type:  CREATE,
+				Value: srcSvc,
+			})
 		}
 	}
+}
 
-	return changeset{version: verChanges, services: svcChgGroup, volumes: volChgGroup}, nil
+func detectServicesDelete(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	srcSvcSet := src.Services.Set()
+	for index, dstSvc := range dst.Services {
+		if !srcSvcSet[dstSvc.Name] {
+			cset.services = append(cset.services, change{
+				Type:  DELETE,
+				Index: index,
+			})
+		}
+	}
+}
+
+func detectServicesEnvironmentDelete(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	srcSvcMapping := src.Services.Map()
+	for index, dstSvc := range dst.Services {
+		srcSvc, ok := srcSvcMapping[dstSvc.Name]
+		if !ok {
+			continue
+		}
+		for envVarKey := range dstSvc.Environment {
+			if _, ok := srcSvc.Environment[envVarKey]; !ok {
+				cset.services = append(cset.services, change{
+					Type:   DELETE,
+					Index:  index,
+					Parent: "environment",
+					Target: envVarKey,
+				})
+			}
+		}
+	}
+}
+
+func detectServicesUpdate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	srcSvcMapping := src.Services.Map()
+	for index, dstSvc := range dst.Services {
+		srcSvc, ok := srcSvcMapping[dstSvc.Name]
+		if !ok {
+			continue
+		}
+
+		if srcSvc.GetLabels()[config.LabelServiceType] != dstSvc.GetLabels()[config.LabelServiceType] {
+			cset.services = append(cset.services, change{
+				Type:   UPDATE,
+				Index:  index,
+				Parent: "labels",
+				Target: config.LabelServiceType,
+				Value:  srcSvc.GetLabels()[config.LabelServiceType],
+			})
+		}
+	}
+}
+
+func detectVolumesCreate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	for srcVolKey, srcVolConfig := range src.Volumes {
+		if _, ok := dst.Volumes[srcVolKey]; !ok {
+			cset.volumes = append(cset.volumes, change{
+				Type:  CREATE,
+				Index: srcVolKey,
+				Value: srcVolConfig,
+			})
+		}
+	}
+}
+
+func detectVolumesDelete(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+	for dstVolKey := range dst.Volumes {
+		if _, ok := src.Volumes[dstVolKey]; !ok {
+			cset.volumes = append(cset.volumes, change{
+				Type:  DELETE,
+				Index: dstVolKey,
+			})
+		}
+	}
 }
 
 // changes returns a flat list of all available changes
 func (cset changeset) changes() []change {
 	var out []change
-	for _, vc := range cset.version {
-		out = append(out, vc)
+	if !reflect.DeepEqual(cset.version, change{}) {
+		out = append(out, cset.version)
 	}
-	for _, vc := range cset.services {
-		out = append(out, vc...)
-	}
-	for _, vc := range cset.volumes {
-		out = append(out, vc...)
-	}
+	out = append(out, cset.services...)
+	out = append(out, cset.volumes...)
 	return out
 }
 
 // HasNoPatches informs if a changeset has any patches to apply.
-// A changeset may have changes but these may not result into valid patches.
 func (cset changeset) HasNoPatches() bool {
-	for _, chg := range cset.changes() {
-		if chg.hasPatch() {
-			return false
-		}
-	}
-	return true
+	return len(cset.changes()) <= 0
 }
 
 func (cset changeset) applyVersionPatchesIfAny(o *composeOverlay, reporter io.Writer) {
-	for _, change := range cset.version {
-		if change.hasPatch() {
-			change.patchVersion(o, reporter)
-		}
+	chg := cset.version
+	if reflect.DeepEqual(chg, change{}) {
+		return
 	}
+	chg.patchVersion(o, reporter)
 }
 
 func (cset changeset) applyServicesPatchesIfAny(o *composeOverlay, reporter io.Writer) {
-	for _, group := range cset.services {
-		for _, change := range group {
-			if change.hasPatch() {
-				change.patchService(o, reporter)
-			}
-		}
+	for _, change := range cset.services {
+		change.patchService(o, reporter)
 	}
 }
 
 func (cset changeset) applyVolumesPatchesIfAny(o *composeOverlay, reporter io.Writer) {
-	for _, group := range cset.volumes {
-		for _, change := range group {
-			if change.hasPatch() {
-				change.patchVolume(o, reporter)
-			}
-		}
+	for _, change := range cset.volumes {
+		change.patchVolume(o, reporter)
 	}
-}
-
-// hasPatch informs whether a change has a valid patch to apply or not
-func (chg change) hasPatch() bool {
-	return chg.create || chg.update || chg.delete
 }
 
 func (chg change) patchVersion(overlay *composeOverlay, reporter io.Writer) {
-	if !chg.update {
+	if chg.Type != UPDATE {
 		return
 	}
 	pre := overlay.Version
-	overlay.Version = chg.value
-	_, _ = reporter.Write([]byte(fmt.Sprintf(" → version updated, from:[%s] to:[%s]\n", pre, chg.value)))
+	newValue := chg.Value.(string)
+	overlay.Version = newValue
+	_, _ = reporter.Write([]byte(fmt.Sprintf(" → version updated, from:[%s] to:[%s]\n", pre, newValue)))
 }
 
 func (chg change) patchService(overlay *composeOverlay, reporter io.Writer) {
-	if chg.create {
-		overlay.Services = append(overlay.Services, ServiceConfig{
-			Labels: map[string]string{},
-		})
-		_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] added\n", chg.value)))
-	}
-
-	if chg.delete {
+	switch chg.Type {
+	case CREATE:
+		newValue := chg.Value.(ServiceConfig)
+		overlay.Services = append(overlay.Services, newValue)
+		_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] added\n", newValue.Name)))
+	case DELETE:
 		switch {
-		case chg.parent == "environment":
-			delete(overlay.Services[chg.index.(int)].Environment, chg.target)
-			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], env var [%s] deleted\n", overlay.Services[chg.index.(int)].Name, chg.target)))
+		case chg.Parent == "environment":
+			delete(overlay.Services[chg.Index.(int)].Environment, chg.Target)
+			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], env var [%s] deleted\n", overlay.Services[chg.Index.(int)].Name, chg.Target)))
 		default:
-			deletedSvcName := overlay.Services[chg.index.(int)].Name
-			overlay.Services = append(overlay.Services[:chg.index.(int)], overlay.Services[chg.index.(int)+1:]...)
+			deletedSvcName := overlay.Services[chg.Index.(int)].Name
+			overlay.Services = append(overlay.Services[:chg.Index.(int)], overlay.Services[chg.Index.(int)+1:]...)
 			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] deleted\n", deletedSvcName)))
 		}
-	}
-
-	if chg.update {
-		switch {
-		case chg.target == "name":
-			isUpdate := len(overlay.Services[chg.index.(int)].Name) > 0
-			overlay.Services[chg.index.(int)].Name = chg.value
-			if isUpdate {
-				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service name updated to: [%s]\n", chg.value)))
-			}
-		case chg.parent == "labels":
-			pre, isUpdate := overlay.Services[chg.index.(int)].Labels[chg.target]
-			overlay.Services[chg.index.(int)].Labels[chg.target] = chg.value
-			if isUpdate {
-				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], label [%s] updated, from:[%s] to:[%s]\n", overlay.Services[chg.index.(int)].Name, chg.target, pre, chg.value)))
+	case UPDATE:
+		if chg.Parent == "labels" {
+			pre, canUpdate := overlay.Services[chg.Index.(int)].Labels[chg.Target]
+			newValue := chg.Value.(string)
+			overlay.Services[chg.Index.(int)].Labels[chg.Target] = newValue
+			if canUpdate {
+				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], label [%s] updated, from:[%s] to:[%s]\n", overlay.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)))
 			}
 		}
 	}
 }
 
 func (chg change) patchVolume(overlay *composeOverlay, reporter io.Writer) {
-	if chg.create {
-		overlay.Volumes = Volumes{
-			chg.index.(string): VolumeConfig{
-				Labels: map[string]string{},
-			},
-		}
-		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] added\n", chg.index.(string))))
+	switch chg.Type {
+	case CREATE:
+		overlay.Volumes[chg.Index.(string)] = chg.Value.(VolumeConfig)
+		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] added\n", chg.Index.(string))))
+	case DELETE:
+		delete(overlay.Volumes, chg.Index.(string))
+		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] deleted\n", chg.Index.(string))))
 	}
-
-	if chg.delete {
-		delete(overlay.Volumes, chg.index.(string))
-		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] deleted\n", chg.index.(string))))
-	}
-
-	if chg.update {
-		switch {
-		case chg.parent == "labels":
-			pre, isUpdate := overlay.Volumes[chg.index.(string)].Labels[chg.target]
-			overlay.Volumes[chg.index.(string)].Labels[chg.target] = chg.value
-			if isUpdate {
-				_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s], label [%s] updated, from:[%s] to:[%s]\n", chg.index.(string), chg.target, pre, chg.value)))
-			}
-		}
-	}
-}
-
-func isServiceAlreadyMarkedForDeletion(chgGroup changeGroup, index int) bool {
-	group, ok := chgGroup[index]
-	return ok == true && group[0].delete && group[0].target == "name"
-}
-
-func isServiceCreateChange(e diff.Change, chgGroup changeGroup, index int) bool {
-	_, ok := chgGroup[index]
-	parent := e.Path[len(e.Path)-2]
-
-	// environment is a special case, see ENV VARS NOTE
-	return e.Type == "create" && ok == false && parent != "environment"
-}
-
-func isServiceUpdateChange(e diff.Change) bool {
-	parent := e.Path[len(e.Path)-2]
-
-	// environment is a special case, see ENV VARS NOTE
-	return (e.Type == "create" || e.Type == "update") && parent != "environment"
-}
-
-func isVolumeAlreadyMarkedForDeletion(chgGroup changeGroup, key string) bool {
-	group, ok := chgGroup[key]
-	return ok == true && group[0].delete
-}
-
-func isVolumeCreateChange(e diff.Change, chgGroup changeGroup, key string) bool {
-	_, ok := chgGroup[key]
-	return e.Type == "create" && ok == false
-}
-
-func isVolumeUpdateChange(e diff.Change) bool {
-	return e.Type == "create" || e.Type == "update"
 }
