@@ -52,6 +52,11 @@ var initCmd = &cobra.Command{
 	RunE:  runInitCmd,
 }
 
+type skippableFile struct {
+	FileName string
+	Skipped  bool
+}
+
 func init() {
 	flags := initCmd.Flags()
 	flags.SortFlags = false
@@ -70,12 +75,15 @@ func init() {
 		"Specify a deployment environment\n(default: dev)",
 	)
 
+	flags.BoolP("skaffold", "s", false, "prepare the project for Skaffold")
+
 	rootCmd.AddCommand(initCmd)
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
+	skaffold, _ := cmd.Flags().GetBool("skaffold")
 
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
@@ -93,19 +101,52 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		return displayInitError(err)
 	}
 
-	var results []string
-	if err := writeTo(manifestPath, manifest); err != nil {
-		return displayInitError(err)
-	}
-	results = append(results, kev.ManifestName)
+	var results []skippableFile
 
 	for _, environment := range manifest.Environments {
 		envPath := path.Join(workingDirAbs, environment.File)
+
 		if err := writeTo(envPath, environment); err != nil {
 			return displayInitError(err)
 		}
-		results = append(results, environment.File)
+
+		results = append(results, skippableFile{
+			FileName: environment.File,
+		})
 	}
+
+	if skaffold {
+		skaffoldManifestPath := path.Join(workingDirAbs, kev.SkaffoldFileName)
+
+		skaffoldManifest, err := kev.PrepareForSkaffold(manifest, skaffoldManifestPath, envs)
+		if err != nil {
+			return displayInitError(err)
+		}
+
+		// don't override existing skaffold.yaml
+		if manifestExistsForPath(skaffoldManifestPath) {
+			results = append(results, skippableFile{
+				FileName: kev.SkaffoldFileName,
+				Skipped:  true,
+			})
+		} else if skaffoldManifest != nil {
+			if err := writeTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
+				return displayInitError(err)
+			}
+
+			results = append(results, skippableFile{
+				FileName: kev.SkaffoldFileName,
+			})
+		}
+	}
+
+	if err := writeTo(manifestPath, manifest); err != nil {
+		return displayInitError(err)
+	}
+
+	results = append([]skippableFile{{
+		FileName: kev.ManifestName,
+	}}, results...)
 
 	displayInitSuccess(os.Stdout, results)
 
@@ -133,10 +174,14 @@ func writeTo(filePath string, w io.WriterTo) error {
 	return file.Close()
 }
 
-func displayInitSuccess(w io.Writer, files []string) {
+func displayInitSuccess(w io.Writer, files []skippableFile) {
 	_, _ = w.Write([]byte("✓ Init\n"))
 	for _, file := range files {
-		msg := fmt.Sprintf(" → Creating %s ... Done\n", file)
+		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
+
+		if file.Skipped {
+			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", file.FileName)
+		}
 		_, _ = w.Write([]byte(msg))
 	}
 }

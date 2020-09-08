@@ -19,6 +19,7 @@ package kubernetes
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -509,6 +510,18 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 // livenessProbeCommand returns liveness probe command
 func (p *ProjectService) livenessProbeCommand() []string {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeCommand]; ok {
+		isList, _ := regexp.MatchString(`\[.*\]`, val)
+		if isList {
+			list := strings.Split(strings.ReplaceAll(strings.Trim(val, "[]"), "\"", ""), ", ")
+
+			switch list[0] {
+			case "NONE", "CMD", "CMD-SHELL":
+				return list[1:]
+			}
+
+			return list
+		}
+
 		return []string{val}
 	}
 
