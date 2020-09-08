@@ -49,11 +49,11 @@ Run the following command within your project directory:
 kev init
 ```
 
-This identifies the default `docker-compose.yaml` and (if present) `docker-compose.override.yaml` files in your project directory. They will be used as Compose Kubernetes sources.
+This identifies the default `docker-compose.yaml` and (if present) `docker-compose.override.yaml` files in your project directory. They will be used as the source of truth for your application deployment in Kubernetes.
 
 Also, it creates a default `dev` environment and its Compose override file.  
 
-Here's another example. It uses an alternate `docker-compose` file with `stage` + `prod` environments:
+Here's another example. It uses an alternate `docker-compose` file with `stage` & `prod` environments:
 
 ```sh
 kev init -f my-docker-compose.yaml -e stage -e prod
@@ -72,12 +72,12 @@ Creating the files below in your project directory:
 ├── ...
 ```
 
-Here's what happened, _Kev_,
+Here's what happened, _Kev_ has,
 - Inferred the configuration details already present in your compose Kubernetes deployment sources.
 - Assigned sensible defaults for any config it couldn't infer.
 - Created Compose overrides files for the `stage` and `prod` environments.
 
-That's it, _Kev_ is now bootstrapped and ready!
+That's it, your _Kev_ project is now ready!
 
 From now on it can,
 - Detect edits in your source compose file.
@@ -96,17 +96,20 @@ Run the following command from your project root:
 kev render
 ```
 
-The command,
-- Detects edits you made to the project's source compose file(s) to re-infer config changes.
+The command above,
+- Detects edits you made to the project's source compose file(s).
 - Applies any found config changes to your compose environment overrides.
 - Generates kubernetes manifests based on all compose files including environment overrides.
-- Targets all environments.
+- Generates kubernetes manifests for all environments.
 
 The directory below should now appear in your project directory:
 
 ```sh
-├── k8s     # stores the Kubernetes manifests for all target deployment environments. 
-├── ...
+├── k8s         # stores the Kubernetes manifests for all target deployment environments. 
+├──── prod      # prod deploymeny environment
+├────── ...     # prod manifests
+├──── stage     # stage deploymeny environment
+├────── ...     # stage manifests
 ```
 
 Other flag options include,
@@ -120,10 +123,10 @@ Other flag options include,
 ### How can I deploy the app to Kubernetes?
 
 To deploy your app onto Kubernetes,
-- Ensure you can access a running Kubernetes installation, either locally or remotely.
-- Use `kubectl` to apply the manifests.
+- Ensure you can access a running Kubernetes installation, either locally (e.g. [Docker Desktop](https://docs.docker.com/desktop/), [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), etc...) or remotely.
+- Use [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) to apply the manifests.
 
-In this example, we deploy the stage environment:
+In this example, we deploy the `stage` environment:
 
 ```sh
 kubectl apply -f k8s/stage     # deploys your app with stage settings onto the default namespace
