@@ -24,6 +24,7 @@ import (
 type Manifest struct {
 	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
+	Skaffold     string       `yaml:"skaffold,omitempty" json:"skaffold,omitempty"`
 }
 
 // Sources tracks a project's docker-compose sources
