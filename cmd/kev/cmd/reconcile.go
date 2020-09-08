@@ -35,7 +35,7 @@ func runReconcileCmd(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	os.Stdout.WriteString("\n...............................\n\n")
+	os.Stdout.WriteString("...............................\n\n")
 
 	for _, environment := range manifest.Environments {
 		filePath := path.Join(workingDir, environment.File)

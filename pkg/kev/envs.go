@@ -156,11 +156,7 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) error {
 	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
 
-	cset, err := overlay.diff(e.overlay)
-	if err != nil {
-		return err
-	}
-
+	cset := overlay.diff(e.overlay)
 	if cset.HasNoPatches() {
 		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
 		return nil
