@@ -455,7 +455,7 @@ var _ = Describe("ProjectService", func() {
 						Container:    targetPath,
 						PVCName:      projectServiceName + "-claim0",
 						PVCSize:      config.DefaultVolumeSize,
-						StorageClass: config.DefaultVolumeClass,
+						StorageClass: config.DefaultVolumeStorageClass,
 					},
 				}))
 			})
