@@ -16,6 +16,17 @@ _Kev_ is opinionated in its choice of Kubernetes elements you should be able to 
 
 _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kubernetes deployment configuration follows best industry practices, with a thin layer of config options to enable further control. See [kev reference documentation](docs/reference/config-params.md) for a list of available options.
 
+## Contents
+
+* [Features](#features)
+* [Installation](#installation)
+* [Quickstart](#quickstart)
+* [Tutorials & guides](#tutorials-and-guides)
+* [Configuration](#configuration)
+* [Similar tools](#similar-tools)
+* [Contributing to Kev](#contributing-to-kev)
+* [Roadmap](#roadmap)
+* [License](#license)
 
 ## Features
 
@@ -138,9 +149,9 @@ With _Kev_, you can use any Kubernetes deployment tool or framework you're famil
 
 Check our [Roadmap][roadmap] for upcoming planned integrations.
 
-## Tutorials
+## Tutorials and guides
 
-- [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
+- Tutorial: [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
 
 ## Configuration
 
