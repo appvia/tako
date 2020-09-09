@@ -208,7 +208,9 @@ _Kubernetes_, however, is designed to help you run your application in a highly 
 
 Describing Compose services as a Kubernetes application requires an extra layer that translates concepts from one to the other.
 
-Furthermore, on Kubernetes, you will share and promote your app through different stages. These stages require varying settings that should ideally be captured from the start. 
+Furthermore, on Kubernetes, you might also want to deploy or promote your app to different "stages", commonly known as environments. Application configuration may vary depending on the environment it is deployed to due to various infrastructure or operational constraints.
+
+So, a good approach to managing your app configuration in different environments is a must.
      
 _Kev_ will help you with all the above! So let's get cracking.
 
@@ -231,13 +233,13 @@ $ kev init -e local -e stage
 ```
 
 _Kev_ has now been initialised and configured. It has,
-- Started tracking the `docker-compose.yaml` file as the _Source application manifest_.
+- Started tracking the `docker-compose.yaml` file as the _source application definition_.
 - Inferred configuration details from the `docker-compose.yaml` file.
 - Assigned sensible defaults for any config it couldn't infer.
 - Created `local` (useful for testing on our own machine) and `staging` (useful for testing on a remote machine) _Compose environment overrides_.
 
 It has also generated three files:
-- `kev.yaml`, a manifest that describes our _Source application manifest_ and _Compose environment overrides_.
+- `kev.yaml`, a manifest that describes our _source application definition_ and _Compose environment overrides_.
 - `docker-compose.kev.*.yaml`, two files to represent our _Compose environment overrides_.
 
 ##### Manifest: kev.yaml
@@ -320,7 +322,7 @@ $ kev render
 ```
 
 In this case, _Kev_,
-- Has re-introspected our _Source application manifest_.
+- Has re-introspected our _source application definition_.
 - Has NOT detected any config changes that need to be applied to our _Compose environment overrides_.
 - Has generated manifests to enable our app to run in both a `local` and `stage` mode.
 
