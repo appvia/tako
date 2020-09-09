@@ -16,18 +16,6 @@ _Kev_ is opinionated in its choice of Kubernetes elements you should be able to 
 
 _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kubernetes deployment configuration follows best industry practices, with a thin layer of config options to enable further control. See [kev reference documentation](docs/reference/config-params.md) for a list of available options.
 
-## Contents
-
-* [Features](#features)
-* [Installation](#installation)
-* [Quickstart](#quickstart)
-* [Tutorials & guides](#tutorials-and-guides)
-* [Configuration](#configuration)
-* [Similar tools](#similar-tools)
-* [Contributing to Kev](#contributing-to-kev)
-* [Roadmap](#roadmap)
-* [License](#license)
-
 ## Features
 
 * **Simplicity** - Based on familiar Docker Compose specification. There is no new framework to learn, no new specification to embrace, and vastness of Kubernetes reduced to a limited set of easy to follow configuration parameters. You focus on the app development. Kev will prepare it for deployment in Kubernetes.
@@ -42,6 +30,19 @@ _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kuber
 
 * **Easy integrations** - You may use generated Kubernetes manifests with any tool / framework of your choice. We aim at adding some useful integrations further improving developer experience.
 
+## Contents
+
+- **[Installation](#installation)**
+- **[Quickstart](#quickstart)**
+    * **[Initialise project](#initialise-project)**
+    * **[Generate Kubernetes manifests](#generate-kubernetes-manifests)**
+- **[Tutorials & guides](#tutorials-and-guides)**
+- **[Configuration](#configuration)**
+- **[Similar tools](#similar-tools)**
+- **[Contributing to Kev](#contributing-to-kev)**
+- **[Roadmap](#roadmap)**
+- **[License](#license)**
+
 ## Installation
 
 All you need to get started quickly is the [kev](https://github.com/appvia/kev/releases) binary added to your PATH, and one or more docker compose files.
@@ -52,7 +53,7 @@ All you need to get started quickly is the [kev](https://github.com/appvia/kev/r
 - `kev render` - detects, applies any config changes and generates deployment manifests.
 - `kev help` - run it if you're a little lost.
 
-### init
+### Initialise project
 
 Run the following command within your project directory:
 
@@ -97,7 +98,7 @@ From now on it can,
 
 You can now customise your deployment targets by altering values in the relevant Compose environment override file. 
 
-### render
+### Generate Kubernetes manifests
 
 We now need to generate manifests based on your Docker Compose config and environments. You'll use these manifests to deploy your app to Kubernetes. 
 
@@ -151,7 +152,9 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 
 ## Tutorials and guides
 
-- Tutorial: [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
+- [Getting started with Kev.](docs/tutorials/getting-started-with-kev.md)
+  
+  This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes. 
 
 ## Configuration
 
