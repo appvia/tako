@@ -219,7 +219,7 @@ func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) 
 		if len(storageClass) > 0 {
 			temp.StorageClass = storageClass
 		} else {
-			temp.StorageClass = config.DefaultVolumeClass
+			temp.StorageClass = config.DefaultVolumeStorageClass
 		}
 
 		vols[i] = temp
