@@ -21,6 +21,8 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -97,6 +99,8 @@ func (m *Manifest) CalculateSourcesBaseOverlay(opts ...BaseOverlayOpts) (*Manife
 // MintEnvironments create new environments based on candidate environments and manifest base labels.
 // If no environments are provided, a default environment will be created.
 func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
+	fileNameTemplate := m.GetEnvironmentFileNameTemplate()
+
 	m.Environments = Environments{}
 	if len(candidates) == 0 {
 		candidates = append(candidates, defaultEnv)
@@ -105,10 +109,19 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		m.Environments = append(m.Environments, &Environment{
 			Name:    env,
 			overlay: m.GetSourcesOverlay(),
-			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(configFileTemplate, env)),
+			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
 		})
 	}
 	return m
+}
+
+// GetEnvironmentFileNameTemplate returns environment file name template to match
+// the naming convention of the first compose source file
+func (m *Manifest) GetEnvironmentFileNameTemplate() string {
+	firstSrc := filepath.Base(m.Sources.Files[0])
+	parts := strings.Split(firstSrc, ".")
+	ext := parts[len(parts)-1]
+	return strings.ReplaceAll(firstSrc, ext, "kev.%s."+ext)
 }
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
