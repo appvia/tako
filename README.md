@@ -120,7 +120,7 @@ Other flag options include,
 
 **Note:** Generated manifests should **NOT** be treated as templates as they are fully expanded.
 
-### How can I deploy the app to Kubernetes?
+#### How can I deploy the app to Kubernetes?
 
 To deploy your app onto Kubernetes,
 - Ensure you can access a running Kubernetes installation, either locally (e.g. [Docker Desktop](https://docs.docker.com/desktop/), [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), etc...) or remotely.
@@ -132,7 +132,7 @@ In this example, we deploy the `stage` environment:
 kubectl apply -f k8s/stage     # deploys your app with stage settings onto the default namespace
 ```
 
-### Other deployment tooling    
+#### Other deployment tooling    
 
 With _Kev_, you can use any Kubernetes deployment tool or framework you're familiar with, e.g `skaffold`, `tilt`, etc...
 
@@ -142,21 +142,21 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 
 This tutorial will walk you through how to **connect your Docker Compose Workflow to Kubernetes** - using _Kev_.
 
-This is NOT a migration.
+This is NOT a migration. On the contrary, we're going to create a continuous development workflow.
 
-Your hard-earned Docker Compose skills will help you work with Kubernetes speeding up development and iteration.   
+Meaning, your hard-earned Docker Compose skills will make it faster to develop and iterate on Kubernetes.   
 
-We'll set up _Kev_, iterate and deploy a [WordPress application]() onto Kubernetes.
+We'll set up _Kev_, iterate and deploy a [WordPress application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
 
 The tutorial assumes that you have,
-- Prior `docker-compose` experience. 
-- `docker` & `docker-compose` installed.
+- Prior [docker-compose](https://docs.docker.com/compose/) experience. 
+- [docker](https://docs.docker.com/engine/install/) & [docker-compose](https://docs.docker.com/compose/install/) installed.
 - [_Kev_ installed](#installation).
 - A local Kubernetes installation. This tutorial uses Docker Desktop ([Mac](https://docs.docker.com/docker-for-mac/#kubernetes) / [Windows](https://docs.docker.com/docker-for-windows/#kubernetes)). As an alternative, use [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) or [Kind](https://kind.sigs.k8s.io/).  
 
 As we walk through the tutorial we'll cover some Kubernetes concepts and how they relate to Docker Compose and _Kev_.
 
-These we'll be explained under a **Kube Notes** heading.
+These will be explained under a **Kube Notes** heading.
 
 Finally, we'll use the term "Compose" to mean "Docker Compose".  
 
@@ -202,27 +202,25 @@ $ docker-compose down -v    # Stop all containers. Remove named volumes.
 
 Compose and Kubernetes address different problems.
 
-_Compose_, helps you wire and run your application on a single machine with a single instance running for every service. It's super for development.
+_Compose_, helps you wire, develop and run your application locally as a set of services. It's super for development.
 
-_Kubernetes_, however, is designed to help you run your application in a highly available mode using clusters and service replications. It's build for production like environments.
+_Kubernetes_, however, is designed to help you run your application in a highly available mode using clusters and service replications. It is production grade.
 
-Describing Compose services as Kubernetes services requires an extra layer that translates between these different worlds.
+Describing Compose services as a Kubernetes application requires an extra layer that translates concepts from one to the other.
 
-Furthermore, since you're moving your app to Kubernetes, you're moving from a development mindset to sharing your app for testing, staging and at some point publishing to a production environment.
-
-So, it would be great if you can capture the different toggles required beyond development for different environments from the start. 
+Furthermore, on Kubernetes, you will share and promote your app through different stages. These stages require varying settings that should ideally be captured from the start. 
      
 _Kev_ will help you with all the above! So let's get cracking.
 
 #### Compose + Kev 
 
-We need to instruct _Kev_ to track our _Compose Kubernetes sources_. In this case, this is our `docker-compose.yaml` file.
+Let's instruct Kev to track our _source Compose_ file, `docker-compose.yaml`, [that we've just created](#create-your-docker-compose-config). 
 
-_Kev_ will introspect the Compose config and _infer the required translation keys_ to enable Compose services to run on Kubernetes.
+_Kev_ will introspect the Compose config and _infer the key attributes_ to enable Compose services to run on Kubernetes.
 
-Also, as we're moving beyond development, we'll instruct _Kev_ to create two _environment overrides_ to target two different variations of the required translation keys (annotated as service `labels`).
+Also, as we're moving beyond development, we'll instruct _Kev_ to create two _environment overrides_ to target two different sets of parameters (annotated as service `labels`).
 
-No time to lose, let's configure _Kev_, 
+No time to lose, let's get started... 
 
 ```shell script
 $ kev init -e local -e stage
@@ -233,13 +231,13 @@ $ kev init -e local -e stage
 ```
 
 _Kev_ has now been initialised and configured. It has,
-- Started tracking the `docker-compose.yaml` file as a Compose Kubernetes source.
+- Started tracking the `docker-compose.yaml` file as the _Source application manifest_.
 - Inferred configuration details from the `docker-compose.yaml` file.
 - Assigned sensible defaults for any config it couldn't infer.
-- Created `local` (useful for a testing our own machine) and `staging` (useful for a testing our a remote machine) _Compose environment overrides_.
+- Created `local` (useful for testing on our own machine) and `staging` (useful for testing on a remote machine) _Compose environment overrides_.
 
 It has also generated three files:
-- `kev.yaml`, a manifest that describes our _Compose Kubernetes sources_.
+- `kev.yaml`, a manifest that describes our _Source application manifest_ and _Compose environment overrides_.
 - `docker-compose.kev.*.yaml`, two files to represent our _Compose environment overrides_.
 
 ##### Manifest: kev.yaml
@@ -251,6 +249,7 @@ compose:
 environments:
   local: docker-compose.kev.local.yaml
   stage: docker-compose.kev.stage.yaml
+...
 ```
 
 ##### Compose environment overrides: docker-compose.kev.*.yaml
@@ -267,7 +266,6 @@ services:
   wordpress:
     labels:
       kev.service.type: LoadBalancer
-      kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
       kev.workload.liveness-probe-disabled: "false"
@@ -276,6 +274,7 @@ services:
       kev.workload.liveness-probe-retries: "3"
       kev.workload.liveness-probe-timeout: 10s
       kev.workload.max-cpu: "0.5"
+      kev.workload.cpu: "0.1"
       kev.workload.max-memory: 500Mi
       kev.workload.memory: 10Mi
       kev.workload.replicas: "1"
@@ -286,11 +285,11 @@ services:
 
 ### Moving to Kubernetes
 
-It's true, our `wordpress` app is very basic, it only starts a `wordpress` container.
+Admittedly, our `wordpress` app is very basic, it only starts a `wordpress` container.
 
 However, all the translation wiring is now in place, so let's run it on Kubernetes!
 
-#### Generate resource manifests
+#### Generate Kubernetes manifests
 
 First, we instruct _Kev_ to generate manifests for the required Kubernetes resources.
 
@@ -321,7 +320,7 @@ $ kev render
 ```
 
 In this case, _Kev_,
-- Has re-introspected our _Compose Kubernetes source_.
+- Has re-introspected our _Source application manifest_.
 - Has NOT detected any config changes that need to be applied to our _Compose environment overrides_.
 - Has generated manifests to enable our app to run in both a `local` and `stage` mode.
 
@@ -329,9 +328,9 @@ We're now ready to run our app on Kubernetes!
 
 #### Running on Kubernetes
  
-This means we need to deploy our newly minted manifests to a Kubernetes instance.
+This means we need to deploy our newly minted manifests to a Kubernetes cluster.
 
-Run the following commands on your local Kubernetes instance (we use [Docker Desktop](https://docs.docker.com/docker-for-mac/#kubernetes)).
+Run the following commands on your local Kubernetes (we use [Docker Desktop](https://docs.docker.com/docker-for-mac/#kubernetes)).
 
 We'll be deploying our app in `local` environment mode.
 
@@ -434,9 +433,9 @@ $ docker-compose down -v    # Stop all containers. Remove named volumes.
 
 #### Re-sync Kubernetes
 
-Now, that we have a new `db` service and `db_data` volumen we need to let _Kev_ _infer the required translation keys_ to enable the new Compose service and volume to run on Kubernetes.
+Now, that we have a new `db` service and `db_data` volume we need to let _Kev_ _infer the key attributes_ to enable the new Compose service and volume to run on Kubernetes.
 
-Also, we've made some minor adjustments to the `wordpress` service. _Kev_ will need to reconcile those changes.
+Also, we've made some minor adjustments to the `wordpress` service. _Kev_ will reconcile those changes.
 
 This will be applied to all _Compose environment overrides_.
 
@@ -490,9 +489,9 @@ $ kubectl apply -f k8s/local -n kev-local   # re-apply the re-generated k8s/loca
 # service/wordpress configured
 ```
 
-**This BREAKS our running app** - to fix it we need to understand how service find-ability differs between Compose and Kubernetes.
+**This BREAKS our running app** - to fix it we need to understand how service discovery differs between Compose and Kubernetes.
 
-#### Make db service findable in Kubernetes
+#### Fix db service discovery
 
 In our Compose config, the `db` service does not have a `ports` attribute. Meaning it is not exposed externally as there are no published ports.
 
@@ -594,6 +593,8 @@ We now have 2 different target environments,
 - `stage` will only run a 5 `wordpress` instances.
 
 These are easily tracked in easy to understand Compose files.
+
+Check the [configuration reference](docs/reference/config-params.md) if you want to configure other params.
 
 ### Conclusion
 
