@@ -32,8 +32,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 
 	"github.com/spf13/cast"

@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

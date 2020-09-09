@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
 	"k8s.io/apimachinery/pkg/api/resource"
