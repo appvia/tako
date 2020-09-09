@@ -40,4 +40,4 @@ volumes:
   db_data:
     labels:
       kev.volume.size: 100Mi
-      kev.volume.storage-class: standard
+      kev.volume.storage-class: ""

@@ -29,9 +29,8 @@ import (
 
 const (
 	// ManifestName main application manifest
-	ManifestName       = "kev.yaml"
-	defaultEnv         = "dev"
-	configFileTemplate = "docker-compose.kev.%s.yaml"
+	ManifestName = "kev.yaml"
+	defaultEnv   = "dev"
 )
 
 // Init initialises a kev manifest including source compose files and environments.
