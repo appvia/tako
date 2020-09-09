@@ -36,7 +36,6 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 
-	// log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
@@ -352,29 +351,6 @@ func (k *Kubernetes) initConfigMap(projectService ProjectService, configMapName 
 		},
 		Data: data,
 	}
-}
-
-// initConfigMapFromEnvFile initializes a ConfigMap object from env_file
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L258
-func (k *Kubernetes) initConfigMapFromEnvFile(projectService ProjectService, envFile string) (*v1.ConfigMap, error) {
-	envs, err := getEnvsFromFile(envFile, k.Opt.InputFiles)
-	if err != nil {
-		log.ErrorfWithFields(log.Fields{
-			"project-service": projectService.Name,
-			"env-file":        envFile,
-		}, "Unable to retrieve env file to initialise ConfigMap from: %s", err.Error())
-
-		return nil, err
-	}
-
-	// Remove root path & replace all other slashes / periods
-	configMapName := formatEnvFileName(envFile)
-
-	// In order to differentiate files, we append to the name and remove '.env' if applicable from the file name
-	configMap := k.initConfigMap(projectService, configMapName, envs)
-	configMap.Labels = configLabels(projectService.Name + "-" + configMapName)
-
-	return configMap, nil
 }
 
 // initConfigMapFromFileOrDir will create a configmap from dir or file
@@ -1188,90 +1164,56 @@ func (k *Kubernetes) configPVCVolumeSource(name string, readonly bool) *v1.Volum
 	}
 }
 
-// configEnvs compiles list of project service environment variables
-// Variables are loaded from env_files if project service is using them as well as explicit variables.
-// All loaded and resolved variables are sorted.
+// configEnvs returns a list of sorted kubernetes EnvVar objects mapping all project service environment variables
+// NOTE: compose-go library preloads all environment variables defined in env_files (if any), and appends
+// 		  them to the list of explicitly provided environment variables.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L961
 func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, error) {
 	envs := EnvSort{}
-	keysFromEnvFile := make(map[string]bool)
 
-	// @step if there is an env_file, use ConfigMaps and ignore the environment variables already specified
-	if len(projectService.EnvFile) > 0 {
+	// @step load up the environment variables
+	for k, v := range projectService.environment() {
+		// @step for nil value we replace it with empty string
+		if v == nil {
+			temp := "" // *string cannot be initialized in one statement
+			v = &temp
+		}
 
-		// @step load up env variables from env_file(s)
-		for _, file := range projectService.EnvFile {
-			envName := formatEnvFileName(file)
-
-			// @step load environment variables from file
-			envLoad, err := getEnvsFromFile(file, k.Opt.InputFiles)
-			if err != nil {
-				log.Error("Unable to read env_file")
-				return envs, err
-			}
-
-			// @step add configMapKeyRef to each environment variable
-			for k := range envLoad {
+		// @step check whether env var value references secret or configmap
+		// e.g. `secret.my-secret-name.my-key`, `config.my-config-name.config-key`
+		parts := strings.Split(*v, ".")
+		if len(parts) == 3 {
+			switch parts[0] {
+			case "secret":
+				envs = append(envs, v1.EnvVar{
+					Name: k,
+					ValueFrom: &v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: parts[1],
+							},
+							Key: parts[2],
+						},
+					},
+				})
+			case "config":
 				envs = append(envs, v1.EnvVar{
 					Name: k,
 					ValueFrom: &v1.EnvVarSource{
 						ConfigMapKeyRef: &v1.ConfigMapKeySelector{
 							LocalObjectReference: v1.LocalObjectReference{
-								Name: envName,
+								Name: parts[1],
 							},
-							Key: k,
-						}},
-				})
-				keysFromEnvFile[k] = true
-			}
-		}
-	}
-
-	// @step load up the environment variables
-	for k, v := range projectService.environment() {
-		if !keysFromEnvFile[k] {
-			// @step for nil value we replace it with empty string
-			if v == nil {
-				temp := "" // *string cannot be initialized in one statement
-				v = &temp
-			}
-
-			// @step check whether env var value references secret or configmap
-			// e.g. `secret.my-secret-name.my-key`, `config.my-config-name.config-key`
-			parts := strings.Split(*v, ".")
-			if len(parts) == 3 {
-				switch parts[0] {
-				case "secret":
-					envs = append(envs, v1.EnvVar{
-						Name: k,
-						ValueFrom: &v1.EnvVarSource{
-							SecretKeyRef: &v1.SecretKeySelector{
-								LocalObjectReference: v1.LocalObjectReference{
-									Name: parts[1],
-								},
-								Key: parts[2],
-							},
+							Key: parts[2],
 						},
-					})
-				case "config":
-					envs = append(envs, v1.EnvVar{
-						Name: k,
-						ValueFrom: &v1.EnvVarSource{
-							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-								LocalObjectReference: v1.LocalObjectReference{
-									Name: parts[1],
-								},
-								Key: parts[2],
-							},
-						},
-					})
-				}
-			} else {
-				envs = append(envs, v1.EnvVar{
-					Name:  k,
-					Value: *v,
+					},
 				})
 			}
+		} else {
+			envs = append(envs, v1.EnvVar{
+				Name:  k,
+				Value: *v,
+			})
 		}
 	}
 
@@ -1308,15 +1250,6 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 		objects = append(objects, k.initStatefulSet(projectService, replicas))
 	case "replicationcontroller":
 		objects = append(objects, k.initReplicationController(projectService, replicas))
-	}
-
-	// @step for service referencing Env_file(s) init a new ConfigMap
-	if len(projectService.EnvFile) > 0 {
-		for _, envFile := range projectService.EnvFile {
-			if configMap, err := k.initConfigMapFromEnvFile(projectService, envFile); err == nil {
-				objects = append(objects, configMap)
-			}
-		}
 	}
 
 	return objects
