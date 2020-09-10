@@ -3,7 +3,7 @@ weight: 12
 title: Getting started with Kev
 ---
 
-# Getting started with _Kev_
+# Getting started with Kev
 
 This tutorial will walk you through how to **connect your Docker Compose Workflow to Kubernetes** - using _Kev_.
 
