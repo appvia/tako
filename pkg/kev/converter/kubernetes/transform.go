@@ -291,33 +291,6 @@ func (k *Kubernetes) initPodSpecWithConfigMap(projectService ProjectService) v1.
 	return pod
 }
 
-// initReplicationController initializes Kubernetes ReplicationController object
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L216
-func (k *Kubernetes) initReplicationController(projectService ProjectService, replicas int) *v1.ReplicationController {
-	repl := int32(replicas)
-
-	rc := &v1.ReplicationController{
-		TypeMeta: meta.TypeMeta{
-			Kind:       "ReplicationController",
-			APIVersion: "v1",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
-			Labels: configAllLabels(projectService),
-		},
-		Spec: v1.ReplicationControllerSpec{
-			Replicas: &repl,
-			Template: &v1.PodTemplateSpec{
-				ObjectMeta: meta.ObjectMeta{
-					Labels: configLabels(projectService.Name),
-				},
-				Spec: k.initPodSpec(projectService),
-			},
-		},
-	}
-	return rc
-}
-
 // initSvc initializes Kubernetes Service object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L240
 func (k *Kubernetes) initSvc(projectService ProjectService) *v1.Service {
@@ -1247,8 +1220,6 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 		objects = append(objects, k.initDaemonSet(projectService))
 	case strings.ToLower(config.StatefulsetWorkload):
 		objects = append(objects, k.initStatefulSet(projectService, replicas))
-	case "replicationcontroller":
-		objects = append(objects, k.initReplicationController(projectService, replicas))
 	}
 
 	return objects
@@ -1340,15 +1311,6 @@ func (k *Kubernetes) createNetworkPolicy(projectServiceName string, networkName 
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1254
 func (k *Kubernetes) updateController(obj runtime.Object, updateTemplate func(*v1.PodTemplateSpec) error, updateMeta func(meta *meta.ObjectMeta)) (err error) {
 	switch t := obj.(type) {
-	case *v1.ReplicationController:
-		if t.Spec.Template == nil {
-			t.Spec.Template = &v1.PodTemplateSpec{}
-		}
-		if err = updateTemplate(t.Spec.Template); err != nil {
-			log.Error("Unable to update ReplicationController template")
-			return err
-		}
-		updateMeta(&t.ObjectMeta)
 	case *v1apps.Deployment:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
 			log.Error("Unable to update Deployment template")

@@ -218,34 +218,6 @@ var _ = Describe("Transform", func() {
 		})
 	})
 
-	Describe("initReplicationController", func() {
-		replicas := 3
-
-		It("generates replication controller spec as expected", func() {
-			expectedReplicas := int32(replicas)
-
-			Expect(k.initReplicationController(projectService, replicas)).To(Equal(&v1.ReplicationController{
-				TypeMeta: meta.TypeMeta{
-					Kind:       "ReplicationController",
-					APIVersion: "v1",
-				},
-				ObjectMeta: meta.ObjectMeta{
-					Name:   projectService.Name,
-					Labels: configAllLabels(projectService),
-				},
-				Spec: v1.ReplicationControllerSpec{
-					Replicas: &expectedReplicas,
-					Template: &v1.PodTemplateSpec{
-						ObjectMeta: meta.ObjectMeta{
-							Labels: configLabels(projectService.Name),
-						},
-						Spec: k.initPodSpec(projectService),
-					},
-				},
-			}))
-		})
-	})
-
 	Describe("initSvc", func() {
 		It("generates kubernetes service spec as expected", func() {
 			Expect(k.initSvc(projectService)).To(Equal(&v1.Service{
