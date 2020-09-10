@@ -1588,20 +1588,19 @@ func (k *Kubernetes) sortServicesFirst(objs *[]runtime.Object) {
 	*objs = ret
 }
 
-// removeDupObjects removes duplicate objects... Example: ConfigMaps from env.
-// Duplication can only happend on ConfigMap, so it currently handles on this case.
+// removeDupObjects removes duplicate objects...
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L679
 func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 	var result []runtime.Object
 	exist := map[string]bool{}
 
 	for _, obj := range *objs {
-		if us, ok := obj.(*v1.ConfigMap); ok {
-			k := us.GroupVersionKind().String() + us.GetNamespace() + us.GetName()
+		if us, ok := obj.(meta.Object); ok {
+			k := obj.GetObjectKind().GroupVersionKind().String() + us.GetNamespace() + us.GetName()
 			if exist[k] {
-				log.DebugWithFields(log.Fields{
+				log.DebugfWithFields(log.Fields{
 					"configmap": us.GetName(),
-				}, "Remove duplicate configmap")
+				}, "Remove duplicate resource: %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, us.GetName())
 
 				continue
 			} else {

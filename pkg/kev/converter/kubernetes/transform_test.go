@@ -1579,14 +1579,14 @@ var _ = Describe("Transform", func() {
 			},
 		}
 
-		Context("when the same ConfigMap object exists multiple times", func() {
+		Context("when the same object exists multiple times", func() {
 			It("removes duplicates", func() {
 				k.removeDupObjects(&objs)
 				Expect(objs).To(HaveLen(1))
 			})
 		})
 
-		Context("with objects other than ConfigMap", func() {
+		Context("with non-duplicate objects", func() {
 			objs := append(objs, &v1beta1.Deployment{
 				TypeMeta: meta.TypeMeta{
 					Kind: "Deployment",
