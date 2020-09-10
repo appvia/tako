@@ -252,48 +252,6 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	Describe("getEnvsFromFile", func() {
-		var file string
-		var inputFilePaths []string
-
-		BeforeEach(func() {
-			file = "env_file"
-			inputFilePaths = []string{
-				"../../testdata/converter/kubernetes/dummy",
-			}
-		})
-
-		It("loads environment variables defined in the referenced env_file and returns a map", func() {
-			env, err := getEnvsFromFile(file, inputFilePaths)
-			Expect(env).To(HaveKeyWithValue("FOO", "BAR"))
-			Expect(env).To(HaveKeyWithValue("BAR", "BAZ"))
-			Expect(env).To(HaveKeyWithValue("EMPTY", ""))
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		Context("with invalid (compose) input file path", func() {
-			BeforeEach(func() {
-				inputFilePaths = []string{"/wrong/path"}
-			})
-
-			It("returns an error", func() {
-				_, err := getEnvsFromFile(file, inputFilePaths)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("with invalid path to env_file", func() {
-			BeforeEach(func() {
-				file = "wrong_env_file"
-			})
-
-			It("returns an error", func() {
-				_, err := getEnvsFromFile(file, inputFilePaths)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-	})
-
 	Describe("configLabelsWithNetwork", func() {
 		svcName := "db"
 		networkNameA := "mynetA"
