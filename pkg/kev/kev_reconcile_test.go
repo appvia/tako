@@ -19,8 +19,8 @@ package kev_test
 import (
 	"bytes"
 
-	"github.com/appvia/kube-devx/pkg/kev"
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

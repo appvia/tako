@@ -17,7 +17,7 @@
 package kev_test
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev"
+	"github.com/appvia/kev/pkg/kev"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

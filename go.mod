@@ -1,4 +1,4 @@
-module github.com/appvia/kube-devx
+module github.com/appvia/kev
 
 go 1.14
 

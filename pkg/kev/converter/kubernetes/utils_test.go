@@ -19,7 +19,7 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -209,23 +209,6 @@ var _ = Describe("Utils", func() {
 			Expect(p.Services[0].Name).To(Equal(s2.Name))
 			Expect(p.Services[1].Name).To(Equal(s3.Name))
 			Expect(p.Services[2].Name).To(Equal(s1.Name))
-		})
-	})
-
-	Describe("resetWorkloadAPIVersion", func() {
-		o := &v1beta1.Deployment{
-			TypeMeta: meta.TypeMeta{
-				Kind: "Deployment",
-			},
-		}
-
-		It("sets group, version and kind on a passed in k8s runtime.Object", func() {
-			d := resetWorkloadAPIVersion(o)
-			Expect(d.GetObjectKind().GroupVersionKind()).To(Equal(schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "Deployment",
-			}))
 		})
 	})
 

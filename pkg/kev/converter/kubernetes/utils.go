@@ -35,8 +35,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -122,6 +122,8 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 		}
 		// version list itself
 		listVersion := schema.GroupVersion{Group: "", Version: "v1"}
+		list.Kind = "List"
+		list.APIVersion = "v1"
 		convertedList, err := convertToVersion(list, listVersion)
 		if err != nil {
 			return err
@@ -487,25 +489,6 @@ func getServiceType(serviceType string) (string, error) {
 	default:
 		return "", fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
 	}
-}
-
-// resetWorkloadAPIVersion sets group, version & kind on passed runtime object
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L700
-// @todo Check if this is still required
-func resetWorkloadAPIVersion(d runtime.Object) runtime.Object {
-	data, err := json.Marshal(d)
-	if err == nil {
-		var us unstructured.Unstructured
-		if err := json.Unmarshal(data, &us); err == nil {
-			us.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    d.GetObjectKind().GroupVersionKind().Kind,
-			})
-			return &us
-		}
-	}
-	return d
 }
 
 // sortServices sorts all compose project services by name

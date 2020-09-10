@@ -32,16 +32,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -163,7 +163,6 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 	// @step sort all object so Services are first, remove duplicates and fix worklaod versions
 	k.sortServicesFirst(&allobjects)
 	k.removeDupObjects(&allobjects)
-	k.fixWorkloadVersion(&allobjects)
 
 	return allobjects, nil
 }
@@ -292,33 +291,6 @@ func (k *Kubernetes) initPodSpecWithConfigMap(projectService ProjectService) v1.
 	return pod
 }
 
-// initReplicationController initializes Kubernetes ReplicationController object
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L216
-func (k *Kubernetes) initReplicationController(projectService ProjectService, replicas int) *v1.ReplicationController {
-	repl := int32(replicas)
-
-	rc := &v1.ReplicationController{
-		TypeMeta: meta.TypeMeta{
-			Kind:       "ReplicationController",
-			APIVersion: "v1",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
-			Labels: configAllLabels(projectService),
-		},
-		Spec: v1.ReplicationControllerSpec{
-			Replicas: &repl,
-			Template: &v1.PodTemplateSpec{
-				ObjectMeta: meta.ObjectMeta{
-					Labels: configLabels(projectService.Name),
-				},
-				Spec: k.initPodSpec(projectService),
-			},
-		},
-	}
-	return rc
-}
-
 // initSvc initializes Kubernetes Service object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L240
 func (k *Kubernetes) initSvc(projectService ProjectService) *v1.Service {
@@ -443,7 +415,7 @@ func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileNa
 
 // initDeployment initializes Kubernetes Deployment object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L380
-func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int) *v1beta1.Deployment {
+func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int) *v1apps.Deployment {
 	repl := int32(replicas)
 
 	var podSpec v1.PodSpec
@@ -453,16 +425,16 @@ func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int)
 		podSpec = k.initPodSpec(projectService)
 	}
 
-	dc := &v1beta1.Deployment{
+	dc := &v1apps.Deployment{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "Deployment",
-			APIVersion: "extensions/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:   projectService.Name,
 			Labels: configAllLabels(projectService),
 		},
-		Spec: v1beta1.DeploymentSpec{
+		Spec: v1apps.DeploymentSpec{
 			Replicas: &repl,
 			Selector: &meta.LabelSelector{
 				MatchLabels: configLabels(projectService.Name),
@@ -480,8 +452,8 @@ func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int)
 	// @step add update strategy if present
 	update := projectService.getKubernetesUpdateStrategy()
 	if update != nil {
-		dc.Spec.Strategy = v1beta1.DeploymentStrategy{
-			Type:          v1beta1.RollingUpdateDeploymentStrategyType,
+		dc.Spec.Strategy = v1apps.DeploymentStrategy{
+			Type:          v1apps.RollingUpdateDeploymentStrategyType,
 			RollingUpdate: update,
 		}
 
@@ -497,17 +469,17 @@ func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int)
 
 // initDaemonSet initializes Kubernetes DaemonSet object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L427
-func (k *Kubernetes) initDaemonSet(projectService ProjectService) *v1beta1.DaemonSet {
-	ds := &v1beta1.DaemonSet{
+func (k *Kubernetes) initDaemonSet(projectService ProjectService) *v1apps.DaemonSet {
+	ds := &v1apps.DaemonSet{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: "extensions/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:   projectService.Name,
 			Labels: configAllLabels(projectService),
 		},
-		Spec: v1beta1.DaemonSetSpec{
+		Spec: v1apps.DaemonSetSpec{
 			Template: v1.PodTemplateSpec{
 				Spec: k.initPodSpec(projectService),
 			},
@@ -600,38 +572,38 @@ func (k *Kubernetes) initJob(projectService ProjectService, replicas int) *v1bat
 
 // initIngress initialises ingress object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
-func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *v1beta1.Ingress {
+// @todo change to networkingv1 after migration to k8s 0.19
+func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *networkingv1beta1.Ingress {
 	expose, _ := projectService.exposeService()
 	if expose == "" {
 		return nil
 	}
 	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(expose, -1)
 
-	ingress := &v1beta1.Ingress{
+	ingress := &networkingv1beta1.Ingress{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "Ingress",
-			APIVersion: "extensions/v1beta1",
+			APIVersion: "networking.k8s.io/v1beta1",
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:        projectService.Name,
 			Labels:      configLabels(projectService.Name),
 			Annotations: configAnnotations(projectService),
 		},
-		Spec: v1beta1.IngressSpec{
-			Rules: make([]v1beta1.IngressRule, len(hosts)),
-			// Rules: []v1beta1.IngressRule{},
+		Spec: networkingv1beta1.IngressSpec{
+			Rules: make([]networkingv1beta1.IngressRule, len(hosts)),
 		},
 	}
 
 	for i, host := range hosts {
 		host, p := parseIngressPath(host)
-		ingress.Spec.Rules[i] = v1beta1.IngressRule{
-			IngressRuleValue: v1beta1.IngressRuleValue{
-				HTTP: &v1beta1.HTTPIngressRuleValue{
-					Paths: []v1beta1.HTTPIngressPath{
+		ingress.Spec.Rules[i] = networkingv1beta1.IngressRule{
+			IngressRuleValue: networkingv1beta1.IngressRuleValue{
+				HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+					Paths: []networkingv1beta1.HTTPIngressPath{
 						{
 							Path: p,
-							Backend: v1beta1.IngressBackend{
+							Backend: networkingv1beta1.IngressBackend{
 								ServiceName: projectService.Name,
 								ServicePort: intstr.IntOrString{
 									IntVal: port,
@@ -649,7 +621,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *v1b
 
 	tlsSecretName := projectService.tlsSecretName()
 	if tlsSecretName != "" {
-		ingress.Spec.TLS = []v1beta1.IngressTLS{
+		ingress.Spec.TLS = []networkingv1beta1.IngressTLS{
 			{
 				Hosts:      hosts,
 				SecretName: tlsSecretName,
@@ -1248,8 +1220,6 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 		objects = append(objects, k.initDaemonSet(projectService))
 	case strings.ToLower(config.StatefulsetWorkload):
 		objects = append(objects, k.initStatefulSet(projectService, replicas))
-	case "replicationcontroller":
-		objects = append(objects, k.initReplicationController(projectService, replicas))
 	}
 
 	return objects
@@ -1297,8 +1267,9 @@ func (k *Kubernetes) initPod(projectService ProjectService) *v1.Pod {
 			APIVersion: "v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
-			Labels: configLabels(projectService.Name),
+			Name:        projectService.Name,
+			Labels:      configLabels(projectService.Name),
+			Annotations: configAnnotations(projectService),
 		},
 		Spec: k.initPodSpec(projectService),
 	}
@@ -1341,16 +1312,7 @@ func (k *Kubernetes) createNetworkPolicy(projectServiceName string, networkName 
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1254
 func (k *Kubernetes) updateController(obj runtime.Object, updateTemplate func(*v1.PodTemplateSpec) error, updateMeta func(meta *meta.ObjectMeta)) (err error) {
 	switch t := obj.(type) {
-	case *v1.ReplicationController:
-		if t.Spec.Template == nil {
-			t.Spec.Template = &v1.PodTemplateSpec{}
-		}
-		if err = updateTemplate(t.Spec.Template); err != nil {
-			log.Error("Unable to update ReplicationController template")
-			return err
-		}
-		updateMeta(&t.ObjectMeta)
-	case *v1beta1.Deployment:
+	case *v1apps.Deployment:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
 			log.Error("Unable to update Deployment template")
 			return err
@@ -1362,7 +1324,7 @@ func (k *Kubernetes) updateController(obj runtime.Object, updateTemplate func(*v
 			return err
 		}
 		updateMeta(&t.ObjectMeta)
-	case *v1beta1.DaemonSet:
+	case *v1apps.DaemonSet:
 		if err = updateTemplate(&t.Spec.Template); err != nil {
 			log.Error("Unable to update DaemonSet template")
 			return err
@@ -1597,8 +1559,8 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		if len(projectServiceVolumes) > 0 {
 			switch objType := obj.(type) {
 			// @todo Check if applicable to other object types
-			case *v1beta1.Deployment:
-				objType.Spec.Strategy.Type = v1beta1.RecreateDeploymentStrategyType
+			case *v1apps.Deployment:
+				objType.Spec.Strategy.Type = v1apps.RecreateDeploymentStrategyType
 			}
 		}
 	}
@@ -1626,47 +1588,25 @@ func (k *Kubernetes) sortServicesFirst(objs *[]runtime.Object) {
 	*objs = ret
 }
 
-// removeDupObjects removes duplicate objects... Example: ConfigMaps from env.
-// Duplication can only happend on ConfigMap, so it currently handles on this case.
+// removeDupObjects removes duplicate objects...
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L679
 func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 	var result []runtime.Object
 	exist := map[string]bool{}
 
 	for _, obj := range *objs {
-		if us, ok := obj.(*v1.ConfigMap); ok {
-			k := us.GroupVersionKind().String() + us.GetNamespace() + us.GetName()
+		if us, ok := obj.(meta.Object); ok {
+			k := obj.GetObjectKind().GroupVersionKind().String() + us.GetNamespace() + us.GetName()
 			if exist[k] {
-				log.DebugWithFields(log.Fields{
+				log.DebugfWithFields(log.Fields{
 					"configmap": us.GetName(),
-				}, "Remove duplicate configmap")
+				}, "Remove duplicate resource: %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, us.GetName())
 
 				continue
 			} else {
 				result = append(result, obj)
 				exist[k] = true
 			}
-		} else {
-			result = append(result, obj)
-		}
-	}
-
-	*objs = result
-}
-
-// fixWorkloadVersion force reset deployment/daemonset's apiversion to apps/v1
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L717
-// @todo check whether it should cover other object types and if needed at all?
-func (k *Kubernetes) fixWorkloadVersion(objs *[]runtime.Object) {
-	var result []runtime.Object
-
-	for _, obj := range *objs {
-		if d, ok := obj.(*v1beta1.Deployment); ok {
-			nd := resetWorkloadAPIVersion(d)
-			result = append(result, nd)
-		} else if d, ok := obj.(*v1beta1.DaemonSet); ok {
-			nd := resetWorkloadAPIVersion(d)
-			result = append(result, nd)
 		} else {
 			result = append(result, obj)
 		}
