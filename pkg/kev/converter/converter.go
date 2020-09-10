@@ -17,8 +17,8 @@
 package converter
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev/converter/dummy"
-	"github.com/appvia/kube-devx/pkg/kev/converter/kubernetes"
+	"github.com/appvia/kev/pkg/kev/converter/dummy"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	composego "github.com/compose-spec/compose-go/types"
 )
 

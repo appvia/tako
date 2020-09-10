@@ -1,4 +1,4 @@
-module github.com/appvia/kube-devx
+module github.com/appvia/kev
 
 go 1.14
 
@@ -7,7 +7,6 @@ require (
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/google/go-cmp v0.5.2
 	github.com/imdario/mergo v0.3.11
-	github.com/joho/godotenv v1.3.0
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1

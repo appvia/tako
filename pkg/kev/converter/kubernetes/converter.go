@@ -20,7 +20,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 )
 

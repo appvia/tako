@@ -21,7 +21,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 )
 
 const (
