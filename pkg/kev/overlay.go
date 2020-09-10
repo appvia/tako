@@ -119,7 +119,8 @@ func (o *composeOverlay) mergeVolumesInto(p *ComposeProject) error {
 		if !ok {
 			return fmt.Errorf("could not find volume %s", override.Name)
 		}
-		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
+
+		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverwriteWithEmptyValue); err != nil {
 			return errors.Wrapf(err, "cannot merge labels for volume %s", name)
 		}
 		p.Volumes[name] = base

@@ -19,7 +19,7 @@ package kubernetes
 import (
 	"bytes"
 
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 

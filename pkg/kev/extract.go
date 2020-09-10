@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -63,7 +63,7 @@ func extractVolumesLabels(c *ComposeProject, out *composeOverlay) {
 		if storageClass, ok := c.Volumes[v].Labels[config.LabelVolumeStorageClass]; ok {
 			labels[config.LabelVolumeStorageClass] = storageClass
 		} else {
-			labels[config.LabelVolumeStorageClass] = config.DefaultVolumeClass
+			labels[config.LabelVolumeStorageClass] = config.DefaultVolumeStorageClass
 		}
 
 		if volSize, ok := c.Volumes[v].Labels[config.LabelVolumeSize]; ok {
