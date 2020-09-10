@@ -24,7 +24,7 @@ import (
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml"
-	"github.com/appvia/kube-devx/pkg/kev/converter/kubernetes"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 )
 
 // SkaffoldManifest is a wrapper around latest SkaffoldConfig

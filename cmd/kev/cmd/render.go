@@ -17,8 +17,8 @@
 package cmd
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/spf13/cobra"
 )
 

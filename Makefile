@@ -20,7 +20,8 @@ ifeq ($(USE_GIT_VERSION),true)
 else
 	VERSION ?= $(GIT_LAST_TAG)
 endif
-LFLAGS ?= -X github.com/appvia/kube-devx/pkg/${NAME}/version.Tag=${GIT_LAST_TAG} -X github.com/appvia/kube-devx/pkg/${NAME}/version.GitSHA=${GIT_SHA} -X github.com/appvia/kube-devx/pkg/${NAME}/version.Compiled=${BUILD_TIME} -X github.com/appvia/kube-devx/pkg/${NAME}/version.Release=${VERSION} -X github.com/appvia/kube-devx/pkg/${NAME}/version.GitBranch=${GIT_BRANCH}
+
+LFLAGS ?= -X github.com/appvia/kev/pkg/${NAME}.Tag=${GIT_LAST_TAG} -X github.com/appvia/kev/pkg/${NAME}.GitSHA=${GIT_SHA} -X github.com/appvia/kev/pkg/${NAME}.Compiled=${BUILD_TIME} -X github.com/appvia/kev/pkg/${NAME}.Release=${VERSION} -X github.com/appvia/kev/pkg/${NAME}.GitBranch=${GIT_BRANCH}
 CLI_PLATFORMS=darwin linux windows
 CLI_ARCHITECTURES=386 amd64
 export GOFLAGS = -mod=vendor
@@ -47,11 +48,11 @@ package:
 
 package-cli:
 	@echo "--> Compiling CLI static binaries"
-	CGO_ENABLED=0 go run github.com/mitchellh/gox -parallel=4 -arch="${CLI_ARCHITECTURES}" -os="${CLI_PLATFORMS}" -ldflags "-w ${LFLAGS}" -output=./release/{{.Dir}}-cli-{{.OS}}-{{.Arch}} ./cmd/${NAME}/
+	CGO_ENABLED=0 gox -parallel=4 -arch="${CLI_ARCHITECTURES}" -os="${CLI_PLATFORMS}" -ldflags "-w ${LFLAGS}" -output=./release/{{.Dir}}-{{.OS}}-{{.Arch}} ./cmd/${NAME}/
 
 push-release-packages:
 	@echo "--> Pushing compiled CLI binaries to draft release (requires github token set in .gitconfig or GITHUB_TOKEN env variable)"
-	go run github.com/tcnksm/ghr -replace -draft -n "Release ${VERSION}" "${VERSION}" ./release
+	ghr -replace -draft -n "Release ${VERSION}" "${VERSION}" ./release
 
 release: build
 	mkdir -p release

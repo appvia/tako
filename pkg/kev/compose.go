@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/compose-spec/compose-go/cli"
 	"github.com/compose-spec/compose-go/errdefs"
 	composego "github.com/compose-spec/compose-go/types"

@@ -35,10 +35,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
@@ -123,6 +122,8 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 		}
 		// version list itself
 		listVersion := schema.GroupVersion{Group: "", Version: "v1"}
+		list.Kind = "List"
+		list.APIVersion = "v1"
 		convertedList, err := convertToVersion(list, listVersion)
 		if err != nil {
 			return err
@@ -490,25 +491,6 @@ func getServiceType(serviceType string) (string, error) {
 	}
 }
 
-// resetWorkloadAPIVersion sets group, version & kind on passed runtime object
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L700
-// @todo Check if this is still required
-func resetWorkloadAPIVersion(d runtime.Object) runtime.Object {
-	data, err := json.Marshal(d)
-	if err == nil {
-		var us unstructured.Unstructured
-		if err := json.Unmarshal(data, &us); err == nil {
-			us.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    d.GetObjectKind().GroupVersionKind().Kind,
-			})
-			return &us
-		}
-	}
-	return d
-}
-
 // sortServices sorts all compose project services by name
 func sortServices(project *composego.Project) {
 	sort.Slice(project.Services, func(i, j int) bool {
@@ -528,30 +510,6 @@ func durationStrToSecondsInt(s string) (*int32, error) {
 	}
 	r := (int32)(duration.Seconds())
 	return &r, nil
-}
-
-// getEnvsFromFile get env vars from env_file
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L757
-func getEnvsFromFile(file string, inputFiles []string) (map[string]string, error) {
-	// Get the correct file context / directory
-	composeDir, err := getComposeFileDir(inputFiles)
-	if err != nil {
-		log.Error("Unable to load file context")
-		return nil, err
-	}
-
-	fileLocation := path.Join(composeDir, file)
-
-	// Load environment variables from file
-	envLoad, err := godotenv.Read(fileLocation)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"file": file,
-		}, "Unable to read env_file")
-		return nil, err
-	}
-
-	return envLoad, nil
 }
 
 // getContentFromFile gets the content from the file..
@@ -587,13 +545,6 @@ func rfc1123label(s string) string {
 		return s[0:62]
 	}
 	return s
-}
-
-// formatEnvFileName format env file name
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L784
-func formatEnvFileName(name string) string {
-	envName := strings.Trim(name, "./")
-	return rfc1123dns(envName)
 }
 
 // formatFileName format file name
