@@ -114,9 +114,11 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return err
 	}
 
-	if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
-		log.Errorf("Couldn't update skaffold.yaml profiles")
-		return err
+	if len(manifest.Skaffold) > 0 {
+		if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
+			log.Errorf("Couldn't update skaffold.yaml profiles")
+			return err
+		}
 	}
 
 	return nil
