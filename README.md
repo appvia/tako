@@ -16,7 +16,6 @@ _Kev_ is opinionated in its choice of Kubernetes elements you should be able to 
 
 _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kubernetes deployment configuration follows best industry practices, with a thin layer of config options to enable further control. See [kev reference documentation](docs/reference/config-params.md) for a list of available options.
 
-
 ## Features
 
 * **Simplicity** - Based on familiar Docker Compose specification. There is no new framework to learn, no new specification to embrace, and vastness of Kubernetes reduced to a limited set of easy to follow configuration parameters. You focus on the app development. Kev will prepare it for deployment in Kubernetes.
@@ -31,72 +30,136 @@ _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kuber
 
 * **Easy integrations** - You may use generated Kubernetes manifests with any tool / framework of your choice. We aim at adding some useful integrations further improving developer experience.
 
-## Quick Start
+## Contents
 
-All you need to get started quickly is [kev](https://github.com/appvia/kev/releases) binary added to your PATH, and one or more docker compose files.
+- **[Installation](#installation)**
+- **[Quickstart](#quickstart)**
+    * **[Initialise project](#initialise-project)**
+    * **[Generate Kubernetes manifests](#generate-kubernetes-manifests)**
+- **[Tutorials & guides](#tutorials-and-guides)**
+- **[Configuration](#configuration)**
+- **[Similar tools](#similar-tools)**
+- **[Contributing to Kev](#contributing-to-kev)**
+- **[Roadmap](#roadmap)**
+- **[License](#license)**
 
-### Initiate a project
+## Installation
 
-Run the following command from within your project directory to initialise Kev project:
+All you need to get started quickly is the [kev](https://github.com/appvia/kev/releases) binary added to your PATH, and one or more docker compose files.
+
+## Quickstart
+
+- `kev init` - identifies a project's Compose Kubernetes source files and creates Compose environment overrides.
+- `kev render` - detects, applies any config changes and generates deployment manifests.
+- `kev help` - run it if you're a little lost.
+
+### Initialise project
+
+Run the following command within your project directory:
 
 ```sh
 kev init
 ```
 
-The command above will auto-detect default `docker-compose.yaml` and `docker-compose.override.yaml` files (if present) in the project directory, and tracks them as Kubernetes deployment sources.
+This identifies the default `docker-compose.yaml` and (if present) `docker-compose.override.yaml` files in your project directory. They will be used as the source of truth for your application deployment in Kubernetes.
 
-If you want to point _Kev_ at set of alternative compose files, simply pass them in with `-f` flag. Multiple source compose files can be specified by providing `-f` flag multiple times.
+Also, it creates a default `dev` environment and its Compose override file.
 
-And, to individually control the configuration of your project for deployments in separate target environments, just specify their respective names with `-e` flag, e.g.:
+Here's another example. It uses an alternate `docker-compose` file with `stage` & `prod` environments:
 
 ```sh
 kev init -f my-docker-compose.yaml -e stage -e prod
 ```
 
-If no environment has been specified, a default one will be named `dev`.
+It makes use of,
+- `-f` flag, to specify an alternate filename.
+- `-e` flags, to specify different deployment environments.
 
-Once the project has bootstrapped you should see a few new files added to your project tree, similar to the list below:
+Creating the files below in your project directory:
 
 ```sh
-├── docker-compose.kev.stage.yaml # stage environment override
-├── docker-compose.kev.prod.yaml  # prod environment override
-├── kev.yaml                      # kev project manifest
+├── docker-compose.kev.stage.yaml       # stage Compose environment override file
+├── docker-compose.kev.prod.yaml        # prod Compose environment override file
+├── kev.yaml                            # kev project manifest
 ├── ...
 ```
 
-Your project is now ready and environment specific configuration files generated. _Kev_ will infer useful configuration details already present in the source compose file(s). If this is not possible it'll assume sensible defaults. Users have an easy way to manually alter values directly in the environment specific override file as and when required.
+Here's what happened, _Kev_ has,
+- Inferred the configuration details already present in your compose Kubernetes deployment sources.
+- Assigned sensible defaults for any config it couldn't infer.
+- Created Compose overrides files for the `stage` and `prod` environments.
 
-### Render K8s manifests
+That's it, your _Kev_ project is now ready!
 
-In order to deploy your project application to Kubernetes you will need to supply _something_ K8s can understand. Currently, _Kev_ only supports Docker Compose conversion to native Kuberentes manifests. The Community might add additional output formats at later stages. See our [Roadmap][roadmap] for planned new features.
+From now on it can,
+- Detect edits in your source compose file.
+- Apply any related config changes to your compose environment overrides.
+- Generate deployment manifests.
 
-To render manifests, simply run the following command from your project root:
+You can now customise your deployment targets by altering values in the relevant Compose environment override file.
+
+### Generate Kubernetes manifests
+
+We now need to generate manifests based on your Docker Compose config and environments. You'll use these manifests to deploy your app to Kubernetes.
+
+Run the following command from your project root:
 
 ```sh
 kev render
 ```
 
-`render` generates the project's manifests based on the tracked docker-compose files, using the desired output format specified via the `-f` flag (defaults to `kubernetes`), and for selected environments. Note that ALL environments will be rendered by default if none are specified.
+The command above,
+- Detects edits you made to the project's source compose file(s).
+- Applies any found config changes to your compose environment overrides.
+- Generates kubernetes manifests based on all compose files including environment overrides.
+- Generates kubernetes manifests for all environments.
 
-You can control which environments to render the manifests for with `-e` flag(s).
+The directory below should now appear in your project directory:
 
-You may also specify the output directory for generated manifests with `-d` flag. Note, that specified directory will contain sub-directories, each for a separate environment name for which manifests were generated.
+```sh
+├── k8s         # stores the Kubernetes manifests for all target deployment environments.
+├──── prod      # prod deploymeny environment
+├────── ...     # prod manifests
+├──── stage     # stage deploymeny environment
+├────── ...     # stage manifests
+```
 
-To render application's manifests to a single file, pass in a `-s` flag and you are good to go.
+Other flag options include,
+- `-f` flag, to specify the deployment files format (defaults to `kubernetes`).
+- `-s` flag, to render application's manifests to a single file.
+- `-d` flag, to specify the output directory for generated manifests (it will contain sub-directories, each for a separate environment name).
+- `-e` flag(s), to control which environments to generate the manifests for.
 
-Note that all generated manifests are fully expanded i.e. they should not be treated as templates. (Quick reminder that a specific environment configuration lives in the docker compose override files.)
+**Note:** Generated manifests should **NOT** be treated as templates as they are fully expanded.
 
-From this point onward you're free to use whatever tool or framework you are already familiar with, to deploy your project to Kubernetes e.g `kubectl`, `skaffold` etc. Watch our [Roadmap][roadmap] for details around planned integrations.
+#### How can I deploy the app to Kubernetes?
 
-## Commands
+To deploy your app onto Kubernetes,
+- Ensure you can access a running Kubernetes installation, either locally (e.g. [Docker Desktop](https://docs.docker.com/desktop/), [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), etc...) or remotely.
+- Use [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) to apply the manifests.
 
-- `kev init` - initiate project for kev.
-- `kev render` - render application manifests for selected environments, according to desired output format.
-- `kev help` - run it if you're a little lost.
+In this example, we deploy the `stage` environment:
+
+```sh
+kubectl apply -f k8s/stage     # deploys your app with stage settings onto the default namespace
+```
+
+#### Other deployment tooling
+
+With _Kev_, you can use any Kubernetes deployment tool or framework you're familiar with, e.g `skaffold`, `tilt`, etc...
+
+Check our [Roadmap][roadmap] for upcoming planned integrations.
+
+## Tutorials and guides
+
+- [How does Kev differ from Kompose?](docs/how-kev-differs-from-kompose.md)
+- [Getting started with Kev.](docs/tutorials/getting-started-with-kev.md)
+
+  This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
 
 ## Configuration
 
-As mentioned in the [Quick Start](#quick-start) section above, the environment specific configuration lives in a set of docker-compose override files. Each environment override file holds simplified Kubernetes configuration parameters for each of the application components.
+As mentioned in the [Quickstart](#quickstart) section above, the environment specific configuration lives in a set of docker-compose override files. Each environment override file holds simplified Kubernetes configuration parameters for each of the application components.
 
 Project components (aka services) are configured via a set of labels attached to them, and optionally environment variables section which allows for localised adjustments - the same exact way you'd control those in a regular docker-compose file.
 
@@ -107,6 +170,8 @@ See the [configuration reference](docs/reference/config-params.md) for details.
 ## Similar tools
 
 _Kev_ is inspired by the simple, easy to use and well adopted Docker Compose specification, as well as several other tools in the Kubernetes manifests generation and templating space such as Kompose, Ksonnet and Kustomize, to name a few.
+
+See how [Kev differs from Kompose.](docs/how-kev-differs-from-kompose.md)
 
 Each of the solutions above, however, come with their own set of challenges and are lacking in various areas. Some have been discontinued, some see very few contributions or updates, others require a great deal of prior Kubernetes expertise to find them useful.
 

@@ -16,7 +16,7 @@
 
 package main
 
-import "github.com/appvia/kube-devx/cmd/kev/cmd"
+import "github.com/appvia/kev/cmd/kev/cmd"
 
 func main() {
 	cmd.Execute()

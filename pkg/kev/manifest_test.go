@@ -17,7 +17,7 @@
 package kev_test
 
 import (
-	"github.com/appvia/kube-devx/pkg/kev"
+	"github.com/appvia/kev/pkg/kev"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -81,6 +81,47 @@ var _ = Describe("Manifest", func() {
 
 			It("should not error", func() {
 				Expect(mergeErr).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("GetEnvironmentFileNameTemplate", func() {
+
+		var (
+			m     *kev.Manifest
+			files []string
+		)
+
+		JustBeforeEach(func() {
+			m = &kev.Manifest{
+				Sources: &kev.Sources{
+					Files: files,
+				},
+			}
+		})
+
+		Context("with mutiple source compose files", func() {
+			BeforeEach(func() {
+				files = []string{
+					"my-custom-docker-compose.yaml",
+					"my-custom-docker-compose.override.yaml",
+				}
+			})
+
+			It("returns environment file name template as expected", func() {
+				Expect(m.GetEnvironmentFileNameTemplate()).To(Equal("my-custom-docker-compose.kev.%s.yaml"))
+			})
+		})
+
+		Context("with a single source compoe file", func() {
+			BeforeEach(func() {
+				files = []string{
+					"compose.yml",
+				}
+			})
+
+			It("returns environment file name template as expected", func() {
+				Expect(m.GetEnvironmentFileNameTemplate()).To(Equal("compose.kev.%s.yml"))
 			})
 		})
 	})

@@ -19,8 +19,8 @@ package kev_test
 import (
 	"bytes"
 
-	"github.com/appvia/kube-devx/pkg/kev"
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -276,7 +276,7 @@ var _ = Describe("Reconcile", func() {
 
 				v, _ := env.GetVolume("db_data")
 				Expect(v.Labels[config.LabelVolumeSize]).To(Equal("100Mi"))
-				Expect(v.Labels[config.LabelVolumeStorageClass]).To(Equal("standard"))
+				Expect(v.Labels[config.LabelVolumeStorageClass]).To(Equal(""))
 			})
 
 			It("should create a change summary", func() {

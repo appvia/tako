@@ -1,0 +1,5 @@
+compose:
+  - docker-compose.yaml
+environments:
+  local: docker-compose.kev.local.yaml
+  stage: docker-compose.kev.stage.yaml

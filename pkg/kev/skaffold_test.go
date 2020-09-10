@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
-	"github.com/appvia/kube-devx/pkg/kev"
-	"github.com/appvia/kube-devx/pkg/kev/converter/kubernetes"
+	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

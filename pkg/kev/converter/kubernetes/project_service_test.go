@@ -22,14 +22,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -388,7 +388,7 @@ var _ = Describe("ProjectService", func() {
 				expectedMaxUnavailable := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
-					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1beta1.RollingUpdateDeployment{
+					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
 					}))
@@ -411,7 +411,7 @@ var _ = Describe("ProjectService", func() {
 				expectedMaxSurge := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
-					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1beta1.RollingUpdateDeployment{
+					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
 					}))
@@ -455,7 +455,7 @@ var _ = Describe("ProjectService", func() {
 						Container:    targetPath,
 						PVCName:      projectServiceName + "-claim0",
 						PVCSize:      config.DefaultVolumeSize,
-						StorageClass: config.DefaultVolumeClass,
+						StorageClass: config.DefaultVolumeStorageClass,
 					},
 				}))
 			})
