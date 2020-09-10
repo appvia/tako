@@ -38,7 +38,6 @@ import (
 	"github.com/appvia/kube-devx/pkg/kev/config"
 	"github.com/appvia/kube-devx/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
@@ -530,30 +529,6 @@ func durationStrToSecondsInt(s string) (*int32, error) {
 	return &r, nil
 }
 
-// getEnvsFromFile get env vars from env_file
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L757
-func getEnvsFromFile(file string, inputFiles []string) (map[string]string, error) {
-	// Get the correct file context / directory
-	composeDir, err := getComposeFileDir(inputFiles)
-	if err != nil {
-		log.Error("Unable to load file context")
-		return nil, err
-	}
-
-	fileLocation := path.Join(composeDir, file)
-
-	// Load environment variables from file
-	envLoad, err := godotenv.Read(fileLocation)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"file": file,
-		}, "Unable to read env_file")
-		return nil, err
-	}
-
-	return envLoad, nil
-}
-
 // getContentFromFile gets the content from the file..
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L775
 func getContentFromFile(file string) (string, error) {
@@ -587,13 +562,6 @@ func rfc1123label(s string) string {
 		return s[0:62]
 	}
 	return s
-}
-
-// formatEnvFileName format env file name
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L784
-func formatEnvFileName(name string) string {
-	envName := strings.Trim(name, "./")
-	return rfc1123dns(envName)
 }
 
 // formatFileName format file name

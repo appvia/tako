@@ -263,54 +263,6 @@ var _ = Describe("Transform", func() {
 		})
 	})
 
-	Describe("initConfigMapForEnv", func() {
-
-		When("env_file exists", func() {
-
-			envFile := "env_file"
-			expectedEnvFileName := "env-file"
-
-			JustBeforeEach(func() {
-				k.Opt.InputFiles = []string{
-					"../../testdata/converter/kubernetes/dummy",
-				}
-			})
-
-			It("generates ConfigMap object for provided env_file", func() {
-				Expect(k.initConfigMapFromEnvFile(projectService, envFile)).To(Equal(&v1.ConfigMap{
-					TypeMeta: meta.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name:   expectedEnvFileName,
-						Labels: configLabels(projectService.Name + "-" + expectedEnvFileName),
-					},
-					Data: map[string]string{
-						"FOO":   "BAR",
-						"BAR":   "BAZ",
-						"EMPTY": "",
-					},
-				}))
-			})
-		})
-
-		Context("for non-existing env_file", func() {
-			envFile := "non_existing_env_file"
-
-			JustBeforeEach(func() {
-				k.Opt.InputFiles = []string{
-					"../../testdata/converter/kubernetes/dummy",
-				}
-			})
-
-			It("returns an error", func() {
-				_, err := k.initConfigMapFromEnvFile(projectService, envFile)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-	})
-
 	Describe("initConfigMapFromFileOrDir", func() {
 
 		Context("with single file", func() {
@@ -1375,30 +1327,9 @@ var _ = Describe("Transform", func() {
 
 	Describe("configEnvs", func() {
 
-		Context("with environment variables loaded from env_file", func() {
-			BeforeEach(func() {
-				projectService.EnvFile = composego.StringList{
-					"env_file",
-				}
-			})
-
-			JustBeforeEach(func() {
-				// this is to make env_file path work as getEnvsFromFile requires it to determine
-				// location of docker compose files. env_files are resolved relative to that location!
-				k.Opt.InputFiles = []string{
-					"../../testdata/converter/kubernetes/dummy",
-				}
-			})
-
-			It("load env vars and sorts them", func() {
-				vars, err := k.configEnvs(projectService)
-				Expect(vars).To(HaveLen(3))
-				Expect(vars[0].Name).To(Equal("BAR"))
-				Expect(vars[1].Name).To(Equal("EMPTY"))
-				Expect(vars[2].Name).To(Equal("FOO"))
-				Expect(err).ToNot(HaveOccurred())
-			})
-		})
+		// NOTE: compose-go automatically appends all environment variables defined in env_file (if any)
+		// 		 to the list of explicitly defined environment variables for a project service.
+		// 		 Values of explicitly defined variables have precedence over the ones coming from env_file.
 
 		Context("with environment variables explicitly defined for project service", func() {
 			dummyVal := "123"
@@ -1417,53 +1348,6 @@ var _ = Describe("Transform", func() {
 				Expect(vars[0].Name).To(Equal("AAA"))
 				Expect(vars[1].Name).To(Equal("FFF"))
 				Expect(vars[2].Name).To(Equal("ZZZ"))
-				Expect(err).ToNot(HaveOccurred())
-			})
-		})
-
-		Context("with both env_file and environment variables provided on the project service", func() {
-			dummyVal := "123"
-
-			BeforeEach(func() {
-				projectService.EnvFile = composego.StringList{
-					"env_file",
-				}
-				projectService.Environment = composego.MappingWithEquals{
-					// mind that env_file already contains variable FOO
-					"FOO": &dummyVal,
-					"ZZZ": &dummyVal,
-				}
-			})
-
-			JustBeforeEach(func() {
-				// this is to make env_file path work as getEnvsFromFile requires it to determine
-				// location of docker compose files. env_files are resolved relative to that location!
-				k.Opt.InputFiles = []string{
-					"../../testdata/converter/kubernetes/dummy",
-				}
-			})
-
-			It("env vars loaded from env_file have precedense over vars explicitly defined on the project service", func() {
-				vars, err := k.configEnvs(projectService)
-				Expect(vars).To(HaveLen(4))
-				Expect(vars[2].Name).To(Equal("FOO"))
-				// as it's defined in the env_file
-				// it won't set the value directly
-				Expect(vars[2].Value).To(Equal(""))
-				Expect(vars[2].ValueFrom).To(Equal(&v1.EnvVarSource{
-					FieldRef:         nil,
-					ResourceFieldRef: nil,
-					ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
-							Name: "env-file",
-						},
-						Key:      "FOO",
-						Optional: nil,
-					},
-					SecretKeyRef: nil,
-				}))
-				Expect(vars[3].Name).To(Equal("ZZZ"))
-				Expect(vars[3].Value).To(Equal(dummyVal))
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
