@@ -163,7 +163,6 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 	// @step sort all object so Services are first, remove duplicates and fix worklaod versions
 	k.sortServicesFirst(&allobjects)
 	k.removeDupObjects(&allobjects)
-	k.fixWorkloadVersion(&allobjects)
 
 	return allobjects, nil
 }
@@ -1646,27 +1645,6 @@ func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 				result = append(result, obj)
 				exist[k] = true
 			}
-		} else {
-			result = append(result, obj)
-		}
-	}
-
-	*objs = result
-}
-
-// fixWorkloadVersion force reset deployment/daemonset's apiversion to apps/v1
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L717
-// @todo check whether it should cover other object types and if needed at all?
-func (k *Kubernetes) fixWorkloadVersion(objs *[]runtime.Object) {
-	var result []runtime.Object
-
-	for _, obj := range *objs {
-		if d, ok := obj.(*v1apps.Deployment); ok {
-			nd := resetWorkloadAPIVersion(d)
-			result = append(result, nd)
-		} else if d, ok := obj.(*v1apps.DaemonSet); ok {
-			nd := resetWorkloadAPIVersion(d)
-			result = append(result, nd)
 		} else {
 			result = append(result, obj)
 		}

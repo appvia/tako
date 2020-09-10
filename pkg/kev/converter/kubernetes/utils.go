@@ -491,25 +491,6 @@ func getServiceType(serviceType string) (string, error) {
 	}
 }
 
-// resetWorkloadAPIVersion sets group, version & kind on passed runtime object
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L700
-// @todo Check if this is still required
-func resetWorkloadAPIVersion(d runtime.Object) runtime.Object {
-	data, err := json.Marshal(d)
-	if err == nil {
-		var us unstructured.Unstructured
-		if err := json.Unmarshal(data, &us); err == nil {
-			us.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    d.GetObjectKind().GroupVersionKind().Kind,
-			})
-			return &us
-		}
-	}
-	return d
-}
-
 // sortServices sorts all compose project services by name
 func sortServices(project *composego.Project) {
 	sort.Slice(project.Services, func(i, j int) bool {

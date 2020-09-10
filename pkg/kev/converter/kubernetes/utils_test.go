@@ -212,23 +212,6 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	Describe("resetWorkloadAPIVersion", func() {
-		o := &v1beta1.Deployment{
-			TypeMeta: meta.TypeMeta{
-				Kind: "Deployment",
-			},
-		}
-
-		It("sets group, version and kind on a passed in k8s runtime.Object", func() {
-			d := resetWorkloadAPIVersion(o)
-			Expect(d.GetObjectKind().GroupVersionKind()).To(Equal(schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "Deployment",
-			}))
-		})
-	})
-
 	Describe("durationStrToSecondsInt", func() {
 
 		It("parses duration string into number of seconds (int)", func() {
