@@ -122,6 +122,8 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 		}
 		// version list itself
 		listVersion := schema.GroupVersion{Group: "", Version: "v1"}
+		list.Kind = "List"
+		list.APIVersion = "v1"
 		convertedList, err := convertToVersion(list, listVersion)
 		if err != nil {
 			return err

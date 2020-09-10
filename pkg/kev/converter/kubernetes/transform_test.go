@@ -33,6 +33,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -384,22 +385,22 @@ var _ = Describe("Transform", func() {
 
 	Describe("initDeployment", func() {
 		var expectedPodSpec v1.PodSpec
-		var expectedDeployment *v1beta1.Deployment
+		var expectedDeployment *v1apps.Deployment
 
 		replicas := 3
 		expectedReplicas := int32(replicas)
 
 		JustBeforeEach(func() {
-			expectedDeployment = &v1beta1.Deployment{
+			expectedDeployment = &v1apps.Deployment{
 				TypeMeta: meta.TypeMeta{
 					Kind:       "Deployment",
-					APIVersion: "extensions/v1beta1",
+					APIVersion: "apps/v1",
 				},
 				ObjectMeta: meta.ObjectMeta{
 					Name:   projectService.Name,
 					Labels: configAllLabels(projectService),
 				},
-				Spec: v1beta1.DeploymentSpec{
+				Spec: v1apps.DeploymentSpec{
 					Replicas: &expectedReplicas,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
@@ -491,16 +492,16 @@ var _ = Describe("Transform", func() {
 	Describe("initDaemonSet", func() {
 
 		It("initialises DaemonSet as expected", func() {
-			Expect(k.initDaemonSet(projectService)).To(Equal(&v1beta1.DaemonSet{
+			Expect(k.initDaemonSet(projectService)).To(Equal(&v1apps.DaemonSet{
 				TypeMeta: meta.TypeMeta{
 					Kind:       "DaemonSet",
-					APIVersion: "extensions/v1beta1",
+					APIVersion: "apps/v1",
 				},
 				ObjectMeta: meta.ObjectMeta{
 					Name:   projectService.Name,
 					Labels: configAllLabels(projectService),
 				},
-				Spec: v1beta1.DaemonSetSpec{
+				Spec: v1apps.DaemonSetSpec{
 					Template: v1.PodTemplateSpec{
 						Spec: k.initPodSpec(projectService),
 					},
@@ -715,25 +716,25 @@ var _ = Describe("Transform", func() {
 			It("initialises Ingress with a port routing to the project service name", func() {
 				ing := k.initIngress(projectService, port)
 
-				Expect(ing).To(Equal(&v1beta1.Ingress{
+				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
 					TypeMeta: meta.TypeMeta{
 						Kind:       "Ingress",
-						APIVersion: "extensions/v1beta1",
+						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
 						Name:        projectService.Name,
 						Labels:      configLabels(projectService.Name),
 						Annotations: configAnnotations(projectService),
 					},
-					Spec: v1beta1.IngressSpec{
-						Rules: []v1beta1.IngressRule{
+					Spec: networkingv1beta1.IngressSpec{
+						Rules: []networkingv1beta1.IngressRule{
 							{
-								IngressRuleValue: v1beta1.IngressRuleValue{
-									HTTP: &v1beta1.HTTPIngressRuleValue{
-										Paths: []v1beta1.HTTPIngressPath{
+								IngressRuleValue: networkingv1beta1.IngressRuleValue{
+									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+										Paths: []networkingv1beta1.HTTPIngressPath{
 											{
 												Path: "",
-												Backend: v1beta1.IngressBackend{
+												Backend: networkingv1beta1.IngressBackend{
 													ServiceName: projectService.Name,
 													ServicePort: intstr.IntOrString{
 														IntVal: port,
@@ -763,26 +764,26 @@ var _ = Describe("Transform", func() {
 			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
 				ing := k.initIngress(projectService, port)
 
-				Expect(ing).To(Equal(&v1beta1.Ingress{
+				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
 					TypeMeta: meta.TypeMeta{
 						Kind:       "Ingress",
-						APIVersion: "extensions/v1beta1",
+						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
 						Name:        projectService.Name,
 						Labels:      configLabels(projectService.Name),
 						Annotations: configAnnotations(projectService),
 					},
-					Spec: v1beta1.IngressSpec{
-						Rules: []v1beta1.IngressRule{
+					Spec: networkingv1beta1.IngressSpec{
+						Rules: []networkingv1beta1.IngressRule{
 							{
 								Host: domain,
-								IngressRuleValue: v1beta1.IngressRuleValue{
-									HTTP: &v1beta1.HTTPIngressRuleValue{
-										Paths: []v1beta1.HTTPIngressPath{
+								IngressRuleValue: networkingv1beta1.IngressRuleValue{
+									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+										Paths: []networkingv1beta1.HTTPIngressPath{
 											{
 												Path: "/" + path,
-												Backend: v1beta1.IngressBackend{
+												Backend: networkingv1beta1.IngressBackend{
 													ServiceName: projectService.Name,
 													ServicePort: intstr.IntOrString{
 														IntVal: port,
@@ -814,26 +815,26 @@ var _ = Describe("Transform", func() {
 			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
 				ing := k.initIngress(projectService, port)
 
-				Expect(ing).To(Equal(&v1beta1.Ingress{
+				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
 					TypeMeta: meta.TypeMeta{
 						Kind:       "Ingress",
-						APIVersion: "extensions/v1beta1",
+						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
 						Name:        projectService.Name,
 						Labels:      configLabels(projectService.Name),
 						Annotations: configAnnotations(projectService),
 					},
-					Spec: v1beta1.IngressSpec{
-						Rules: []v1beta1.IngressRule{
+					Spec: networkingv1beta1.IngressSpec{
+						Rules: []networkingv1beta1.IngressRule{
 							{
 								Host: domains[0],
-								IngressRuleValue: v1beta1.IngressRuleValue{
-									HTTP: &v1beta1.HTTPIngressRuleValue{
-										Paths: []v1beta1.HTTPIngressPath{
+								IngressRuleValue: networkingv1beta1.IngressRuleValue{
+									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+										Paths: []networkingv1beta1.HTTPIngressPath{
 											{
 												Path: "",
-												Backend: v1beta1.IngressBackend{
+												Backend: networkingv1beta1.IngressBackend{
 													ServiceName: projectService.Name,
 													ServicePort: intstr.IntOrString{
 														IntVal: port,
@@ -846,12 +847,12 @@ var _ = Describe("Transform", func() {
 							},
 							{
 								Host: domains[1],
-								IngressRuleValue: v1beta1.IngressRuleValue{
-									HTTP: &v1beta1.HTTPIngressRuleValue{
-										Paths: []v1beta1.HTTPIngressPath{
+								IngressRuleValue: networkingv1beta1.IngressRuleValue{
+									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+										Paths: []networkingv1beta1.HTTPIngressPath{
 											{
 												Path: "",
-												Backend: v1beta1.IngressBackend{
+												Backend: networkingv1beta1.IngressBackend{
 													ServiceName: projectService.Name,
 													ServicePort: intstr.IntOrString{
 														IntVal: port,
@@ -879,7 +880,7 @@ var _ = Describe("Transform", func() {
 			It("will include it in the ingress spec", func() {
 				ing := k.initIngress(projectService, port)
 
-				Expect(ing.Spec.TLS).To(Equal([]v1beta1.IngressTLS{
+				Expect(ing.Spec.TLS).To(Equal([]networkingv1beta1.IngressTLS{
 					{
 						Hosts:      []string{"domain.name"},
 						SecretName: "my-tls-secret",
