@@ -1267,8 +1267,9 @@ func (k *Kubernetes) initPod(projectService ProjectService) *v1.Pod {
 			APIVersion: "v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
-			Labels: configLabels(projectService.Name),
+			Name:        projectService.Name,
+			Labels:      configLabels(projectService.Name),
+			Annotations: configAnnotations(projectService),
 		},
 		Spec: k.initPodSpec(projectService),
 	}
