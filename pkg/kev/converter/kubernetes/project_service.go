@@ -23,13 +23,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
+	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -156,13 +156,13 @@ func (p *ProjectService) tlsSecretName() string {
 // getKubernetesUpdateStrategy gets update strategy for compose project service
 // Note: it only supports `parallelism` and `order`
 // @todo add label support for update strategy!
-func (p *ProjectService) getKubernetesUpdateStrategy() *v1beta1.RollingUpdateDeployment {
+func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDeployment {
 	if p.Deploy == nil || p.Deploy.UpdateConfig == nil {
 		return nil
 	}
 
 	config := p.Deploy.UpdateConfig
-	r := v1beta1.RollingUpdateDeployment{}
+	r := v1apps.RollingUpdateDeployment{}
 
 	if config.Order == "stop-first" {
 		if config.Parallelism != nil {
@@ -219,7 +219,7 @@ func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) 
 		if len(storageClass) > 0 {
 			temp.StorageClass = storageClass
 		} else {
-			temp.StorageClass = config.DefaultVolumeClass
+			temp.StorageClass = config.DefaultVolumeStorageClass
 		}
 
 		vols[i] = temp

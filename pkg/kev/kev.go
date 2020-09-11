@@ -21,17 +21,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/appvia/kube-devx/pkg/kev/converter"
-	"github.com/appvia/kube-devx/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/converter"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 )
 
 const (
 	// ManifestName main application manifest
-	ManifestName       = "kev.yaml"
-	defaultEnv         = "dev"
-	configFileTemplate = "docker-compose.kev.%s.yaml"
+	ManifestName = "kev.yaml"
+	defaultEnv   = "dev"
 )
 
 // Init initialises a kev manifest including source compose files and environments.
@@ -115,9 +114,11 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return err
 	}
 
-	if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
-		log.Errorf("Couldn't update skaffold.yaml profiles")
-		return err
+	if len(manifest.Skaffold) > 0 {
+		if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
+			log.Errorf("Couldn't update skaffold.yaml profiles")
+			return err
+		}
 	}
 
 	return nil

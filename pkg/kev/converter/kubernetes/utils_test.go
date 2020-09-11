@@ -19,7 +19,7 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/appvia/kube-devx/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -212,23 +212,6 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	Describe("resetWorkloadAPIVersion", func() {
-		o := &v1beta1.Deployment{
-			TypeMeta: meta.TypeMeta{
-				Kind: "Deployment",
-			},
-		}
-
-		It("sets group, version and kind on a passed in k8s runtime.Object", func() {
-			d := resetWorkloadAPIVersion(o)
-			Expect(d.GetObjectKind().GroupVersionKind()).To(Equal(schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "Deployment",
-			}))
-		})
-	})
-
 	Describe("durationStrToSecondsInt", func() {
 
 		It("parses duration string into number of seconds (int)", func() {
@@ -249,48 +232,6 @@ var _ = Describe("Utils", func() {
 
 			_, err2 := durationStrToSecondsInt("abc")
 			Expect(err2).To(HaveOccurred())
-		})
-	})
-
-	Describe("getEnvsFromFile", func() {
-		var file string
-		var inputFilePaths []string
-
-		BeforeEach(func() {
-			file = "env_file"
-			inputFilePaths = []string{
-				"../../testdata/converter/kubernetes/dummy",
-			}
-		})
-
-		It("loads environment variables defined in the referenced env_file and returns a map", func() {
-			env, err := getEnvsFromFile(file, inputFilePaths)
-			Expect(env).To(HaveKeyWithValue("FOO", "BAR"))
-			Expect(env).To(HaveKeyWithValue("BAR", "BAZ"))
-			Expect(env).To(HaveKeyWithValue("EMPTY", ""))
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		Context("with invalid (compose) input file path", func() {
-			BeforeEach(func() {
-				inputFilePaths = []string{"/wrong/path"}
-			})
-
-			It("returns an error", func() {
-				_, err := getEnvsFromFile(file, inputFilePaths)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("with invalid path to env_file", func() {
-			BeforeEach(func() {
-				file = "wrong_env_file"
-			})
-
-			It("returns an error", func() {
-				_, err := getEnvsFromFile(file, inputFilePaths)
-				Expect(err).To(HaveOccurred())
-			})
 		})
 	})
 
