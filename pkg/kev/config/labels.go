@@ -17,6 +17,9 @@
 package config
 
 const (
+	// LabelComponentEnabled toggles the project service component
+	LabelComponentEnabled = "kev.component.enabled"
+
 	// LabelWorkloadType defines type of workload controller
 	LabelWorkloadType = "kev.workload.type"
 
