@@ -955,3 +955,10 @@ func loadPlacement(constraints []string) map[string]string {
 
 	return placement
 }
+
+// contains returns true of slice of strings contains a given string
+func contains(strs []string, s string) bool {
+	sort.Strings(strs)
+	i := sort.SearchStrings(strs, s)
+	return i < len(strs) && strs[i] == s
+}

@@ -1156,8 +1156,11 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			v = &temp
 		}
 
-		// @step generate EnvVar spec and handle special value reference cases for `secret`, `configmap` or `pod` field
-		// e.g. `secret.my-secret-name.my-key`, `config.my-config-name.config-key`, `pod.metadata.namespace`
+		// @step generate EnvVar spec and handle special value reference cases for `secret`, `configmap`, `pod` field or `container` resource
+		// e.g. `secret.my-secret-name.my-key`,
+		// 		`config.my-config-name.config-key`,
+		// 		`pod.metadata.namespace`,
+		// 		`container.my-container-name.limits.cpu`,
 		// if none of the special cases has been referenced by the env var value then it's going to be treated as literal value
 		parts := strings.Split(*v, ".")
 		switch parts[0] {
@@ -1196,9 +1199,7 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 
 			path := strings.Join(parts[1:], ".")
 
-			sort.Strings(paths)
-			i := sort.SearchStrings(paths, path)
-			if i < len(paths) && paths[i] == path {
+			if contains(paths, path) {
 				envs = append(envs, v1.EnvVar{
 					Name: k,
 					ValueFrom: &v1.EnvVarSource{
@@ -1213,6 +1214,34 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 					"env-var":         k,
 					"path":            path,
 				}, "Unsupported Pod field reference: %s", path)
+			}
+		case "container":
+			// Selects a resource of the container. Only resources limits and requests are currently supported:
+			// 		limits.cpu, limits.memory, limits.ephemeral-storage,
+			//  	requests.cpu, requests.memory and requests.ephemeral-storage
+			resources := []string{
+				"limits.cpu", "limits.memory", "limits.ephemeral-storage",
+				"requests.cpu", "requests.memory", "requests.ephemeral-storage",
+			}
+			resource := strings.Join(parts[2:], ".")
+
+			if contains(resources, resource) {
+				envs = append(envs, v1.EnvVar{
+					Name: k,
+					ValueFrom: &v1.EnvVarSource{
+						ResourceFieldRef: &v1.ResourceFieldSelector{
+							ContainerName: parts[1],
+							Resource:      resource,
+						},
+					},
+				})
+			} else {
+				log.WarnfWithFields(log.Fields{
+					"project-service": projectService.Name,
+					"env-var":         k,
+					"container":       parts[1],
+					"resource":        resource,
+				}, "Unsupported Container resource reference: %s", resource)
 			}
 		default:
 			envs = append(envs, v1.EnvVar{

@@ -1435,6 +1435,57 @@ var _ = Describe("Transform", func() {
 				})
 			})
 
+			Context("as container resource resource field", func() {
+
+				Context("with valid container resource eg. container.{my-container}.limits.cpu", func() {
+					configRef := "container.my-container.limits.cpu"
+
+					BeforeEach(func() {
+						projectService.Environment = composego.MappingWithEquals{
+							"MY_CONFIG": &configRef,
+						}
+					})
+
+					It("expands that env variable to reference container resource field", func() {
+						vars, err := k.configEnvs(projectService)
+
+						Expect(vars[0].ValueFrom).To(Equal(&v1.EnvVarSource{
+							ResourceFieldRef: &v1.ResourceFieldSelector{
+								ContainerName: "my-container",
+								Resource:      "limits.cpu",
+							},
+						}))
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+
+				Context("with not supported resource", func() {
+					configRef := "container.my-container.unsupported.resource"
+
+					BeforeEach(func() {
+						projectService.Environment = composego.MappingWithEquals{
+							"MY_CONFIG": &configRef,
+						}
+					})
+
+					It("doesn't add environment variable with malconfigured reference", func() {
+						vars, err := k.configEnvs(projectService)
+
+						Expect(vars).To(HaveLen(0))
+
+						assertLog(logrus.WarnLevel,
+							"Unsupported Container resource reference: unsupported.resource",
+							map[string]string{
+								"project-service": projectService.Name,
+								"env-var":         "MY_CONFIG",
+								"container":       "my-container",
+								"resource":        "unsupported.resource",
+							})
+
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+			})
 		})
 	})
 
