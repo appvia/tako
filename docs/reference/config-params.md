@@ -605,9 +605,20 @@ This group allows for application component `environment` variables configuratio
 
 ```
 ENV_A: literal-value                      # Literal value
-ENV_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
-ENV_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
+ENV_B: secret.{secret-name}.{secret-key}  # Refer to a value stored in a secret key
+ENV_C: config.{config-name}.{config-key}  # Refer to a value stored in a configmap key
+ENV_D: pod.{field-path}                   # Refer to a value of K8s Pod path for current component pod
 ```
+
+### Supported `pod.{...}` field paths:
+* `metadata.name` - returns current app component K8s Pod name
+* `metadata.namespace` - returns current app component K8s namespace name in which Pod operates
+* `metadata.labels` - return current app component labels
+* `metadata.annotations` - returns current app component annotations
+* `spec.nodeName` - returns current app component K8s cluster node name
+* `spec.serviceAccountName` - returns current app component K8s service account name with which Pod runs
+* `status.hostIP` - returns current app component K8s cluster Node IP address
+* `status.podIP` - returns current app component K8s Pod IP address
 
 > environment:
 ```yaml
@@ -620,5 +631,6 @@ services:
       ENV_VAR_A: another-literal-value              # Literal value
       ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
       ENV_VAR_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
-...
+      ENV_VAR_D: pod.{field-path}                   # Refer to the a value of the K8s workload Pod field path
+                                                    # e.g. `pod.metadata.namespace` to get the k8s namespace name in which pod operates
 ```
