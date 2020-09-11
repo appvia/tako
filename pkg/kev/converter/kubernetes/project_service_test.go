@@ -84,7 +84,7 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("enabled", func() {
 
-		When("component toggle label is set to true", func() {
+		When("component toggle label is set to Truthy value", func() {
 			BeforeEach(func() {
 				labels = composego.Labels{
 					config.LabelComponentEnabled: "true",
@@ -96,7 +96,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		When("component toggle label is set to false", func() {
+		When("component toggle label is set to Falsy value", func() {
 			BeforeEach(func() {
 				labels = composego.Labels{
 					config.LabelComponentEnabled: "false",
@@ -108,7 +108,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		When("component toggle label is set to any string value", func() {
+		When("component toggle label is set to any string value not representing a boolean value (one of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False.)", func() {
 			BeforeEach(func() {
 				labels = composego.Labels{
 					config.LabelComponentEnabled: "anyrandomstring",
