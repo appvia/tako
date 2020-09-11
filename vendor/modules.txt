@@ -180,7 +180,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/api v0.18.4
+# k8s.io/api v0.18.8
 ## explicit
 k8s.io/api/apps/v1
 k8s.io/api/apps/v1beta1
@@ -189,7 +189,7 @@ k8s.io/api/core/v1
 k8s.io/api/extensions/v1beta1
 k8s.io/api/networking/v1
 k8s.io/api/networking/v1beta1
-# k8s.io/apimachinery v0.18.4
+# k8s.io/apimachinery v0.18.8
 ## explicit
 k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/apis/meta/v1
