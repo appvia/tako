@@ -21,6 +21,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml"
@@ -33,6 +35,15 @@ type SkaffoldManifest latest.SkaffoldConfig
 const (
 	// SkaffoldFileName is a file name of skaffold manifest
 	SkaffoldFileName = "skaffold.yaml"
+
+	// ProfileNamePrefix is a prefix to the added skaffold aprofile
+	ProfileNamePrefix = "zz-"
+
+	// EnvProfileNameSuffix is a suffix added to environment specific profile name
+	EnvProfileNameSuffix = "-env"
+
+	// EnvProfileKubeContextSuffix is a suffix added to environment specific profile kube-context
+	EnvProfileKubeContextSuffix = "-context"
 )
 
 var (
@@ -60,6 +71,22 @@ func LoadSkaffoldManifest(path string) (*SkaffoldManifest, error) {
 	return s, yaml.Unmarshal(data, &s)
 }
 
+// AddProfiles injects kev profiles to existing Skaffold manifest
+// Note, if profile name already exists in the skaffold manifest then profile won't be added
+func AddProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldManifest, error) {
+	skaffold, err := LoadSkaffoldManifest(path)
+	if err != nil {
+		return nil, err
+	}
+
+	skaffold.SetProfiles(envs)
+	if includeAdditional {
+		skaffold.AdditionalProfiles()
+	}
+
+	return skaffold, nil
+}
+
 // UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.
 // Note, it'll persist updated profiles in the skaffold.yaml file.
 // Important: This will always persist the last rendered directory as Deploy manifests source!
@@ -85,8 +112,13 @@ func UpdateSkaffoldProfiles(path string, envToOutputPath map[string]string) erro
 // Note, currently the only supported format is native kubernetes manifests
 func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) {
 	for _, p := range s.Profiles {
-		if outputPath, found := envToOutputPath[p.Name]; found {
 
+		// envToOutputPath is keyed by canonical environment name, however
+		// profile names in skaffold manifest might have additional suffix!
+		// We must strip the profile suffix to check the path for that environment.
+		envNameFromProfileName := strings.ReplaceAll(p.Name, EnvProfileNameSuffix, "")
+
+		if outputPath, found := envToOutputPath[envNameFromProfileName]; found {
 			manifestsPath := ""
 			if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
 				manifestsPath = filepath.Join(outputPath, "*")
@@ -123,8 +155,13 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 	}
 
 	for _, e := range envs {
+
+		if s.profileNameExist(e + EnvProfileNameSuffix) {
+			continue
+		}
+
 		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: e,
+			Name: e + EnvProfileNameSuffix,
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
@@ -152,7 +189,7 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 					},
 					// @todo define convention on how kubernetes context are named.
 					// for now simply user environment name with `-context` suffix.
-					KubeContext: e + "-context",
+					KubeContext: e + EnvProfileKubeContextSuffix,
 				},
 				Test:        []*latest.TestCase{},
 				PortForward: []*latest.PortForwardResource{},
@@ -163,28 +200,35 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 
 // AdditionalProfiles adds additional Skaffold profiles
 func (s *SkaffoldManifest) AdditionalProfiles() {
-	s.Profiles = append(s.Profiles, []latest.Profile{
+
+	if !s.profileNameExist(ProfileNamePrefix + "minikube") {
 		// Helper profile for developing in local minikube
-		{
-			Name: "minikube",
+		s.Profiles = append(s.Profiles, latest.Profile{
+			Name: ProfileNamePrefix + "minikube",
 			Activation: []latest.Activation{
 				{
 					KubeContext: "minikube",
 				},
 			},
-		},
+		})
+	}
+
+	if !s.profileNameExist(ProfileNamePrefix + "docker-desktop") {
 		// Helper profile for developing in local docker-desktop
-		{
-			Name: "docker-desktop",
+		s.Profiles = append(s.Profiles, latest.Profile{
+			Name: ProfileNamePrefix + "docker-desktop",
 			Activation: []latest.Activation{
 				{
 					KubeContext: "docker-desktop",
 				},
 			},
-		},
+		})
+	}
+
+	if !s.profileNameExist(ProfileNamePrefix + "ci-build-no-push") {
 		// Helper profile for use in CI pipeline
-		{
-			Name: "ci-build-no-push",
+		s.Profiles = append(s.Profiles, latest.Profile{
+			Name: ProfileNamePrefix + "ci-build-no-push",
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
@@ -196,10 +240,13 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 				// deploy is a no-op intentionally
 				Deploy: latest.DeployConfig{},
 			},
-		},
+		})
+	}
+
+	if !s.profileNameExist(ProfileNamePrefix + "ci-build-and-push") {
 		// Helper profile for use in CI pipeline
-		{
-			Name: "ci-build-and-push",
+		s.Profiles = append(s.Profiles, latest.Profile{
+			Name: ProfileNamePrefix + "ci-build-and-push",
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
@@ -211,8 +258,8 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 				// deploy is a no-op intentionally
 				Deploy: latest.DeployConfig{},
 			},
-		},
-	}...)
+		})
+	}
 }
 
 // WriteTo writes out a skaffold manifest to a writer.
@@ -225,4 +272,28 @@ func (s *SkaffoldManifest) WriteTo(w io.Writer) (n int64, err error) {
 
 	written, err := w.Write(data)
 	return int64(written), err
+}
+
+// ProfilesNames returns sorted list of defined skaffold profile names
+func (s *SkaffoldManifest) ProfilesNames() []string {
+	profiles := []string{}
+	for _, p := range s.Profiles {
+		profiles = append(profiles, p.Name)
+	}
+	sort.Strings(profiles)
+	return profiles
+}
+
+// profileNameExist returns true if skaffold contains profiles of given name
+func (s *SkaffoldManifest) profileNameExist(profileName string) bool {
+	profiles := s.ProfilesNames()
+	i := sort.SearchStrings(profiles, profileName)
+	return i < len(profiles) && profiles[i] == profileName
+}
+
+// sortProfiles sorts manifest's profiles by name
+func (s *SkaffoldManifest) sortProfiles() {
+	sort.Slice(s.Profiles, func(i, j int) bool {
+		return s.Profiles[i].Name < s.Profiles[j].Name
+	})
 }

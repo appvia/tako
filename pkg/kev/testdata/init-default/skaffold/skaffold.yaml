@@ -2,3 +2,16 @@ apiVersion: skaffold/v2beta6
 kind: Config
 metadata:
   name: KevApp
+profiles:
+  - name: dev-env
+    build:
+      tagPolicy:
+        gitCommit:
+          variant: Tags
+      local:
+        push: false
+    deploy:
+      kubectl:
+        manifests:
+          - k8s/dev/*
+      kubeContext: dev-context

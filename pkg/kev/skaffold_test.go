@@ -108,12 +108,29 @@ var _ = Describe("Skaffold", func() {
 			manifest := kev.BaseSkaffoldManifest()
 			manifest.SetProfiles(envs)
 
-			It("falls back to default `dev` environment onlys", func() {
+			It("falls back to default `dev` environment only", func() {
 				Expect(manifest.Profiles).ToNot(BeEmpty())
 				Expect(manifest.Profiles).To(HaveLen(1))
-				Expect(manifest.Profiles[0].Name).To(Equal("dev"))
+				Expect(manifest.Profiles[0].Name).To(Equal("dev-env"))
 			})
 		})
+
+		When("profiles for specified environment already exists in skaffold profiles", func() {
+
+			envs := []string{"dev", "uat", "prod"}
+			manifest := kev.BaseSkaffoldManifest()
+			manifest.SetProfiles(envs)
+
+			BeforeEach(func() {
+				// explicitly triggering another SetProfiles(envs)
+				manifest.SetProfiles(envs)
+			})
+
+			It("doesn't add existing environment profile again", func() {
+				Expect(manifest.Profiles).To(HaveLen(3))
+			})
+		})
+
 	})
 
 	Describe("AdditionalProfiles", func() {
@@ -125,9 +142,9 @@ var _ = Describe("Skaffold", func() {
 			Expect(manifest.Profiles).To(HaveLen(4))
 		})
 
-		It("adds additional profiles to the skaffold manifest", func() {
+		It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
 			Expect(manifest.Profiles).To(ContainElement(latest.Profile{
-				Name: "minikube",
+				Name: "zz-minikube",
 				Activation: []latest.Activation{
 					{
 						KubeContext: "minikube",
@@ -135,12 +152,24 @@ var _ = Describe("Skaffold", func() {
 				},
 			}))
 		})
+
+		When("profile of the same name already exists in skaffold profiles", func() {
+
+			BeforeEach(func() {
+				// explicitly triggering another AdditionalProfiles
+				manifest.AdditionalProfiles()
+			})
+
+			It("doesn't add existing additional profiles again", func() {
+				Expect(manifest.Profiles).To(HaveLen(4))
+			})
+		})
 	})
 
 	Describe("UpdateProfiles", func() {
 		var manifest *kev.SkaffoldManifest
 
-		envName := "testenv"
+		envName := "test"
 
 		BeforeEach(func() {
 			envs := []string{envName}
@@ -185,8 +214,52 @@ var _ = Describe("Skaffold", func() {
 
 			It("profile manifests path should remain unchanged", func() {
 				manifest.UpdateProfiles(envToOutputPath)
-				Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement("k8s/testenv/*"))
+				Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement("k8s/test/*"))
 			})
 		})
+	})
+
+	Describe("AddProfiles", func() {
+		var (
+			skaffoldManifest          *kev.SkaffoldManifest
+			existingSkaffoldPath      string
+			err                       error
+			includeAdditionalProfiles bool
+		)
+
+		BeforeEach(func() {
+			existingSkaffoldPath = "testdata/init-default/skaffold/skaffold.yaml"
+			includeAdditionalProfiles = false
+		})
+
+		When("skaffold profile doesn't already exist in the manifest", func() {
+			// Note, example skaffold already contains dev environment profile
+			BeforeEach(func() {
+				envs := []string{"prod"}
+				skaffoldManifest, err = kev.AddProfiles(existingSkaffoldPath, envs, includeAdditionalProfiles)
+			})
+
+			It("adds that profile to skaffold manifest", func() {
+				Expect(skaffoldManifest.ProfilesNames()).To(ContainElement("dev-env"))
+				Expect(skaffoldManifest.ProfilesNames()).To(ContainElement("prod-env"))
+				Expect(skaffoldManifest.Profiles).To(HaveLen(2))
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
+		When("skaffold profile of given name already exists in the manifest", func() {
+			// Note, example skaffold already contains dev environment profile
+			BeforeEach(func() {
+				envs := []string{"dev"}
+				skaffoldManifest, err = kev.AddProfiles(existingSkaffoldPath, envs, includeAdditionalProfiles)
+			})
+
+			It("doesn't add it to the skaffold manifest", func() {
+				Expect(skaffoldManifest.ProfilesNames()).To(ContainElement("dev-env"))
+				Expect(skaffoldManifest.Profiles).To(HaveLen(1))
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
 	})
 })
