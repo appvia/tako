@@ -645,7 +645,7 @@ ENV_F: container.{container-name}.{resouce-field} # Refer to a value of K8s Cont
 * `status.podIP` - returns current app component K8s Pod IP address
 
 ### Supported `container.{name}.{....}` resource fields:
-*	`limits.cpu`, `limits.memory`, `limits.ephemeral-storage` - return value of selected container `limit` field
+* `limits.cpu`, `limits.memory`, `limits.ephemeral-storage` - return value of selected container `limit` field
 * `requests.cpu`, `requests.memory`, `requests.ephemeral-storage` - return value of selected container `requests` field
 
 > environment:
