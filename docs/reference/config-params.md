@@ -626,11 +626,12 @@ This group allows for application component `environment` variables configuratio
 
 > Environment variables can be configured in the following formats:
 
-```
-ENV_A: literal-value                      # Literal value
-ENV_B: secret.{secret-name}.{secret-key}  # Refer to a value stored in a secret key
-ENV_C: config.{config-name}.{config-key}  # Refer to a value stored in a configmap key
-ENV_D: pod.{field-path}                   # Refer to a value of K8s Pod path for current component pod
+```yaml
+ENV_A: literal-value                              # Literal value
+ENV_B: secret.{secret-name}.{secret-key}          # Refer to a value stored in a secret key
+ENV_C: config.{config-name}.{config-key}          # Refer to a value stored in a configmap key
+ENV_D: pod.{field-path}                           # Refer to a value of K8s Pod path for current component pod
+ENV_F: container.{container-name}.{resouce-field} # Refer to a value of K8s Container reouce field for named container
 ```
 
 ### Supported `pod.{...}` field paths:
@@ -643,6 +644,10 @@ ENV_D: pod.{field-path}                   # Refer to a value of K8s Pod path for
 * `status.hostIP` - returns current app component K8s cluster Node IP address
 * `status.podIP` - returns current app component K8s Pod IP address
 
+### Supported `container.{name}.{....}` resource fields:
+* `limits.cpu`, `limits.memory`, `limits.ephemeral-storage` - return value of selected container `limit` field
+* `requests.cpu`, `requests.memory`, `requests.ephemeral-storage` - return value of selected container `requests` field
+
 > environment:
 ```yaml
 version: 3.7
@@ -651,9 +656,12 @@ services:
     labels:
       ...
     environment:
-      ENV_VAR_A: another-literal-value              # Literal value
-      ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
-      ENV_VAR_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
-      ENV_VAR_D: pod.{field-path}                   # Refer to the a value of the K8s workload Pod field path
-                                                    # e.g. `pod.metadata.namespace` to get the k8s namespace name in which pod operates
+      ENV_VAR_A: another-literal-value                       # Literal value
+      ENV_VAR_B: secret.{secret-name}.{secret-key}           # Refer to the a value stored in a secret key
+      ENV_VAR_C: config.{config-name}.{config-key}           # Refer to the a value stored in a configmap key
+      ENV_VAR_D: pod.{field-path}                            # Refer to the a value of the K8s workload Pod field path
+                                                             # e.g. `pod.metadata.namespace` to get the k8s namespace
+                                                             # name in which pod operates
+      ENV_VAR_F: container.{container-name}.{resource-field} # Refer to the a value of the K8s workload Container resource field
+                                                             # e.g `limits.cpu` to get max CPU allocatable to the container
 ```
