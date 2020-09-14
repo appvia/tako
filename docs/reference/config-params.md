@@ -10,10 +10,33 @@ Kev leverages Docker Compose specification to configure and prepare an applicati
 ### Component level configuration
 
 Configuration is divided into the following groups of parameters:
+* [Component](#component)
 * [Workload](#workload)
 * [Service](#service)
 * [Volumes](#volumes)
 * [Environment](#environment)
+
+# Component
+
+This configuration group contains application composition related settings. Configuration parameters can be individually defined via set of labels (listed below) for each application stack component.
+
+## kev.component.enabled
+
+Defines whether a component is enabled or disabled. All application components are enabled by default.
+
+### Default: `true`
+
+### Possible options: `true`, `false`.
+
+> kev.workload.image-pull-policy:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.component.enabled: false
+...
+```
 
 # Workload
 

@@ -234,6 +234,16 @@ var _ = Describe("Transform", func() {
 				},
 			}))
 		})
+
+		When("project service name is longer than 63 characters", func() {
+			BeforeEach(func() {
+				projectService.Name = strings.Repeat("a", 100)
+			})
+
+			It("trims down service name to max 63 chars as per DNS label standard RFC-1123", func() {
+				Expect(k.initSvc(projectService).Name).To(HaveLen(63))
+			})
+		})
 	})
 
 	Describe("initConfigMapFromFileOrDir", func() {

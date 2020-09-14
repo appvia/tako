@@ -82,6 +82,51 @@ var _ = Describe("ProjectService", func() {
 		}
 	})
 
+	Describe("enabled", func() {
+
+		When("component toggle label is set to Truthy value", func() {
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelComponentEnabled: "true",
+				}
+			})
+
+			It("returns true", func() {
+				Expect(projectService.enabled()).To(BeTrue())
+			})
+		})
+
+		When("component toggle label is set to Falsy value", func() {
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelComponentEnabled: "false",
+				}
+			})
+
+			It("returns false", func() {
+				Expect(projectService.enabled()).To(BeFalse())
+			})
+		})
+
+		When("component toggle label is set to any string value not representing a boolean value (one of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False.)", func() {
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelComponentEnabled: "anyrandomstring",
+				}
+			})
+
+			It("returns true", func() {
+				Expect(projectService.enabled()).To(BeTrue())
+			})
+		})
+
+		When("component toggle label is not specified", func() {
+			It("defaults to true if no label", func() {
+				Expect(projectService.enabled()).To(BeTrue())
+			})
+		})
+	})
+
 	Describe("replicas", func() {
 
 		replicas := 10
