@@ -88,13 +88,13 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		}
 
 		// @step normalise project service name
-		if normalizeServiceNames(projectService.Name) != projectService.Name {
+		if rfc1123dns(projectService.Name) != projectService.Name {
 			log.DebugfWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Compose service name normalised to %q",
-				normalizeServiceNames(projectService.Name))
+				rfc1123dns(projectService.Name))
 
-			projectService.Name = normalizeServiceNames(projectService.Name)
+			projectService.Name = rfc1123dns(projectService.Name)
 		}
 
 		// @step we're not concerned about building & publishing images yet,
@@ -305,7 +305,7 @@ func (k *Kubernetes) initSvc(projectService ProjectService) *v1.Service {
 			APIVersion: "v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
+			Name:   rfc1123label(projectService.Name),
 			Labels: configLabels(projectService.Name),
 		},
 		Spec: v1.ServiceSpec{
@@ -1461,7 +1461,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step fillTemplate function will fill the pod template with the values calculated from config
 	fillTemplate := func(template *v1.PodTemplateSpec) error {
 		if len(projectService.ContainerName) > 0 {
-			template.Spec.Containers[0].Name = formatContainerName(projectService.ContainerName)
+			template.Spec.Containers[0].Name = rfc1123dns(projectService.ContainerName)
 		}
 		template.Spec.Containers[0].Env = envs
 		template.Spec.Containers[0].Command = projectService.Entrypoint
