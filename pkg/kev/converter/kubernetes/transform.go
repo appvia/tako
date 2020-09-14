@@ -1156,37 +1156,65 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			v = &temp
 		}
 
-		// @step check whether env var value references secret or configmap
-		// e.g. `secret.my-secret-name.my-key`, `config.my-config-name.config-key`
+		// @step generate EnvVar spec and handle special value reference cases for `secret`, `configmap` or `pod` field
+		// e.g. `secret.my-secret-name.my-key`, `config.my-config-name.config-key`, `pod.metadata.namespace`
+		// if none of the special cases has been referenced by the env var value then it's going to be treated as literal value
 		parts := strings.Split(*v, ".")
-		if len(parts) == 3 {
-			switch parts[0] {
-			case "secret":
-				envs = append(envs, v1.EnvVar{
-					Name: k,
-					ValueFrom: &v1.EnvVarSource{
-						SecretKeyRef: &v1.SecretKeySelector{
-							LocalObjectReference: v1.LocalObjectReference{
-								Name: parts[1],
-							},
-							Key: parts[2],
+		switch parts[0] {
+		case "secret":
+			envs = append(envs, v1.EnvVar{
+				Name: k,
+				ValueFrom: &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: parts[1],
 						},
+						Key: parts[2],
 					},
-				})
-			case "config":
-				envs = append(envs, v1.EnvVar{
-					Name: k,
-					ValueFrom: &v1.EnvVarSource{
-						ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-							LocalObjectReference: v1.LocalObjectReference{
-								Name: parts[1],
-							},
-							Key: parts[2],
+				},
+			})
+		case "config":
+			envs = append(envs, v1.EnvVar{
+				Name: k,
+				ValueFrom: &v1.EnvVarSource{
+					ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: parts[1],
 						},
+						Key: parts[2],
 					},
-				})
+				},
+			})
+		case "pod":
+			// Selects a field of the pod
+			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.annotations,
+			// 					spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+			paths := []string{
+				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.annotations",
+				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
 			}
-		} else {
+
+			path := strings.Join(parts[1:], ".")
+
+			sort.Strings(paths)
+			i := sort.SearchStrings(paths, path)
+			if i < len(paths) && paths[i] == path {
+				envs = append(envs, v1.EnvVar{
+					Name: k,
+					ValueFrom: &v1.EnvVarSource{
+						FieldRef: &v1.ObjectFieldSelector{
+							FieldPath: path,
+						},
+					},
+				})
+			} else {
+				log.WarnfWithFields(log.Fields{
+					"project-service": projectService.Name,
+					"env-var":         k,
+					"path":            path,
+				}, "Unsupported Pod field reference: %s", path)
+			}
+		default:
 			envs = append(envs, v1.EnvVar{
 				Name:  k,
 				Value: *v,

@@ -1385,6 +1385,56 @@ var _ = Describe("Transform", func() {
 				})
 			})
 
+			Context("as pod field path", func() {
+
+				Context("with valid pod field path eg. pod.metadata.namespace", func() {
+					configRef := "pod.metadata.namespace"
+
+					BeforeEach(func() {
+						projectService.Environment = composego.MappingWithEquals{
+							"MY_CONFIG": &configRef,
+						}
+					})
+
+					It("expands that env variable to reference pod field path", func() {
+						vars, err := k.configEnvs(projectService)
+
+						Expect(vars[0].ValueFrom).To(Equal(&v1.EnvVarSource{
+							FieldRef: &v1.ObjectFieldSelector{
+								FieldPath: "metadata.namespace",
+							},
+						}))
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+
+				Context("with not supported path", func() {
+					configRef := "pod.unsupported.path"
+
+					BeforeEach(func() {
+						projectService.Environment = composego.MappingWithEquals{
+							"MY_CONFIG": &configRef,
+						}
+					})
+
+					It("doesn't add environment variable with malconfigured reference", func() {
+						vars, err := k.configEnvs(projectService)
+
+						Expect(vars).To(HaveLen(0))
+
+						assertLog(logrus.WarnLevel,
+							"Unsupported Pod field reference: unsupported.path",
+							map[string]string{
+								"project-service": projectService.Name,
+								"env-var":         "MY_CONFIG",
+								"path":            "unsupported.path",
+							})
+
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+			})
+
 		})
 	})
 
