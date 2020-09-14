@@ -34,6 +34,23 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// enabled returns Bool telling Kev whether app component is enabled/disabled
+func (p *ProjectService) enabled() bool {
+	if val, ok := p.Labels[config.LabelComponentEnabled]; ok {
+		if v, err := strconv.ParseBool(val); err == nil {
+			return v
+		}
+
+		log.WarnfWithFields(log.Fields{
+			"project-service": p.Name,
+			"enabled":         val,
+		}, "Unable to extract Bool value from %s label. Component will remain enabled.",
+			config.LabelComponentEnabled)
+	}
+
+	return true
+}
+
 // replicas returns number of replicas for given project service
 func (p *ProjectService) replicas() int {
 	if val, ok := p.Labels[config.LabelWorkloadReplicas]; ok {

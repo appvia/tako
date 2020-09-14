@@ -82,6 +82,11 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 		projectService := ProjectService(pSvc)
 
+		// @step skip disabled services
+		if !projectService.enabled() {
+			continue
+		}
+
 		// @step normalise project service name
 		if rfc1123dns(projectService.Name) != projectService.Name {
 			log.DebugfWithFields(log.Fields{
