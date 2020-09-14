@@ -24,25 +24,16 @@ import (
 
 var _ = Describe("PrepareForSkaffold", func() {
 	var (
-		manifest         *kev.Manifest
 		skaffoldManifest *kev.SkaffoldManifest
 		err              error
-		skaffoldPath     string
 	)
 
 	JustBeforeEach(func() {
-		manifest = &kev.Manifest{}
-		skaffoldPath = "some/path/skaffold.yaml"
-		skaffoldManifest, err = kev.PrepareForSkaffold(manifest, skaffoldPath, []string{})
+		skaffoldManifest, err = kev.PrepareForSkaffold([]string{})
 	})
 
 	It("generates skaffold config for the project", func() {
 		Expect(skaffoldManifest).ToNot(BeNil())
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	It("sets kev's manifest skaffold attribute with a correct path", func() {
-		Expect(manifest.Skaffold).To(Equal(skaffoldPath))
 		Expect(err).ToNot(HaveOccurred())
 	})
 
