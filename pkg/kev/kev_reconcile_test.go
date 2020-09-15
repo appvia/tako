@@ -215,6 +215,10 @@ var _ = Describe("Reconcile", func() {
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
 
+				It("should not include any env vars", func() {
+					Expect(env.GetServices()[1].Environment).To(HaveLen(0))
+				})
+
 				It("should create a change summary", func() {
 					Expect(reporter.String()).To(ContainSubstring(env.Name))
 					Expect(reporter.String()).To(ContainSubstring("added"))

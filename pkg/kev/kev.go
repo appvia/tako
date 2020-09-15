@@ -19,7 +19,6 @@ package kev
 import (
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
@@ -49,14 +48,11 @@ func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 }
 
 // PrepareForSkaffold initialises a skaffold manifest for kev project.
-// It'll also set the Skaffold field in kev manifest with skaffold file path passed as argument.
-func PrepareForSkaffold(manifest *Manifest, skaffoldPath string, envs []string) (*SkaffoldManifest, error) {
+func PrepareForSkaffold(envs []string) (*SkaffoldManifest, error) {
 	s, err := NewSkaffoldManifest(envs)
 	if err != nil {
 		return nil, err
 	}
-
-	manifest.Skaffold = skaffoldPath
 
 	return s, nil
 }
@@ -115,7 +111,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	}
 
 	if len(manifest.Skaffold) > 0 {
-		if err := UpdateSkaffoldProfiles(filepath.Join(workDir, manifest.Skaffold), outputPaths); err != nil {
+		if err := UpdateSkaffoldProfiles(manifest.Skaffold, outputPaths); err != nil {
 			log.Errorf("Couldn't update skaffold.yaml profiles")
 			return err
 		}

@@ -55,6 +55,7 @@ var initCmd = &cobra.Command{
 type skippableFile struct {
 	FileName string
 	Skipped  bool
+	Updated  bool
 }
 
 func init() {
@@ -118,25 +119,11 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	if skaffold {
 		skaffoldManifestPath := path.Join(workingDirAbs, kev.SkaffoldFileName)
 
-		skaffoldManifest, err := kev.PrepareForSkaffold(manifest, skaffoldManifestPath, envs)
-		if err != nil {
+		// set skaffold path in kev manifest
+		manifest.Skaffold = kev.SkaffoldFileName
+
+		if err := createOrUpdateSkaffoldManifest(skaffoldManifestPath, envs, &results); err != nil {
 			return displayInitError(err)
-		}
-
-		// don't override existing skaffold.yaml
-		if manifestExistsForPath(skaffoldManifestPath) {
-			results = append(results, skippableFile{
-				FileName: kev.SkaffoldFileName,
-				Skipped:  true,
-			})
-		} else if skaffoldManifest != nil {
-			if err := writeTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
-				return displayInitError(err)
-			}
-
-			results = append(results, skippableFile{
-				FileName: kev.SkaffoldFileName,
-			})
 		}
 	}
 
@@ -179,9 +166,52 @@ func displayInitSuccess(w io.Writer, files []skippableFile) {
 	for _, file := range files {
 		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
 
+		if file.Updated {
+			msg = fmt.Sprintf(" → Updating %s ... Done\n", file.FileName)
+		}
+
 		if file.Skipped {
 			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", file.FileName)
 		}
 		_, _ = w.Write([]byte(msg))
 	}
+}
+
+func createOrUpdateSkaffoldManifest(path string, envs []string, results *[]skippableFile) error {
+
+	if manifestExistsForPath(path) {
+		// skaffold manifest already present - add additional profiles to it!
+		// Note: kev will skip profiles with names matching those of existing
+		// profile names defined in skaffold to avoid profile "hijack".
+
+		updatedSkaffold, err := kev.AddProfiles(path, envs, true)
+		if err != nil {
+			return displayInitError(err)
+		}
+		if err := writeTo(path, updatedSkaffold); err != nil {
+			return displayInitError(err)
+		}
+
+		*results = append(*results, skippableFile{
+			FileName: kev.SkaffoldFileName,
+			Updated:  true,
+		})
+
+	} else {
+
+		skaffoldManifest, err := kev.PrepareForSkaffold(envs)
+		if err != nil {
+			return displayInitError(err)
+		}
+
+		if err := writeTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
+			return displayInitError(err)
+		}
+
+		*results = append(*results, skippableFile{
+			FileName: kev.SkaffoldFileName,
+		})
+	}
+
+	return nil
 }

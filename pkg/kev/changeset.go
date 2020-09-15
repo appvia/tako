@@ -77,7 +77,7 @@ func detectServicesCreate(dst *composeOverlay, src *composeOverlay, cset *change
 		if !dstSvcSet[srcSvc.Name] {
 			cset.services = append(cset.services, change{
 				Type:  CREATE,
-				Value: srcSvc,
+				Value: srcSvc.minusEnvVars(),
 			})
 		}
 	}

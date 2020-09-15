@@ -82,14 +82,19 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 		projectService := ProjectService(pSvc)
 
+		// @step skip disabled services
+		if !projectService.enabled() {
+			continue
+		}
+
 		// @step normalise project service name
-		if normalizeServiceNames(projectService.Name) != projectService.Name {
+		if rfc1123dns(projectService.Name) != projectService.Name {
 			log.DebugfWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Compose service name normalised to %q",
-				normalizeServiceNames(projectService.Name))
+				rfc1123dns(projectService.Name))
 
-			projectService.Name = normalizeServiceNames(projectService.Name)
+			projectService.Name = rfc1123dns(projectService.Name)
 		}
 
 		// @step we're not concerned about building & publishing images yet,
@@ -300,7 +305,7 @@ func (k *Kubernetes) initSvc(projectService ProjectService) *v1.Service {
 			APIVersion: "v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
+			Name:   rfc1123label(projectService.Name),
 			Labels: configLabels(projectService.Name),
 		},
 		Spec: v1.ServiceSpec{
@@ -1151,37 +1156,94 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			v = &temp
 		}
 
-		// @step check whether env var value references secret or configmap
-		// e.g. `secret.my-secret-name.my-key`, `config.my-config-name.config-key`
+		// @step generate EnvVar spec and handle special value reference cases for `secret`, `configmap`, `pod` field or `container` resource
+		// e.g. `secret.my-secret-name.my-key`,
+		// 		`config.my-config-name.config-key`,
+		// 		`pod.metadata.namespace`,
+		// 		`container.my-container-name.limits.cpu`,
+		// if none of the special cases has been referenced by the env var value then it's going to be treated as literal value
 		parts := strings.Split(*v, ".")
-		if len(parts) == 3 {
-			switch parts[0] {
-			case "secret":
-				envs = append(envs, v1.EnvVar{
-					Name: k,
-					ValueFrom: &v1.EnvVarSource{
-						SecretKeyRef: &v1.SecretKeySelector{
-							LocalObjectReference: v1.LocalObjectReference{
-								Name: parts[1],
-							},
-							Key: parts[2],
+		switch parts[0] {
+		case "secret":
+			envs = append(envs, v1.EnvVar{
+				Name: k,
+				ValueFrom: &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: parts[1],
 						},
+						Key: parts[2],
 					},
-				})
-			case "config":
-				envs = append(envs, v1.EnvVar{
-					Name: k,
-					ValueFrom: &v1.EnvVarSource{
-						ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-							LocalObjectReference: v1.LocalObjectReference{
-								Name: parts[1],
-							},
-							Key: parts[2],
+				},
+			})
+		case "config":
+			envs = append(envs, v1.EnvVar{
+				Name: k,
+				ValueFrom: &v1.EnvVarSource{
+					ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: parts[1],
 						},
+						Key: parts[2],
 					},
-				})
+				},
+			})
+		case "pod":
+			// Selects a field of the pod
+			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.annotations,
+			// 					spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+			paths := []string{
+				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.annotations",
+				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
 			}
-		} else {
+
+			path := strings.Join(parts[1:], ".")
+
+			if contains(paths, path) {
+				envs = append(envs, v1.EnvVar{
+					Name: k,
+					ValueFrom: &v1.EnvVarSource{
+						FieldRef: &v1.ObjectFieldSelector{
+							FieldPath: path,
+						},
+					},
+				})
+			} else {
+				log.WarnfWithFields(log.Fields{
+					"project-service": projectService.Name,
+					"env-var":         k,
+					"path":            path,
+				}, "Unsupported Pod field reference: %s", path)
+			}
+		case "container":
+			// Selects a resource of the container. Only resources limits and requests are currently supported:
+			// 		limits.cpu, limits.memory, limits.ephemeral-storage,
+			//  	requests.cpu, requests.memory and requests.ephemeral-storage
+			resources := []string{
+				"limits.cpu", "limits.memory", "limits.ephemeral-storage",
+				"requests.cpu", "requests.memory", "requests.ephemeral-storage",
+			}
+			resource := strings.Join(parts[2:], ".")
+
+			if contains(resources, resource) {
+				envs = append(envs, v1.EnvVar{
+					Name: k,
+					ValueFrom: &v1.EnvVarSource{
+						ResourceFieldRef: &v1.ResourceFieldSelector{
+							ContainerName: parts[1],
+							Resource:      resource,
+						},
+					},
+				})
+			} else {
+				log.WarnfWithFields(log.Fields{
+					"project-service": projectService.Name,
+					"env-var":         k,
+					"container":       parts[1],
+					"resource":        resource,
+				}, "Unsupported Container resource reference: %s", resource)
+			}
+		default:
 			envs = append(envs, v1.EnvVar{
 				Name:  k,
 				Value: *v,
@@ -1456,7 +1518,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step fillTemplate function will fill the pod template with the values calculated from config
 	fillTemplate := func(template *v1.PodTemplateSpec) error {
 		if len(projectService.ContainerName) > 0 {
-			template.Spec.Containers[0].Name = formatContainerName(projectService.ContainerName)
+			template.Spec.Containers[0].Name = rfc1123dns(projectService.ContainerName)
 		}
 		template.Spec.Containers[0].Env = envs
 		template.Spec.Containers[0].Command = projectService.Entrypoint

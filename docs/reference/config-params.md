@@ -10,10 +10,33 @@ Kev leverages Docker Compose specification to configure and prepare an applicati
 ### Component level configuration
 
 Configuration is divided into the following groups of parameters:
+* [Component](#component)
 * [Workload](#workload)
 * [Service](#service)
 * [Volumes](#volumes)
 * [Environment](#environment)
+
+# Component
+
+This configuration group contains application composition related settings. Configuration parameters can be individually defined via set of labels (listed below) for each application stack component.
+
+## kev.component.enabled
+
+Defines whether a component is enabled or disabled. All application components are enabled by default.
+
+### Default: `true`
+
+### Possible options: `true`, `false`.
+
+> kev.workload.image-pull-policy:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.component.enabled: false
+...
+```
 
 # Workload
 
@@ -603,11 +626,27 @@ This group allows for application component `environment` variables configuratio
 
 > Environment variables can be configured in the following formats:
 
+```yaml
+ENV_A: literal-value                              # Literal value
+ENV_B: secret.{secret-name}.{secret-key}          # Refer to a value stored in a secret key
+ENV_C: config.{config-name}.{config-key}          # Refer to a value stored in a configmap key
+ENV_D: pod.{field-path}                           # Refer to a value of K8s Pod path for current component pod
+ENV_F: container.{container-name}.{resouce-field} # Refer to a value of K8s Container reouce field for named container
 ```
-ENV_A: literal-value                      # Literal value
-ENV_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
-ENV_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
-```
+
+### Supported `pod.{...}` field paths:
+* `metadata.name` - returns current app component K8s Pod name
+* `metadata.namespace` - returns current app component K8s namespace name in which Pod operates
+* `metadata.labels` - return current app component labels
+* `metadata.annotations` - returns current app component annotations
+* `spec.nodeName` - returns current app component K8s cluster node name
+* `spec.serviceAccountName` - returns current app component K8s service account name with which Pod runs
+* `status.hostIP` - returns current app component K8s cluster Node IP address
+* `status.podIP` - returns current app component K8s Pod IP address
+
+### Supported `container.{name}.{....}` resource fields:
+* `limits.cpu`, `limits.memory`, `limits.ephemeral-storage` - return value of selected container `limit` field
+* `requests.cpu`, `requests.memory`, `requests.ephemeral-storage` - return value of selected container `requests` field
 
 > environment:
 ```yaml
@@ -617,8 +656,12 @@ services:
     labels:
       ...
     environment:
-      ENV_VAR_A: another-literal-value              # Literal value
-      ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to the a value stored in a secret key
-      ENV_VAR_C: config.{config-name}.{config-key}  # Refer to the a value stored in a configmap key
-...
+      ENV_VAR_A: another-literal-value                       # Literal value
+      ENV_VAR_B: secret.{secret-name}.{secret-key}           # Refer to the a value stored in a secret key
+      ENV_VAR_C: config.{config-name}.{config-key}           # Refer to the a value stored in a configmap key
+      ENV_VAR_D: pod.{field-path}                            # Refer to the a value of the K8s workload Pod field path
+                                                             # e.g. `pod.metadata.namespace` to get the k8s namespace
+                                                             # name in which pod operates
+      ENV_VAR_F: container.{container-name}.{resource-field} # Refer to the a value of the K8s workload Container resource field
+                                                             # e.g `limits.cpu` to get max CPU allocatable to the container
 ```

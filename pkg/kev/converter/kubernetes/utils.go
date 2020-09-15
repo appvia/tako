@@ -525,13 +525,20 @@ func getContentFromFile(file string) (string, error) {
 	return string(fileBytes), nil
 }
 
+// rfc1123
+// NOTE: only accept alphanumeric chars (specifically excluding dots)
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+func rfc1123(s string) string {
+	re := regexp.MustCompile("[^A-Za-z0-9]+")
+	return strings.Trim(strings.ToLower(re.ReplaceAllString(s, "-")), "-")
+}
+
 // rfc1123dns
 // https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
 func rfc1123dns(s string) string {
-	re := regexp.MustCompile("[^A-Za-z0-9.]+")
-	s = strings.ToLower(re.ReplaceAllString(s, "-"))
+	s = rfc1123(s)
 	if len(s) > 253 {
-		return s[0:252]
+		return s[0:253]
 	}
 	return s
 }
@@ -539,10 +546,9 @@ func rfc1123dns(s string) string {
 // rfc1123label
 // https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
 func rfc1123label(s string) string {
-	re := regexp.MustCompile("[^A-Za-z0-9]+")
-	s = strings.ToLower(re.ReplaceAllString(s, "-"))
+	s = rfc1123(s)
 	if len(s) > 63 {
-		return s[0:62]
+		return s[0:63]
 	}
 	return s
 }
@@ -556,26 +562,7 @@ func formatFileName(name string) string {
 	_, file := path.Split(name)
 
 	// Make it DNS-1123 compliant for Kubernetes
-	return strings.ToLower(strings.Replace(file, "_", "-", -1))
-}
-
-// normalizeServiceNames normalises service name
-// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L127
-func normalizeServiceNames(svcName string) string {
-	re := regexp.MustCompile("[._]")
-	return strings.ToLower(re.ReplaceAllString(svcName, "-"))
-}
-
-// normalizeVolumes normalises volume name
-// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L132
-func normalizeVolumes(svcName string) string {
-	return strings.Replace(svcName, "_", "-", -1)
-}
-
-//formatContainerName format Container name
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L803
-func formatContainerName(name string) string {
-	return strings.Replace(name, "_", "-", -1)
+	return rfc1123(file)
 }
 
 // configLabels configures selector label for project service passed
@@ -670,7 +657,7 @@ func configLabelsWithNetwork(projectService ProjectService) map[string]string {
 // findByName selects compose project service by name
 func findByName(projectServices composego.Services, name string) *composego.ServiceConfig {
 	for _, ps := range projectServices {
-		if normalizeServiceNames(ps.Name) == name {
+		if rfc1123dns(ps.Name) == name {
 			return &ps
 		}
 	}
@@ -772,7 +759,7 @@ func parseVols(volNames []string, svcName string) ([]Volumes, error) {
 			return nil, err
 		}
 
-		v.VolumeName = normalizeVolumes(v.VolumeName)
+		v.VolumeName = rfc1123(v.VolumeName)
 		v.SvcName = svcName
 		v.MountPath = fmt.Sprintf("%s:%s", v.Host, v.Container)
 		v.PVCName = fmt.Sprintf("%s-claim%d", v.SvcName, i)
@@ -967,4 +954,11 @@ func loadPlacement(constraints []string) map[string]string {
 	}
 
 	return placement
+}
+
+// contains returns true of slice of strings contains a given string
+func contains(strs []string, s string) bool {
+	sort.Strings(strs)
+	i := sort.SearchStrings(strs, s)
+	return i < len(strs) && strs[i] == s
 }
