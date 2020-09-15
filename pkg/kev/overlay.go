@@ -67,6 +67,15 @@ func (sc ServiceConfig) GetLabels() map[string]string {
 	return sc.Labels
 }
 
+// minusEnvVars returns a copy of the ServiceConfig with blank env vars
+func (sc ServiceConfig) minusEnvVars() ServiceConfig {
+	return ServiceConfig{
+		Name:        sc.Name,
+		Labels:      sc.Labels,
+		Environment: map[string]*string{},
+	}
+}
+
 // diff detects changes between an overlay against another overlay.
 func (o *composeOverlay) diff(other *composeOverlay) changeset {
 	return newChangeset(other, o)
