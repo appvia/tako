@@ -147,11 +147,17 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 		envVarsFromNilToBlankInService(s)
 		services = append(services, ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment})
 	}
+	volumes := Volumes{}
+	for _, v := range p.VolumeNames() {
+		volumes[v] = VolumeConfig{
+			Labels: p.Volumes[v].Labels,
+		}
+	}
 	e.overlay = &composeOverlay{
 		Version:  p.GetVersion(),
 		Services: services,
+		Volumes:  volumes,
 	}
-	extractVolumesLabels(p, e.overlay)
 	return e, nil
 }
 
