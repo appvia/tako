@@ -17,7 +17,6 @@
 package kev
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -27,85 +26,6 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 )
-
-// MarshalYAML makes Services implement yaml.Marshaller.
-func (s Services) MarshalYAML() (interface{}, error) {
-	services := map[string]ServiceConfig{}
-	for _, service := range s {
-		services[service.Name] = service
-	}
-	return services, nil
-}
-
-// MarshalJSON makes Services implement json.Marshaler.
-func (s Services) MarshalJSON() ([]byte, error) {
-	data, err := s.MarshalYAML()
-	if err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(data, "", "  ")
-}
-
-// Map converts services to a map.
-func (s Services) Map() map[string]ServiceConfig {
-	out := map[string]ServiceConfig{}
-	for _, service := range s {
-		out[service.Name] = service
-	}
-	return out
-}
-
-// Set converts services to a set.
-func (s Services) Set() map[string]bool {
-	out := map[string]bool{}
-	for _, service := range s {
-		out[service.Name] = true
-	}
-	return out
-}
-
-// GetLabels gets a service's labels
-func (sc ServiceConfig) GetLabels() map[string]string {
-	return sc.Labels
-}
-
-// minusEnvVars returns a copy of the ServiceConfig with blank env vars
-func (sc ServiceConfig) minusEnvVars() ServiceConfig {
-	return ServiceConfig{
-		Name:        sc.Name,
-		Labels:      sc.Labels,
-		Environment: map[string]*string{},
-	}
-}
-
-// toBaseLabels returns a copy of the ServiceConfig with only condensed base service labels
-func (sc ServiceConfig) toBaseLabels(baseLabels []string) ServiceConfig {
-	for key := range sc.GetLabels() {
-		if !contains(baseLabels, key) {
-			delete(sc.Labels, key)
-		}
-	}
-
-	return ServiceConfig{
-		Name:        sc.Name,
-		Labels:      sc.Labels,
-		Environment: sc.Environment,
-	}
-}
-
-// toBaseLabels returns a copy of the VolumeConfig with only condensed base volume labels
-func (vc VolumeConfig) toBaseLabels(baseLabels []string) VolumeConfig {
-	for key := range vc.Labels {
-		if !contains(baseLabels, key) {
-			delete(vc.Labels, key)
-		}
-	}
-
-	return VolumeConfig{
-		Name:   vc.Name,
-		Labels: vc.Labels,
-	}
-}
 
 // getService retrieves the specific service by name from the overlay's services.
 func (o *composeOverlay) getService(name string) (ServiceConfig, error) {
@@ -127,23 +47,23 @@ func (o *composeOverlay) getVolume(name string) (VolumeConfig, error) {
 	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
-// toBaseLabels returns a copy of the composeOverlay with
-// condensed base labels for services and volumes
+// toBaseLabels returns a copy of the composeOverlay with condensed base labels for services and volumes.
 func (o *composeOverlay) toBaseLabels() *composeOverlay {
 	var services Services
 	volumes := Volumes{}
 
 	for _, svcConfig := range o.Services {
-		services = append(services, svcConfig.toBaseLabels(config.BaseServiceLabels))
+		services = append(services, svcConfig.condenseLabels(config.BaseServiceLabels))
 	}
 	for key, volConfig := range o.Volumes {
-		volumes[key] = volConfig.toBaseLabels(config.BaseVolumeLabels)
+		volumes[key] = volConfig.condenseLabels(config.BaseVolumeLabels)
 	}
 
 	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
 }
 
-func (o *composeOverlay) toBaseLabelsMatching(other *composeOverlay) *composeOverlay {
+// toLabelsMatching condenses an overlay's labels to the same label keys found in the provided overlay.
+func (o *composeOverlay) toLabelsMatching(other *composeOverlay) *composeOverlay {
 	services := o.servicesWithLabelsMatching(other)
 	volumes := o.volumesWithLabelsMatching(other)
 	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
@@ -157,7 +77,7 @@ func (o *composeOverlay) servicesWithLabelsMatching(other *composeOverlay) Servi
 			services = append(services, svc)
 			continue
 		}
-		services = append(services, svc.toBaseLabels(keys(otherSvc.Labels)))
+		services = append(services, svc.condenseLabels(keys(otherSvc.Labels)))
 	}
 	return services
 }
@@ -170,18 +90,20 @@ func (o *composeOverlay) volumesWithLabelsMatching(other *composeOverlay) Volume
 			volumes[volKey] = volConfig
 			continue
 		}
-		volumes[volKey] = volConfig.toBaseLabels(keys(otherVol.Labels))
+		volumes[volKey] = volConfig.condenseLabels(keys(otherVol.Labels))
 	}
 	return volumes
 }
 
-func (o *composeOverlay) toExpandedLabelsMatching(other *composeOverlay) *composeOverlay {
-	services := o.servicesWithExpandedLabelsMatching(other)
-	volumes := o.volumesWithExpandedLabelsMatching(other)
+// expandLabelsFrom returns a copy of the compose overlay
+// filling in gaps in services and volumes labels (keys and values) using the provided overlay.
+func (o *composeOverlay) expandLabelsFrom(other *composeOverlay) *composeOverlay {
+	services := o.servicesLabelsExpandedFrom(other)
+	volumes := o.volumesLabelsExpandedFrom(other)
 	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
 }
 
-func (o *composeOverlay) servicesWithExpandedLabelsMatching(other *composeOverlay) Services {
+func (o *composeOverlay) servicesLabelsExpandedFrom(other *composeOverlay) Services {
 	var out Services
 	for _, otherSvc := range other.Services {
 		dstSvc, err := o.getService(otherSvc.Name)
@@ -198,7 +120,7 @@ func (o *composeOverlay) servicesWithExpandedLabelsMatching(other *composeOverla
 	return out
 }
 
-func (o *composeOverlay) volumesWithExpandedLabelsMatching(other *composeOverlay) Volumes {
+func (o *composeOverlay) volumesLabelsExpandedFrom(other *composeOverlay) Volumes {
 	out := Volumes{}
 	for otherVolKey, otherVolConfig := range other.Volumes {
 		dstVol, err := o.getVolume(otherVolKey)

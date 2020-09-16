@@ -164,7 +164,7 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) error {
 	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
 
-	labelsMatching := overlay.toBaseLabelsMatching(e.overlay)
+	labelsMatching := overlay.toLabelsMatching(e.overlay)
 	cset := labelsMatching.diff(e.overlay)
 	if cset.HasNoPatches() {
 		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
@@ -180,7 +180,7 @@ func (e *Environment) patch(cset changeset, reporter io.Writer) {
 }
 
 func (e *Environment) prepareForMergeUsing(overlay *composeOverlay) {
-	e.overlay = e.overlay.toExpandedLabelsMatching(overlay)
+	e.overlay = e.overlay.expandLabelsFrom(overlay)
 	e.overlay.overrideServiceTypeFrom(overlay)
 }
 
