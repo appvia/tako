@@ -104,7 +104,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	}
 
 	c := converter.Factory(format)
-	outputPaths, err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered)
+	outputPaths, err := c.Render(singleFile, dir, manifest.getWorkingDir(), projects, files, rendered)
 	if err != nil {
 		log.Errorf("Couldn't render manifests")
 		return err

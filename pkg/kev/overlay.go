@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
@@ -74,6 +76,50 @@ func (sc ServiceConfig) minusEnvVars() ServiceConfig {
 		Labels:      sc.Labels,
 		Environment: map[string]*string{},
 	}
+}
+
+// toBaseLabels returns a copy of the ServiceConfig with only condensed base service labels
+func (sc ServiceConfig) toBaseLabels() ServiceConfig {
+	for key, _ := range sc.GetLabels() {
+		if !contains(config.BaseServiceLabels, key) {
+			delete(sc.Labels, key)
+		}
+	}
+
+	return ServiceConfig{
+		Name:        sc.Name,
+		Labels:      sc.Labels,
+		Environment: sc.Environment,
+	}
+}
+
+// toBaseLabels returns a copy of the VolumeConfig with only condensed base volume labels
+func (vc VolumeConfig) toBaseLabels() VolumeConfig {
+	for key := range vc.Labels {
+		if !contains(config.BaseVolumeLabels, key) {
+			delete(vc.Labels, key)
+		}
+	}
+
+	return VolumeConfig{
+		Name:   vc.Name,
+		Labels: vc.Labels,
+	}
+}
+
+// diff detects changes between an overlay against another overlay.
+func (o *composeOverlay) toBaseLabels() *composeOverlay {
+	var services Services
+	volumes := Volumes{}
+
+	for _, svcConfig := range o.Services {
+		services = append(services, svcConfig.toBaseLabels())
+	}
+	for key, volConfig := range o.Volumes {
+		volumes[key] = volConfig.toBaseLabels()
+	}
+
+	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
 }
 
 // diff detects changes between an overlay against another overlay.
@@ -135,4 +181,11 @@ func (o *composeOverlay) mergeVolumesInto(p *ComposeProject) error {
 		p.Volumes[name] = base
 	}
 	return nil
+}
+
+// contains returns true of slice of strings contains a given string
+func contains(strs []string, s string) bool {
+	sort.Strings(strs)
+	i := sort.SearchStrings(strs, s)
+	return i < len(strs) && strs[i] == s
 }

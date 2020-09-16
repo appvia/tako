@@ -105,11 +105,13 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	if len(candidates) == 0 {
 		candidates = append(candidates, defaultEnv)
 	}
+
+	overlay := m.getSourcesOverlay().toBaseLabels()
 	for _, env := range candidates {
 		m.Environments = append(m.Environments, &Environment{
 			Name:    env,
-			overlay: m.GetSourcesOverlay(),
-			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
+			overlay: overlay,
+			File:    path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
 		})
 	}
 	return m
@@ -131,7 +133,7 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 	}
 
 	for _, e := range m.Environments {
-		if err := e.reconcile(m.GetSourcesOverlay(), reporter); err != nil {
+		if err := e.reconcile(m.getSourcesOverlay(), reporter); err != nil {
 			return nil, err
 		}
 	}
@@ -152,17 +154,17 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 	return p, nil
 }
 
-// GetWorkingDir gets the sources working directory.
-func (m *Manifest) GetWorkingDir() string {
-	return m.Sources.getWorkingDir()
-}
-
-// GetSourcesOverlay gets the sources calculated overlay.
-func (m *Manifest) GetSourcesOverlay() *composeOverlay {
-	return m.Sources.overlay
-}
-
 // GetSourcesFiles gets the sources tracked docker-compose files.
 func (m *Manifest) GetSourcesFiles() []string {
 	return m.Sources.Files
+}
+
+// getWorkingDir gets the sources working directory.
+func (m *Manifest) getWorkingDir() string {
+	return m.Sources.getWorkingDir()
+}
+
+// getSourcesOverlay gets the sources calculated overlay.
+func (m *Manifest) getSourcesOverlay() *composeOverlay {
+	return m.Sources.overlay
 }

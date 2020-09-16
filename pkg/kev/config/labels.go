@@ -101,3 +101,12 @@ const (
 	// LabelVolumeStorageClass defines persistent volume storage class
 	LabelVolumeStorageClass = "kev.volume.storage-class"
 )
+
+var BaseServiceLabels = []string{
+	LabelWorkloadReplicas,
+	LabelWorkloadLivenessProbeCommand,
+}
+
+var BaseVolumeLabels = []string{
+	LabelVolumeSize,
+}

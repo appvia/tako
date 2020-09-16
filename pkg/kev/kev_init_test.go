@@ -18,6 +18,7 @@ package kev_test
 
 import (
 	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -27,10 +28,14 @@ var _ = Describe("Init", func() {
 		workingDir string
 		manifest   *kev.Manifest
 		mErr       error
+		env        *kev.Environment
 	)
 
 	JustBeforeEach(func() {
 		manifest, mErr = kev.Init([]string{}, []string{}, workingDir)
+		if mErr == nil {
+			env, _ = manifest.GetEnvironment("dev")
+		}
 	})
 
 	Context("with no alternate compose files supplied", func() {
@@ -115,6 +120,28 @@ var _ = Describe("Init", func() {
 
 			It("should not error", func() {
 				Expect(mErr).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Context("created environment overlays", func() {
+		BeforeEach(func() {
+			workingDir = "./testdata/init-default/compose-yaml"
+		})
+
+		Context("with services", func() {
+			It("should include a subset of labels as config params", func() {
+				svc, _ := env.GetService("db")
+				Expect(svc.GetLabels()).To(HaveLen(2))
+				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeCommand))
+				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadReplicas))
+			})
+		})
+		Context("with volumes", func() {
+			It("should include a subset of labels as config params", func() {
+				vol, _ := env.GetVolume("db_data")
+				Expect(vol.Labels).To(HaveLen(1))
+				Expect(vol.Labels).To(HaveKey(config.LabelVolumeSize))
 			})
 		})
 	})
