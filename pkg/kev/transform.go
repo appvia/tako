@@ -23,6 +23,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -45,7 +46,7 @@ func augmentOrAddDeploy(x *ComposeProject) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "service dependencies may be missing")
 	}
 
 	x.Services = updated
@@ -70,7 +71,7 @@ func augmentOrAddHealthCheck(x *ComposeProject) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "service dependencies may be missing")
 	}
 
 	x.Services = updated
