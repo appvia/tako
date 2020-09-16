@@ -179,6 +179,11 @@ func (e *Environment) patch(cset changeset, reporter io.Writer) {
 	e.overlay.patch(cset, reporter)
 }
 
+func (e *Environment) prepareForMergeUsing(overlay *composeOverlay) {
+	e.overlay = e.overlay.toExpandedLabelsMatching(overlay)
+	e.overlay.overrideServiceTypeFrom(overlay)
+}
+
 func (e *Environment) mergeInto(p *ComposeProject) error {
 	return e.overlay.mergeInto(p)
 }

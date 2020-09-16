@@ -56,6 +56,7 @@ var _ = Describe("Manifest", func() {
 
 			manifest, err := kev.LoadManifest(workingDir)
 			if err == nil {
+				_, _ = manifest.CalculateSourcesBaseOverlay()
 				env, _ = manifest.GetEnvironment("dev")
 				merged, mergeErr = manifest.MergeEnvIntoSources(env)
 			}

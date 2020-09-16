@@ -145,7 +145,9 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 // MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
 // It returns the merged ComposeProject.
 func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
-	p, err := m.Sources.toComposeProject()
+	e.prepareForMergeUsing(m.getSourcesOverlay())
+
+	p, err := m.sourcesToComposeProject()
 	if err != nil {
 		return nil, err
 	}
@@ -168,4 +170,9 @@ func (m *Manifest) getWorkingDir() string {
 // getSourcesOverlay gets the sources calculated overlay.
 func (m *Manifest) getSourcesOverlay() *composeOverlay {
 	return m.Sources.overlay
+}
+
+// sourcesToComposeProject returns the manifests compose sources as a ComposeProject.
+func (m *Manifest) sourcesToComposeProject() (*ComposeProject, error) {
+	return m.Sources.toComposeProject()
 }

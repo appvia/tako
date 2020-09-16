@@ -84,6 +84,10 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return err
 	}
 
+	if _, err := manifest.CalculateSourcesBaseOverlay(); err != nil {
+		return errors.Wrap(err, "Unable to render")
+	}
+
 	filteredEnvs, err := manifest.GetEnvironments(envs)
 	if err != nil {
 		return errors.Wrap(err, "Unable to render")

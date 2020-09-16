@@ -107,22 +107,6 @@ func (vc VolumeConfig) toBaseLabels(baseLabels []string) VolumeConfig {
 	}
 }
 
-// toBaseLabels returns a copy of the composeOverlay with
-// condensed base labels for services and volumes
-func (o *composeOverlay) toBaseLabels() *composeOverlay {
-	var services Services
-	volumes := Volumes{}
-
-	for _, svcConfig := range o.Services {
-		services = append(services, svcConfig.toBaseLabels(config.BaseServiceLabels))
-	}
-	for key, volConfig := range o.Volumes {
-		volumes[key] = volConfig.toBaseLabels(config.BaseVolumeLabels)
-	}
-
-	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
-}
-
 // getService retrieves the specific service by name from the overlay's services.
 func (o *composeOverlay) getService(name string) (ServiceConfig, error) {
 	for _, s := range o.Services {
@@ -143,13 +127,29 @@ func (o *composeOverlay) getVolume(name string) (VolumeConfig, error) {
 	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
-func (o *composeOverlay) toBaseLabelsMatching(other *composeOverlay) *composeOverlay {
-	services := o.toServicesLabelsMatching(other)
-	volumes := o.toVolumesLabelsMatching(other)
+// toBaseLabels returns a copy of the composeOverlay with
+// condensed base labels for services and volumes
+func (o *composeOverlay) toBaseLabels() *composeOverlay {
+	var services Services
+	volumes := Volumes{}
+
+	for _, svcConfig := range o.Services {
+		services = append(services, svcConfig.toBaseLabels(config.BaseServiceLabels))
+	}
+	for key, volConfig := range o.Volumes {
+		volumes[key] = volConfig.toBaseLabels(config.BaseVolumeLabels)
+	}
+
 	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
 }
 
-func (o *composeOverlay) toServicesLabelsMatching(other *composeOverlay) Services {
+func (o *composeOverlay) toBaseLabelsMatching(other *composeOverlay) *composeOverlay {
+	services := o.servicesWithLabelsMatching(other)
+	volumes := o.volumesWithLabelsMatching(other)
+	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
+}
+
+func (o *composeOverlay) servicesWithLabelsMatching(other *composeOverlay) Services {
 	var services Services
 	for _, svc := range o.Services {
 		otherSvc, err := other.getService(svc.Name)
@@ -162,7 +162,7 @@ func (o *composeOverlay) toServicesLabelsMatching(other *composeOverlay) Service
 	return services
 }
 
-func (o *composeOverlay) toVolumesLabelsMatching(other *composeOverlay) Volumes {
+func (o *composeOverlay) volumesWithLabelsMatching(other *composeOverlay) Volumes {
 	volumes := Volumes{}
 	for volKey, volConfig := range o.Volumes {
 		otherVol, err := other.getVolume(volKey)
@@ -173,6 +173,60 @@ func (o *composeOverlay) toVolumesLabelsMatching(other *composeOverlay) Volumes 
 		volumes[volKey] = volConfig.toBaseLabels(keys(otherVol.Labels))
 	}
 	return volumes
+}
+
+func (o *composeOverlay) toExpandedLabelsMatching(other *composeOverlay) *composeOverlay {
+	services := o.servicesWithExpandedLabelsMatching(other)
+	volumes := o.volumesWithExpandedLabelsMatching(other)
+	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
+}
+
+func (o *composeOverlay) servicesWithExpandedLabelsMatching(other *composeOverlay) Services {
+	var out Services
+	for _, otherSvc := range other.Services {
+		dstSvc, err := o.getService(otherSvc.Name)
+		if err != nil {
+			continue
+		}
+		for key, value := range otherSvc.GetLabels() {
+			if _, ok := dstSvc.Labels[key]; !ok {
+				dstSvc.Labels[key] = value
+			}
+		}
+		out = append(out, dstSvc)
+	}
+	return out
+}
+
+func (o *composeOverlay) volumesWithExpandedLabelsMatching(other *composeOverlay) Volumes {
+	out := Volumes{}
+	for otherVolKey, otherVolConfig := range other.Volumes {
+		dstVol, err := o.getVolume(otherVolKey)
+		if err != nil {
+			continue
+		}
+
+		for key, value := range otherVolConfig.Labels {
+			if _, ok := dstVol.Labels[key]; !ok {
+				dstVol.Labels[key] = value
+			}
+		}
+		out[otherVolKey] = dstVol
+	}
+	return out
+}
+
+func (o *composeOverlay) overrideServiceTypeFrom(other *composeOverlay) {
+	var services Services
+	for _, otherSvc := range other.Services {
+		dstSvc, err := o.getService(otherSvc.Name)
+		if err != nil {
+			continue
+		}
+		dstSvc.Labels[config.LabelServiceType] = otherSvc.Labels[config.LabelServiceType]
+		services = append(services, dstSvc)
+	}
+	o.Services = services
 }
 
 // diff detects changes between an overlay against another overlay.
