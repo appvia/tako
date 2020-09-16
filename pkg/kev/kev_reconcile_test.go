@@ -211,7 +211,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service labels with defaults", func() {
-					expected := newDefaultServiceLabels("wordpress", "LoadBalancer")
+					expected := newDefaultServiceLabels("wordpress")
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
 
@@ -236,12 +236,8 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service labels from deploy config", func() {
-					expected := newDefaultServiceLabels("wordpress", "LoadBalancer")
+					expected := newDefaultServiceLabels("wordpress")
 					expected[config.LabelWorkloadReplicas] = "3"
-					expected[config.LabelWorkloadCPU] = "0.25"
-					expected[config.LabelWorkloadMaxCPU] = "0.25"
-					expected[config.LabelWorkloadMemory] = "20Mi"
-					expected[config.LabelWorkloadMaxMemory] = "50Mi"
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
 			})
@@ -252,13 +248,8 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service labels from healthcheck config", func() {
-					expected := newDefaultServiceLabels("wordpress", "LoadBalancer")
+					expected := newDefaultServiceLabels("wordpress")
 					expected[config.LabelWorkloadLivenessProbeCommand] = "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
-					expected[config.LabelWorkloadLivenessProbeDisabled] = "true"
-					expected[config.LabelWorkloadLivenessProbeInitialDelay] = "2m0s"
-					expected[config.LabelWorkloadLivenessProbeInterval] = "5m0s"
-					expected[config.LabelWorkloadLivenessProbeRetries] = "10"
-					expected[config.LabelWorkloadLivenessProbeTimeout] = "30s"
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
 			})
@@ -279,8 +270,8 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetVolumes()).To(HaveLen(1))
 
 				v, _ := env.GetVolume("db_data")
+				Expect(v.Labels).To(HaveLen(1))
 				Expect(v.Labels[config.LabelVolumeSize]).To(Equal("100Mi"))
-				Expect(v.Labels[config.LabelVolumeStorageClass]).To(Equal(""))
 			})
 
 			It("should create a change summary", func() {
@@ -429,23 +420,9 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func newDefaultServiceLabels(name string, svcType string) map[string]string {
+func newDefaultServiceLabels(name string) map[string]string {
 	return map[string]string{
-		config.LabelServiceType:                       svcType,
-		config.LabelWorkloadCPU:                       "0.1",
-		config.LabelWorkloadImagePullPolicy:           "IfNotPresent",
-		config.LabelWorkloadLivenessProbeCommand:      "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
-		config.LabelWorkloadLivenessProbeDisabled:     "false",
-		config.LabelWorkloadLivenessProbeInitialDelay: "1m0s",
-		config.LabelWorkloadLivenessProbeInterval:     "1m0s",
-		config.LabelWorkloadLivenessProbeRetries:      "3",
-		config.LabelWorkloadLivenessProbeTimeout:      "10s",
-		config.LabelWorkloadMaxCPU:                    "0.5",
-		config.LabelWorkloadMaxMemory:                 "500Mi",
-		config.LabelWorkloadMemory:                    "10Mi",
-		config.LabelWorkloadReplicas:                  "1",
-		config.LabelWorkloadRollingUpdateMaxSurge:     "1",
-		config.LabelWorkloadServiceAccountName:        "default",
-		config.LabelWorkloadType:                      "Deployment",
+		config.LabelWorkloadLivenessProbeCommand: "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
+		config.LabelWorkloadReplicas:             "1",
 	}
 }

@@ -207,7 +207,7 @@ func (chg change) patchVersion(overlay *composeOverlay, reporter io.Writer) {
 func (chg change) patchService(overlay *composeOverlay, reporter io.Writer) {
 	switch chg.Type {
 	case CREATE:
-		newValue := chg.Value.(ServiceConfig)
+		newValue := chg.Value.(ServiceConfig).toBaseLabels(config.BaseServiceLabels)
 		overlay.Services = append(overlay.Services, newValue)
 		_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] added\n", newValue.Name)))
 	case DELETE:
@@ -235,7 +235,8 @@ func (chg change) patchService(overlay *composeOverlay, reporter io.Writer) {
 func (chg change) patchVolume(overlay *composeOverlay, reporter io.Writer) {
 	switch chg.Type {
 	case CREATE:
-		overlay.Volumes[chg.Index.(string)] = chg.Value.(VolumeConfig)
+		newValue := chg.Value.(VolumeConfig).toBaseLabels(config.BaseVolumeLabels)
+		overlay.Volumes[chg.Index.(string)] = newValue
 		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] added\n", chg.Index.(string))))
 	case DELETE:
 		delete(overlay.Volumes, chg.Index.(string))
