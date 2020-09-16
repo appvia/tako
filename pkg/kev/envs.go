@@ -69,12 +69,13 @@ func (e *Environment) GetServices() Services {
 
 // GetService retrieves the specific service by name from the environment's overlay.
 func (e *Environment) GetService(name string) (ServiceConfig, error) {
-	for _, s := range e.GetServices() {
-		if s.Name == name {
-			return s, nil
-		}
-	}
-	return ServiceConfig{}, fmt.Errorf("no such service: %s", name)
+	return e.overlay.getService(name)
+	// for _, s := range e.GetServices() {
+	// 	if s.Name == name {
+	// 		return s, nil
+	// 	}
+	// }
+	// return ServiceConfig{}, fmt.Errorf("no such service: %s", name)
 }
 
 // GetEnvVarsForService retrieves the env vars for a specific service from the environment's overlay.
@@ -111,12 +112,13 @@ func (e *Environment) VolumeNames() []string {
 
 // GetVolume retrieves a specific volume by name from the environment's overlay volumes.
 func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
-	for k, v := range e.GetVolumes() {
-		if k == name {
-			return v, nil
-		}
-	}
-	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
+	return e.overlay.getVolume(name)
+	// for k, v := range e.GetVolumes() {
+	// 	if k == name {
+	// 		return v, nil
+	// 	}
+	// }
+	// return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
 // WriteTo writes out an environment to a writer.
@@ -156,7 +158,8 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) error {
 	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
 
-	cset := overlay.diff(e.overlay)
+	labelsMatching := overlay.toBaseLabelsMatching(e.overlay)
+	cset := labelsMatching.diff(e.overlay)
 	if cset.HasNoPatches() {
 		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
 		return nil

@@ -80,7 +80,7 @@ func (sc ServiceConfig) minusEnvVars() ServiceConfig {
 
 // toBaseLabels returns a copy of the ServiceConfig with only condensed base service labels
 func (sc ServiceConfig) toBaseLabels(baseLabels []string) ServiceConfig {
-	for key, _ := range sc.GetLabels() {
+	for key := range sc.GetLabels() {
 		if !contains(baseLabels, key) {
 			delete(sc.Labels, key)
 		}
@@ -121,6 +121,58 @@ func (o *composeOverlay) toBaseLabels() *composeOverlay {
 	}
 
 	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
+}
+
+// getService retrieves the specific service by name from the overlay's services.
+func (o *composeOverlay) getService(name string) (ServiceConfig, error) {
+	for _, s := range o.Services {
+		if s.Name == name {
+			return s, nil
+		}
+	}
+	return ServiceConfig{}, fmt.Errorf("no such service: %s", name)
+}
+
+// getVolume retrieves a specific volume by name from the overlay's volumes.
+func (o *composeOverlay) getVolume(name string) (VolumeConfig, error) {
+	for k, v := range o.Volumes {
+		if k == name {
+			return v, nil
+		}
+	}
+	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
+}
+
+func (o *composeOverlay) toBaseLabelsMatching(other *composeOverlay) *composeOverlay {
+	services := o.toServicesLabelsMatching(other)
+	volumes := o.toVolumesLabelsMatching(other)
+	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
+}
+
+func (o *composeOverlay) toServicesLabelsMatching(other *composeOverlay) Services {
+	var services Services
+	for _, svc := range o.Services {
+		otherSvc, err := other.getService(svc.Name)
+		if err != nil {
+			services = append(services, svc)
+			continue
+		}
+		services = append(services, svc.toBaseLabels(keys(otherSvc.Labels)))
+	}
+	return services
+}
+
+func (o *composeOverlay) toVolumesLabelsMatching(other *composeOverlay) Volumes {
+	volumes := Volumes{}
+	for volKey, volConfig := range o.Volumes {
+		otherVol, err := other.getVolume(volKey)
+		if err != nil {
+			volumes[volKey] = volConfig
+			continue
+		}
+		volumes[volKey] = volConfig.toBaseLabels(keys(otherVol.Labels))
+	}
+	return volumes
 }
 
 // diff detects changes between an overlay against another overlay.
@@ -185,8 +237,17 @@ func (o *composeOverlay) mergeVolumesInto(p *ComposeProject) error {
 }
 
 // contains returns true of slice of strings contains a given string
-func contains(strs []string, s string) bool {
-	sort.Strings(strs)
-	i := sort.SearchStrings(strs, s)
-	return i < len(strs) && strs[i] == s
+func contains(src []string, s string) bool {
+	sort.Strings(src)
+	i := sort.SearchStrings(src, s)
+	return i < len(src) && src[i] == s
+}
+
+// contains returns true of slice of strings contains a given string
+func keys(src map[string]string) []string {
+	out := make([]string, 0, len(src))
+	for k := range src {
+		out = append(out, k)
+	}
+	return out
 }
