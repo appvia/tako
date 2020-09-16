@@ -132,8 +132,9 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 		return nil, err
 	}
 
+	sourcesOverlay := m.getSourcesOverlay()
 	for _, e := range m.Environments {
-		if err := e.reconcile(m.getSourcesOverlay(), reporter); err != nil {
+		if err := e.reconcile(sourcesOverlay, reporter); err != nil {
 			return nil, err
 		}
 	}

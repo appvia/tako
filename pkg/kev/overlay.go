@@ -79,9 +79,9 @@ func (sc ServiceConfig) minusEnvVars() ServiceConfig {
 }
 
 // toBaseLabels returns a copy of the ServiceConfig with only condensed base service labels
-func (sc ServiceConfig) toBaseLabels() ServiceConfig {
+func (sc ServiceConfig) toBaseLabels(baseLabels []string) ServiceConfig {
 	for key, _ := range sc.GetLabels() {
-		if !contains(config.BaseServiceLabels, key) {
+		if !contains(baseLabels, key) {
 			delete(sc.Labels, key)
 		}
 	}
@@ -94,9 +94,9 @@ func (sc ServiceConfig) toBaseLabels() ServiceConfig {
 }
 
 // toBaseLabels returns a copy of the VolumeConfig with only condensed base volume labels
-func (vc VolumeConfig) toBaseLabels() VolumeConfig {
+func (vc VolumeConfig) toBaseLabels(baseLabels []string) VolumeConfig {
 	for key := range vc.Labels {
-		if !contains(config.BaseVolumeLabels, key) {
+		if !contains(baseLabels, key) {
 			delete(vc.Labels, key)
 		}
 	}
@@ -107,16 +107,17 @@ func (vc VolumeConfig) toBaseLabels() VolumeConfig {
 	}
 }
 
-// diff detects changes between an overlay against another overlay.
+// toBaseLabels returns a copy of the composeOverlay with
+// condensed base labels for services and volumes
 func (o *composeOverlay) toBaseLabels() *composeOverlay {
 	var services Services
 	volumes := Volumes{}
 
 	for _, svcConfig := range o.Services {
-		services = append(services, svcConfig.toBaseLabels())
+		services = append(services, svcConfig.toBaseLabels(config.BaseServiceLabels))
 	}
 	for key, volConfig := range o.Volumes {
-		volumes[key] = volConfig.toBaseLabels()
+		volumes[key] = volConfig.toBaseLabels(config.BaseVolumeLabels)
 	}
 
 	return &composeOverlay{Version: o.Version, Services: services, Volumes: volumes}
