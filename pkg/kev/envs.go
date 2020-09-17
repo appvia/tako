@@ -55,24 +55,24 @@ func (e Environments) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
-// GetVersion gets the environment's overlay version.
+// GetVersion gets the environment's override version.
 func (e *Environment) GetVersion() string {
-	return e.overlay.Version
+	return e.override.Version
 }
 
-// GetServices gets the environment's overlay services.
+// GetServices gets the environment's override services.
 func (e *Environment) GetServices() Services {
-	var out = make([]ServiceConfig, len(e.overlay.Services))
-	copy(out, e.overlay.Services)
+	var out = make([]ServiceConfig, len(e.override.Services))
+	copy(out, e.override.Services)
 	return out
 }
 
-// GetService retrieves the specific service by name from the environment's overlay.
+// GetService retrieves the specific service by name from the environment's override.
 func (e *Environment) GetService(name string) (ServiceConfig, error) {
-	return e.overlay.getService(name)
+	return e.override.getService(name)
 }
 
-// GetEnvVarsForService retrieves the env vars for a specific service from the environment's overlay.
+// GetEnvVarsForService retrieves the env vars for a specific service from the environment's override.
 func (e *Environment) GetEnvVarsForService(name string) (map[string]*string, error) {
 	s, err := e.GetService(name)
 	if err != nil {
@@ -85,16 +85,16 @@ func (e *Environment) GetEnvVarsForService(name string) (map[string]*string, err
 	return out, nil
 }
 
-// GetVolumes gets the environment's overlay volumes.
+// GetVolumes gets the environment's override volumes.
 func (e *Environment) GetVolumes() Volumes {
 	out := make(Volumes)
-	for k, v := range e.overlay.Volumes {
+	for k, v := range e.override.Volumes {
 		out[k] = v
 	}
 	return out
 }
 
-// VolumeNames return names for all volumes from the environment's overlay volumes.
+// VolumeNames return names for all volumes from the environment's override volumes.
 func (e *Environment) VolumeNames() []string {
 	var out []string
 	for k := range e.GetVolumes() {
@@ -104,15 +104,15 @@ func (e *Environment) VolumeNames() []string {
 	return out
 }
 
-// GetVolume retrieves a specific volume by name from the environment's overlay volumes.
+// GetVolume retrieves a specific volume by name from the environment's override volumes.
 func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
-	return e.overlay.getVolume(name)
+	return e.override.getVolume(name)
 }
 
 // WriteTo writes out an environment to a writer.
 // The Environment struct implements the io.WriterTo interface.
 func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
-	data, err := MarshalIndent(e.overlay, 2)
+	data, err := MarshalIndent(e.override, 2)
 	if err != nil {
 		return int64(0), err
 	}
@@ -141,7 +141,7 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 			Labels: p.Volumes[v].Labels,
 		}
 	}
-	e.overlay = &composeOverlay{
+	e.override = &composeOverride{
 		Version:  p.GetVersion(),
 		Services: services,
 		Volumes:  volumes,
@@ -149,11 +149,11 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 	return e, nil
 }
 
-func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) error {
+func (e *Environment) reconcile(override *composeOverride, reporter io.Writer) error {
 	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
 
-	labelsMatching := overlay.toLabelsMatching(e.overlay)
-	cset := labelsMatching.diff(e.overlay)
+	labelsMatching := override.toLabelsMatching(e.override)
+	cset := labelsMatching.diff(e.override)
 	if cset.HasNoPatches() {
 		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
 		return nil
@@ -164,16 +164,16 @@ func (e *Environment) reconcile(overlay *composeOverlay, reporter io.Writer) err
 }
 
 func (e *Environment) patch(cset changeset, reporter io.Writer) {
-	e.overlay.patch(cset, reporter)
+	e.override.patch(cset, reporter)
 }
 
-func (e *Environment) prepareForMergeUsing(overlay *composeOverlay) {
-	e.overlay = e.overlay.expandLabelsFrom(overlay)
-	e.overlay.overrideServiceTypeFrom(overlay)
+func (e *Environment) prepareForMergeUsing(override *composeOverride) {
+	e.override = e.override.expandLabelsFrom(override)
+	e.override.overrideServiceTypeFrom(override)
 }
 
 func (e *Environment) mergeInto(p *ComposeProject) error {
-	return e.overlay.mergeInto(p)
+	return e.override.mergeInto(p)
 }
 
 func loadEnvironment(name, file string) (*Environment, error) {

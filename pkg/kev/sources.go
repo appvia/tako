@@ -31,7 +31,7 @@ func (s *Sources) CalculateBaseOverlay(opts ...BaseOverlayOpts) error {
 	if err != nil {
 		return err
 	}
-	s.overlay = extractLabels(ready)
+	s.override = extractLabels(ready)
 	for _, opt := range opts {
 		if err := opt(s, ready); err != nil {
 			return nil
@@ -40,10 +40,10 @@ func (s *Sources) CalculateBaseOverlay(opts ...BaseOverlayOpts) error {
 	return nil
 }
 
-// withEnvVars attaches the sources env vars to the base overlay
+// withEnvVars attaches the sources env vars to the base override
 func withEnvVars(s *Sources, origin *ComposeProject) error {
 	var services Services
-	for _, svc := range s.overlay.Services {
+	for _, svc := range s.override.Services {
 		originSvc, err := origin.GetService(svc.Name)
 		if err != nil {
 			return err
@@ -57,7 +57,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 			Environment: originSvc.Environment,
 		})
 	}
-	s.overlay.Services = services
+	s.override.Services = services
 	return nil
 }
 

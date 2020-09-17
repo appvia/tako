@@ -1,4 +1,0 @@
-compose:
-  - testdata/reconcile-overlay-rollback/docker-compose.yaml
-environments:
-  dev: testdata/reconcile-overlay-rollback/docker-compose.kev.dev.yaml

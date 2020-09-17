@@ -27,19 +27,19 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		reporter     bytes.Buffer
-		workingDir   string
-		source       *kev.ComposeProject
-		overlayFiles []string
-		overlay      *kev.ComposeProject
-		manifest     *kev.Manifest
-		env          *kev.Environment
-		mErr         error
+		reporter      bytes.Buffer
+		workingDir    string
+		source        *kev.ComposeProject
+		overrideFiles []string
+		override      *kev.ComposeProject
+		manifest      *kev.Manifest
+		env           *kev.Environment
+		mErr          error
 	)
 
 	JustBeforeEach(func() {
-		if len(overlayFiles) > 0 {
-			overlay, _ = kev.NewComposeProject(overlayFiles)
+		if len(overrideFiles) > 0 {
+			override, _ = kev.NewComposeProject(overrideFiles)
 		}
 		manifest, mErr = kev.Reconcile(workingDir, &reporter)
 		if mErr == nil {
@@ -47,17 +47,17 @@ var _ = Describe("Reconcile", func() {
 		}
 	})
 
-	Describe("Reconcile changes from overlays", func() {
-		When("the overlay version has been updated", func() {
+	Describe("Reconcile changes from overrides", func() {
+		When("the override version has been updated", func() {
 			BeforeEach(func() {
-				workingDir = "testdata/reconcile-overlay-rollback"
+				workingDir = "testdata/reconcile-override-rollback"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the version pre reconciliation", func() {
-				Expect(overlay.GetVersion()).NotTo(Equal(source.GetVersion()))
+				Expect(override.GetVersion()).NotTo(Equal(source.GetVersion()))
 			})
 
 			It("should roll back the change", func() {
@@ -67,14 +67,14 @@ var _ = Describe("Reconcile", func() {
 
 		Context("for services and volumes", func() {
 			BeforeEach(func() {
-				workingDir = "testdata/reconcile-overlay-keep"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				workingDir = "testdata/reconcile-override-keep"
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
-			When("the overlay service label overrides have been updated", func() {
+			When("the override service label overrides have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
-					s, _ := overlay.GetService("db")
+					s, _ := override.GetService("db")
 					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
 					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
 					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
@@ -82,7 +82,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(s.Labels["kev.workload.service-account-name"]).To(Equal("overridden-service-account-name"))
 				})
 
-				It("keeps overridden overlay values", func() {
+				It("keeps overridden override values", func() {
 					s, _ := env.GetService("db")
 					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
 					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
@@ -92,13 +92,13 @@ var _ = Describe("Reconcile", func() {
 				})
 			})
 
-			When("the overlay volume label overrides have been updated", func() {
+			When("the override volume label overrides have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
-					v, _ := overlay.Volumes["db_data"]
+					v, _ := override.Volumes["db_data"]
 					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
 				})
 
-				It("keeps overridden overlay values", func() {
+				It("keeps overridden override values", func() {
 					v, _ := env.GetVolume("db_data")
 					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
 				})
@@ -133,13 +133,13 @@ var _ = Describe("Reconcile", func() {
 		Context("when a compose service has been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-removal"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of services pre reconciliation", func() {
-				Expect(overlay.Services).To(HaveLen(2))
-				Expect(overlay.ServiceNames()).To(ContainElements("db", "wordpress"))
+				Expect(override.Services).To(HaveLen(2))
+				Expect(override.ServiceNames()).To(ContainElements("db", "wordpress"))
 			})
 
 			It("should remove the service from all environments", func() {
@@ -161,13 +161,13 @@ var _ = Describe("Reconcile", func() {
 		Context("when the compose service is edited", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-edit"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			Context("and it changes port mode to host", func() {
 				It("confirms the edit pre reconciliation", func() {
-					s, _ := overlay.GetService("wordpress")
+					s, _ := override.GetService("wordpress")
 					Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
 				})
 
@@ -195,13 +195,13 @@ var _ = Describe("Reconcile", func() {
 			Context("and the service has no deploy or healthcheck config", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
-					overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 					reporter = bytes.Buffer{}
 				})
 
 				It("confirms the number of services pre reconciliation", func() {
-					Expect(overlay.Services).To(HaveLen(1))
-					Expect(overlay.ServiceNames()).To(ContainElements("db"))
+					Expect(override.Services).To(HaveLen(1))
+					Expect(override.ServiceNames()).To(ContainElements("db"))
 				})
 
 				It("should add the new service labels to all environments", func() {
@@ -258,12 +258,12 @@ var _ = Describe("Reconcile", func() {
 		Context("when a new compose volume has been added", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
-				Expect(overlay.Volumes).To(HaveLen(0))
+				Expect(override.Volumes).To(HaveLen(0))
 			})
 
 			It("should add the new volume labels to all environments", func() {
@@ -288,12 +288,12 @@ var _ = Describe("Reconcile", func() {
 		Context("when a compose volume has been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-removal"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
-				Expect(overlay.Volumes).To(HaveLen(1))
+				Expect(override.Volumes).To(HaveLen(1))
 			})
 
 			It("should remove the volume from all environments", func() {
@@ -314,13 +314,13 @@ var _ = Describe("Reconcile", func() {
 		Context("when a compose volume has been edited", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-edit"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the volume name pre reconciliation", func() {
-				Expect(overlay.VolumeNames()).To(HaveLen(1))
-				Expect(overlay.VolumeNames()).To(ContainElements("db_data"))
+				Expect(override.VolumeNames()).To(HaveLen(1))
+				Expect(override.VolumeNames()).To(ContainElements("db_data"))
 			})
 
 			It("should update the volume in all environments", func() {
@@ -344,12 +344,12 @@ var _ = Describe("Reconcile", func() {
 		Context("when compose env vars have been removed", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-removal"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the env vars pre reconciliation", func() {
-				s, _ := overlay.GetService("wordpress")
+				s, _ := override.GetService("wordpress")
 				Expect(s.Environment).To(HaveLen(2))
 				Expect(s.Environment).To(HaveKey("WORDPRESS_CACHE_USER"))
 				Expect(s.Environment).To(HaveKey("WORDPRESS_CACHE_PASSWORD"))
@@ -380,12 +380,12 @@ var _ = Describe("Reconcile", func() {
 		Context("when compose env var is overridden in an environment", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-override"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the overridden env var pre reconciliation", func() {
-				s, _ := overlay.GetService("db")
+				s, _ := override.GetService("db")
 				Expect(s.Environment).To(HaveLen(1))
 				Expect(s.Environment).To(HaveKey("TO_OVERRIDE"))
 			})
@@ -406,10 +406,10 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("when compose or overlay env var is not assigned a value", func() {
+		Context("when compose or override env var is not assigned a value", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-unassigned"
-				overlayFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				reporter = bytes.Buffer{}
 			})
 

@@ -124,7 +124,7 @@ var _ = Describe("Init", func() {
 		})
 	})
 
-	Context("created environment overlays", func() {
+	Context("created environment overrides", func() {
 		BeforeEach(func() {
 			workingDir = "./testdata/init-default/compose-yaml"
 		})

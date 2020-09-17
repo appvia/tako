@@ -88,7 +88,7 @@ func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
 	return out, nil
 }
 
-// CalculateSourcesBaseOverlay extracts the base overlay from the manifest's docker-compose source files.
+// CalculateSourcesBaseOverlay extracts the base override from the manifest's docker-compose source files.
 func (m *Manifest) CalculateSourcesBaseOverlay(opts ...BaseOverlayOpts) (*Manifest, error) {
 	if err := m.Sources.CalculateBaseOverlay(opts...); err != nil {
 		return nil, err
@@ -106,12 +106,12 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		candidates = append(candidates, defaultEnv)
 	}
 
-	overlay := m.getSourcesOverlay().toBaseLabels()
+	override := m.getSourcesOverride().toBaseLabels()
 	for _, env := range candidates {
 		m.Environments = append(m.Environments, &Environment{
-			Name:    env,
-			overlay: overlay,
-			File:    path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
+			Name:     env,
+			override: override,
+			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
 		})
 	}
 	return m
@@ -132,7 +132,7 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 		return nil, err
 	}
 
-	sourcesOverlay := m.getSourcesOverlay()
+	sourcesOverlay := m.getSourcesOverride()
 	for _, e := range m.Environments {
 		if err := e.reconcile(sourcesOverlay, reporter); err != nil {
 			return nil, err
@@ -145,7 +145,7 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 // MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
 // It returns the merged ComposeProject.
 func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
-	e.prepareForMergeUsing(m.getSourcesOverlay())
+	e.prepareForMergeUsing(m.getSourcesOverride())
 
 	p, err := m.sourcesToComposeProject()
 	if err != nil {
@@ -167,9 +167,9 @@ func (m *Manifest) getWorkingDir() string {
 	return m.Sources.getWorkingDir()
 }
 
-// getSourcesOverlay gets the sources calculated overlay.
-func (m *Manifest) getSourcesOverlay() *composeOverlay {
-	return m.Sources.overlay
+// getSourcesOverride gets the sources calculated override.
+func (m *Manifest) getSourcesOverride() *composeOverride {
+	return m.Sources.override
 }
 
 // sourcesToComposeProject returns the manifests compose sources as a ComposeProject.
