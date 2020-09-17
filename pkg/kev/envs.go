@@ -70,12 +70,6 @@ func (e *Environment) GetServices() Services {
 // GetService retrieves the specific service by name from the environment's overlay.
 func (e *Environment) GetService(name string) (ServiceConfig, error) {
 	return e.overlay.getService(name)
-	// for _, s := range e.GetServices() {
-	// 	if s.Name == name {
-	// 		return s, nil
-	// 	}
-	// }
-	// return ServiceConfig{}, fmt.Errorf("no such service: %s", name)
 }
 
 // GetEnvVarsForService retrieves the env vars for a specific service from the environment's overlay.
@@ -113,12 +107,6 @@ func (e *Environment) VolumeNames() []string {
 // GetVolume retrieves a specific volume by name from the environment's overlay volumes.
 func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
 	return e.overlay.getVolume(name)
-	// for k, v := range e.GetVolumes() {
-	// 	if k == name {
-	// 		return v, nil
-	// 	}
-	// }
-	// return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
 // WriteTo writes out an environment to a writer.
