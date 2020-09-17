@@ -40,7 +40,7 @@ func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 		return nil, err
 	}
 
-	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
+	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
 		return nil, err
 	}
 
@@ -84,7 +84,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return err
 	}
 
-	if _, err := manifest.CalculateSourcesBaseOverlay(); err != nil {
+	if _, err := manifest.CalculateSourcesBaseOverride(); err != nil {
 		return errors.Wrap(err, "Unable to render")
 	}
 

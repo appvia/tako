@@ -88,9 +88,9 @@ func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
 	return out, nil
 }
 
-// CalculateSourcesBaseOverlay extracts the base override from the manifest's docker-compose source files.
-func (m *Manifest) CalculateSourcesBaseOverlay(opts ...BaseOverlayOpts) (*Manifest, error) {
-	if err := m.Sources.CalculateBaseOverlay(opts...); err != nil {
+// CalculateSourcesBaseOverride extracts the base override from the manifest's docker-compose source files.
+func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Manifest, error) {
+	if err := m.Sources.CalculateBaseOverride(opts...); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -128,7 +128,7 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
 func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
-	if _, err := m.CalculateSourcesBaseOverlay(withEnvVars); err != nil {
+	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		return nil, err
 	}
 
