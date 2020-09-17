@@ -1,0 +1,4 @@
+compose:
+  - testdata/reconcile-override-keep/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-override-keep/docker-compose.kev.dev.yaml

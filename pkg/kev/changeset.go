@@ -30,9 +30,9 @@ const (
 	DELETE = "delete"
 )
 
-// newChangeset detects all changes between a destination overlay and source overlay.
+// newChangeset detects all changes between a destination override and source override.
 // A change is either a create, update or delete event.
-// A change targets an overlay's version, services or volumes and it's properties will depend on the actual target.
+// A change targets an override's version, services or volumes and it's properties will depend on the actual target.
 // Example: here's a Change that creates a new service:
 // {
 //    Type: "create",   //string
@@ -49,11 +49,11 @@ const (
 //
 // ENV VARS NOTE:
 // The changeset deals with the docker-compose `environment` attribute as a special case:
-// - Env vars in overlays override a project's docker-compose env vars.
+// - Env vars in overrides override a project's docker-compose env vars.
 // - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
 // - A changeset will NOT update or create env vars in deployment environments.
 // - To create useful diffs a project's docker-compose env vars will be taken into account.
-func newChangeset(dst *composeOverlay, src *composeOverlay) changeset {
+func newChangeset(dst *composeOverride, src *composeOverride) changeset {
 	cset := changeset{}
 	detectVersionUpdate(dst, src, &cset)
 	detectServicesCreate(dst, src, &cset)
@@ -65,13 +65,13 @@ func newChangeset(dst *composeOverlay, src *composeOverlay) changeset {
 	return cset
 }
 
-func detectVersionUpdate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectVersionUpdate(dst *composeOverride, src *composeOverride, cset *changeset) {
 	if dst.Version != src.Version {
 		cset.version = change{Value: src.Version, Type: UPDATE, Target: "version"}
 	}
 }
 
-func detectServicesCreate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectServicesCreate(dst *composeOverride, src *composeOverride, cset *changeset) {
 	dstSvcSet := dst.Services.Set()
 	for _, srcSvc := range src.Services {
 		if !dstSvcSet[srcSvc.Name] {
@@ -83,7 +83,7 @@ func detectServicesCreate(dst *composeOverlay, src *composeOverlay, cset *change
 	}
 }
 
-func detectServicesDelete(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectServicesDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
 	srcSvcSet := src.Services.Set()
 	for index, dstSvc := range dst.Services {
 		if !srcSvcSet[dstSvc.Name] {
@@ -95,7 +95,7 @@ func detectServicesDelete(dst *composeOverlay, src *composeOverlay, cset *change
 	}
 }
 
-func detectServicesEnvironmentDelete(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectServicesEnvironmentDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
 	srcSvcMapping := src.Services.Map()
 	for index, dstSvc := range dst.Services {
 		srcSvc, ok := srcSvcMapping[dstSvc.Name]
@@ -115,7 +115,7 @@ func detectServicesEnvironmentDelete(dst *composeOverlay, src *composeOverlay, c
 	}
 }
 
-func detectServicesUpdate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectServicesUpdate(dst *composeOverride, src *composeOverride, cset *changeset) {
 	srcSvcMapping := src.Services.Map()
 	for index, dstSvc := range dst.Services {
 		srcSvc, ok := srcSvcMapping[dstSvc.Name]
@@ -135,7 +135,7 @@ func detectServicesUpdate(dst *composeOverlay, src *composeOverlay, cset *change
 	}
 }
 
-func detectVolumesCreate(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectVolumesCreate(dst *composeOverride, src *composeOverride, cset *changeset) {
 	for srcVolKey, srcVolConfig := range src.Volumes {
 		if _, ok := dst.Volumes[srcVolKey]; !ok {
 			cset.volumes = append(cset.volumes, change{
@@ -147,7 +147,7 @@ func detectVolumesCreate(dst *composeOverlay, src *composeOverlay, cset *changes
 	}
 }
 
-func detectVolumesDelete(dst *composeOverlay, src *composeOverlay, cset *changeset) {
+func detectVolumesDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
 	for dstVolKey := range dst.Volumes {
 		if _, ok := src.Volumes[dstVolKey]; !ok {
 			cset.volumes = append(cset.volumes, change{
@@ -174,7 +174,7 @@ func (cset changeset) HasNoPatches() bool {
 	return len(cset.changes()) <= 0
 }
 
-func (cset changeset) applyVersionPatchesIfAny(o *composeOverlay, reporter io.Writer) {
+func (cset changeset) applyVersionPatchesIfAny(o *composeOverride, reporter io.Writer) {
 	chg := cset.version
 	if reflect.DeepEqual(chg, change{}) {
 		return
@@ -182,63 +182,64 @@ func (cset changeset) applyVersionPatchesIfAny(o *composeOverlay, reporter io.Wr
 	chg.patchVersion(o, reporter)
 }
 
-func (cset changeset) applyServicesPatchesIfAny(o *composeOverlay, reporter io.Writer) {
+func (cset changeset) applyServicesPatchesIfAny(o *composeOverride, reporter io.Writer) {
 	for _, change := range cset.services {
 		change.patchService(o, reporter)
 	}
 }
 
-func (cset changeset) applyVolumesPatchesIfAny(o *composeOverlay, reporter io.Writer) {
+func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride, reporter io.Writer) {
 	for _, change := range cset.volumes {
 		change.patchVolume(o, reporter)
 	}
 }
 
-func (chg change) patchVersion(overlay *composeOverlay, reporter io.Writer) {
+func (chg change) patchVersion(override *composeOverride, reporter io.Writer) {
 	if chg.Type != UPDATE {
 		return
 	}
-	pre := overlay.Version
+	pre := override.Version
 	newValue := chg.Value.(string)
-	overlay.Version = newValue
+	override.Version = newValue
 	_, _ = reporter.Write([]byte(fmt.Sprintf(" → version updated, from:[%s] to:[%s]\n", pre, newValue)))
 }
 
-func (chg change) patchService(overlay *composeOverlay, reporter io.Writer) {
+func (chg change) patchService(override *composeOverride, reporter io.Writer) {
 	switch chg.Type {
 	case CREATE:
-		newValue := chg.Value.(ServiceConfig)
-		overlay.Services = append(overlay.Services, newValue)
+		newValue := chg.Value.(ServiceConfig).condenseLabels(config.BaseServiceLabels)
+		override.Services = append(override.Services, newValue)
 		_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] added\n", newValue.Name)))
 	case DELETE:
 		switch {
 		case chg.Parent == "environment":
-			delete(overlay.Services[chg.Index.(int)].Environment, chg.Target)
-			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], env var [%s] deleted\n", overlay.Services[chg.Index.(int)].Name, chg.Target)))
+			delete(override.Services[chg.Index.(int)].Environment, chg.Target)
+			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], env var [%s] deleted\n", override.Services[chg.Index.(int)].Name, chg.Target)))
 		default:
-			deletedSvcName := overlay.Services[chg.Index.(int)].Name
-			overlay.Services = append(overlay.Services[:chg.Index.(int)], overlay.Services[chg.Index.(int)+1:]...)
+			deletedSvcName := override.Services[chg.Index.(int)].Name
+			override.Services = append(override.Services[:chg.Index.(int)], override.Services[chg.Index.(int)+1:]...)
 			_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] deleted\n", deletedSvcName)))
 		}
 	case UPDATE:
 		if chg.Parent == "labels" {
-			pre, canUpdate := overlay.Services[chg.Index.(int)].Labels[chg.Target]
+			pre, canUpdate := override.Services[chg.Index.(int)].Labels[chg.Target]
 			newValue := chg.Value.(string)
-			overlay.Services[chg.Index.(int)].Labels[chg.Target] = newValue
+			override.Services[chg.Index.(int)].Labels[chg.Target] = newValue
 			if canUpdate {
-				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], label [%s] updated, from:[%s] to:[%s]\n", overlay.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)))
+				_, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], label [%s] updated, from:[%s] to:[%s]\n", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)))
 			}
 		}
 	}
 }
 
-func (chg change) patchVolume(overlay *composeOverlay, reporter io.Writer) {
+func (chg change) patchVolume(override *composeOverride, reporter io.Writer) {
 	switch chg.Type {
 	case CREATE:
-		overlay.Volumes[chg.Index.(string)] = chg.Value.(VolumeConfig)
+		newValue := chg.Value.(VolumeConfig).condenseLabels(config.BaseVolumeLabels)
+		override.Volumes[chg.Index.(string)] = newValue
 		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] added\n", chg.Index.(string))))
 	case DELETE:
-		delete(overlay.Volumes, chg.Index.(string))
+		delete(override.Volumes, chg.Index.(string))
 		_, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] deleted\n", chg.Index.(string))))
 	}
 }

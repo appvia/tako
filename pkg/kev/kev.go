@@ -40,7 +40,7 @@ func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 		return nil, err
 	}
 
-	if _, err := m.CalculateSourcesBaseOverlay(); err != nil {
+	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
 		return nil, err
 	}
 
@@ -84,6 +84,10 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 		return err
 	}
 
+	if _, err := manifest.CalculateSourcesBaseOverride(); err != nil {
+		return errors.Wrap(err, "Unable to render")
+	}
+
 	filteredEnvs, err := manifest.GetEnvironments(envs)
 	if err != nil {
 		return errors.Wrap(err, "Unable to render")
@@ -104,7 +108,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	}
 
 	c := converter.Factory(format)
-	outputPaths, err := c.Render(singleFile, dir, manifest.GetWorkingDir(), projects, files, rendered)
+	outputPaths, err := c.Render(singleFile, dir, manifest.getWorkingDir(), projects, files, rendered)
 	if err != nil {
 		log.Errorf("Couldn't render manifests")
 		return err

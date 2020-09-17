@@ -88,9 +88,9 @@ func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
 	return out, nil
 }
 
-// CalculateSourcesBaseOverlay extracts the base overlay from the manifest's docker-compose source files.
-func (m *Manifest) CalculateSourcesBaseOverlay(opts ...BaseOverlayOpts) (*Manifest, error) {
-	if err := m.Sources.CalculateBaseOverlay(opts...); err != nil {
+// CalculateSourcesBaseOverride extracts the base override from the manifest's docker-compose source files.
+func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Manifest, error) {
+	if err := m.Sources.CalculateBaseOverride(opts...); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -105,11 +105,13 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	if len(candidates) == 0 {
 		candidates = append(candidates, defaultEnv)
 	}
+
+	override := m.getSourcesOverride().toBaseLabels()
 	for _, env := range candidates {
 		m.Environments = append(m.Environments, &Environment{
-			Name:    env,
-			overlay: m.GetSourcesOverlay(),
-			File:    path.Join(m.GetWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
+			Name:     env,
+			override: override,
+			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
 		})
 	}
 	return m
@@ -126,12 +128,13 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
 func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
-	if _, err := m.CalculateSourcesBaseOverlay(withEnvVars); err != nil {
+	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		return nil, err
 	}
 
+	sourcesOverlay := m.getSourcesOverride()
 	for _, e := range m.Environments {
-		if err := e.reconcile(m.GetSourcesOverlay(), reporter); err != nil {
+		if err := e.reconcile(sourcesOverlay, reporter); err != nil {
 			return nil, err
 		}
 	}
@@ -142,7 +145,9 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 // MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
 // It returns the merged ComposeProject.
 func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
-	p, err := m.Sources.toComposeProject()
+	e.prepareForMergeUsing(m.getSourcesOverride())
+
+	p, err := m.sourcesToComposeProject()
 	if err != nil {
 		return nil, err
 	}
@@ -152,17 +157,22 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 	return p, nil
 }
 
-// GetWorkingDir gets the sources working directory.
-func (m *Manifest) GetWorkingDir() string {
-	return m.Sources.getWorkingDir()
-}
-
-// GetSourcesOverlay gets the sources calculated overlay.
-func (m *Manifest) GetSourcesOverlay() *composeOverlay {
-	return m.Sources.overlay
-}
-
 // GetSourcesFiles gets the sources tracked docker-compose files.
 func (m *Manifest) GetSourcesFiles() []string {
 	return m.Sources.Files
+}
+
+// getWorkingDir gets the sources working directory.
+func (m *Manifest) getWorkingDir() string {
+	return m.Sources.getWorkingDir()
+}
+
+// getSourcesOverride gets the sources calculated override.
+func (m *Manifest) getSourcesOverride() *composeOverride {
+	return m.Sources.override
+}
+
+// sourcesToComposeProject returns the manifests compose sources as a ComposeProject.
+func (m *Manifest) sourcesToComposeProject() (*ComposeProject, error) {
+	return m.Sources.toComposeProject()
 }

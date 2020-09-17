@@ -27,8 +27,8 @@ import (
 )
 
 // extractLabels extracts a set of labels from a compose project object.
-func extractLabels(c *ComposeProject) *composeOverlay {
-	out := &composeOverlay{
+func extractLabels(c *ComposeProject) *composeOverride {
+	out := &composeOverride{
 		Version: c.version,
 	}
 	extractVolumesLabels(c, out)
@@ -54,7 +54,7 @@ func setDefaultLabels(target *ServiceConfig) {
 }
 
 // extractVolumesLabels extracts volume labels into a label's Volumes attribute.
-func extractVolumesLabels(c *ComposeProject, out *composeOverlay) {
+func extractVolumesLabels(c *ComposeProject, out *composeOverride) {
 	vols := make(map[string]VolumeConfig)
 
 	for _, v := range c.VolumeNames() {
