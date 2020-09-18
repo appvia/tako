@@ -17,20 +17,35 @@
 package kev
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/analyze"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/build"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/config"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/deploy"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml"
 	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
+	"github.com/appvia/kev/pkg/kev/log"
 )
 
 // SkaffoldManifest is a wrapper around latest SkaffoldConfig
 type SkaffoldManifest latest.SkaffoldConfig
+
+// Analysis holds the information about detected dockerfiles and images
+type Analysis struct {
+	Dockerfiles []string `json:"dockerfiles,omitempty"`
+	Images      []string `json:"images,omitempty"`
+}
 
 const (
 	// SkaffoldFileName is a file name of skaffold manifest
@@ -54,7 +69,14 @@ var (
 // NewSkaffoldManifest returns a new SkaffoldManifest struct.
 func NewSkaffoldManifest(envs []string) (*SkaffoldManifest, error) {
 
+	analysis, err := analyzeProject()
+	if err != nil {
+		// just warn for now - potentially put project analysis behind a flag?
+		log.Warn(err.Error())
+	}
+
 	manifest := BaseSkaffoldManifest()
+	manifest.SetBuildArtifacts(analysis)
 	manifest.SetProfiles(envs)
 	manifest.AdditionalProfiles()
 
@@ -260,6 +282,88 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 			},
 		})
 	}
+}
+
+// SetBuildArtifacts detects build artifacts from the current project and adds `build` section to the manifest
+func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis) error {
+
+	// don't set build artefacts if no analysis available
+	if analysis == nil {
+		return nil
+	}
+
+	buildArtifacts := map[string]string{}
+
+	for _, d := range analysis.Dockerfiles {
+		context := strings.ReplaceAll(d, "/Dockerfile", "")
+		contextParts := strings.Split(context, "/")
+		svcNameFromContext := contextParts[len(contextParts)-1]
+
+		// Check whether images contain service name derived from context
+		// as that's the best we can do in order to match a service to corresponding
+		// docker registry image. If no docker registry image was detected
+		// then we use service name as docker image name.
+		re := regexp.MustCompile(fmt.Sprintf(`.*\/%s`, svcNameFromContext))
+
+		for _, image := range analysis.Images {
+			if found := re.FindAllStringSubmatchIndex(image, -1); found != nil {
+				buildArtifacts[context] = image
+				break
+			} else {
+				buildArtifacts[context] = svcNameFromContext
+			}
+		}
+	}
+
+	artifacts := []*latest.Artifact{}
+
+	for context, image := range buildArtifacts {
+		artifacts = append(artifacts, &latest.Artifact{
+			ImageName: image,
+			Workspace: context,
+		})
+	}
+
+	s.Build = latest.BuildConfig{
+		Artifacts: artifacts,
+	}
+
+	return nil
+}
+
+func analyzeProject() (*Analysis, error) {
+	c := config.Config{
+		Analyze:             true,
+		EnableNewInitFormat: false,
+	}
+
+	a := analyze.NewAnalyzer(c)
+	if err := a.Analyze("."); err != nil {
+		return nil, err
+	}
+
+	deployInitializer := deploy.NewInitializer(a.Manifests(), a.KustomizeBases(), a.KustomizePaths(), c)
+	images := deployInitializer.GetImages()
+
+	buildInitializer := build.NewInitializer(a.Builders(), c)
+	if err := buildInitializer.ProcessImages(images); err != nil {
+		return nil, err
+	}
+
+	if c.Analyze {
+		out := &bytes.Buffer{}
+		buildInitializer.PrintAnalysis(out)
+
+		a := &Analysis{}
+
+		if err := json.Unmarshal(out.Bytes(), &a); err != nil {
+			return nil, err
+		}
+
+		return a, nil
+	}
+
+	return nil, nil
 }
 
 // WriteTo writes out a skaffold manifest to a writer.
