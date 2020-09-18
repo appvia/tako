@@ -292,6 +292,24 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis) error {
 		return nil
 	}
 
+	artifacts := []*latest.Artifact{}
+
+	for context, image := range collectBuildArtifacts(analysis) {
+		artifacts = append(artifacts, &latest.Artifact{
+			ImageName: image,
+			Workspace: context,
+		})
+	}
+
+	s.Build = latest.BuildConfig{
+		Artifacts: artifacts,
+	}
+
+	return nil
+}
+
+// collectBuildArtfacts returns a map of build contexts to corresponding image names
+func collectBuildArtifacts(analysis *Analysis) map[string]string {
 	buildArtifacts := map[string]string{}
 
 	for _, d := range analysis.Dockerfiles {
@@ -315,22 +333,10 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis) error {
 		}
 	}
 
-	artifacts := []*latest.Artifact{}
-
-	for context, image := range buildArtifacts {
-		artifacts = append(artifacts, &latest.Artifact{
-			ImageName: image,
-			Workspace: context,
-		})
-	}
-
-	s.Build = latest.BuildConfig{
-		Artifacts: artifacts,
-	}
-
-	return nil
+	return buildArtifacts
 }
 
+// analyzeProject analyses the project and returns Analysis report object
 func analyzeProject() (*Analysis, error) {
 	c := config.Config{
 		Analyze:             true,
