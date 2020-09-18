@@ -136,15 +136,17 @@ func (e *Environment) loadOverride() (*Environment, error) {
 		envVarsFromNilToBlankInService(s)
 		serviceConfig, err := newServiceConfig(s)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Cannot load environment [%s], service [%s]", e.Name, serviceConfig.Name)
+			return nil, errors.Wrapf(err, "Cannot load environment [%s], service [%s]", e.Name, name)
 		}
 		services = append(services, serviceConfig)
 	}
 	volumes := Volumes{}
 	for _, v := range p.VolumeNames() {
-		volumes[v] = VolumeConfig{
-			Labels: p.Volumes[v].Labels,
+		volumeConfig, err := newVolumeConfig(v, p)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Cannot load environment [%s], volume [%s]", e.Name, v)
 		}
+		volumes[v] = volumeConfig
 	}
 	e.override = &composeOverride{
 		Version:  p.GetVersion(),
