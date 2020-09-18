@@ -27,7 +27,7 @@ var _ = Describe("ServiceConfig", func() {
 	Context("validation", func() {
 
 		When("base labels", func() {
-			It("errors when base labels are not present", func() {
+			It("fails when base labels are not present", func() {
 				err := ServiceConfig{Labels: composego.Labels{}}.validate()
 				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[0])))
 
@@ -35,7 +35,7 @@ var _ = Describe("ServiceConfig", func() {
 				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[1])))
 			})
 
-			It("errors when replicas label is not a number", func() {
+			It("fails when replicas label is not a number", func() {
 				serviceConfig := ServiceConfig{Labels: composego.Labels{config.LabelWorkloadLivenessProbeCommand: "value"}}
 				serviceConfig.Labels[config.LabelWorkloadReplicas] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
@@ -53,67 +53,67 @@ var _ = Describe("ServiceConfig", func() {
 					}}
 			})
 
-			It("errors when unknown labels are present", func() {
+			It("fails when unknown labels are present", func() {
 				serviceConfig.Labels["kev.workload.unknown"] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when component enabled label has incorrect value", func() {
+			It("fails when component enabled label has incorrect value", func() {
 				serviceConfig.Labels[config.LabelComponentEnabled] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when image pull policy label has wrong value", func() {
+			It("fails when image pull policy label has wrong value", func() {
 				serviceConfig.Labels[config.LabelWorkloadImagePullPolicy] = "wrong-value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when liveness probe disabled label has wrong value", func() {
+			It("fails when liveness probe disabled label has wrong value", func() {
 				serviceConfig.Labels[config.LabelWorkloadImagePullPolicy] = "wrong-value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when liveness probe initial delay label is not a duration", func() {
+			It("fails when liveness probe initial delay label is not a duration", func() {
 				serviceConfig.Labels[config.LabelWorkloadLivenessProbeInitialDelay] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when liveness probe initial interval label is not a duration", func() {
+			It("fails when liveness probe initial interval label is not a duration", func() {
 				serviceConfig.Labels[config.LabelWorkloadLivenessProbeInterval] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when liveness probe retries label is not a number", func() {
+			It("fails when liveness probe retries label is not a number", func() {
 				serviceConfig.Labels[config.LabelWorkloadLivenessProbeRetries] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when liveness probe timeout label is not a duration", func() {
+			It("fails when liveness probe timeout label is not a duration", func() {
 				serviceConfig.Labels[config.LabelWorkloadLivenessProbeTimeout] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when max memory label is not a memory unit", func() {
+			It("fails when max memory label is not a memory unit", func() {
 				serviceConfig.Labels[config.LabelWorkloadMaxMemory] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when the memory label is not a memory unit", func() {
+			It("fails when the memory label is not a memory unit", func() {
 				serviceConfig.Labels[config.LabelWorkloadMemory] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when rolling update max surge label is not a number", func() {
+			It("fails when rolling update max surge label is not a number", func() {
 				serviceConfig.Labels[config.LabelWorkloadRollingUpdateMaxSurge] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when service account name label has the incorrect pattern", func() {
+			It("fails when service account name label has the incorrect pattern", func() {
 				serviceConfig.Labels[config.LabelWorkloadServiceAccountName] = " wrong-pattern"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when workload type label has the wrong value", func() {
+			It("fails when workload type label has the wrong value", func() {
 				serviceConfig.Labels[config.LabelWorkloadType] = "wrong-value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})

@@ -27,12 +27,12 @@ var _ = Describe("VolumeConfig", func() {
 	Context("validation", func() {
 
 		When("base labels", func() {
-			It("errors when base labels are not present", func() {
+			It("fails when base labels are not present", func() {
 				err := VolumeConfig{Labels: composego.Labels{}}.validate()
 				Expect(err).Should(MatchError(ContainSubstring(config.BaseVolumeLabels[0])))
 			})
 
-			It("errors when volume size label is not a memory unit", func() {
+			It("fails when volume size label is not a memory unit", func() {
 				volumeConfig := VolumeConfig{Labels: composego.Labels{config.LabelVolumeSize: "value"}}
 				Expect(volumeConfig.validate()).Should(HaveOccurred())
 			})
@@ -46,17 +46,17 @@ var _ = Describe("VolumeConfig", func() {
 					Labels: composego.Labels{config.LabelVolumeSize: "10Gi"}}
 			})
 
-			It("errors when unknown labels are present", func() {
+			It("fails when unknown labels are present", func() {
 				volumeConfig.Labels["kev.volume.unknown"] = "value"
 				Expect(volumeConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when storage class label has the incorrect pattern", func() {
+			It("fails when storage class label has the incorrect pattern", func() {
 				volumeConfig.Labels[config.LabelVolumeStorageClass] = " wrong-pattern"
 				Expect(volumeConfig.validate()).Should(HaveOccurred())
 			})
 
-			It("errors when volume selector label has the incorrect pattern", func() {
+			It("fails when volume selector label has the incorrect pattern", func() {
 				volumeConfig.Labels[config.LabelVolumeSelector] = " wrong-pattern"
 				Expect(volumeConfig.validate()).Should(HaveOccurred())
 			})
