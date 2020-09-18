@@ -18,16 +18,11 @@ package kev
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/xeipuuv/gojsonschema"
-)
-
-const (
-	jsonschemaOneOf = "number_one_of"
-	jsonschemaAnyOf = "number_any_of"
 )
 
 func newServiceConfig(s composego.ServiceConfig) (ServiceConfig, error) {
@@ -81,7 +76,7 @@ func (sc ServiceConfig) validate() error {
 	}
 
 	if !result.Valid() {
-		return fmt.Errorf("overridden service: %s, validation err: %s", sc.Name, result.Errors()[0].Description())
+		return errors.New(result.Errors()[0].Description())
 	}
 	return nil
 }
