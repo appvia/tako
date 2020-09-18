@@ -1105,10 +1105,9 @@ var _ = Describe("Transform", func() {
 				Expect(p).To(HaveLen(2))
 				Expect(p).To(Equal([]v1.ServicePort{
 					{
-						Name:        "8080",
-						Protocol:    "TCP",
-						AppProtocol: nil,
-						Port:        8080,
+						Name:     "8080",
+						Protocol: "TCP",
+						Port:     8080,
 						TargetPort: intstr.IntOrString{
 							Type:   0,
 							IntVal: 8080,
@@ -1117,10 +1116,9 @@ var _ = Describe("Transform", func() {
 						NodePort: 0,
 					},
 					{
-						Name:        "9999",
-						Protocol:    "TCP",
-						AppProtocol: nil,
-						Port:        9999,
+						Name:     "9999",
+						Protocol: "TCP",
+						Port:     9999,
 						TargetPort: intstr.IntOrString{
 							Type:   0,
 							IntVal: 8080,
@@ -1588,10 +1586,9 @@ var _ = Describe("Transform", func() {
 
 		expectedPorts := []v1.ServicePort{
 			{
-				Name:        "8080",
-				Protocol:    "TCP",
-				AppProtocol: nil,
-				Port:        8080,
+				Name:     "8080",
+				Protocol: "TCP",
+				Port:     8080,
 				TargetPort: intstr.IntOrString{
 					Type:   0,
 					IntVal: 8080,
@@ -1628,10 +1625,9 @@ var _ = Describe("Transform", func() {
 			Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
 			Expect(svc.Spec.Ports).To(Equal([]v1.ServicePort{
 				{
-					Name:        "headless",
-					Protocol:    "",
-					AppProtocol: nil,
-					Port:        55555,
+					Name:     "headless",
+					Protocol: "",
+					Port:     55555,
 					TargetPort: intstr.IntOrString{
 						Type:   0,
 						IntVal: 0,
