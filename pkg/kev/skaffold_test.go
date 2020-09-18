@@ -304,7 +304,6 @@ var _ = Describe("Skaffold", func() {
 				})
 
 				It("picks remote registry image path and sets correct Build configuration", func() {
-					// skaffoldManifest.SetBuildArtifacts(analysis)
 					Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
 					Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal("quay.io/myorg/myservice"))
 					Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
