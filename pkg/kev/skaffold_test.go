@@ -277,7 +277,10 @@ var _ = Describe("Skaffold", func() {
 
 	Describe("SetBuildArtifacts", func() {
 
-		var skaffoldManifest *kev.SkaffoldManifest
+		var (
+			skaffoldManifest *kev.SkaffoldManifest
+			analysis         *kev.Analysis
+		)
 
 		Context("with detected service Dockerfiles", func() {
 
@@ -285,17 +288,23 @@ var _ = Describe("Skaffold", func() {
 				skaffoldManifest = &kev.SkaffoldManifest{}
 			})
 
+			JustBeforeEach(func() {
+				skaffoldManifest.SetBuildArtifacts(analysis)
+			})
+
 			// Note, service name is derived from the Dockerfile location path
 			// example: src/myservice/Dockerfile will result in `myservice` service name
 
 			Context("and detected remote registry image names matching service name", func() {
-				analysis := &kev.Analysis{
-					Dockerfiles: []string{"src/myservice/Dockerfile"},
-					Images:      []string{"quay.io/myorg/myservice", "myservice"},
-				}
+				BeforeEach(func() {
+					analysis = &kev.Analysis{
+						Dockerfiles: []string{"src/myservice/Dockerfile"},
+						Images:      []string{"quay.io/myorg/myservice", "myservice"},
+					}
+				})
 
 				It("picks remote registry image path and sets correct Build configuration", func() {
-					skaffoldManifest.SetBuildArtifacts(analysis)
+					// skaffoldManifest.SetBuildArtifacts(analysis)
 					Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
 					Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal("quay.io/myorg/myservice"))
 					Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
@@ -303,13 +312,14 @@ var _ = Describe("Skaffold", func() {
 			})
 
 			Context("and no remote registry image names detected matching service name", func() {
-				analysis := &kev.Analysis{
-					Dockerfiles: []string{"src/myservice/Dockerfile"},
-					Images:      []string{"quay.io/myorg/someotherserviceregistry"},
-				}
+				BeforeEach(func() {
+					analysis = &kev.Analysis{
+						Dockerfiles: []string{"src/myservice/Dockerfile"},
+						Images:      []string{"quay.io/myorg/someotherserviceregistry"},
+					}
+				})
 
 				It("sets image name to be the same as service name and sets correct Build configuration", func() {
-					skaffoldManifest.SetBuildArtifacts(analysis)
 					Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
 					Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal("myservice"))
 					Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
