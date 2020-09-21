@@ -126,4 +126,14 @@ var _ = Describe("Manifest", func() {
 			})
 		})
 	})
+
+	Describe("LoadManifest", func() {
+		Context("validation", func() {
+			It("fails for invalid loaded environment", func() {
+				workingDir := "testdata/validation"
+				_, err := kev.LoadManifest(workingDir)
+				Expect(err).Should(HaveOccurred())
+			})
+		})
+	})
 })

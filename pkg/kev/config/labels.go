@@ -103,8 +103,8 @@ const (
 )
 
 var BaseServiceLabels = []string{
-	LabelWorkloadReplicas,
 	LabelWorkloadLivenessProbeCommand,
+	LabelWorkloadReplicas,
 }
 
 var BaseVolumeLabels = []string{

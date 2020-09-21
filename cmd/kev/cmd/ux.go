@@ -17,34 +17,28 @@
 package cmd
 
 import (
+	"fmt"
+	"io"
 	"os"
-	"path"
-
-	"github.com/appvia/kev/pkg/kev"
-	"github.com/spf13/cobra"
 )
 
-func runReconcileCmd(_ *cobra.Command, _ []string) error {
-	cmdName := "Reconcile"
+func displayError(cmdName string, err error) error {
+	_, _ = os.Stdout.Write([]byte("⨯ " + cmdName + "\n"))
+	return fmt.Errorf(" → Error: %s", err)
+}
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return displayError(cmdName, err)
-	}
+func displayInitSuccess(w io.Writer, files []skippableFile) {
+	_, _ = w.Write([]byte("✓ Init\n"))
+	for _, file := range files {
+		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
 
-	manifest, err := kev.Reconcile(workingDir, os.Stdout)
-	if err != nil {
-		return displayError(cmdName, err)
-	}
-
-	os.Stdout.WriteString("...............................\n\n")
-
-	for _, environment := range manifest.Environments {
-		filePath := path.Join(workingDir, environment.File)
-		if err := writeTo(filePath, environment); err != nil {
-			return displayError(cmdName, err)
+		if file.Updated {
+			msg = fmt.Sprintf(" → Updating %s ... Done\n", file.FileName)
 		}
-	}
 
-	return nil
+		if file.Skipped {
+			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", file.FileName)
+		}
+		_, _ = w.Write([]byte(msg))
+	}
 }

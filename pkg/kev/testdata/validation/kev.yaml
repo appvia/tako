@@ -1,0 +1,4 @@
+compose:
+  - testdata/validation/docker-compose.yaml
+environments:
+  dev: testdata/validation/docker-compose.kev.dev.yaml

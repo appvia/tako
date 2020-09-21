@@ -82,24 +82,26 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
+	cmdName := "Init"
+
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
 
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
-		return displayInitError(err)
+		return displayError(cmdName, err)
 	}
 
 	manifestPath := path.Join(workingDirAbs, kev.ManifestName)
 	if manifestExistsForPath(manifestPath) {
 		err := fmt.Errorf("kev.yaml already exists at: %s", manifestPath)
-		return displayInitError(err)
+		return displayError(cmdName, err)
 	}
 
 	manifest, err := kev.Init(files, envs, ".")
 	if err != nil {
-		return displayInitError(err)
+		return displayError(cmdName, err)
 	}
 
 	var results []skippableFile
@@ -108,7 +110,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		envPath := path.Join(workingDirAbs, environment.File)
 
 		if err := writeTo(envPath, environment); err != nil {
-			return displayInitError(err)
+			return displayError(cmdName, err)
 		}
 
 		results = append(results, skippableFile{
@@ -123,12 +125,12 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		manifest.Skaffold = kev.SkaffoldFileName
 
 		if err := createOrUpdateSkaffoldManifest(skaffoldManifestPath, envs, &results); err != nil {
-			return displayInitError(err)
+			return displayError(cmdName, err)
 		}
 	}
 
 	if err := writeTo(manifestPath, manifest); err != nil {
-		return displayInitError(err)
+		return displayError(cmdName, err)
 	}
 
 	results = append([]skippableFile{{
@@ -145,11 +147,6 @@ func manifestExistsForPath(manifestPath string) bool {
 	return err == nil
 }
 
-func displayInitError(err error) error {
-	_, _ = os.Stdout.Write([]byte("⨯ Init\n"))
-	return fmt.Errorf(" → Error: %s", err)
-}
-
 func writeTo(filePath string, w io.WriterTo) error {
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -161,23 +158,8 @@ func writeTo(filePath string, w io.WriterTo) error {
 	return file.Close()
 }
 
-func displayInitSuccess(w io.Writer, files []skippableFile) {
-	_, _ = w.Write([]byte("✓ Init\n"))
-	for _, file := range files {
-		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
-
-		if file.Updated {
-			msg = fmt.Sprintf(" → Updating %s ... Done\n", file.FileName)
-		}
-
-		if file.Skipped {
-			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", file.FileName)
-		}
-		_, _ = w.Write([]byte(msg))
-	}
-}
-
 func createOrUpdateSkaffoldManifest(path string, envs []string, results *[]skippableFile) error {
+	cmdName := "Init"
 
 	if manifestExistsForPath(path) {
 		// skaffold manifest already present - add additional profiles to it!
@@ -186,10 +168,10 @@ func createOrUpdateSkaffoldManifest(path string, envs []string, results *[]skipp
 
 		updatedSkaffold, err := kev.AddProfiles(path, envs, true)
 		if err != nil {
-			return displayInitError(err)
+			return displayError(cmdName, err)
 		}
 		if err := writeTo(path, updatedSkaffold); err != nil {
-			return displayInitError(err)
+			return displayError(cmdName, err)
 		}
 
 		*results = append(*results, skippableFile{
@@ -201,11 +183,11 @@ func createOrUpdateSkaffoldManifest(path string, envs []string, results *[]skipp
 
 		skaffoldManifest, err := kev.PrepareForSkaffold(envs)
 		if err != nil {
-			return displayInitError(err)
+			return displayError(cmdName, err)
 		}
 
 		if err := writeTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
-			return displayInitError(err)
+			return displayError(cmdName, err)
 		}
 
 		*results = append(*results, skippableFile{

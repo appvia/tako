@@ -22,6 +22,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -120,7 +121,7 @@ func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
 	return int64(written), err
 }
 
-func (e *Environment) loadOverlay() (*Environment, error) {
+func (e *Environment) loadOverride() (*Environment, error) {
 	p, err := NewComposeProject([]string{e.File})
 	if err != nil {
 		return nil, err
@@ -133,13 +134,19 @@ func (e *Environment) loadOverlay() (*Environment, error) {
 			return nil, err
 		}
 		envVarsFromNilToBlankInService(s)
-		services = append(services, ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment})
+		serviceConfig, err := newServiceConfig(s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Cannot load environment [%s], service [%s]", e.Name, name)
+		}
+		services = append(services, serviceConfig)
 	}
 	volumes := Volumes{}
 	for _, v := range p.VolumeNames() {
-		volumes[v] = VolumeConfig{
-			Labels: p.Volumes[v].Labels,
+		volumeConfig, err := newVolumeConfig(v, p)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Cannot load environment [%s], volume [%s]", e.Name, v)
 		}
+		volumes[v] = volumeConfig
 	}
 	e.override = &composeOverride{
 		Version:  p.GetVersion(),
@@ -181,5 +188,5 @@ func loadEnvironment(name, file string) (*Environment, error) {
 		Name: name,
 		File: file,
 	}
-	return e.loadOverlay()
+	return e.loadOverride()
 }

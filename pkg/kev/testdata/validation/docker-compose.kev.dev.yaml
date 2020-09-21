@@ -1,0 +1,15 @@
+version: "3.7"
+services:
+  db:
+    labels:
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
+      kev.workload.replicas: "1"
+  wordpress:
+    labels:
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
+      kev.workload.replicas: "1"
+      kev.workload.unknown: "unknown-value"
+volumes:
+  db_data:
+    labels:
+      kev.volume.storage-class: standard

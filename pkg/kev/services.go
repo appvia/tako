@@ -16,7 +16,19 @@
 
 package kev
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/appvia/kev/pkg/kev/config"
+	composego "github.com/compose-spec/compose-go/types"
+	"github.com/xeipuuv/gojsonschema"
+)
+
+func newServiceConfig(s composego.ServiceConfig) (ServiceConfig, error) {
+	config := ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment}
+	return config, config.validate()
+}
 
 // MarshalYAML makes Services implement yaml.Marshaller.
 func (s Services) MarshalYAML() (interface{}, error) {
@@ -52,6 +64,21 @@ func (s Services) Set() map[string]bool {
 		out[service.Name] = true
 	}
 	return out
+}
+
+func (sc ServiceConfig) validate() error {
+	ls := gojsonschema.NewGoLoader(config.ServicesSchema)
+	ld := gojsonschema.NewGoLoader(sc.Labels)
+
+	result, err := gojsonschema.Validate(ls, ld)
+	if err != nil {
+		return err
+	}
+
+	if !result.Valid() {
+		return errors.New(result.Errors()[0].Description())
+	}
+	return nil
 }
 
 // GetLabels gets a service's labels
