@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev"
@@ -34,6 +35,9 @@ var devLongDesc = `(dev) Continuously watches and reconciles changes to the sour
 
    ### Run Kev in dev mode for a particular environment only
    $ kev dev -e dev -e prod
+
+   ### Run Kev in dev mode and render manifests to custom directory
+   $ kev dev -d my-manifests
  `
 
 var devCmd = &cobra.Command{
@@ -84,26 +88,53 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Error("Couldn't get working directory")
+		return err
+	}
+
+	manifest, err := kev.LoadManifest(workDir)
+	if err != nil {
+		log.Error("Unable to load app manifest")
+		return err
+	}
+
 	log.Infof(`Running Kev in development mode... Watched environments: %s`, strings.Join(envs, ", "))
 
-	change := make(chan string, 1)
+	change := make(chan string, 50)
 	defer close(change)
 
-	go kev.Dev(envs, change)
+	files := manifest.GetSourcesFiles()
+	filteredEnvs, err := manifest.GetEnvironments(envs)
+	for _, e := range filteredEnvs {
+		files = append(files, e.File)
+	}
+
+	go kev.Watch(files, change)
 
 	for {
-		if len(<-change) > 0 {
-			fmt.Print("\n♻️  Re-rendering manifests...\n\n")
+		ch := <-change
+		if len(ch) > 0 {
+			fmt.Printf("\n♻️  %s changed! Re-rendering manifests...\n\n", ch)
 
 			if err := runReconcileCmd(cmd, args); err != nil {
 				return err
 			}
 
+			// re-render manifests for specified environments only
 			if err := runRenderCmd(cmd, args); err != nil {
 				return err
 			}
 
-			// <-change
+			// empty the buffer as we only ever do one re-render cycle per a batch of changes
+			if len(change) > 0 {
+				for range change {
+					if len(change) == 0 {
+						break
+					}
+				}
+			}
 		}
 	}
 }
