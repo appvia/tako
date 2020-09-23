@@ -19,7 +19,6 @@ package kev
 import (
 	"fmt"
 	"io"
-	"sort"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
@@ -210,20 +209,4 @@ func (o *composeOverride) mergeVolumesInto(p *ComposeProject) error {
 		p.Volumes[name] = base
 	}
 	return nil
-}
-
-// contains returns true of slice of strings contains a given string
-func contains(src []string, s string) bool {
-	sort.Strings(src)
-	i := sort.SearchStrings(src, s)
-	return i < len(src) && src[i] == s
-}
-
-// contains returns true of slice of strings contains a given string
-func keys(src map[string]string) []string {
-	out := make([]string, 0, len(src))
-	for k := range src {
-		out = append(out, k)
-	}
-	return out
 }
