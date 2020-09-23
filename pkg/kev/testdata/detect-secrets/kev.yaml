@@ -1,0 +1,4 @@
+compose:
+  - testdata/detect-secrets/docker-compose.yaml
+environments:
+  dev: testdata/detect-secrets/docker-compose.kev.dev.yaml

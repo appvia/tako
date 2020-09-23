@@ -157,6 +157,42 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 	return p, nil
 }
 
+// DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.
+func (m *Manifest) DetectSecretsInSources(matchers []map[string]string, reporter io.Writer) error {
+	sourcesFiles := m.GetSourcesFiles()
+	p, err := NewComposeProject(sourcesFiles)
+	if err != nil {
+		return err
+	}
+
+	candidates := Services{}
+	for _, s := range p.Services {
+		candidates = append(candidates, ServiceConfig{Name: s.Name, Environment: s.Environment})
+	}
+
+	_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting secret leaks in sources [%s]\n", sourcesFiles)))
+	return candidates.detectSecrets(matchers, reporter)
+}
+
+// DetectSecretsInEnvs detects any potential secrets setup as environment variables
+// in a manifests deployment environments config.
+func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string, reporter io.Writer) error {
+	var filter []string
+	envs, err := m.GetEnvironments(filter)
+	if err != nil {
+		return err
+	}
+
+	for _, env := range envs {
+		_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting secret leaks in env [%s]\n", env.Name)))
+		err := env.GetServices().detectSecrets(matchers, reporter)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetSourcesFiles gets the sources tracked docker-compose files.
 func (m *Manifest) GetSourcesFiles() []string {
 	return m.Sources.Files

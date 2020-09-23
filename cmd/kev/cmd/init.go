@@ -46,10 +46,11 @@ Examples:
   $ kev init -e staging`
 
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Tracks compose sources & creates deployment environments.",
-	Long:  initLongDesc,
-	RunE:  runInitCmd,
+	Use:      "init",
+	Short:    "Tracks compose sources & creates deployment environments.",
+	Long:     initLongDesc,
+	RunE:     runInitCmd,
+	PostRunE: runDetectSecretsCmd,
 }
 
 type skippableFile struct {
