@@ -313,9 +313,18 @@ func collectBuildArtifacts(analysis *Analysis) map[string]string {
 	buildArtifacts := map[string]string{}
 
 	for _, d := range analysis.Dockerfiles {
+
 		context := strings.ReplaceAll(d, "/Dockerfile", "")
 		contextParts := strings.Split(context, "/")
 		svcNameFromContext := contextParts[len(contextParts)-1]
+
+		if d == "Dockerfile" {
+			// Dockerfile detected in the root directory, use local dir as context
+			// and current working directory name as service name
+			context = "."
+			wd, _ := os.Getwd()
+			svcNameFromContext = filepath.Base(wd)
+		}
 
 		// Check whether images contain service name derived from context
 		// as that's the best we can do in order to match a service to corresponding
