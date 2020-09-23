@@ -23,6 +23,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
 
@@ -120,6 +121,75 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+// Dev continuously watches source compose files and rebuilds Kubernetes manifests on each change.
+// Note: It'll rebuild manifessts for all tracked environments, unless list of environments specifically provided.
+func Dev(envs []string, change chan<- string) error {
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Error("Couldn't get working directory")
+		return err
+	}
+
+	manifest, err := LoadManifest(workDir)
+	if err != nil {
+		log.Error("Unable to load app manifest")
+		return err
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					log.Warn(event.Name)
+					change <- event.Name
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+
+				log.Error(err)
+			}
+		}
+	}()
+
+	watched := manifest.GetSourcesFiles()
+
+	// @todo as long as we reconcile before render watching environments causes problems
+	// as it'll rewrite environment specific configs and this itself will invoke reconcile/rebuild
+	// so we're going into infinite loop...
+
+	// filteredEnvs, err := manifest.GetEnvironments(envs)
+	// for _, e := range filteredEnvs {
+	// 	watched = append(watched, e.File)
+	// }
+
+	for _, w := range watched {
+		err = watcher.Add(w)
+		if err != nil {
+			return err
+		}
+	}
+
+	<-done
 
 	return nil
 }

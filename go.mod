@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/GoogleContainerTools/skaffold v1.14.0
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/go-cmp v0.5.2
 	github.com/imdario/mergo v0.3.11
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
