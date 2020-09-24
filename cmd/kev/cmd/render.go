@@ -37,7 +37,16 @@ var renderCmd = &cobra.Command{
 	Short: "Generates application's deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return runReconcileCmd(cmd, args)
+		fns := []func(cmd *cobra.Command, args []string) error{
+			runReconcileCmd,
+			runDetectSecretsCmd,
+		}
+		for _, fn := range fns {
+			if err := fn(cmd, args); err != nil {
+				return err
+			}
+		}
+		return nil
 	},
 	RunE: runRenderCmd,
 }

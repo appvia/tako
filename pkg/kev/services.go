@@ -19,6 +19,9 @@ package kev
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"regexp"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
@@ -64,6 +67,52 @@ func (s Services) Set() map[string]bool {
 		out[service.Name] = true
 	}
 	return out
+}
+
+func (s Services) detectSecrets(matchers []map[string]string, reporter io.Writer) error {
+	var matches []secretHit
+	for _, svc := range s {
+		matches = append(matches, svc.detectSecretsInEnvVars(matchers)...)
+	}
+
+	if len(matches) == 0 {
+		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing detected\n")))
+		return nil
+	}
+
+	for _, m := range matches {
+		_, _ = reporter.Write([]byte(
+			fmt.Sprintf(
+				" → WARNING, Service [%s], env var [%s] looks like a secret\n",
+				m.svcName,
+				m.envVar)))
+	}
+	return nil
+}
+
+func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []secretHit {
+	var matches []secretHit
+
+	for key, val := range sc.Environment {
+		for _, matcher := range matchers {
+			var candidate string
+
+			if matcher["part"] == config.PartIdentifier {
+				candidate = key
+			}
+
+			if matcher["part"] == matcher[config.PartIdentifier] {
+				candidate = *val
+			}
+
+			if found := regexp.MustCompile(matcher["match"]).MatchString(candidate); found {
+				matches = append(matches, secretHit{sc.Name, key, matcher["description"]})
+				break
+			}
+		}
+	}
+
+	return matches
 }
 
 func (sc ServiceConfig) validate() error {

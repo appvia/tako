@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
@@ -68,6 +69,19 @@ func Reconcile(workingDir string, reporter io.Writer) (*Manifest, error) {
 		return nil, errors.Wrap(err, "Could not reconcile project latest")
 	}
 	return m, err
+}
+
+// DetectSecrets detects any potential secrets defined in environment variables
+// found either in sources or override environments.
+// Any detected secrets are reported back using the supplied reporter.
+func DetectSecrets(workingDir string, reporter io.Writer) error {
+	m, err := LoadManifest(workingDir)
+	if err != nil {
+		return err
+	}
+	m.DetectSecretsInSources(config.SecretMatchers, reporter)
+	m.DetectSecretsInEnvs(config.SecretMatchers, reporter)
+	return nil
 }
 
 // Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info

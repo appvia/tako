@@ -65,6 +65,12 @@ type ServiceConfig struct {
 	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
 }
 
+type secretHit struct {
+	svcName     string
+	envVar      string
+	description string
+}
+
 // Services is a list of ServiceConfig
 type Services []ServiceConfig
 
