@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev"
@@ -88,30 +87,12 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	workDir, err := os.Getwd()
-	if err != nil {
-		log.Error("Couldn't get working directory")
-		return err
-	}
-
-	manifest, err := kev.LoadManifest(workDir)
-	if err != nil {
-		log.Error("Unable to load app manifest")
-		return err
-	}
-
 	log.Infof(`Running Kev in development mode... Watched environments: %s`, strings.Join(envs, ", "))
 
 	change := make(chan string, 50)
 	defer close(change)
 
-	files := manifest.GetSourcesFiles()
-	filteredEnvs, err := manifest.GetEnvironments(envs)
-	for _, e := range filteredEnvs {
-		files = append(files, e.File)
-	}
-
-	go kev.Watch(files, change)
+	go kev.Watch(envs, change)
 
 	for {
 		ch := <-change

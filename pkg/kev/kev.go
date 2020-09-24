@@ -125,8 +125,20 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 	return nil
 }
 
-// Watch continuously watches specified files and notifies changes to a channel
-func Watch(files []string, change chan<- string) error {
+// Watch continuously watches source compose files & environment overrides and notifies changes to a channel
+func Watch(envs []string, change chan<- string) error {
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Error("Couldn't get working directory")
+		return err
+	}
+
+	manifest, err := LoadManifest(workDir)
+	if err != nil {
+		log.Error("Unable to load app manifest")
+		return err
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -156,6 +168,12 @@ func Watch(files []string, change chan<- string) error {
 			}
 		}
 	}()
+
+	files := manifest.GetSourcesFiles()
+	filteredEnvs, err := manifest.GetEnvironments(envs)
+	for _, e := range filteredEnvs {
+		files = append(files, e.File)
+	}
 
 	for _, f := range files {
 		err = watcher.Add(f)
