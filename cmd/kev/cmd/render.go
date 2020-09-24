@@ -17,6 +17,10 @@
 package cmd
 
 import (
+	"fmt"
+	"io/ioutil"
+	"strings"
+
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/spf13/cobra"
@@ -91,18 +95,22 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	singleFile, err := cmd.Flags().GetBool("single")
 	dir, err := cmd.Flags().GetString("dir")
 	envs, err := cmd.Flags().GetStringSlice("environment")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
 		return err
 	}
 
-	log.Infof("⚙️  Output format: %s", format)
+	reporter := getReporter(true)
+	if !verbose {
+		log.SetOutput(ioutil.Discard)
+	}
 
+	_, _ = reporter.Write([]byte("✓ Render\n"))
 	if err := kev.Render(format, singleFile, dir, envs); err != nil {
 		return err
 	}
-
-	log.Info("🧰 App render complete!")
+	_, _ = reporter.Write([]byte(fmt.Sprintf(" → Rendering manifests in %s output format ... Done\n", strings.Title(format))))
 
 	return nil
 }

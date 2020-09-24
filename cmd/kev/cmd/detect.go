@@ -23,17 +23,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func runDetectSecretsCmd(_ *cobra.Command, _ []string) error {
+func runDetectSecretsCmd(cmd *cobra.Command, _ []string) error {
 	cmdName := "Detect secrets"
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return displayError(cmdName, err)
 	}
 
-	if err := kev.DetectSecrets(workingDir, os.Stdout); err != nil {
+	reporter := getReporter(verbose)
+	if err := kev.DetectSecrets(workingDir, reporter); err != nil {
 		return displayError(cmdName, err)
 	}
+	_, _ = reporter.Write([]byte("\n"))
 
 	return nil
 }

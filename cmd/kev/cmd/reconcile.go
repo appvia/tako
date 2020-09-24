@@ -24,20 +24,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func runReconcileCmd(_ *cobra.Command, _ []string) error {
+func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 	cmdName := "Reconcile"
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return displayError(cmdName, err)
 	}
 
-	manifest, err := kev.Reconcile(workingDir, os.Stdout)
+	reporter := getReporter(verbose)
+	manifest, err := kev.Reconcile(workingDir, reporter)
 	if err != nil {
 		return displayError(cmdName, err)
 	}
-
-	os.Stdout.WriteString("...............................\n\n")
 
 	for _, environment := range manifest.Environments {
 		filePath := path.Join(workingDir, environment.File)

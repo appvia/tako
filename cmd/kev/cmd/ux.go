@@ -19,8 +19,17 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 )
+
+func getReporter(onScreen bool) io.Writer {
+	out := ioutil.Discard
+	if onScreen {
+		out = os.Stdout
+	}
+	return out
+}
 
 func displayError(cmdName string, err error) error {
 	_, _ = os.Stdout.Write([]byte("⨯ " + cmdName + "\n"))

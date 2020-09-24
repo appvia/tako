@@ -26,10 +26,11 @@ import (
 
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
-	Use:           "kev",
-	Short:         "Develop Kubernetes apps iteratively using Docker-Compose.",
-	SilenceErrors: true,
-	SilenceUsage:  true,
+	Use:              "kev",
+	Short:            "Develop Kubernetes apps iteratively using Docker-Compose.",
+	TraverseChildren: true,
+	SilenceErrors:    true,
+	SilenceUsage:     true,
 }
 
 // NewRootCmd returns root command
@@ -38,6 +39,16 @@ func NewRootCmd() *cobra.Command {
 }
 
 func init() {
+	flags := rootCmd.Flags()
+	flags.SortFlags = false
+
+	flags.BoolP(
+		"verbose",
+		"v",
+		false,
+		"Show more output",
+	)
+
 	// This is required to help with error handling from RunE , https://github.com/spf13/cobra/issues/914#issuecomment-548411337
 	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		cmd.Println(err)
