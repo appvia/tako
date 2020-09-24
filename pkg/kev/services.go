@@ -75,7 +75,7 @@ func (s Services) detectSecrets(matchers []map[string]string, reporter io.Writer
 		matches = append(matches, svc.detectSecretsInEnvVars(matchers)...)
 	}
 
-	if nothingDetected := len(matches) < 1; nothingDetected {
+	if len(matches) == 0 {
 		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing detected\n")))
 		return nil
 	}
@@ -92,7 +92,7 @@ func (s Services) detectSecrets(matchers []map[string]string, reporter io.Writer
 }
 
 func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []secretHit {
-	var out []secretHit
+	var matches []secretHit
 
 	for key, val := range sc.Environment {
 		for _, matcher := range matchers {
@@ -107,13 +107,13 @@ func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []s
 			}
 
 			if found := regexp.MustCompile(matcher["match"]).MatchString(candidate); found {
-				out = append(out, secretHit{sc.Name, key, matcher["description"]})
+				matches = append(matches, secretHit{sc.Name, key, matcher["description"]})
 				break
 			}
 		}
 	}
 
-	return out
+	return matches
 }
 
 func (sc ServiceConfig) validate() error {
