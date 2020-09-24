@@ -170,7 +170,7 @@ func (m *Manifest) DetectSecretsInSources(matchers []map[string]string, reporter
 		candidates = append(candidates, ServiceConfig{Name: s.Name, Environment: s.Environment})
 	}
 
-	_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting secret leaks in sources [%s]\n", sourcesFiles)))
+	_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting potential secrets in sources %s\n", sourcesFiles)))
 	return candidates.detectSecrets(matchers, reporter)
 }
 
@@ -184,7 +184,7 @@ func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string, reporter io
 	}
 
 	for _, env := range envs {
-		_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting secret leaks in env [%s]\n", env.Name)))
+		_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting potential secrets in env [%s]\n", env.Name)))
 		err := env.GetServices().detectSecrets(matchers, reporter)
 		if err != nil {
 			return err

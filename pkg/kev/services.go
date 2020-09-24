@@ -83,10 +83,9 @@ func (s Services) detectSecrets(matchers []map[string]string, reporter io.Writer
 	for _, m := range matches {
 		_, _ = reporter.Write([]byte(
 			fmt.Sprintf(
-				" → WARNING, leak detected    ... Service [%s], env var [%s], %s\n",
+				" → WARNING, Service [%s], env var [%s] looks like a secret\n",
 				m.svcName,
-				m.envVar,
-				m.description)))
+				m.envVar)))
 	}
 	return nil
 }
