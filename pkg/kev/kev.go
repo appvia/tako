@@ -126,13 +126,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 }
 
 // Watch continuously watches source compose files & environment overrides and notifies changes to a channel
-func Watch(envs []string, change chan<- string) error {
-	workDir, err := os.Getwd()
-	if err != nil {
-		log.Error("Couldn't get working directory")
-		return err
-	}
-
+func Watch(workDir string, envs []string, change chan<- string) error {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
 		log.Error("Unable to load app manifest")

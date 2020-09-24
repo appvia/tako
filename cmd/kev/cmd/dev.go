@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev"
@@ -92,7 +93,13 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	change := make(chan string, 50)
 	defer close(change)
 
-	go kev.Watch(envs, change)
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Error("Couldn't get working directory")
+		return err
+	}
+
+	go kev.Watch(workDir, envs, change)
 
 	for {
 		ch := <-change
