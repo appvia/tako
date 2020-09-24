@@ -23,6 +23,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
 
@@ -120,6 +121,62 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+// Watch continuously watches source compose files & environment overrides and notifies changes to a channel
+func Watch(workDir string, envs []string, change chan<- string) error {
+	manifest, err := LoadManifest(workDir)
+	if err != nil {
+		log.Error("Unable to load app manifest")
+		return err
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					change <- event.Name
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+
+				log.Error(err)
+			}
+		}
+	}()
+
+	files := manifest.GetSourcesFiles()
+	filteredEnvs, err := manifest.GetEnvironments(envs)
+	for _, e := range filteredEnvs {
+		files = append(files, e.File)
+	}
+
+	for _, f := range files {
+		err = watcher.Add(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	<-done
 
 	return nil
 }
