@@ -369,8 +369,7 @@ var _ = Describe("Transform", func() {
 		var expectedPodSpec v1.PodSpec
 		var expectedDeployment *v1apps.Deployment
 
-		replicas := 3
-		expectedReplicas := int32(replicas)
+		replicas := int32(3)
 
 		JustBeforeEach(func() {
 			expectedDeployment = &v1apps.Deployment{
@@ -383,7 +382,7 @@ var _ = Describe("Transform", func() {
 					Labels: configAllLabels(projectService),
 				},
 				Spec: v1apps.DeploymentSpec{
-					Replicas: &expectedReplicas,
+					Replicas: &replicas,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},
@@ -496,8 +495,7 @@ var _ = Describe("Transform", func() {
 		var expectedPodSpec v1.PodSpec
 		var expectedSts *v1apps.StatefulSet
 
-		replicas := 3
-		expectedReplicas := int32(replicas)
+		replicas := int32(3)
 
 		JustBeforeEach(func() {
 			expectedSts = &v1apps.StatefulSet{
@@ -510,7 +508,7 @@ var _ = Describe("Transform", func() {
 					Labels: configAllLabels(projectService),
 				},
 				Spec: v1apps.StatefulSetSpec{
-					Replicas: &expectedReplicas,
+					Replicas: &replicas,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},

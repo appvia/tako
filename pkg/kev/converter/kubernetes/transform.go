@@ -420,9 +420,7 @@ func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileNa
 
 // initDeployment initializes Kubernetes Deployment object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L380
-func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int) *v1apps.Deployment {
-	repl := int32(replicas)
-
+func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int32) *v1apps.Deployment {
 	var podSpec v1.PodSpec
 	if len(projectService.Configs) > 0 {
 		podSpec = k.initPodSpecWithConfigMap(projectService)
@@ -440,7 +438,7 @@ func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int)
 			Labels: configAllLabels(projectService),
 		},
 		Spec: v1apps.DeploymentSpec{
-			Replicas: &repl,
+			Replicas: &replicas,
 			Selector: &meta.LabelSelector{
 				MatchLabels: configLabels(projectService.Name),
 			},
@@ -494,9 +492,7 @@ func (k *Kubernetes) initDaemonSet(projectService ProjectService) *v1apps.Daemon
 }
 
 // initStatefulSet initialises a new StatefulSet
-func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int) *v1apps.StatefulSet {
-	repl := int32(replicas)
-
+func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int32) *v1apps.StatefulSet {
 	var podSpec v1.PodSpec
 	if len(projectService.Configs) > 0 {
 		podSpec = k.initPodSpecWithConfigMap(projectService)
@@ -514,7 +510,7 @@ func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int
 			Labels: configAllLabels(projectService),
 		},
 		Spec: v1apps.StatefulSetSpec{
-			Replicas: &repl,
+			Replicas: &replicas,
 			Selector: &meta.LabelSelector{
 				MatchLabels: configLabels(projectService.Name),
 			},
