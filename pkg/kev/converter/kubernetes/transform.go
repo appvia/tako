@@ -38,6 +38,7 @@ import (
 
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
@@ -420,15 +421,15 @@ func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileNa
 
 // initDeployment initializes Kubernetes Deployment object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L380
-func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int) *v1apps.Deployment {
-	repl := int32(replicas)
-
+func (k *Kubernetes) initDeployment(projectService ProjectService) *v1apps.Deployment {
 	var podSpec v1.PodSpec
 	if len(projectService.Configs) > 0 {
 		podSpec = k.initPodSpecWithConfigMap(projectService)
 	} else {
 		podSpec = k.initPodSpec(projectService)
 	}
+
+	replicas := projectService.replicas()
 
 	dc := &v1apps.Deployment{
 		TypeMeta: meta.TypeMeta{
@@ -440,7 +441,7 @@ func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int)
 			Labels: configAllLabels(projectService),
 		},
 		Spec: v1apps.DeploymentSpec{
-			Replicas: &repl,
+			Replicas: &replicas,
 			Selector: &meta.LabelSelector{
 				MatchLabels: configLabels(projectService.Name),
 			},
@@ -494,15 +495,15 @@ func (k *Kubernetes) initDaemonSet(projectService ProjectService) *v1apps.Daemon
 }
 
 // initStatefulSet initialises a new StatefulSet
-func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int) *v1apps.StatefulSet {
-	repl := int32(replicas)
-
+func (k *Kubernetes) initStatefulSet(projectService ProjectService) *v1apps.StatefulSet {
 	var podSpec v1.PodSpec
 	if len(projectService.Configs) > 0 {
 		podSpec = k.initPodSpecWithConfigMap(projectService)
 	} else {
 		podSpec = k.initPodSpec(projectService)
 	}
+
+	replicas := projectService.replicas()
 
 	sts := &v1apps.StatefulSet{
 		TypeMeta: meta.TypeMeta{
@@ -514,7 +515,7 @@ func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int
 			Labels: configAllLabels(projectService),
 		},
 		Spec: v1apps.StatefulSetSpec{
-			Replicas: &repl,
+			Replicas: &replicas,
 			Selector: &meta.LabelSelector{
 				MatchLabels: configLabels(projectService.Name),
 			},
@@ -635,6 +636,100 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 	}
 
 	return ingress
+}
+
+// initHpa intialised horizontal pod autoscaler for a project service
+func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Object) *autoscalingv2beta2.HorizontalPodAutoscaler {
+
+	t := reflect.ValueOf(target).Elem()
+	typeMeta := t.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
+	if !contains([]string{"Deployment", "StatefulSet"}, typeMeta.Kind) {
+		log.WarnWithFields(log.Fields{
+			"project-service": projectService.Name,
+			"kind":            typeMeta.Kind,
+		}, "Unsupported target kind for Horizontal Pod Autoscaler. Skipping ...")
+
+		return nil
+	}
+
+	replicas := projectService.replicas()
+	maxRepl := projectService.autoscaleMaxReplicas()
+	targetCPUUtilization := projectService.autoscaleTargetCPUUtilization()
+	targetMemoryUtilization := projectService.autoscaleTargetMemoryUtilization()
+
+	// if replicas set to 0, autobump to at least 1
+	if replicas == 0 {
+		replicas = 1
+	}
+
+	// no HPA without max replicas
+	if maxRepl == 0 {
+		return nil
+	}
+
+	// max replicas should be greater than min replicas!
+	if maxRepl > 0 && maxRepl <= replicas {
+		log.WarnWithFields(log.Fields{
+			"project-service":        projectService.Name,
+			"replicas":               replicas,
+			"autoscale-max-replicas": maxRepl,
+		}, "Max replicas must be greater than initial replicas number for the Horizontal Pod Autoscaler. Skipping ...")
+
+		return nil
+	}
+
+	metrics := []autoscalingv2beta2.MetricSpec{}
+
+	if targetCPUUtilization > 0 {
+		metrics = append(metrics, autoscalingv2beta2.MetricSpec{
+			Type: "Resource",
+			Resource: &autoscalingv2beta2.ResourceMetricSource{
+				Name: "cpu",
+				Target: autoscalingv2beta2.MetricTarget{
+					Type:               "Utilization",
+					AverageUtilization: &targetCPUUtilization,
+				},
+			},
+		})
+	}
+
+	if targetMemoryUtilization > 0 {
+		metrics = append(metrics, autoscalingv2beta2.MetricSpec{
+			Type: "Resource",
+			Resource: &autoscalingv2beta2.ResourceMetricSource{
+				Name: "memory",
+				Target: autoscalingv2beta2.MetricTarget{
+					Type:               "Utilization",
+					AverageUtilization: &targetMemoryUtilization,
+				},
+			},
+		})
+	}
+
+	return &autoscalingv2beta2.HorizontalPodAutoscaler{
+		TypeMeta: meta.TypeMeta{
+			Kind:       "HorizontalPodAutoscaler",
+			APIVersion: "autoscaling/v2beta2",
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name:        projectService.Name,
+			Labels:      configLabels(projectService.Name),
+			Annotations: configAnnotations(projectService),
+		},
+		Spec: autoscalingv2beta2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2beta2.CrossVersionObjectReference{
+				Kind:       typeMeta.Kind,
+				APIVersion: typeMeta.APIVersion,
+				Name:       projectService.Name,
+			},
+			MinReplicas: &replicas,
+			MaxReplicas: maxRepl,
+			Metrics:     metrics,
+		},
+		Status: autoscalingv2beta2.HorizontalPodAutoscalerStatus{
+			Conditions: []autoscalingv2beta2.HorizontalPodAutoscalerCondition{},
+		},
+	}
 }
 
 // createSecrets create secrets
@@ -1263,9 +1358,6 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []runtime.Object {
 	var objects []runtime.Object
 
-	// @step get number of replicas for service
-	replicas := projectService.replicas()
-
 	// @step get workload type
 	workloadType := projectService.workloadType()
 
@@ -1277,11 +1369,21 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	// @step create object based on inferred / manually configured workload controller type
 	switch strings.ToLower(workloadType) {
 	case strings.ToLower(config.DeploymentWorkload):
-		objects = append(objects, k.initDeployment(projectService, replicas))
+		o := k.initDeployment(projectService)
+		objects = append(objects, o)
+		hpa := k.initHpa(projectService, o)
+		if hpa != nil {
+			objects = append(objects, hpa)
+		}
+	case strings.ToLower(config.StatefulsetWorkload):
+		o := k.initStatefulSet(projectService)
+		objects = append(objects, o)
+		hpa := k.initHpa(projectService, o)
+		if hpa != nil {
+			objects = append(objects, hpa)
+		}
 	case strings.ToLower(config.DaemonsetWorkload):
 		objects = append(objects, k.initDaemonSet(projectService))
-	case strings.ToLower(config.StatefulsetWorkload):
-		objects = append(objects, k.initStatefulSet(projectService, replicas))
 	}
 
 	return objects

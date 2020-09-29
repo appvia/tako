@@ -369,8 +369,7 @@ var _ = Describe("Transform", func() {
 		var expectedPodSpec v1.PodSpec
 		var expectedDeployment *v1apps.Deployment
 
-		replicas := 3
-		expectedReplicas := int32(replicas)
+		replicas := int32(1)
 
 		JustBeforeEach(func() {
 			expectedDeployment = &v1apps.Deployment{
@@ -383,7 +382,7 @@ var _ = Describe("Transform", func() {
 					Labels: configAllLabels(projectService),
 				},
 				Spec: v1apps.DeploymentSpec{
-					Replicas: &expectedReplicas,
+					Replicas: &replicas,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},
@@ -404,7 +403,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes deployment spec as expected", func() {
-				d := k.initDeployment(projectService, replicas)
+				d := k.initDeployment(projectService)
 				Expect(d).To(Equal(expectedDeployment))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -441,7 +440,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes deployment spec as expected", func() {
-				d := k.initDeployment(projectService, replicas)
+				d := k.initDeployment(projectService)
 				Expect(d).To(Equal(expectedDeployment))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -464,7 +463,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("it includes update strategy in the deployment spec", func() {
-				d := k.initDeployment(projectService, replicas)
+				d := k.initDeployment(projectService)
 				Expect(d.Spec.Strategy.RollingUpdate.MaxSurge.IntValue()).To(Equal(2))
 				Expect(d.Spec.Strategy.RollingUpdate.MaxUnavailable.IntValue()).To(Equal(0))
 			})
@@ -496,8 +495,7 @@ var _ = Describe("Transform", func() {
 		var expectedPodSpec v1.PodSpec
 		var expectedSts *v1apps.StatefulSet
 
-		replicas := 3
-		expectedReplicas := int32(replicas)
+		replicas := int32(1)
 
 		JustBeforeEach(func() {
 			expectedSts = &v1apps.StatefulSet{
@@ -510,7 +508,7 @@ var _ = Describe("Transform", func() {
 					Labels: configAllLabels(projectService),
 				},
 				Spec: v1apps.StatefulSetSpec{
-					Replicas: &expectedReplicas,
+					Replicas: &replicas,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},
@@ -536,7 +534,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes deployment spec as expected", func() {
-				d := k.initStatefulSet(projectService, replicas)
+				d := k.initStatefulSet(projectService)
 				Expect(d).To(Equal(expectedSts))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -573,7 +571,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes StatefulSet spec as expected", func() {
-				d := k.initStatefulSet(projectService, replicas)
+				d := k.initStatefulSet(projectService)
 				Expect(d).To(Equal(expectedSts))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -870,6 +868,165 @@ var _ = Describe("Transform", func() {
 				}))
 			})
 		})
+	})
+
+	Describe("initHpa", func() {
+		var obj runtime.Object
+
+		Context("with supported object kind", func() {
+			BeforeEach(func() {
+				obj = &v1apps.Deployment{
+					TypeMeta: meta.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+				}
+			})
+
+			Context("with autoscaling options specified", func() {
+
+				When("the maximum number of replicas is defined", func() {
+					BeforeEach(func() {
+						projectService.Labels = composego.Labels{
+							config.LabelWorkloadAutoscaleMaxReplicas: "10",
+						}
+					})
+
+					It("initialises HPA with expected API version referencing passed object", func() {
+						hpa := k.initHpa(projectService, obj)
+						Expect(hpa.APIVersion).To(Equal("autoscaling/v2beta2"))
+						Expect(hpa.Spec.ScaleTargetRef.Kind).To(Equal("Deployment"))
+						Expect(hpa.Spec.ScaleTargetRef.APIVersion).To(Equal("apps/v1"))
+						Expect(hpa.Spec.ScaleTargetRef.Name).To(Equal(projectService.Name))
+					})
+
+					When("workload CPU threshold paramters is also specified", func() {
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas:             "10",
+								config.LabelWorkloadAutoscaleCPUUtilizationThreshold: "65",
+							}
+						})
+
+						It("initialises Horizontal Pod Autoscaler for a project service", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
+							// first metrics is CPU
+							Expect(hpa.Spec.Metrics[0].Resource.Name).To(BeEquivalentTo("cpu"))
+							Expect(hpa.Spec.Metrics[0].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[0].Resource.Target.AverageUtilization).To(BeEquivalentTo(65))
+						})
+					})
+
+					When("workload CPU threshold is not specified", func() {
+
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas: "10",
+							}
+						})
+
+						It("initialises Horizontal Pod Autoscaler for a project service with default target CPU utilization of 70%", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
+							// first metrics is CPU
+							Expect(hpa.Spec.Metrics[0].Resource.Name).To(BeEquivalentTo("cpu"))
+							Expect(hpa.Spec.Metrics[0].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[0].Resource.Target.AverageUtilization).To(BeEquivalentTo(70))
+						})
+					})
+
+					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
+
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadReplicas:             "10",
+								config.LabelWorkloadAutoscaleMaxReplicas: "5",
+							}
+						})
+
+						It("doesn't initialise the Horizontal Pod Autoscaler", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa).To(BeNil())
+						})
+					})
+
+					When("the maximum number of replicas is specified as 0", func() {
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas: "0",
+							}
+						})
+
+						It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa).To(BeNil())
+						})
+					})
+
+					When("workload Memory threshold paramter is also specified", func() {
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas:                "10",
+								config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: "40",
+							}
+						})
+
+						It("initialises Horizontal Pod Autoscaler for a project service", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
+							// second metric is Memory
+							Expect(hpa.Spec.Metrics[1].Resource.Name).To(BeEquivalentTo("memory"))
+							Expect(hpa.Spec.Metrics[1].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[1].Resource.Target.AverageUtilization).To(BeEquivalentTo(40))
+						})
+					})
+
+					When("workload Memory threshold is not specified", func() {
+
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas: "10",
+							}
+						})
+
+						It("initialises Horizontal Pod Autoscaler for a project service with default target Memory utilization of 70%", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
+							// second metric is Memory
+							Expect(hpa.Spec.Metrics[1].Resource.Name).To(BeEquivalentTo("memory"))
+							Expect(hpa.Spec.Metrics[1].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[1].Resource.Target.AverageUtilization).To(BeEquivalentTo(70))
+						})
+					})
+				})
+
+				When("the maximum number of replicas is not defined", func() {
+					It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+						hpa := k.initHpa(projectService, obj)
+						Expect(hpa).To(BeNil())
+					})
+				})
+
+			})
+		})
+
+		Context("with not supported object kind", func() {
+			BeforeEach(func() {
+				obj = &v1apps.StatefulSet{
+					TypeMeta: meta.TypeMeta{
+						Kind:       "StatefulSet",
+						APIVersion: "apps/v1",
+					},
+				}
+			})
+
+			It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+				hpa := k.initHpa(projectService, obj)
+				Expect(hpa).To(BeNil())
+			})
+		})
+
 	})
 
 	Describe("createSecrets", func() {

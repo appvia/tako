@@ -140,7 +140,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("will use a label value", func() {
-				Expect(projectService.replicas()).To(Equal(replicas))
+				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
@@ -158,7 +158,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("will use a label value", func() {
-				Expect(projectService.replicas()).To(Equal(int(replicas)))
+				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
@@ -173,13 +173,82 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("will use a replica number as specified in deploy block", func() {
-				Expect(projectService.replicas()).To(Equal(int(replicas)))
+				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
 		Context("when there is no replicas label supplied nor deploy block contains number of replicas", func() {
 			It("will use default number of replicas", func() {
-				Expect(projectService.replicas()).To(Equal(config.DefaultReplicaNumber))
+				Expect(projectService.replicas()).To(BeEquivalentTo(config.DefaultReplicaNumber))
+			})
+		})
+	})
+
+	Describe("autoscaleMaxReplicas", func() {
+		replicas := 10
+
+		Context("when provided via label", func() {
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadAutoscaleMaxReplicas: strconv.Itoa(replicas),
+				}
+			})
+
+			It("will use a label value", func() {
+				Expect(projectService.autoscaleMaxReplicas()).To(BeEquivalentTo(replicas))
+			})
+		})
+
+		Context("when there is no autoscale max replicas label supplied", func() {
+			It("will use default max number of replicas for autoscaling purposes ", func() {
+				Expect(projectService.autoscaleMaxReplicas()).To(BeEquivalentTo(config.DefaultAutoscaleMaxReplicaNumber))
+			})
+		})
+	})
+
+	Describe("autoscaleTargetCPUUtilization", func() {
+		cpuThreshold := 70 // 70% utilization should kick off the autoscaling
+
+		Context("when provided via label", func() {
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadAutoscaleCPUUtilizationThreshold: strconv.Itoa(cpuThreshold),
+				}
+			})
+
+			It("will use a label value", func() {
+				Expect(projectService.autoscaleTargetCPUUtilization()).To(BeEquivalentTo(cpuThreshold))
+			})
+		})
+
+		Context("when there is no autoscale target CPU utilization label supplied", func() {
+			It("will use default CPU threshold for autoscaling purposes ", func() {
+				Expect(projectService.autoscaleTargetCPUUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleCPUThreshold))
+			})
+		})
+	})
+
+	Describe("autoscaleTargetMemoryUtilization", func() {
+		memThreshold := 70 // 70% utilization should kick off the autoscaling
+
+		Context("when provided via label", func() {
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: strconv.Itoa(memThreshold),
+				}
+			})
+
+			It("will use a label value", func() {
+				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(memThreshold))
+			})
+		})
+
+		Context("when there is no autoscale target Memory utilization label supplied", func() {
+			It("will use default Memory threshold for autoscaling purposes ", func() {
+				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleMemoryThreshold))
 			})
 		})
 	})

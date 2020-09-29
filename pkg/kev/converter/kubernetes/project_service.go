@@ -52,7 +52,7 @@ func (p *ProjectService) enabled() bool {
 }
 
 // replicas returns number of replicas for given project service
-func (p *ProjectService) replicas() int {
+func (p *ProjectService) replicas() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadReplicas]; ok {
 		replicas, err := strconv.Atoi(val)
 		if err != nil {
@@ -64,12 +64,72 @@ func (p *ProjectService) replicas() int {
 
 			return config.DefaultReplicaNumber
 		}
-		return replicas
+		return int32(replicas)
 	} else if p.Deploy != nil && p.Deploy.Replicas != nil {
-		return int(*p.Deploy.Replicas)
+		return int32(*p.Deploy.Replicas)
 	}
 
 	return config.DefaultReplicaNumber
+}
+
+// autoscaleMaxReplicas returns maximum number of replicas for autoscaler
+func (p *ProjectService) autoscaleMaxReplicas() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadAutoscaleMaxReplicas]; ok {
+		maxReplicas, err := strconv.Atoi(val)
+		if err != nil {
+			log.WarnfWithFields(log.Fields{
+				"project-service":        p.Name,
+				"autoscale-max-replicas": val,
+			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
+				config.LabelWorkloadAutoscaleMaxReplicas,
+				config.DefaultAutoscaleMaxReplicaNumber)
+
+			return int32(config.DefaultAutoscaleMaxReplicaNumber)
+		}
+		return int32(maxReplicas)
+	}
+
+	return int32(config.DefaultAutoscaleMaxReplicaNumber)
+}
+
+// autoscaleTargetCPUUtilization returns target CPU utilization percentage for autoscaler
+func (p *ProjectService) autoscaleTargetCPUUtilization() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadAutoscaleCPUUtilizationThreshold]; ok {
+		cpu, err := strconv.Atoi(val)
+		if err != nil {
+			log.WarnfWithFields(log.Fields{
+				"project-service":         p.Name,
+				"autoscale-cpu-threshold": val,
+			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
+				config.LabelWorkloadAutoscaleCPUUtilizationThreshold,
+				config.DefaultAutoscaleCPUThreshold)
+
+			return int32(config.DefaultAutoscaleCPUThreshold)
+		}
+		return int32(cpu)
+	}
+
+	return int32(config.DefaultAutoscaleCPUThreshold)
+}
+
+// autoscaleTargetMemoryUtilization returns target memory utilization percentage for autoscaler
+func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadAutoscaleMemoryUtilizationThreshold]; ok {
+		mem, err := strconv.Atoi(val)
+		if err != nil {
+			log.WarnfWithFields(log.Fields{
+				"project-service":         p.Name,
+				"autoscale-mem-threshold": val,
+			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
+				config.LabelWorkloadAutoscaleMemoryUtilizationThreshold,
+				config.DefaultAutoscaleMemoryThreshold)
+
+			return int32(config.DefaultAutoscaleMemoryThreshold)
+		}
+		return int32(mem)
+	}
+
+	return int32(config.DefaultAutoscaleMemoryThreshold)
 }
 
 // workloadType returns workload type for the project service

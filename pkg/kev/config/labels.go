@@ -26,6 +26,15 @@ const (
 	// LabelWorkloadReplicas represents number of replicas for given workload. Takes presedence if defined.
 	LabelWorkloadReplicas = "kev.workload.replicas"
 
+	// LabelWorkloadAutoscaleMaxReplicas represents maximum number of replicas for given workload. Used in Horizontal Pod Autoscaler.
+	LabelWorkloadAutoscaleMaxReplicas = "kev.workload.autoscale-max-replicas"
+
+	// LabelWorkloadAutoscaleCPUUtilizationThreshold represents a maximum CPU utilization for given workload that instructs horizontal pod autoscaler.
+	LabelWorkloadAutoscaleCPUUtilizationThreshold = "kev.workload.autoscale-cpu-threshold"
+
+	// LabelWorkloadAutoscaleMemoryUtilizationThreshold represents a maximum Memory utilization for given workload that instructs horizontal pod autoscaler.
+	LabelWorkloadAutoscaleMemoryUtilizationThreshold = "kev.workload.autoscale-mem-threshold"
+
 	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
 	LabelWorkloadRollingUpdateMaxSurge = "kev.workload.rolling-update-max-surge"
 
