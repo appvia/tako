@@ -726,6 +726,9 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 			MaxReplicas: maxRepl,
 			Metrics:     metrics,
 		},
+		Status: autoscalingv2beta2.HorizontalPodAutoscalerStatus{
+			Conditions: []autoscalingv2beta2.HorizontalPodAutoscalerCondition{},
+		},
 	}
 }
 
