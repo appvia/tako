@@ -214,7 +214,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadAutoscalingCPUUtilizationThreshold: strconv.Itoa(cpuThreshold),
+					config.LabelWorkloadAutoscaleCPUUtilizationThreshold: strconv.Itoa(cpuThreshold),
 				}
 			})
 
@@ -237,7 +237,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadAutoscalingMemoryUtilizationThreshold: strconv.Itoa(memThreshold),
+					config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: strconv.Itoa(memThreshold),
 				}
 			})
 

@@ -94,14 +94,14 @@ func (p *ProjectService) autoscaleMaxReplicas() int32 {
 
 // autoscaleTargetCPUUtilization returns target CPU utilization percentage for autoscaler
 func (p *ProjectService) autoscaleTargetCPUUtilization() int32 {
-	if val, ok := p.Labels[config.LabelWorkloadAutoscalingCPUUtilizationThreshold]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadAutoscaleCPUUtilizationThreshold]; ok {
 		cpu, err := strconv.Atoi(val)
 		if err != nil {
 			log.WarnfWithFields(log.Fields{
 				"project-service":         p.Name,
 				"autoscale-cpu-threshold": val,
 			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
-				config.LabelWorkloadAutoscalingCPUUtilizationThreshold,
+				config.LabelWorkloadAutoscaleCPUUtilizationThreshold,
 				config.DefaultAutoscaleCPUThreshold)
 
 			return int32(config.DefaultAutoscaleCPUThreshold)
@@ -114,14 +114,14 @@ func (p *ProjectService) autoscaleTargetCPUUtilization() int32 {
 
 // autoscaleTargetMemoryUtilization returns target memory utilization percentage for autoscaler
 func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
-	if val, ok := p.Labels[config.LabelWorkloadAutoscalingMemoryUtilizationThreshold]; ok {
+	if val, ok := p.Labels[config.LabelWorkloadAutoscaleMemoryUtilizationThreshold]; ok {
 		mem, err := strconv.Atoi(val)
 		if err != nil {
 			log.WarnfWithFields(log.Fields{
 				"project-service":         p.Name,
 				"autoscale-mem-threshold": val,
 			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
-				config.LabelWorkloadAutoscalingMemoryUtilizationThreshold,
+				config.LabelWorkloadAutoscaleMemoryUtilizationThreshold,
 				config.DefaultAutoscaleMemoryThreshold)
 
 			return int32(config.DefaultAutoscaleMemoryThreshold)
