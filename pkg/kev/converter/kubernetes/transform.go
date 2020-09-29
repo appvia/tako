@@ -420,13 +420,15 @@ func (k *Kubernetes) initConfigMapFromFile(projectService ProjectService, fileNa
 
 // initDeployment initializes Kubernetes Deployment object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L380
-func (k *Kubernetes) initDeployment(projectService ProjectService, replicas int32) *v1apps.Deployment {
+func (k *Kubernetes) initDeployment(projectService ProjectService) *v1apps.Deployment {
 	var podSpec v1.PodSpec
 	if len(projectService.Configs) > 0 {
 		podSpec = k.initPodSpecWithConfigMap(projectService)
 	} else {
 		podSpec = k.initPodSpec(projectService)
 	}
+
+	replicas := projectService.replicas()
 
 	dc := &v1apps.Deployment{
 		TypeMeta: meta.TypeMeta{
@@ -492,13 +494,15 @@ func (k *Kubernetes) initDaemonSet(projectService ProjectService) *v1apps.Daemon
 }
 
 // initStatefulSet initialises a new StatefulSet
-func (k *Kubernetes) initStatefulSet(projectService ProjectService, replicas int32) *v1apps.StatefulSet {
+func (k *Kubernetes) initStatefulSet(projectService ProjectService) *v1apps.StatefulSet {
 	var podSpec v1.PodSpec
 	if len(projectService.Configs) > 0 {
 		podSpec = k.initPodSpecWithConfigMap(projectService)
 	} else {
 		podSpec = k.initPodSpec(projectService)
 	}
+
+	replicas := projectService.replicas()
 
 	sts := &v1apps.StatefulSet{
 		TypeMeta: meta.TypeMeta{
@@ -1259,9 +1263,6 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []runtime.Object {
 	var objects []runtime.Object
 
-	// @step get number of replicas for service
-	replicas := projectService.replicas()
-
 	// @step get workload type
 	workloadType := projectService.workloadType()
 
@@ -1273,11 +1274,11 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	// @step create object based on inferred / manually configured workload controller type
 	switch strings.ToLower(workloadType) {
 	case strings.ToLower(config.DeploymentWorkload):
-		objects = append(objects, k.initDeployment(projectService, replicas))
+		objects = append(objects, k.initDeployment(projectService))
+	case strings.ToLower(config.StatefulsetWorkload):
+		objects = append(objects, k.initStatefulSet(projectService))
 	case strings.ToLower(config.DaemonsetWorkload):
 		objects = append(objects, k.initDaemonSet(projectService))
-	case strings.ToLower(config.StatefulsetWorkload):
-		objects = append(objects, k.initStatefulSet(projectService, replicas))
 	}
 
 	return objects

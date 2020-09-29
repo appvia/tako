@@ -369,7 +369,7 @@ var _ = Describe("Transform", func() {
 		var expectedPodSpec v1.PodSpec
 		var expectedDeployment *v1apps.Deployment
 
-		replicas := int32(3)
+		replicas := int32(1)
 
 		JustBeforeEach(func() {
 			expectedDeployment = &v1apps.Deployment{
@@ -403,7 +403,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes deployment spec as expected", func() {
-				d := k.initDeployment(projectService, replicas)
+				d := k.initDeployment(projectService)
 				Expect(d).To(Equal(expectedDeployment))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -440,7 +440,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes deployment spec as expected", func() {
-				d := k.initDeployment(projectService, replicas)
+				d := k.initDeployment(projectService)
 				Expect(d).To(Equal(expectedDeployment))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -463,7 +463,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("it includes update strategy in the deployment spec", func() {
-				d := k.initDeployment(projectService, replicas)
+				d := k.initDeployment(projectService)
 				Expect(d.Spec.Strategy.RollingUpdate.MaxSurge.IntValue()).To(Equal(2))
 				Expect(d.Spec.Strategy.RollingUpdate.MaxUnavailable.IntValue()).To(Equal(0))
 			})
@@ -495,7 +495,7 @@ var _ = Describe("Transform", func() {
 		var expectedPodSpec v1.PodSpec
 		var expectedSts *v1apps.StatefulSet
 
-		replicas := int32(3)
+		replicas := int32(1)
 
 		JustBeforeEach(func() {
 			expectedSts = &v1apps.StatefulSet{
@@ -534,7 +534,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes deployment spec as expected", func() {
-				d := k.initStatefulSet(projectService, replicas)
+				d := k.initStatefulSet(projectService)
 				Expect(d).To(Equal(expectedSts))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -571,7 +571,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates kubernetes StatefulSet spec as expected", func() {
-				d := k.initStatefulSet(projectService, replicas)
+				d := k.initStatefulSet(projectService)
 				Expect(d).To(Equal(expectedSts))
 
 				podContainerVolumeMounts := d.Spec.Template.Spec.Containers[0].VolumeMounts
