@@ -41,6 +41,10 @@ var _ = Describe("Detect", func() {
 		hook.Reset()
 	})
 
+	JustAfterEach(func() {
+		hook.Reset()
+	})
+
 	BeforeEach(func() {
 		workingDir = "testdata/detect-secrets"
 	})

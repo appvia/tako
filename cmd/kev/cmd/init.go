@@ -143,7 +143,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		FileName: kev.ManifestName,
 	}}, results...)
 
-	displayInitSuccess(getReporter(true), results)
+	displayInitSuccess(os.Stdout, results)
 
 	return nil
 }

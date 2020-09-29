@@ -149,7 +149,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		// @step create network policies if networks defined
 		if len(projectService.Networks) > 0 {
 			for name := range projectService.Networks {
-				log.DebugWithFields(log.Fields{
+				log.DebugDetailWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"network-name":    name,
 				}, "Network detected and will be converted to equivalent NetworkPolicy")
@@ -1128,7 +1128,7 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 				}
 			}
 		} else {
-			log.DebugWithFields(log.Fields{
+			log.DebugDetailWithFields(log.Fields{
 				"project-service": projectService.Name,
 			}, "Use PVC volume")
 
@@ -1762,7 +1762,7 @@ func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 		if us, ok := obj.(meta.Object); ok {
 			k := obj.GetObjectKind().GroupVersionKind().String() + us.GetNamespace() + us.GetName()
 			if exist[k] {
-				log.DebugfWithFields(log.Fields{
+				log.DebugDetailfWithFields(log.Fields{
 					"configmap": us.GetName(),
 				}, "Remove duplicate resource: %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, us.GetName())
 
