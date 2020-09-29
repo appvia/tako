@@ -72,13 +72,14 @@ func (p *ProjectService) replicas() int32 {
 	return config.DefaultReplicaNumber
 }
 
+// autoscaleMaxReplicas returns maximum number of replicas for autoscaler
 func (p *ProjectService) autoscaleMaxReplicas() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadAutoscaleMaxReplicas]; ok {
 		maxReplicas, err := strconv.Atoi(val)
 		if err != nil {
 			log.WarnfWithFields(log.Fields{
-				"project-service": p.Name,
-				"max-replicas":    val,
+				"project-service":        p.Name,
+				"autoscale-max-replicas": val,
 			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
 				config.LabelWorkloadAutoscaleMaxReplicas,
 				config.DefaultAutoscaleMaxReplicaNumber)
@@ -91,13 +92,14 @@ func (p *ProjectService) autoscaleMaxReplicas() int32 {
 	return int32(config.DefaultAutoscaleMaxReplicaNumber)
 }
 
+// autoscaleTargetCPUUtilization returns target CPU utilization percentage for autoscaler
 func (p *ProjectService) autoscaleTargetCPUUtilization() int32 {
 	if val, ok := p.Labels[config.LabelWorkloadAutoscalingCPUUtilizationThreshold]; ok {
 		cpu, err := strconv.Atoi(val)
 		if err != nil {
 			log.WarnfWithFields(log.Fields{
-				"project-service": p.Name,
-				"max-replicas":    val,
+				"project-service":         p.Name,
+				"autoscale-cpu-threshold": val,
 			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
 				config.LabelWorkloadAutoscalingCPUUtilizationThreshold,
 				config.DefaultAutoscaleCPUThreshold)
@@ -108,6 +110,26 @@ func (p *ProjectService) autoscaleTargetCPUUtilization() int32 {
 	}
 
 	return int32(config.DefaultAutoscaleCPUThreshold)
+}
+
+// autoscaleTargetMemoryUtilization returns target memory utilization percentage for autoscaler
+func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadAutoscalingMemoryUtilizationThreshold]; ok {
+		mem, err := strconv.Atoi(val)
+		if err != nil {
+			log.WarnfWithFields(log.Fields{
+				"project-service":         p.Name,
+				"autoscale-mem-threshold": val,
+			}, "Unable to extract integer value from %s label. Defaulting to %d replicas.",
+				config.LabelWorkloadAutoscalingMemoryUtilizationThreshold,
+				config.DefaultAutoscaleMemoryThreshold)
+
+			return int32(config.DefaultAutoscaleMemoryThreshold)
+		}
+		return int32(mem)
+	}
+
+	return int32(config.DefaultAutoscaleMemoryThreshold)
 }
 
 // workloadType returns workload type for the project service

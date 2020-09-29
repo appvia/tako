@@ -230,6 +230,29 @@ var _ = Describe("ProjectService", func() {
 		})
 	})
 
+	Describe("autoscaleTargetMemoryUtilization", func() {
+		memThreshold := 70 // 70% utilization should kick off the autoscaling
+
+		Context("when provided via label", func() {
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadAutoscalingMemoryUtilizationThreshold: strconv.Itoa(memThreshold),
+				}
+			})
+
+			It("will use a label value", func() {
+				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(memThreshold))
+			})
+		})
+
+		Context("when there is no autoscale target Memory utilization label supplied", func() {
+			It("will use default Memory threshold for autoscaling purposes ", func() {
+				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleMemoryThreshold))
+			})
+		})
+	})
+
 	Describe("workloadType", func() {
 
 		Context("when provided via label", func() {
