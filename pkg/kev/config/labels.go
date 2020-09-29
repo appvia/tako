@@ -32,6 +32,9 @@ const (
 	// LabelWorkloadAutoscalingCPUUtilizationThreshold represents a maximum CPU utilization for given workload that instructs horizontal pod autoscaler.
 	LabelWorkloadAutoscalingCPUUtilizationThreshold = "kev.workload.autoscale-cpu-threshold"
 
+	// LabelWorkloadAutoscalingMemoryUtilizationThreshold represents a maximum Memory utilization for given workload that instructs horizontal pod autoscaler.
+	LabelWorkloadAutoscalingMemoryUtilizationThreshold = "kev.workload.autoscale-mem-threshold"
+
 	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
 	LabelWorkloadRollingUpdateMaxSurge = "kev.workload.rolling-update-max-surge"
 

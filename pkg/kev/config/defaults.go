@@ -93,7 +93,10 @@ const (
 	DefaultAutoscaleMaxReplicaNumber = 0
 
 	// DefaultAutoscaleCPUThreshold default CPU utilization threshold (percentage) for the workload's Horizontal Pod Autoscaler
-	DefaultAutoscaleCPUThreshold = 50
+	DefaultAutoscaleCPUThreshold = 70
+
+	// DefaultAutoscaleMemoryThreshold default Memory utilization threshold (percentage) for the workload's Horizontal Pod Autoscaler
+	DefaultAutoscaleMemoryThreshold = 70
 
 	// DefaultRollingUpdateMaxSurge default number of containers to be updated at a time
 	DefaultRollingUpdateMaxSurge = 1
