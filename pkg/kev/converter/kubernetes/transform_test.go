@@ -903,8 +903,8 @@ var _ = Describe("Transform", func() {
 					When("workload CPU threshold paramters is also specified", func() {
 						BeforeEach(func() {
 							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas:               "10",
-								config.LabelWorkloadAutoscalingCPUUtilizationThreshold: "65",
+								config.LabelWorkloadAutoscaleMaxReplicas:             "10",
+								config.LabelWorkloadAutoscaleCPUUtilizationThreshold: "65",
 							}
 						})
 
@@ -967,8 +967,8 @@ var _ = Describe("Transform", func() {
 					When("workload Memory threshold paramter is also specified", func() {
 						BeforeEach(func() {
 							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas:                  "10",
-								config.LabelWorkloadAutoscalingMemoryUtilizationThreshold: "40",
+								config.LabelWorkloadAutoscaleMaxReplicas:                "10",
+								config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: "40",
 							}
 						})
 
