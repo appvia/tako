@@ -19,11 +19,11 @@ package kev
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"regexp"
 
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -69,25 +69,21 @@ func (s Services) Set() map[string]bool {
 	return out
 }
 
-func (s Services) detectSecrets(matchers []map[string]string, reporter io.Writer) error {
+func (s Services) detectSecrets(matchers []map[string]string, _ io.Writer, detectedFn func()) bool {
 	var matches []secretHit
 	for _, svc := range s {
 		matches = append(matches, svc.detectSecretsInEnvVars(matchers)...)
 	}
 
 	if len(matches) == 0 {
-		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing detected\n")))
-		return nil
+		return false
 	}
 
+	detectedFn()
 	for _, m := range matches {
-		_, _ = reporter.Write([]byte(
-			fmt.Sprintf(
-				" → WARNING, Service [%s], env var [%s] looks like a secret\n",
-				m.svcName,
-				m.envVar)))
+		log.Warnf("Service [%s], env var [%s] looks like a secret", m.svcName, m.envVar)
 	}
-	return nil
+	return true
 }
 
 func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []secretHit {

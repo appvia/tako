@@ -18,10 +18,10 @@ package kev
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"sort"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -157,12 +157,14 @@ func (e *Environment) loadOverride() (*Environment, error) {
 }
 
 func (e *Environment) reconcile(override *composeOverride, reporter io.Writer) error {
-	_, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
+	// _, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
+	log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
 	labelsMatching := override.toLabelsMatching(e.override)
 	cset := labelsMatching.diff(e.override)
 	if cset.HasNoPatches() {
-		_, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
+		// _, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
+		log.DebugDetail("nothing to update")
 		return nil
 	}
 

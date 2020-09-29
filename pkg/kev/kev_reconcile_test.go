@@ -21,13 +21,18 @@ import (
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = Describe("Reconcile", func() {
 	var (
+		hook          *test.Hook
 		reporter      bytes.Buffer
+		loggedMsgs    string
 		workingDir    string
 		source        *kev.ComposeProject
 		overrideFiles []string
@@ -41,10 +46,16 @@ var _ = Describe("Reconcile", func() {
 		if len(overrideFiles) > 0 {
 			override, _ = kev.NewComposeProject(overrideFiles)
 		}
+		hook = testutil.NewLogger(logrus.DebugLevel)
 		manifest, mErr = kev.Reconcile(workingDir, &reporter)
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}
+		loggedMsgs = testutil.GetLoggedMsgs(hook)
+	})
+
+	JustAfterEach(func() {
+		hook.Reset()
 	})
 
 	Describe("Reconcile changes from overrides", func() {
@@ -119,10 +130,15 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetVersion()).To(Equal(source.GetVersion()))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("3.7"))
-				Expect(reporter.String()).To(ContainSubstring(env.GetVersion()))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("3.7"))
+				Expect(loggedMsgs).To(ContainSubstring(env.GetVersion()))
 			})
 
 			It("should not error", func() {
@@ -147,10 +163,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetServices()[0].Name).To(Equal("db"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("wordpress"))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("wordpress"))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
 			})
 
 			It("should not error", func() {
@@ -176,13 +196,17 @@ var _ = Describe("Reconcile", func() {
 					Expect(s.Labels["kev.service.type"]).To(Equal("NodePort"))
 				})
 
+				It("should log the change summary using the debug level", func() {
+					Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+				})
+
 				It("should create a change summary", func() {
-					Expect(reporter.String()).To(ContainSubstring(env.Name))
-					Expect(reporter.String()).To(ContainSubstring("wordpress"))
-					Expect(reporter.String()).To(ContainSubstring("updated"))
-					Expect(reporter.String()).To(ContainSubstring(config.LabelServiceType))
-					Expect(reporter.String()).To(ContainSubstring("LoadBalancer"))
-					Expect(reporter.String()).To(ContainSubstring("NodePort"))
+					Expect(loggedMsgs).To(ContainSubstring(env.Name))
+					Expect(loggedMsgs).To(ContainSubstring("wordpress"))
+					Expect(loggedMsgs).To(ContainSubstring("updated"))
+					Expect(loggedMsgs).To(ContainSubstring(config.LabelServiceType))
+					Expect(loggedMsgs).To(ContainSubstring("LoadBalancer"))
+					Expect(loggedMsgs).To(ContainSubstring("NodePort"))
 				})
 
 				It("should not error", func() {
@@ -219,10 +243,14 @@ var _ = Describe("Reconcile", func() {
 					Expect(env.GetServices()[1].Environment).To(HaveLen(0))
 				})
 
+				It("should log the change summary using the debug level", func() {
+					Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+				})
+
 				It("should create a change summary", func() {
-					Expect(reporter.String()).To(ContainSubstring(env.Name))
-					Expect(reporter.String()).To(ContainSubstring("added"))
-					Expect(reporter.String()).To(ContainSubstring("wordpress"))
+					Expect(loggedMsgs).To(ContainSubstring(env.Name))
+					Expect(loggedMsgs).To(ContainSubstring("added"))
+					Expect(loggedMsgs).To(ContainSubstring("wordpress"))
 				})
 
 				It("should not error", func() {
@@ -274,10 +302,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(v.Labels[config.LabelVolumeSize]).To(Equal("100Mi"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("added"))
-				Expect(reporter.String()).To(ContainSubstring("db_data"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("added"))
+				Expect(loggedMsgs).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -300,10 +332,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetVolumes()).To(HaveLen(0))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
-				Expect(reporter.String()).To(ContainSubstring("db_data"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -328,12 +364,16 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.VolumeNames()).To(ContainElements("mysql_data"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
-				Expect(reporter.String()).To(ContainSubstring("db_data"))
-				Expect(reporter.String()).To(ContainSubstring("added"))
-				Expect(reporter.String()).To(ContainSubstring("mysql_data"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring("db_data"))
+				Expect(loggedMsgs).To(ContainSubstring("added"))
+				Expect(loggedMsgs).To(ContainSubstring("mysql_data"))
 			})
 
 			It("should not error", func() {
@@ -365,11 +405,15 @@ var _ = Describe("Reconcile", func() {
 				Expect(s.GetLabels()).To(HaveLen(16))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
-				Expect(reporter.String()).To(ContainSubstring("WORDPRESS_CACHE_USER"))
-				Expect(reporter.String()).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_USER"))
+				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
 			})
 
 			It("should not error", func() {
@@ -396,9 +440,13 @@ var _ = Describe("Reconcile", func() {
 				Expect(vars).To(HaveKey("TO_OVERRIDE"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("nothing to update"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 			})
 
 			It("should not error", func() {

@@ -14,30 +14,32 @@
  * limitations under the License.
  */
 
-package cmd
+package testutil
 
 import (
-	"os"
+	"bytes"
+	"strings"
 
-	"github.com/appvia/kev/pkg/kev"
-	"github.com/spf13/cobra"
+	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
-func runDetectSecretsCmd(cmd *cobra.Command, _ []string) error {
-	cmdName := "Detect secrets"
-	verbose, _ := cmd.Root().Flags().GetBool("verbose")
+func NewLogger(level logrus.Level) *test.Hook {
+	var buffer = &bytes.Buffer{}
+	log.SetOutput(buffer)
+	log.SetLogLevel(logrus.DebugLevel)
+	return test.NewLocal(log.GetLogger())
+}
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return displayError(err)
+func GetLoggedMsgs(hook *test.Hook) string {
+	var out strings.Builder
+	for _, entry := range hook.Entries {
+		out.WriteString(entry.Message + "\n")
 	}
+	return out.String()
+}
 
-	setReporting(verbose)
-	displayCmdStarted(cmdName)
-
-	if err := kev.DetectSecrets(workingDir, nil); err != nil {
-		return displayError(err)
-	}
-
-	return nil
+func GetLoggedLevel(hook *test.Hook) string {
+	return hook.LastEntry().Level.String()
 }

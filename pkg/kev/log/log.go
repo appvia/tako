@@ -17,6 +17,7 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -28,14 +29,20 @@ import (
 )
 
 const (
+	// successTitlePrefix log level prefix for info and debug, using unicode to ensure a visual on screen.
+	successTitlePrefix = "✓ "
+
+	// ErrorTitlePrefix error log level prefix, using unicode to ensure a visual on screen.
+	errorDetailPrefix = "⨯ "
+
+	// detailPrefix debug log level prefix for info, debug, error, using unicode to ensure a visual on screen.
+	detailPrefix = " → "
+
 	// DebugPrefix debug log level prefix
 	DebugPrefix = "🔎"
 
 	// InfoPrefix info log level prefix
 	InfoPrefix = "💡"
-
-	// WarnPrefix warn log level prefix
-	WarnPrefix = "⚠️ "
 
 	// ErrorPrefix error log level prefix
 	ErrorPrefix = "✋"
@@ -44,10 +51,27 @@ const (
 	FatalPrefix = "😱"
 )
 
+// tuiFormatter is a text user interface formatter that wraps the logrus-prefixed-formatter.
+type tuiFormatter struct {
+	*prefixed.TextFormatter
+}
+
+func (f *tuiFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	logged, err := f.TextFormatter.Format(entry)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.Replace(logged, []byte(":"), []byte(""), 1), nil
+}
+
 var logger = &logrus.Logger{
 	Out: os.Stdout,
-	Formatter: &prefixed.TextFormatter{
-		DisableTimestamp: true,
+	Formatter: &tuiFormatter{
+		&prefixed.TextFormatter{
+			DisableTimestamp: true,
+			DisableUppercase: true,
+			ForceFormatting:  false,
+		},
 	},
 	Hooks: make(logrus.LevelHooks),
 	Level: logrus.InfoLevel,
@@ -86,6 +110,41 @@ func EnableFileInfo() {
 // DisableFileInfo disables file information in log entry
 func DisableFileInfo() {
 	enableFileInfo = false
+}
+
+// DebugTitlef logs a Debug message
+func DebugTitlef(m string, args ...interface{}) {
+	logger.WithFields(decorate("debug-title")).Debugf(m, args...)
+}
+
+// DebugDetail logs a Debug message
+func DebugDetail(args ...interface{}) {
+	logger.WithFields(decorate("debug-detail")).Debug(args...)
+}
+
+// DebugDetailf logs a Debug message
+func DebugDetailf(m string, args ...interface{}) {
+	logger.WithFields(decorate("debug-detail")).Debugf(m, args...)
+}
+
+// DebugDetailWithFields logs a Debug message with fields
+func DebugDetailWithFields(f Fields, args ...interface{}) {
+	logger.WithFields(decorate("debug-detail", f)).Debug(args...)
+}
+
+// DebugDetailfWithFields logs a Debug message with fields
+func DebugDetailfWithFields(f Fields, m string, args ...interface{}) {
+	logger.WithFields(decorate("debug-detail", f)).Debugf(m, args...)
+}
+
+// ErrorDetailf logs an Error message
+func ErrorDetail(args ...interface{}) {
+	logger.WithFields(decorate("error-detail")).Error(args...)
+}
+
+// ErrorDetailf logs an Error message
+func ErrorDetailf(m string, args ...interface{}) {
+	logger.WithFields(decorate("error-detail")).Errorf(m, args...)
 }
 
 // Debug logs a Debug message
@@ -197,12 +256,16 @@ func decorate(level string, f ...Fields) logrus.Fields {
 
 	if fields["prefix"] == nil || fields["prefix"] == "" {
 		switch level {
+		case "debug-title":
+			fields["prefix"] = successTitlePrefix
+		case "debug-detail":
+			fields["prefix"] = detailPrefix
+		case "error-detail":
+			fields["prefix"] = errorDetailPrefix
 		case "debug":
 			fields["prefix"] = DebugPrefix
 		case "info":
 			fields["prefix"] = InfoPrefix
-		case "warn":
-			fields["prefix"] = WarnPrefix
 		case "error":
 			fields["prefix"] = ErrorPrefix
 		case "fatal":

@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -131,7 +132,6 @@ func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		return nil, err
 	}
-
 	sourcesOverride := m.getSourcesOverride()
 	for _, e := range m.Environments {
 		if err := e.reconcile(sourcesOverride, reporter); err != nil {
@@ -170,8 +170,15 @@ func (m *Manifest) DetectSecretsInSources(matchers []map[string]string, reporter
 		candidates = append(candidates, ServiceConfig{Name: s.Name, Environment: s.Environment})
 	}
 
-	_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting potential secrets in sources %s\n", sourcesFiles)))
-	return candidates.detectSecrets(matchers, reporter)
+	detected := candidates.detectSecrets(matchers, reporter, func() {
+		log.Warnf("Detected potential secrets in sources %s", sourcesFiles)
+	})
+
+	if !detected {
+		log.DebugDetail("No secrets detected in project sources")
+	}
+
+	return nil
 }
 
 // DetectSecretsInEnvs detects any potential secrets setup as environment variables
@@ -184,10 +191,11 @@ func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string, reporter io
 	}
 
 	for _, env := range envs {
-		_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting potential secrets in env [%s]\n", env.Name)))
-		err := env.GetServices().detectSecrets(matchers, reporter)
-		if err != nil {
-			return err
+		detected := env.GetServices().detectSecrets(matchers, reporter, func() {
+			log.Warnf("Detected potential secrets in env [%s]", env.Name)
+		})
+		if !detected {
+			log.DebugDetailf("No secrets detected in env [%s]", env.Name)
 		}
 	}
 	return nil

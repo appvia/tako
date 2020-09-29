@@ -30,19 +30,21 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 
 	workingDir, err := os.Getwd()
 	if err != nil {
-		return displayError(cmdName, err)
+		return displayError(err)
 	}
 
-	reporter := getReporter(verbose)
-	manifest, err := kev.Reconcile(workingDir, reporter)
+	setReporting(verbose)
+	displayCmdStarted(cmdName)
+
+	manifest, err := kev.Reconcile(workingDir, nil)
 	if err != nil {
-		return displayError(cmdName, err)
+		return displayError(err)
 	}
 
 	for _, environment := range manifest.Environments {
 		filePath := path.Join(workingDir, environment.File)
 		if err := writeTo(filePath, environment); err != nil {
-			return displayError(cmdName, err)
+			return displayError(err)
 		}
 	}
 

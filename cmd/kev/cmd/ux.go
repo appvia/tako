@@ -19,25 +19,29 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
+
+	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/sirupsen/logrus"
 )
 
-func getReporter(onScreen bool) io.Writer {
-	out := ioutil.Discard
-	if onScreen {
-		out = os.Stdout
+func setReporting(verbose bool) {
+	log.SetLogLevel(logrus.InfoLevel)
+	if verbose {
+		log.SetLogLevel(logrus.DebugLevel)
 	}
-	return out
 }
 
-func displayError(cmdName string, err error) error {
-	_, _ = os.Stdout.Write([]byte("⨯ " + cmdName + "\n"))
-	return fmt.Errorf(" → Error: %s", err)
+func displayCmdStarted(cmdName string) {
+	_, _ = os.Stdout.Write([]byte("᛬" + cmdName + " ...\n"))
+}
+
+func displayError(err error) error {
+	log.ErrorDetail(err)
+	return err
 }
 
 func displayInitSuccess(w io.Writer, files []skippableFile) {
-	_, _ = w.Write([]byte("✓ Init\n"))
 	for _, file := range files {
 		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
 

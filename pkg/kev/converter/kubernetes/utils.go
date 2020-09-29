@@ -79,7 +79,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 	var f *os.File
 	dirName := getDirName(opt)
-	log.Infof("Target Dir: %s", dirName)
+	log.DebugDetailf("Target Dir: %s", dirName)
 
 	// Check if output file is a directory
 	isDirVal, err := isDir(opt.OutFile)
@@ -244,7 +244,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 			}, "Failed to write content to a file")
 			return "", err
 		}
-		log.Infof("⎈  %s file %q created", Name, file)
+		log.DebugDetailf("%s file %q created", Name, file)
 	}
 	return file, nil
 }

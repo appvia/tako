@@ -20,19 +20,28 @@ import (
 	"bytes"
 
 	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = Describe("Detect", func() {
 	var (
+		hook       *test.Hook
 		workingDir string
 		reporter   bytes.Buffer
 		dErr       error
 	)
 
 	JustBeforeEach(func() {
+		hook = testutil.NewLogger(logrus.InfoLevel)
 		dErr = kev.DetectSecrets(workingDir, &reporter)
+	})
+
+	JustAfterEach(func() {
+		hook.Reset()
 	})
 
 	BeforeEach(func() {
@@ -44,21 +53,25 @@ var _ = Describe("Detect", func() {
 		Expect(dErr).ShouldNot(HaveOccurred())
 	})
 
+	It("should log the detected secrets summary using the warning level", func() {
+		Expect(testutil.GetLoggedLevel(hook)).To(Equal("warning"))
+	})
+
 	When("secrets leaked as environment variables in sources", func() {
 		It("should create a detected leaks summary", func() {
-			Expect(reporter.String()).Should(ContainSubstring("MYSQL_ROOT_PASSWORD"))
-			Expect(reporter.String()).Should(ContainSubstring("MYSQL_USER"))
-			Expect(reporter.String()).Should(ContainSubstring("MYSQL_PASSWORD"))
-			Expect(reporter.String()).Should(ContainSubstring("WORDPRESS_DB_USER"))
-			Expect(reporter.String()).Should(ContainSubstring("WORDPRESS_DB_PASSWORD"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("MYSQL_ROOT_PASSWORD"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("MYSQL_USER"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("MYSQL_PASSWORD"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("WORDPRESS_DB_USER"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("WORDPRESS_DB_PASSWORD"))
 		})
 	})
 
 	When("secrets leaked as environment variables in overridden environments", func() {
 		It("should create a detected leaks summary", func() {
-			Expect(reporter.String()).Should(ContainSubstring("AWS_ACCESS_KEY_ID"))
-			Expect(reporter.String()).Should(ContainSubstring("AWS_SECRET_ACCESS_KEY"))
-			Expect(reporter.String()).ShouldNot(ContainSubstring("CACHE_SWITCH"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("AWS_ACCESS_KEY_ID"))
+			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("AWS_SECRET_ACCESS_KEY"))
+			Expect(testutil.GetLoggedMsgs(hook)).ShouldNot(ContainSubstring("CACHE_SWITCH"))
 		})
 	})
 })
