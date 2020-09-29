@@ -235,7 +235,7 @@ services:
 
 Defines the CPU utilization threshold for the horizontal pod autoscaler for the application component. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account maximum number of replicas for the application component is defined.
 
-### Default: `50` (50% cpu utilization)
+### Default: `70` (70% cpu utilization)
 
 ### Possible options: Arbitrary integer value. Example: `80`.
 
@@ -246,6 +246,24 @@ services:
   my-service:
     labels:
       kev.workload.autoscale-cpu-threshold: 80
+...
+```
+
+## kev.workload.autoscale-mem-threshold
+
+Defines the Memory utilization threshold for the horizontal pod autoscaler for the application component. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account maximum number of replicas for the application component is defined.
+
+### Default: `70` (70% memory utilization)
+
+### Possible options: Arbitrary integer value. Example: `80`.
+
+> autoscale-mem-threshold:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.autoscale-mem-threshold: 80
 ...
 ```
 
