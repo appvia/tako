@@ -38,7 +38,7 @@ import (
 
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
@@ -639,7 +639,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 }
 
 // initHpa intialised horizontal pod autoscaler for a project service
-func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Object) *autoscalingv1.HorizontalPodAutoscaler {
+func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Object) *autoscalingv2beta2.HorizontalPodAutoscaler {
 
 	t := reflect.ValueOf(target).Elem()
 	typeMeta := t.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
@@ -655,6 +655,7 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 	replicas := projectService.replicas()
 	maxRepl := projectService.autoscaleMaxReplicas()
 	targetCPUUtilization := projectService.autoscaleTargetCPUUtilization()
+	targetMemoryUtilization := projectService.autoscaleTargetMemoryUtilization()
 
 	// if replicas set to 0, autobump to at least 1
 	if replicas == 0 {
@@ -677,25 +678,53 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 		return nil
 	}
 
-	return &autoscalingv1.HorizontalPodAutoscaler{
+	metrics := []autoscalingv2beta2.MetricSpec{}
+
+	if targetCPUUtilization > 0 {
+		metrics = append(metrics, autoscalingv2beta2.MetricSpec{
+			Type: "Resource",
+			Resource: &autoscalingv2beta2.ResourceMetricSource{
+				Name: "cpu",
+				Target: autoscalingv2beta2.MetricTarget{
+					Type:               "Utilization",
+					AverageUtilization: &targetCPUUtilization,
+				},
+			},
+		})
+	}
+
+	if targetMemoryUtilization > 0 {
+		metrics = append(metrics, autoscalingv2beta2.MetricSpec{
+			Type: "Resource",
+			Resource: &autoscalingv2beta2.ResourceMetricSource{
+				Name: "memory",
+				Target: autoscalingv2beta2.MetricTarget{
+					Type:               "Utilization",
+					AverageUtilization: &targetMemoryUtilization,
+				},
+			},
+		})
+	}
+
+	return &autoscalingv2beta2.HorizontalPodAutoscaler{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "HorizontalPodAutoscaler",
-			APIVersion: "autoscaling/v1",
+			APIVersion: "autoscaling/v2beta2",
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:        projectService.Name,
 			Labels:      configLabels(projectService.Name),
 			Annotations: configAnnotations(projectService),
 		},
-		Spec: autoscalingv1.HorizontalPodAutoscalerSpec{
-			ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+		Spec: autoscalingv2beta2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2beta2.CrossVersionObjectReference{
 				Kind:       typeMeta.Kind,
 				APIVersion: typeMeta.APIVersion,
 				Name:       projectService.Name,
 			},
-			MinReplicas:                    &replicas,
-			MaxReplicas:                    maxRepl,
-			TargetCPUUtilizationPercentage: &targetCPUUtilization,
+			MinReplicas: &replicas,
+			MaxReplicas: maxRepl,
+			Metrics:     metrics,
 		},
 	}
 }
@@ -1339,11 +1368,17 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	case strings.ToLower(config.DeploymentWorkload):
 		o := k.initDeployment(projectService)
 		objects = append(objects, o)
-		objects = append(objects, k.initHpa(projectService, o))
+		hpa := k.initHpa(projectService, o)
+		if hpa != nil {
+			objects = append(objects, hpa)
+		}
 	case strings.ToLower(config.StatefulsetWorkload):
 		o := k.initStatefulSet(projectService)
 		objects = append(objects, o)
-		objects = append(objects, k.initHpa(projectService, o))
+		hpa := k.initHpa(projectService, o)
+		if hpa != nil {
+			objects = append(objects, hpa)
+		}
 	case strings.ToLower(config.DaemonsetWorkload):
 		objects = append(objects, k.initDaemonSet(projectService))
 	}

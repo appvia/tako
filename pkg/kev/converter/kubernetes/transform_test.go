@@ -886,9 +886,21 @@ var _ = Describe("Transform", func() {
 			Context("with autoscaling options specified", func() {
 
 				When("the maximum number of replicas is defined", func() {
+					BeforeEach(func() {
+						projectService.Labels = composego.Labels{
+							config.LabelWorkloadAutoscaleMaxReplicas: "10",
+						}
+					})
+
+					It("initialises HPA with expected API version referencing passed object", func() {
+						hpa := k.initHpa(projectService, obj)
+						Expect(hpa.APIVersion).To(Equal("autoscaling/v2beta2"))
+						Expect(hpa.Spec.ScaleTargetRef.Kind).To(Equal("Deployment"))
+						Expect(hpa.Spec.ScaleTargetRef.APIVersion).To(Equal("apps/v1"))
+						Expect(hpa.Spec.ScaleTargetRef.Name).To(Equal(projectService.Name))
+					})
 
 					When("workload CPU threshold paramters is also specified", func() {
-
 						BeforeEach(func() {
 							projectService.Labels = composego.Labels{
 								config.LabelWorkloadAutoscaleMaxReplicas:               "10",
@@ -899,7 +911,10 @@ var _ = Describe("Transform", func() {
 						It("initialises Horizontal Pod Autoscaler for a project service", func() {
 							hpa := k.initHpa(projectService, obj)
 							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
-							Expect(*hpa.Spec.TargetCPUUtilizationPercentage).To(BeEquivalentTo(65))
+							// first metrics is CPU
+							Expect(hpa.Spec.Metrics[0].Resource.Name).To(BeEquivalentTo("cpu"))
+							Expect(hpa.Spec.Metrics[0].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[0].Resource.Target.AverageUtilization).To(BeEquivalentTo(65))
 						})
 					})
 
@@ -911,10 +926,13 @@ var _ = Describe("Transform", func() {
 							}
 						})
 
-						It("initialises Horizontal Pod Autoscaler for a project service with default target utilization of 50%", func() {
+						It("initialises Horizontal Pod Autoscaler for a project service with default target CPU utilization of 70%", func() {
 							hpa := k.initHpa(projectService, obj)
 							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
-							Expect(*hpa.Spec.TargetCPUUtilizationPercentage).To(BeEquivalentTo(50))
+							// first metrics is CPU
+							Expect(hpa.Spec.Metrics[0].Resource.Name).To(BeEquivalentTo("cpu"))
+							Expect(hpa.Spec.Metrics[0].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[0].Resource.Target.AverageUtilization).To(BeEquivalentTo(70))
 						})
 					})
 
@@ -943,6 +961,42 @@ var _ = Describe("Transform", func() {
 						It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
 							hpa := k.initHpa(projectService, obj)
 							Expect(hpa).To(BeNil())
+						})
+					})
+
+					When("workload Memory threshold paramter is also specified", func() {
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas:                  "10",
+								config.LabelWorkloadAutoscalingMemoryUtilizationThreshold: "40",
+							}
+						})
+
+						It("initialises Horizontal Pod Autoscaler for a project service", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
+							// second metric is Memory
+							Expect(hpa.Spec.Metrics[1].Resource.Name).To(BeEquivalentTo("memory"))
+							Expect(hpa.Spec.Metrics[1].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[1].Resource.Target.AverageUtilization).To(BeEquivalentTo(40))
+						})
+					})
+
+					When("workload Memory threshold is not specified", func() {
+
+						BeforeEach(func() {
+							projectService.Labels = composego.Labels{
+								config.LabelWorkloadAutoscaleMaxReplicas: "10",
+							}
+						})
+
+						It("initialises Horizontal Pod Autoscaler for a project service with default target Memory utilization of 70%", func() {
+							hpa := k.initHpa(projectService, obj)
+							Expect(hpa.Spec.MaxReplicas).To(BeEquivalentTo(10))
+							// second metric is Memory
+							Expect(hpa.Spec.Metrics[1].Resource.Name).To(BeEquivalentTo("memory"))
+							Expect(hpa.Spec.Metrics[1].Resource.Target.Type).To(BeEquivalentTo("Utilization"))
+							Expect(*hpa.Spec.Metrics[1].Resource.Target.AverageUtilization).To(BeEquivalentTo(70))
 						})
 					})
 				})
