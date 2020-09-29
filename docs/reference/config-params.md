@@ -213,6 +213,42 @@ services:
 ...
 ```
 
+## kev.workload.autoscale-max-replicas
+
+Defines the maximum number of instances (replicas) the application component should automatically scale up to. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account when initial number of replicas is lower than this parameter.
+
+### Default: `0`
+
+### Possible options: Arbitrary integer value. Example: `10`.
+
+> autoscale-max-replicas:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.autoscale-max-replicas: 3
+...
+```
+
+## kev.workload.autoscale-cpu-threshold
+
+Defines the CPU utilization threshold for the horizontal pod autoscaler for the application component. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account maximum number of replicas for the application component is defined.
+
+### Default: `50` (50% cpu utilization)
+
+### Possible options: Arbitrary integer value. Example: `80`.
+
+> autoscale-cpu-threshold:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.autoscale-cpu-threshold: 80
+...
+```
+
 ## kev.workload.rolling-update-max-surge
 
 Defines the number of pods that can be created above the desired amount of pods during an update. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#proportional-scaling). Kev will attempt to infer this number from the information specified in the compose file.
