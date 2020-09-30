@@ -38,9 +38,6 @@ const (
 	// detailPrefix debug log level prefix for info, debug, error, using unicode to ensure a visual on screen.
 	detailPrefix = " → "
 
-	// DebugPrefix debug log level prefix
-	DebugPrefix = "🔎"
-
 	// InfoPrefix info log level prefix
 	InfoPrefix = "💡"
 
@@ -117,24 +114,24 @@ func DebugTitlef(m string, args ...interface{}) {
 	logger.WithFields(decorate("debug-title")).Debugf(m, args...)
 }
 
-// DebugDetail logs a Debug message
-func DebugDetail(args ...interface{}) {
-	logger.WithFields(decorate("debug-detail")).Debug(args...)
+// Debug logs a Debug message
+func Debug(args ...interface{}) {
+	logger.WithFields(decorate("debug")).Debug(args...)
 }
 
-// DebugDetailf logs a Debug message
-func DebugDetailf(m string, args ...interface{}) {
-	logger.WithFields(decorate("debug-detail")).Debugf(m, args...)
+// Debugf logs a Debug message
+func Debugf(m string, args ...interface{}) {
+	logger.WithFields(decorate("debug")).Debugf(m, args...)
 }
 
-// DebugDetailWithFields logs a Debug message with fields
-func DebugDetailWithFields(f Fields, args ...interface{}) {
-	logger.WithFields(decorate("debug-detail", f)).Debug(args...)
+// DebugWithFields logs a Debug message with fields
+func DebugWithFields(f Fields, args ...interface{}) {
+	logger.WithFields(decorate("debug", f)).Debug(args...)
 }
 
-// DebugDetailfWithFields logs a Debug message with fields
-func DebugDetailfWithFields(f Fields, m string, args ...interface{}) {
-	logger.WithFields(decorate("debug-detail", f)).Debugf(m, args...)
+// DebugfWithFields logs a Debug message with fields
+func DebugfWithFields(f Fields, m string, args ...interface{}) {
+	logger.WithFields(decorate("debug", f)).Debugf(m, args...)
 }
 
 // ErrorDetailf logs an Error message
@@ -145,26 +142,6 @@ func ErrorDetail(args ...interface{}) {
 // ErrorDetailf logs an Error message
 func ErrorDetailf(m string, args ...interface{}) {
 	logger.WithFields(decorate("error-detail")).Errorf(m, args...)
-}
-
-// Debug logs a Debug message
-func Debug(args ...interface{}) {
-	logger.WithFields(decorate("debug")).Debug(args...)
-}
-
-// DebugWithFields logs a Debug message with fields
-func DebugWithFields(f Fields, args ...interface{}) {
-	logger.WithFields(decorate("debug", f)).Debug(args...)
-}
-
-// Debugf logs a Debug message
-func Debugf(m string, args ...interface{}) {
-	logger.WithFields(decorate("debug")).Debugf(m, args...)
-}
-
-// DebugfWithFields logs a Debug message with fields
-func DebugfWithFields(f Fields, m string, args ...interface{}) {
-	logger.WithFields(decorate("debug", f)).Debugf(m, args...)
 }
 
 // Info logs a Info message
@@ -258,12 +235,10 @@ func decorate(level string, f ...Fields) logrus.Fields {
 		switch level {
 		case "debug-title":
 			fields["prefix"] = successTitlePrefix
-		case "debug-detail":
+		case "debug":
 			fields["prefix"] = detailPrefix
 		case "error-detail":
 			fields["prefix"] = errorDetailPrefix
-		case "debug":
-			fields["prefix"] = DebugPrefix
 		case "info":
 			fields["prefix"] = InfoPrefix
 		case "error":

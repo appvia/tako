@@ -162,7 +162,7 @@ func (e *Environment) reconcile(override *composeOverride) error {
 	labelsMatching := override.toLabelsMatching(e.override)
 	cset := labelsMatching.diff(e.override)
 	if cset.HasNoPatches() {
-		log.DebugDetail("nothing to update")
+		log.Debug("nothing to update")
 		return nil
 	}
 

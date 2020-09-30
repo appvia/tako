@@ -175,7 +175,7 @@ func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
 	})
 
 	if !detected {
-		log.DebugDetail("No secrets detected in project sources")
+		log.Debug("No secrets detected in project sources")
 	}
 
 	return nil
@@ -195,7 +195,7 @@ func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string) error {
 			log.Warnf("Detected potential secrets in env [%s]", env.Name)
 		})
 		if !detected {
-			log.DebugDetailf("No secrets detected in env [%s]", env.Name)
+			log.Debugf("No secrets detected in env [%s]", env.Name)
 		}
 	}
 	return nil

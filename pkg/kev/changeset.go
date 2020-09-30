@@ -200,7 +200,7 @@ func (chg change) patchVersion(override *composeOverride) {
 	pre := override.Version
 	newValue := chg.Value.(string)
 	override.Version = newValue
-	log.DebugDetailf("version updated, from:[%s] to:[%s]", pre, newValue)
+	log.Debugf("version updated, from:[%s] to:[%s]", pre, newValue)
 }
 
 func (chg change) patchService(override *composeOverride) {
@@ -208,16 +208,16 @@ func (chg change) patchService(override *composeOverride) {
 	case CREATE:
 		newValue := chg.Value.(ServiceConfig).condenseLabels(config.BaseServiceLabels)
 		override.Services = append(override.Services, newValue)
-		log.DebugDetailf("service [%s] added", newValue.Name)
+		log.Debugf("service [%s] added", newValue.Name)
 	case DELETE:
 		switch {
 		case chg.Parent == "environment":
 			delete(override.Services[chg.Index.(int)].Environment, chg.Target)
-			log.DebugDetailf("service [%s], env var [%s] deleted", override.Services[chg.Index.(int)].Name, chg.Target)
+			log.Debugf("service [%s], env var [%s] deleted", override.Services[chg.Index.(int)].Name, chg.Target)
 		default:
 			deletedSvcName := override.Services[chg.Index.(int)].Name
 			override.Services = append(override.Services[:chg.Index.(int)], override.Services[chg.Index.(int)+1:]...)
-			log.DebugDetailf("service [%s] deleted", deletedSvcName)
+			log.Debugf("service [%s] deleted", deletedSvcName)
 		}
 	case UPDATE:
 		if chg.Parent == "labels" {
@@ -225,7 +225,7 @@ func (chg change) patchService(override *composeOverride) {
 			newValue := chg.Value.(string)
 			override.Services[chg.Index.(int)].Labels[chg.Target] = newValue
 			if canUpdate {
-				log.DebugDetailf("service [%s], label [%s] updated, from:[%s] to:[%s]", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)
+				log.Debugf("service [%s], label [%s] updated, from:[%s] to:[%s]", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)
 			}
 		}
 	}
@@ -236,9 +236,9 @@ func (chg change) patchVolume(override *composeOverride) {
 	case CREATE:
 		newValue := chg.Value.(VolumeConfig).condenseLabels(config.BaseVolumeLabels)
 		override.Volumes[chg.Index.(string)] = newValue
-		log.DebugDetailf("volume [%s] added", chg.Index.(string))
+		log.Debugf("volume [%s] added", chg.Index.(string))
 	case DELETE:
 		delete(override.Volumes, chg.Index.(string))
-		log.DebugDetailf("volume [%s] deleted", chg.Index.(string))
+		log.Debugf("volume [%s] deleted", chg.Index.(string))
 	}
 }
