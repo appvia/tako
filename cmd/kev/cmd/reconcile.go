@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -35,6 +36,7 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 
 	setReporting(verbose)
 	displayCmdStarted(cmdName)
+	displayReconcileRules(verbose)
 
 	manifest, err := kev.Reconcile(workingDir)
 	if err != nil {
@@ -49,4 +51,15 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func displayReconcileRules(verbose bool) {
+	if verbose {
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2mHOW DOES RECONCILE WORK?\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ New services & volumes in a project will be added to all environments.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Removed services & volumes from a project will be removed from all environments.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Generally, updates to a project's settings DON'T affect environments.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Updates to a service's ports in a project DO affect environments.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ ENV VARS will be removed if they are found in an environment file but not in the project.\n")
+	}
 }

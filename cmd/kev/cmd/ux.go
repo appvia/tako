@@ -55,3 +55,5 @@ func displayInitSuccess(w io.Writer, files []skippableFile) {
 		_, _ = w.Write([]byte(msg))
 	}
 }
+
+func resetFormatting() { fmt.Print(" \033[0m") }
