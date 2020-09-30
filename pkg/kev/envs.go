@@ -156,24 +156,22 @@ func (e *Environment) loadOverride() (*Environment, error) {
 	return e, nil
 }
 
-func (e *Environment) reconcile(override *composeOverride, reporter io.Writer) error {
-	// _, _ = reporter.Write([]byte(fmt.Sprintf("✓ Reconciling environment [%s]\n", e.Name)))
+func (e *Environment) reconcile(override *composeOverride) error {
 	log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
 	labelsMatching := override.toLabelsMatching(e.override)
 	cset := labelsMatching.diff(e.override)
 	if cset.HasNoPatches() {
-		// _, _ = reporter.Write([]byte(fmt.Sprint(" → nothing to update\n")))
 		log.DebugDetail("nothing to update")
 		return nil
 	}
 
-	e.patch(cset, reporter)
+	e.patch(cset)
 	return nil
 }
 
-func (e *Environment) patch(cset changeset, reporter io.Writer) {
-	e.override.patch(cset, reporter)
+func (e *Environment) patch(cset changeset) {
+	e.override.patch(cset)
 }
 
 func (e *Environment) prepareForMergeUsing(override *composeOverride) {

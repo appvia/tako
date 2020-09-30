@@ -17,8 +17,6 @@
 package kev_test
 
 import (
-	"bytes"
-
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/testutil"
@@ -31,7 +29,6 @@ import (
 var _ = Describe("Reconcile", func() {
 	var (
 		hook          *test.Hook
-		reporter      bytes.Buffer
 		loggedMsgs    string
 		workingDir    string
 		source        *kev.ComposeProject
@@ -47,7 +44,7 @@ var _ = Describe("Reconcile", func() {
 			override, _ = kev.NewComposeProject(overrideFiles)
 		}
 		hook = testutil.NewLogger(logrus.DebugLevel)
-		manifest, mErr = kev.Reconcile(workingDir, &reporter)
+		manifest, mErr = kev.Reconcile(workingDir)
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}
@@ -64,7 +61,6 @@ var _ = Describe("Reconcile", func() {
 				workingDir = "testdata/reconcile-override-rollback"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the version pre reconciliation", func() {
@@ -80,7 +76,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-override-keep"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
+
 			})
 
 			When("the override service label overrides have been updated", func() {
@@ -123,7 +119,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-version"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
-				reporter = bytes.Buffer{}
 			})
 
 			It("should update all environments with the new version", func() {
@@ -150,7 +145,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-removal"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of services pre reconciliation", func() {
@@ -182,7 +176,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-edit"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			Context("and it changes port mode to host", func() {
@@ -220,7 +213,6 @@ var _ = Describe("Reconcile", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
 					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-					reporter = bytes.Buffer{}
 				})
 
 				It("confirms the number of services pre reconciliation", func() {
@@ -287,7 +279,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -321,7 +312,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-removal"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -351,7 +341,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-edit"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the volume name pre reconciliation", func() {
@@ -385,7 +374,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-removal"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the env vars pre reconciliation", func() {
@@ -425,7 +413,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-override"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the overridden env var pre reconciliation", func() {
@@ -458,7 +445,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-unassigned"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("should not error", func() {

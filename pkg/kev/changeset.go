@@ -17,7 +17,6 @@
 package kev
 
 import (
-	"io"
 	"reflect"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -174,54 +173,50 @@ func (cset changeset) HasNoPatches() bool {
 	return len(cset.changes()) <= 0
 }
 
-func (cset changeset) applyVersionPatchesIfAny(o *composeOverride, reporter io.Writer) {
+func (cset changeset) applyVersionPatchesIfAny(o *composeOverride) {
 	chg := cset.version
 	if reflect.DeepEqual(chg, change{}) {
 		return
 	}
-	chg.patchVersion(o, reporter)
+	chg.patchVersion(o)
 }
 
-func (cset changeset) applyServicesPatchesIfAny(o *composeOverride, reporter io.Writer) {
+func (cset changeset) applyServicesPatchesIfAny(o *composeOverride) {
 	for _, change := range cset.services {
-		change.patchService(o, reporter)
+		change.patchService(o)
 	}
 }
 
-func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride, reporter io.Writer) {
+func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride) {
 	for _, change := range cset.volumes {
-		change.patchVolume(o, reporter)
+		change.patchVolume(o)
 	}
 }
 
-func (chg change) patchVersion(override *composeOverride, reporter io.Writer) {
+func (chg change) patchVersion(override *composeOverride) {
 	if chg.Type != UPDATE {
 		return
 	}
 	pre := override.Version
 	newValue := chg.Value.(string)
 	override.Version = newValue
-	// _, _ = reporter.Write([]byte(fmt.Sprintf(" → version updated, from:[%s] to:[%s]\n", pre, newValue)))
 	log.DebugDetailf("version updated, from:[%s] to:[%s]", pre, newValue)
 }
 
-func (chg change) patchService(override *composeOverride, reporter io.Writer) {
+func (chg change) patchService(override *composeOverride) {
 	switch chg.Type {
 	case CREATE:
 		newValue := chg.Value.(ServiceConfig).condenseLabels(config.BaseServiceLabels)
 		override.Services = append(override.Services, newValue)
-		// _, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] added\n", newValue.Name)))
 		log.DebugDetailf("service [%s] added", newValue.Name)
 	case DELETE:
 		switch {
 		case chg.Parent == "environment":
 			delete(override.Services[chg.Index.(int)].Environment, chg.Target)
-			// _, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], env var [%s] deleted\n", override.Services[chg.Index.(int)].Name, chg.Target)))
 			log.DebugDetailf("service [%s], env var [%s] deleted", override.Services[chg.Index.(int)].Name, chg.Target)
 		default:
 			deletedSvcName := override.Services[chg.Index.(int)].Name
 			override.Services = append(override.Services[:chg.Index.(int)], override.Services[chg.Index.(int)+1:]...)
-			// _, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s] deleted\n", deletedSvcName)))
 			log.DebugDetailf("service [%s] deleted", deletedSvcName)
 		}
 	case UPDATE:
@@ -230,23 +225,20 @@ func (chg change) patchService(override *composeOverride, reporter io.Writer) {
 			newValue := chg.Value.(string)
 			override.Services[chg.Index.(int)].Labels[chg.Target] = newValue
 			if canUpdate {
-				// _, _ = reporter.Write([]byte(fmt.Sprintf(" → service [%s], label [%s] updated, from:[%s] to:[%s]\n", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)))
 				log.DebugDetailf("service [%s], label [%s] updated, from:[%s] to:[%s]", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)
 			}
 		}
 	}
 }
 
-func (chg change) patchVolume(override *composeOverride, reporter io.Writer) {
+func (chg change) patchVolume(override *composeOverride) {
 	switch chg.Type {
 	case CREATE:
 		newValue := chg.Value.(VolumeConfig).condenseLabels(config.BaseVolumeLabels)
 		override.Volumes[chg.Index.(string)] = newValue
-		// _, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] added\n", chg.Index.(string))))
 		log.DebugDetailf("volume [%s] added", chg.Index.(string))
 	case DELETE:
 		delete(override.Volumes, chg.Index.(string))
-		// _, _ = reporter.Write([]byte(fmt.Sprintf(" → volume [%s] deleted\n", chg.Index.(string))))
 		log.DebugDetailf("volume [%s] deleted", chg.Index.(string))
 	}
 }

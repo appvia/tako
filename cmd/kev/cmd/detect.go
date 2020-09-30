@@ -35,7 +35,7 @@ func runDetectSecretsCmd(cmd *cobra.Command, _ []string) error {
 	setReporting(verbose)
 	displayCmdStarted(cmdName)
 
-	if err := kev.DetectSecrets(workingDir, nil); err != nil {
+	if err := kev.DetectSecrets(workingDir); err != nil {
 		return displayError(err)
 	}
 

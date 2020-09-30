@@ -18,7 +18,6 @@ package kev
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
@@ -156,10 +155,10 @@ func (o *composeOverride) diff(other *composeOverride) changeset {
 }
 
 // patch patches an override based on the supplied changeset patches.
-func (o *composeOverride) patch(cset changeset, reporter io.Writer) {
-	cset.applyVersionPatchesIfAny(o, reporter)
-	cset.applyServicesPatchesIfAny(o, reporter)
-	cset.applyVolumesPatchesIfAny(o, reporter)
+func (o *composeOverride) patch(cset changeset) {
+	cset.applyVersionPatchesIfAny(o)
+	cset.applyServicesPatchesIfAny(o)
+	cset.applyVolumesPatchesIfAny(o)
 }
 
 // mergeInto merges an override onto a compose project.

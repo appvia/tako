@@ -36,7 +36,7 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 	setReporting(verbose)
 	displayCmdStarted(cmdName)
 
-	manifest, err := kev.Reconcile(workingDir, nil)
+	manifest, err := kev.Reconcile(workingDir)
 	if err != nil {
 		return displayError(err)
 	}

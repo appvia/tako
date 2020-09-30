@@ -17,8 +17,6 @@
 package kev_test
 
 import (
-	"bytes"
-
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
@@ -31,13 +29,12 @@ var _ = Describe("Detect", func() {
 	var (
 		hook       *test.Hook
 		workingDir string
-		reporter   bytes.Buffer
 		dErr       error
 	)
 
 	JustBeforeEach(func() {
 		hook = testutil.NewLogger(logrus.InfoLevel)
-		dErr = kev.DetectSecrets(workingDir, &reporter)
+		dErr = kev.DetectSecrets(workingDir)
 	})
 
 	JustAfterEach(func() {
@@ -46,7 +43,6 @@ var _ = Describe("Detect", func() {
 
 	BeforeEach(func() {
 		workingDir = "testdata/detect-secrets"
-		reporter = bytes.Buffer{}
 	})
 
 	It("should not error", func() {

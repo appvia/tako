@@ -19,7 +19,6 @@ package kev
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"regexp"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -69,7 +68,7 @@ func (s Services) Set() map[string]bool {
 	return out
 }
 
-func (s Services) detectSecrets(matchers []map[string]string, _ io.Writer, detectedFn func()) bool {
+func (s Services) detectSecrets(matchers []map[string]string, detectedFn func()) bool {
 	var matches []secretHit
 	for _, svc := range s {
 		matches = append(matches, svc.detectSecretsInEnvVars(matchers)...)
