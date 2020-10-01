@@ -20,11 +20,8 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/GoogleContainerTools/skaffold v1.14.0
+# github.com/GoogleContainerTools/skaffold v1.15.0
 ## explicit
-github.com/GoogleContainerTools/skaffold/pkg/diag
-github.com/GoogleContainerTools/skaffold/pkg/diag/recommender
-github.com/GoogleContainerTools/skaffold/pkg/diag/validator
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/apiversion
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/build
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/build/bazel
@@ -38,9 +35,12 @@ github.com/GoogleContainerTools/skaffold/pkg/skaffold/cluster
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/color
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/config
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/constants
-github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/helm
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/kubectl
-github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/resource
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/kustomize
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/label
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/types
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/util
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/docker
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/errors
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/event
@@ -57,9 +57,8 @@ github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/context
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/generator
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/manifest
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/logfile
-github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/runcontext
-github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/util
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/util
@@ -96,6 +95,7 @@ github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta3
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta4
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta5
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta6
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta7
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/util
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/version
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/walk
@@ -751,7 +751,7 @@ k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.18.8 => k8s.io/apimachinery v0.17.4
+# k8s.io/apimachinery v0.19.2 => k8s.io/apimachinery v0.17.4
 ## explicit
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/meta

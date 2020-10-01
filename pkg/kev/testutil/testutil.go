@@ -28,7 +28,7 @@ import (
 func NewLogger(level logrus.Level) *test.Hook {
 	var buffer = &bytes.Buffer{}
 	log.SetOutput(buffer)
-	log.SetLogLevel(logrus.DebugLevel)
+	log.SetLogLevel(level)
 	return test.NewLocal(log.GetLogger())
 }
 
