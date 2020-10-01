@@ -3,7 +3,7 @@ module github.com/appvia/kev
 go 1.14
 
 require (
-	github.com/GoogleContainerTools/skaffold v1.14.0
+	github.com/GoogleContainerTools/skaffold v1.15.0
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/go-cmp v0.5.2
@@ -20,7 +20,7 @@ require (
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	k8s.io/api v0.18.8
-	k8s.io/apimachinery v0.18.8
+	k8s.io/apimachinery v0.19.2
 )
 
 replace (
