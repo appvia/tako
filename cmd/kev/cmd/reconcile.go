@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -35,6 +36,7 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 
 	setReporting(verbose)
 	displayCmdStarted(cmdName)
+	displayReconcileRules(verbose)
 
 	manifest, err := kev.Reconcile(workingDir)
 	if err != nil {
@@ -49,4 +51,14 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func displayReconcileRules(verbose bool) {
+	if verbose {
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2mHOW DOES RECONCILE WORK?\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ New services & volumes in a project will be added to all environments.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Removed services & volumes from a project will be removed from all environments.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Environment settings trump project settings, with the exception of ports.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ An environment can only override a service's Env Vars.\n")
+	}
 }
