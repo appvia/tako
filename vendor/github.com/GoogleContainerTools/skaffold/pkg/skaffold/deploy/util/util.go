@@ -14,34 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package custom
+package util
 
 import (
-	"context"
 	"fmt"
-	"io"
 
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/docker"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 )
 
-// Build builds an artifact using a custom script
-func (b *Builder) Build(ctx context.Context, out io.Writer, artifact *latest.Artifact, tag string) (string, error) {
-	if err := b.runBuildScript(ctx, out, artifact, tag); err != nil {
-		return "", fmt.Errorf("building custom artifact: %w", err)
-	}
-
-	if b.pushImages {
-		return docker.RemoteDigest(tag, b.cfg)
-	}
-
-	imageID, err := b.localDocker.ImageID(ctx, tag)
+// ApplyDefaultRepo applies the default repo to a given image tag.
+func ApplyDefaultRepo(globalConfig string, defaultRepo *string, tag string) (string, error) {
+	repo, err := config.GetDefaultRepo(globalConfig, defaultRepo)
 	if err != nil {
-		return "", err
-	}
-	if imageID == "" {
-		return "", fmt.Errorf("the custom script didn't produce an image with tag [%s]", tag)
+		return "", fmt.Errorf("getting default repo: %w", err)
 	}
 
-	return imageID, nil
+	newTag, err := docker.SubstituteDefaultRepoIntoImage(repo, tag)
+	if err != nil {
+		return "", fmt.Errorf("applying default repo to %q: %w", tag, err)
+	}
+
+	return newTag, nil
 }
