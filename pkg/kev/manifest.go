@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -127,14 +128,13 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 }
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
-func (m *Manifest) ReconcileConfig(reporter io.Writer) (*Manifest, error) {
+func (m *Manifest) ReconcileConfig() (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		return nil, err
 	}
-
 	sourcesOverride := m.getSourcesOverride()
 	for _, e := range m.Environments {
-		if err := e.reconcile(sourcesOverride, reporter); err != nil {
+		if err := e.reconcile(sourcesOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -158,7 +158,7 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 }
 
 // DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.
-func (m *Manifest) DetectSecretsInSources(matchers []map[string]string, reporter io.Writer) error {
+func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
 	sourcesFiles := m.GetSourcesFiles()
 	p, err := NewComposeProject(sourcesFiles)
 	if err != nil {
@@ -170,13 +170,20 @@ func (m *Manifest) DetectSecretsInSources(matchers []map[string]string, reporter
 		candidates = append(candidates, ServiceConfig{Name: s.Name, Environment: s.Environment})
 	}
 
-	_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting potential secrets in sources %s\n", sourcesFiles)))
-	return candidates.detectSecrets(matchers, reporter)
+	detected := candidates.detectSecrets(matchers, func() {
+		log.Warnf("Detected potential secrets in sources %s", sourcesFiles)
+	})
+
+	if !detected {
+		log.Debug("No secrets detected in project sources")
+	}
+
+	return nil
 }
 
 // DetectSecretsInEnvs detects any potential secrets setup as environment variables
 // in a manifests deployment environments config.
-func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string, reporter io.Writer) error {
+func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string) error {
 	var filter []string
 	envs, err := m.GetEnvironments(filter)
 	if err != nil {
@@ -184,10 +191,11 @@ func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string, reporter io
 	}
 
 	for _, env := range envs {
-		_, _ = reporter.Write([]byte(fmt.Sprintf("\n✓ Detecting potential secrets in env [%s]\n", env.Name)))
-		err := env.GetServices().detectSecrets(matchers, reporter)
-		if err != nil {
-			return err
+		detected := env.GetServices().detectSecrets(matchers, func() {
+			log.Warnf("Detected potential secrets in env [%s]", env.Name)
+		})
+		if !detected {
+			log.Debugf("No secrets detected in env [%s]", env.Name)
 		}
 	}
 	return nil

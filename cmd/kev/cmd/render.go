@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/spf13/cobra"
@@ -45,6 +47,7 @@ var renderCmd = &cobra.Command{
 			if err := fn(cmd, args); err != nil {
 				return err
 			}
+			os.Stdout.Write([]byte("\n"))
 		}
 		return nil
 	},
@@ -87,22 +90,24 @@ func init() {
 }
 
 func runRenderCmd(cmd *cobra.Command, _ []string) error {
+	cmdName := "Render"
+
 	format, err := cmd.Flags().GetString("format")
 	singleFile, err := cmd.Flags().GetBool("single")
 	dir, err := cmd.Flags().GetString("dir")
 	envs, err := cmd.Flags().GetStringSlice("environment")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
 		return err
 	}
 
-	log.Infof("⚙️  Output format: %s", format)
-
+	setReporting(verbose)
+	displayCmdStarted(cmdName)
+	log.DebugTitlef("Output format: %s", format)
 	if err := kev.Render(format, singleFile, dir, envs); err != nil {
 		return err
 	}
-
-	log.Info("🧰 App render complete!")
 
 	return nil
 }

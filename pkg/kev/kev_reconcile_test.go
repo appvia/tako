@@ -17,17 +17,19 @@
 package kev_test
 
 import (
-	"bytes"
-
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = Describe("Reconcile", func() {
 	var (
-		reporter      bytes.Buffer
+		hook          *test.Hook
+		loggedMsgs    string
 		workingDir    string
 		source        *kev.ComposeProject
 		overrideFiles []string
@@ -41,10 +43,16 @@ var _ = Describe("Reconcile", func() {
 		if len(overrideFiles) > 0 {
 			override, _ = kev.NewComposeProject(overrideFiles)
 		}
-		manifest, mErr = kev.Reconcile(workingDir, &reporter)
+		hook = testutil.NewLogger(logrus.DebugLevel)
+		manifest, mErr = kev.Reconcile(workingDir)
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}
+		loggedMsgs = testutil.GetLoggedMsgs(hook)
+	})
+
+	JustAfterEach(func() {
+		hook.Reset()
 	})
 
 	Describe("Reconcile changes from overrides", func() {
@@ -53,7 +61,6 @@ var _ = Describe("Reconcile", func() {
 				workingDir = "testdata/reconcile-override-rollback"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the version pre reconciliation", func() {
@@ -69,7 +76,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-override-keep"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
+
 			})
 
 			When("the override service label overrides have been updated", func() {
@@ -112,17 +119,21 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-version"
 				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
-				reporter = bytes.Buffer{}
 			})
 
 			It("should update all environments with the new version", func() {
 				Expect(env.GetVersion()).To(Equal(source.GetVersion()))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("3.7"))
-				Expect(reporter.String()).To(ContainSubstring(env.GetVersion()))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("3.7"))
+				Expect(loggedMsgs).To(ContainSubstring(env.GetVersion()))
 			})
 
 			It("should not error", func() {
@@ -134,7 +145,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-removal"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of services pre reconciliation", func() {
@@ -147,10 +157,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetServices()[0].Name).To(Equal("db"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("wordpress"))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("wordpress"))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
 			})
 
 			It("should not error", func() {
@@ -162,7 +176,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-service-edit"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			Context("and it changes port mode to host", func() {
@@ -176,13 +189,17 @@ var _ = Describe("Reconcile", func() {
 					Expect(s.Labels["kev.service.type"]).To(Equal("NodePort"))
 				})
 
+				It("should log the change summary using the debug level", func() {
+					Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+				})
+
 				It("should create a change summary", func() {
-					Expect(reporter.String()).To(ContainSubstring(env.Name))
-					Expect(reporter.String()).To(ContainSubstring("wordpress"))
-					Expect(reporter.String()).To(ContainSubstring("updated"))
-					Expect(reporter.String()).To(ContainSubstring(config.LabelServiceType))
-					Expect(reporter.String()).To(ContainSubstring("LoadBalancer"))
-					Expect(reporter.String()).To(ContainSubstring("NodePort"))
+					Expect(loggedMsgs).To(ContainSubstring(env.Name))
+					Expect(loggedMsgs).To(ContainSubstring("wordpress"))
+					Expect(loggedMsgs).To(ContainSubstring("updated"))
+					Expect(loggedMsgs).To(ContainSubstring(config.LabelServiceType))
+					Expect(loggedMsgs).To(ContainSubstring("LoadBalancer"))
+					Expect(loggedMsgs).To(ContainSubstring("NodePort"))
 				})
 
 				It("should not error", func() {
@@ -196,7 +213,6 @@ var _ = Describe("Reconcile", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
 					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-					reporter = bytes.Buffer{}
 				})
 
 				It("confirms the number of services pre reconciliation", func() {
@@ -219,10 +235,14 @@ var _ = Describe("Reconcile", func() {
 					Expect(env.GetServices()[1].Environment).To(HaveLen(0))
 				})
 
+				It("should log the change summary using the debug level", func() {
+					Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+				})
+
 				It("should create a change summary", func() {
-					Expect(reporter.String()).To(ContainSubstring(env.Name))
-					Expect(reporter.String()).To(ContainSubstring("added"))
-					Expect(reporter.String()).To(ContainSubstring("wordpress"))
+					Expect(loggedMsgs).To(ContainSubstring(env.Name))
+					Expect(loggedMsgs).To(ContainSubstring("added"))
+					Expect(loggedMsgs).To(ContainSubstring("wordpress"))
 				})
 
 				It("should not error", func() {
@@ -259,7 +279,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -274,10 +293,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(v.Labels[config.LabelVolumeSize]).To(Equal("100Mi"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("added"))
-				Expect(reporter.String()).To(ContainSubstring("db_data"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("added"))
+				Expect(loggedMsgs).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -289,7 +312,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-removal"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -300,10 +322,14 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetVolumes()).To(HaveLen(0))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
-				Expect(reporter.String()).To(ContainSubstring("db_data"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -315,7 +341,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-edit"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the volume name pre reconciliation", func() {
@@ -328,12 +353,16 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.VolumeNames()).To(ContainElements("mysql_data"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
-				Expect(reporter.String()).To(ContainSubstring("db_data"))
-				Expect(reporter.String()).To(ContainSubstring("added"))
-				Expect(reporter.String()).To(ContainSubstring("mysql_data"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring("db_data"))
+				Expect(loggedMsgs).To(ContainSubstring("added"))
+				Expect(loggedMsgs).To(ContainSubstring("mysql_data"))
 			})
 
 			It("should not error", func() {
@@ -345,7 +374,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-removal"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the env vars pre reconciliation", func() {
@@ -365,11 +393,15 @@ var _ = Describe("Reconcile", func() {
 				Expect(s.GetLabels()).To(HaveLen(16))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("deleted"))
-				Expect(reporter.String()).To(ContainSubstring("WORDPRESS_CACHE_USER"))
-				Expect(reporter.String()).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
+				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_USER"))
+				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
 			})
 
 			It("should not error", func() {
@@ -381,7 +413,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-override"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("confirms the overridden env var pre reconciliation", func() {
@@ -396,9 +427,13 @@ var _ = Describe("Reconcile", func() {
 				Expect(vars).To(HaveKey("TO_OVERRIDE"))
 			})
 
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
 			It("should create a change summary", func() {
-				Expect(reporter.String()).To(ContainSubstring(env.Name))
-				Expect(reporter.String()).To(ContainSubstring("nothing to update"))
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 			})
 
 			It("should not error", func() {
@@ -410,7 +445,6 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-env-var-unassigned"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-				reporter = bytes.Buffer{}
 			})
 
 			It("should not error", func() {

@@ -17,7 +17,6 @@
 package kev
 
 import (
-	"io"
 	"os"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -60,12 +59,12 @@ func PrepareForSkaffold(envs []string) (*SkaffoldManifest, error) {
 }
 
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
-func Reconcile(workingDir string, reporter io.Writer) (*Manifest, error) {
+func Reconcile(workingDir string) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := m.ReconcileConfig(reporter); err != nil {
+	if _, err := m.ReconcileConfig(); err != nil {
 		return nil, errors.Wrap(err, "Could not reconcile project latest")
 	}
 	return m, err
@@ -73,14 +72,14 @@ func Reconcile(workingDir string, reporter io.Writer) (*Manifest, error) {
 
 // DetectSecrets detects any potential secrets defined in environment variables
 // found either in sources or override environments.
-// Any detected secrets are reported back using the supplied reporter.
-func DetectSecrets(workingDir string, reporter io.Writer) error {
+// Any detected secrets are logged using a warning log level.
+func DetectSecrets(workingDir string) error {
 	m, err := LoadManifest(workingDir)
 	if err != nil {
 		return err
 	}
-	m.DetectSecretsInSources(config.SecretMatchers, reporter)
-	m.DetectSecretsInEnvs(config.SecretMatchers, reporter)
+	m.DetectSecretsInSources(config.SecretMatchers)
+	m.DetectSecretsInEnvs(config.SecretMatchers)
 	return nil
 }
 

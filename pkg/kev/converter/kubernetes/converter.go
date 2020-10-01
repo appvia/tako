@@ -47,7 +47,7 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 	renderOutputPaths := map[string]string{}
 
 	for env, project := range projects {
-		log.Infof("🖨️  Rendering %s environment", env)
+		log.Debugf("Rendering environment [%s]", env)
 
 		// @step override output directory if specified
 		outDirPath := ""
