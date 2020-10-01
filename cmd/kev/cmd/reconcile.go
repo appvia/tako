@@ -58,8 +58,7 @@ func displayReconcileRules(verbose bool) {
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2mHOW DOES RECONCILE WORK?\n")
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ New services & volumes in a project will be added to all environments.\n")
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Removed services & volumes from a project will be removed from all environments.\n")
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Generally, updates to a project's settings DON'T affect environments.\n")
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Updates to a service's ports in a project DO affect environments.\n")
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ ENV VARS will be removed if they are found in an environment file but not in the project.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Environment settings trump project settings, with the exception of ports.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ To avoid Env Var hell, an environment can only override a service's Env Vars.\n")
 	}
 }
