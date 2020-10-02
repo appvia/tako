@@ -518,6 +518,114 @@ services:
 ...
 ```
 
+## kev.workload.readiness-probe-disabled
+
+Defines whether workload should have a readiness probe enabled. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `true`
+
+### Possible options: Bool
+
+> kev.workload.readiness-probe-disabled:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-disabled: true
+...
+```
+
+## kev.workload.readiness-probe-command
+
+Defines the readiness probe command to be run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: nil
+
+### Possible options: shell command
+
+> kev.workload.liveness-probe-command:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-command: ["/is-my-service-ready.sh"]
+...
+```
+
+## kev.workload.readiness-probe-interval
+
+Defines how often readiness proble should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `1m`
+
+### Possible options: Time duration
+
+> kev.workload.readiness-probe-interval:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-interval: 30s
+...
+```
+
+## kev.workload.readiness-probe-retries
+
+Defines how many times readiness proble should retry upon failure for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `3`
+
+### Possible options: Arbitrary integer. Example: `5`
+
+> kev.workload.readiness-probe-retries:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-retries: 10
+...
+```
+
+## kev.workload.readiness-probe-initial-delay
+
+Defines how many how long to wait before the first readiness probe runs for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `1m`
+
+### Possible options: Arbitrary time duration. Example: `1m30s`
+
+> kev.workload.readiness-probe-initial-delay:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-initial-delay: 10s
+...
+```
+
+## kev.workload.readiness-probe-timeout
+
+Defines how many the timeout for the readiness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `10s`
+
+### Possible options: Arbitrary time duration. Example: `30s`
+
+> kev.workload.readiness-probe-timeout:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-timeout: 10s
+...
+```
+
 # Service
 
 The `service` group contains configuration detail around Kubernetes services and how they get exposed externally.
