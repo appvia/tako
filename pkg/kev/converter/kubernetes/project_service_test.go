@@ -1309,7 +1309,7 @@ var _ = Describe("ProjectService", func() {
 
 		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInterval)
+				expected, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
 				Expect(projectService.livenessProbeInterval()).To(Equal(*expected))
 			})
 		})
@@ -1347,7 +1347,7 @@ var _ = Describe("ProjectService", func() {
 
 		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultLivenessProbeTimeout)
+				expected, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
 				Expect(projectService.livenessProbeTimeout()).To(Equal(*expected))
 			})
 		})
@@ -1385,7 +1385,7 @@ var _ = Describe("ProjectService", func() {
 
 		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInitialDelay)
+				expected, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
 				Expect(projectService.livenessProbeInitialDelay()).To(Equal(*expected))
 			})
 		})
@@ -1423,13 +1423,13 @@ var _ = Describe("ProjectService", func() {
 
 		When("not defined by both label nor healthcheck block", func() {
 			It("returns default value", func() {
-				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(config.DefaultLivenessProbeRetries))
+				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(config.DefaultProbeRetries))
 			})
 		})
 	})
 
 	Describe("livenessProbeDisabled", func() {
-		When("defined via labels", func() {
+		When("defined via labels with valid (truth) value", func() {
 			disabled := "true"
 
 			BeforeEach(func() {
@@ -1439,6 +1439,34 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
+				Expect(projectService.livenessProbeDisabled()).To(BeTrue())
+			})
+		})
+
+		When("defined via labels with valid (false) value", func() {
+			disabled := "false"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadLivenessProbeDisabled: disabled,
+				}
+			})
+
+			It("returns label value", func() {
+				Expect(projectService.livenessProbeDisabled()).To(BeFalse())
+			})
+		})
+
+		When("defined via labels with invalid (non truthy) value", func() {
+			disabled := "FOO"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadLivenessProbeDisabled: disabled,
+				}
+			})
+
+			It("disables the liveness probe", func() {
 				Expect(projectService.livenessProbeDisabled()).To(BeTrue())
 			})
 		})
@@ -1460,6 +1488,222 @@ var _ = Describe("ProjectService", func() {
 		When("not defined via labels", func() {
 			It("returns default value", func() {
 				Expect(projectService.livenessProbeDisabled()).To(BeFalse())
+			})
+		})
+	})
+
+	Describe("readinessProbe", func() {
+
+		Describe("validations", func() {
+
+			When("any of time based paramaters is set to 0", func() {
+				JustBeforeEach(func() {
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeDisabled: "false",
+						config.LabelWorkloadReadinessProbeTimeout:  "0",
+					}
+				})
+
+				It("logs and returns error", func() {
+					_, err := projectService.readinessProbe()
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("Readiness probe misconfigured"))
+
+					assertLog(logrus.ErrorLevel,
+						"Readiness probe misconfigured",
+						map[string]string{},
+					)
+				})
+			})
+		})
+	})
+
+	Describe("readinessProbeCommand", func() {
+		When("defined via labels", func() {
+
+			Context("and supplied as string command", func() {
+				cmd := "my test command"
+
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeDisabled: "false",
+						config.LabelWorkloadReadinessProbeCommand:  cmd,
+					}
+				})
+
+				It("returns label value", func() {
+					Expect(projectService.readinessProbeCommand()).To(HaveLen(1))
+					Expect(projectService.readinessProbeCommand()).To(ContainElement(cmd))
+				})
+			})
+
+			Context("and specified as list", func() {
+				cmd := "[\"CMD\", \"echo\", \"Hello World\"]"
+
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeDisabled: "false",
+						config.LabelWorkloadReadinessProbeCommand:  cmd,
+					}
+				})
+
+				It("returns label value", func() {
+					Expect(projectService.readinessProbeCommand()).To(HaveLen(2))
+					Expect(projectService.readinessProbeCommand()).ToNot(ContainElements("CMD"))
+					Expect(projectService.readinessProbeCommand()).To(ContainElements("echo", "Hello World"))
+				})
+			})
+		})
+
+		When("not defined by label", func() {
+			It("returns default value as empty string slice", func() {
+				Expect(projectService.readinessProbeCommand()).To(Equal([]string{}))
+			})
+		})
+	})
+
+	Describe("readinessProbeInterval", func() {
+		When("defined via labels", func() {
+			interval := "30s"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled: "false",
+					config.LabelWorkloadReadinessProbeInterval: interval,
+				}
+			})
+
+			It("returns label value", func() {
+				Expect(projectService.readinessProbeInterval()).To(BeEquivalentTo(30))
+			})
+		})
+
+		When("not defined by label", func() {
+			It("returns default value", func() {
+				expected, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
+				Expect(projectService.readinessProbeInterval()).To(Equal(*expected))
+			})
+		})
+	})
+
+	Describe("readinessProbeTimeout", func() {
+		When("defined via labels", func() {
+			timeout := "30s"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled: "false",
+					config.LabelWorkloadReadinessProbeTimeout:  timeout,
+				}
+			})
+
+			It("returns label value", func() {
+				Expect(projectService.readinessProbeTimeout()).To(BeEquivalentTo(30))
+			})
+		})
+
+		When("not defined by label", func() {
+			It("returns default value", func() {
+				expected, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
+				Expect(projectService.readinessProbeTimeout()).To(Equal(*expected))
+			})
+		})
+	})
+
+	Describe("readinessProbeInitialDelay", func() {
+		When("defined via labels", func() {
+			delay := "30s"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled:     "false",
+					config.LabelWorkloadReadinessProbeInitialDelay: delay,
+				}
+			})
+
+			It("returns label value", func() {
+				Expect(projectService.readinessProbeInitialDelay()).To(BeEquivalentTo(30))
+			})
+		})
+
+		When("not defined by label", func() {
+			It("returns default value", func() {
+				expected, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
+				Expect(projectService.readinessProbeInitialDelay()).To(Equal(*expected))
+			})
+		})
+	})
+
+	Describe("readinessProbeRetries", func() {
+		When("defined via labels", func() {
+			retries := "3"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled: "false",
+					config.LabelWorkloadReadinessProbeRetries:  retries,
+				}
+			})
+
+			It("returns label value", func() {
+				expected := 3
+				Expect(projectService.readinessProbeRetries()).To(BeEquivalentTo(expected))
+			})
+		})
+
+		When("not defined by label", func() {
+			It("returns default value", func() {
+				Expect(projectService.readinessProbeRetries()).To(BeEquivalentTo(config.DefaultProbeRetries))
+			})
+		})
+	})
+
+	Describe("readinessProbeDisabled", func() {
+		When("defined via labels with valid (truth) value", func() {
+			disabled := "true"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled: disabled,
+				}
+			})
+
+			It("returns label value", func() {
+				Expect(projectService.readinessProbeDisabled()).To(BeTrue())
+			})
+		})
+
+		When("defined via labels with valid (false) value", func() {
+			disabled := "false"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled: disabled,
+				}
+			})
+
+			It("returns label value", func() {
+				Expect(projectService.readinessProbeDisabled()).To(BeFalse())
+			})
+		})
+
+		When("defined via labels with invalid (non truthy) value", func() {
+			disabled := "FOO"
+
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeDisabled: disabled,
+				}
+			})
+
+			It("disables the readiness probe", func() {
+				Expect(projectService.readinessProbeDisabled()).To(BeTrue())
+			})
+		})
+
+		When("not defined via labels at all", func() {
+			It("returns default value - disable by default", func() {
+				Expect(projectService.readinessProbeDisabled()).To(BeTrue())
 			})
 		})
 	})

@@ -166,7 +166,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		allobjects = append(allobjects, objects...)
 	}
 
-	// @step sort all object so Services are first, remove duplicates and fix worklaod versions
+	// @step sort all object so Services are first and remove duplicates
 	k.sortServicesFirst(&allobjects)
 	k.removeDupObjects(&allobjects)
 
@@ -1643,6 +1643,20 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		}
 		if healthCheck != nil {
 			template.Spec.Containers[0].LivenessProbe = healthCheck
+		}
+
+		// @step configure readiness probe
+		// Note: This is not covered by the docker compose spec
+		readinessProbe, err := projectService.readinessProbe()
+		if err != nil {
+			log.ErrorWithFields(log.Fields{
+				"project-service": projectService.Name,
+			}, "Readiness probe definition has errors")
+
+			return err
+		}
+		if readinessProbe != nil {
+			template.Spec.Containers[0].ReadinessProbe = readinessProbe
 		}
 
 		// @step configure pod termination grace priod

@@ -1,5 +1,5 @@
 ---
-weight: 11
+weight: 50
 title: Kev configuration reference
 ---
 
@@ -10,13 +10,13 @@ Kev leverages Docker Compose specification to configure and prepare an applicati
 ### Component level configuration
 
 Configuration is divided into the following groups of parameters:
-* [Component](#component)
-* [Workload](#workload)
-* [Service](#service)
-* [Volumes](#volumes)
-* [Environment](#environment)
+* [Component](#-component)
+* [Workload](#-workload)
+* [Service](#-service)
+* [Volumes](#-volumes)
+* [Environment](#-environment)
 
-# Component
+# → Component
 
 This configuration group contains application composition related settings. Configuration parameters can be individually defined via set of labels (listed below) for each application stack component.
 
@@ -38,7 +38,7 @@ services:
 ...
 ```
 
-# Workload
+# → Workload
 
 This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined via set of labels (listed below) for each application stack component.
 
@@ -518,7 +518,115 @@ services:
 ...
 ```
 
-# Service
+## kev.workload.readiness-probe-disabled
+
+Defines whether workload should have a readiness probe enabled. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `true`
+
+### Possible options: Bool
+
+> kev.workload.readiness-probe-disabled:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-disabled: true
+...
+```
+
+## kev.workload.readiness-probe-command
+
+Defines the readiness probe command to be run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: nil
+
+### Possible options: shell command
+
+> kev.workload.liveness-probe-command:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-command: ["/is-my-service-ready.sh"]
+...
+```
+
+## kev.workload.readiness-probe-interval
+
+Defines how often readiness proble should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `1m`
+
+### Possible options: Time duration
+
+> kev.workload.readiness-probe-interval:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-interval: 30s
+...
+```
+
+## kev.workload.readiness-probe-retries
+
+Defines how many times readiness proble should retry upon failure for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `3`
+
+### Possible options: Arbitrary integer. Example: `5`
+
+> kev.workload.readiness-probe-retries:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-retries: 10
+...
+```
+
+## kev.workload.readiness-probe-initial-delay
+
+Defines how many how long to wait before the first readiness probe runs for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `1m`
+
+### Possible options: Arbitrary time duration. Example: `1m30s`
+
+> kev.workload.readiness-probe-initial-delay:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-initial-delay: 10s
+...
+```
+
+## kev.workload.readiness-probe-timeout
+
+Defines how many the timeout for the readiness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+### Default: `10s`
+
+### Possible options: Arbitrary time duration. Example: `30s`
+
+> kev.workload.readiness-probe-timeout:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-timeout: 10s
+...
+```
+
+# → Service
 
 The `service` group contains configuration detail around Kubernetes services and how they get exposed externally.
 
@@ -615,7 +723,7 @@ services:
 ...
 ```
 
-# Volumes
+# → Volumes
 
 This configuration group contains Kubernetes persistent `volume` claim specific settings. Configuration parameters can be individually defined via a set of labels (see below), for each volume referenced in the project compose file(s).
 
@@ -674,18 +782,68 @@ volumes:
 ...
 ```
 
-# Environment
+# → Environment
 
 This group allows for application component `environment` variables configuration.
 
-> Environment variables can be configured in the following formats:
+## Literal string
+
+To set an environment variable with explicit string value
+
+> Environment variable with as literal string:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      ...
+    environment:
+      ENV_VAR_A: some-literal-value  # Literal value
+```
+
+## Reference K8s secret key value
+
+To set an environment variable with a value taken from Kubernetes secret, use the following shortcut: `secret.{secret-name}.{secret-key}`.
 
 ```yaml
-ENV_A: literal-value                              # Literal value
-ENV_B: secret.{secret-name}.{secret-key}          # Refer to a value stored in a secret key
-ENV_C: config.{config-name}.{config-key}          # Refer to a value stored in a configmap key
-ENV_D: pod.{field-path}                           # Refer to a value of K8s Pod path for current component pod
-ENV_F: container.{container-name}.{resouce-field} # Refer to a value of K8s Container reouce field for named container
+version: 3.7
+services:
+  my-service:
+    labels:
+      ...
+    environment:
+      ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to a value stored in a secret key
+```
+
+## Reference K8s config map key value
+
+To set an environment variable with a value taken from Kubernetes config map, use the following shortcut: `config.{config-name}.{config-key}`.
+
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      ...
+    environment:
+      ENV_VAR_C: config.{config-name}.{config-key}  # Refer to a value stored in a configmap key
+```
+
+## Reference Pod field path
+
+To set an environment variable with a value referencing K8s Pod field value, use the following shortcut: `pod.{field-path}`.
+
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      ...
+    environment:
+      ENV_VAR_D: pod.{field-path} # Refer to the a value of the K8s workload Pod field path
+                                  # e.g. `pod.metadata.namespace` to get the k8s namespace
+                                  # name in which pod operates
+
 ```
 
 ### Supported `pod.{...}` field paths:
@@ -698,11 +856,10 @@ ENV_F: container.{container-name}.{resouce-field} # Refer to a value of K8s Cont
 * `status.hostIP` - returns current app component K8s cluster Node IP address
 * `status.podIP` - returns current app component K8s Pod IP address
 
-### Supported `container.{name}.{....}` resource fields:
-* `limits.cpu`, `limits.memory`, `limits.ephemeral-storage` - return value of selected container `limit` field
-* `requests.cpu`, `requests.memory`, `requests.ephemeral-storage` - return value of selected container `requests` field
+## Reference Container resource field
 
-> environment:
+To set an environment variable with a value referencing K8s Container resource field value, use the following shortcut: `container.{name}.{....}`.
+
 ```yaml
 version: 3.7
 services:
@@ -710,12 +867,11 @@ services:
     labels:
       ...
     environment:
-      ENV_VAR_A: another-literal-value                       # Literal value
-      ENV_VAR_B: secret.{secret-name}.{secret-key}           # Refer to the a value stored in a secret key
-      ENV_VAR_C: config.{config-name}.{config-key}           # Refer to the a value stored in a configmap key
-      ENV_VAR_D: pod.{field-path}                            # Refer to the a value of the K8s workload Pod field path
-                                                             # e.g. `pod.metadata.namespace` to get the k8s namespace
-                                                             # name in which pod operates
-      ENV_VAR_F: container.{container-name}.{resource-field} # Refer to the a value of the K8s workload Container resource field
+      ENV_VAR_E: container.{container-name}.{resource-field} # Refer to the a value of the K8s workload Container resource field
                                                              # e.g `limits.cpu` to get max CPU allocatable to the container
+
 ```
+
+### Supported `container.{name}.{....}` resource fields:
+* `limits.cpu`, `limits.memory`, `limits.ephemeral-storage` - return value of selected container `limit` field
+* `requests.cpu`, `requests.memory`, `requests.ephemeral-storage` - return value of selected container `requests` field

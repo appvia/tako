@@ -1,5 +1,5 @@
 ---
-weight: 12
+weight: 51
 title: Kev configuration example
 ---
 

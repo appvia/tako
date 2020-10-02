@@ -89,6 +89,24 @@ const (
 	// LabelWorkloadLivenessProbeDisabled disables workload liveness probe
 	LabelWorkloadLivenessProbeDisabled = "kev.workload.liveness-probe-disabled"
 
+	// LabelWorkloadReadinessProbeCommand defines the command for workload liveness probe
+	LabelWorkloadReadinessProbeCommand = "kev.workload.readiness-probe-command"
+
+	// LabelWorkloadReadinessProbeInterval defines the interval for workload liveness probe
+	LabelWorkloadReadinessProbeInterval = "kev.workload.readiness-probe-interval"
+
+	// LabelWorkloadReadinessProbeTimeout defines the timeout for workload liveness probe
+	LabelWorkloadReadinessProbeTimeout = "kev.workload.readiness-probe-timeout"
+
+	// LabelWorkloadReadinessProbeInitialDelay defines the initial delay for workload liveness probe
+	LabelWorkloadReadinessProbeInitialDelay = "kev.workload.readiness-probe-initial-delay"
+
+	// LabelWorkloadReadinessProbeRetries defines number of times workload liveness probe will retry
+	LabelWorkloadReadinessProbeRetries = "kev.workload.readiness-probe-retries"
+
+	// LabelWorkloadReadinessProbeDisabled disables workload liveness probe
+	LabelWorkloadReadinessProbeDisabled = "kev.workload.readiness-probe-disabled"
+
 	// LabelServiceType defines the type of service to be created
 	LabelServiceType = "kev.service.type"
 

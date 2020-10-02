@@ -189,21 +189,21 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 	if source.HealthCheck != nil && source.HealthCheck.Interval != nil {
 		interval = source.HealthCheck.Interval.String()
 	} else {
-		interval = config.DefaultLivenessProbeInterval
+		interval = config.DefaultProbeInterval
 	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeInterval, interval)
 
 	if source.HealthCheck != nil && source.HealthCheck.Retries != nil {
 		retries = strconv.FormatUint(*source.HealthCheck.Retries, 10)
 	} else {
-		retries = strconv.FormatUint(config.DefaultLivenessProbeRetries, 10)
+		retries = strconv.FormatUint(config.DefaultProbeRetries, 10)
 	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeRetries, retries)
 
 	if source.HealthCheck != nil && source.HealthCheck.StartPeriod != nil {
 		initialDelay = source.HealthCheck.StartPeriod.String()
 	} else {
-		initialDelay = config.DefaultLivenessProbeInitialDelay
+		initialDelay = config.DefaultProbeInitialDelay
 	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeInitialDelay, initialDelay)
 
@@ -217,7 +217,7 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 	if source.HealthCheck != nil && source.HealthCheck.Timeout != nil {
 		timeout = source.HealthCheck.Timeout.String()
 	} else {
-		timeout = config.DefaultLivenessProbeTimeout
+		timeout = config.DefaultProbeTimeout
 	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeTimeout, timeout)
 }

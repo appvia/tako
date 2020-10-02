@@ -152,7 +152,7 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 
 ## Tutorials and guides
 
-- [How does Kev differ from Kompose?](docs/how-kev-differs-from-kompose.md)
+- [How does Kev differ from Kompose?](docs/tutorials/how-kev-differs-from-kompose.md)
 - [Getting started with Kev.](docs/tutorials/getting-started-with-kev.md)
 
   This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
@@ -171,7 +171,7 @@ See the [configuration reference](docs/reference/config-params.md) for details.
 
 _Kev_ is inspired by the simple, easy to use and well adopted Docker Compose specification, as well as several other tools in the Kubernetes manifests generation and templating space such as Kompose, Ksonnet and Kustomize, to name a few.
 
-See how [Kev differs from Kompose.](docs/how-kev-differs-from-kompose.md)
+See how [Kev differs from Kompose.](docs/tutorials/how-kev-differs-from-kompose.md)
 
 Each of the solutions above, however, come with their own set of challenges and are lacking in various areas. Some have been discontinued, some see very few contributions or updates, others require a great deal of prior Kubernetes expertise to find them useful.
 
