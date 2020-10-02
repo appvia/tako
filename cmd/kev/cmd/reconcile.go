@@ -50,6 +50,10 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	if verbose {
+		os.Stdout.Write([]byte("\n"))
+	}
+
 	return nil
 }
 

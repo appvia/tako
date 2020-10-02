@@ -39,5 +39,9 @@ func runDetectSecretsCmd(cmd *cobra.Command, _ []string) error {
 		return displayError(err)
 	}
 
+	if verbose {
+		os.Stdout.Write([]byte("\n"))
+	}
+
 	return nil
 }
