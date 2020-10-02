@@ -560,7 +560,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 		initialDelaySeconds := p.livenessProbeInitialDelay()
 		failureThreshold := p.livenessProbeRetries()
 
-		if len(command) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+		if len(command) == 0 || len(command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
 			initialDelaySeconds == 0 || failureThreshold == 0 {
 			log.Error("Health check misconfigured")
 			return nil, errors.New("Health check misconfigured")
@@ -710,7 +710,7 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 		initialDelaySeconds := p.readinessProbeInitialDelay()
 		failureThreshold := p.readinessProbeRetries()
 
-		if len(command) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+		if len(command) == 0 || len(command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
 			initialDelaySeconds == 0 || failureThreshold == 0 {
 			log.Error("Readiness probe misconfigured")
 			return nil, errors.New("Readiness probe misconfigured")
