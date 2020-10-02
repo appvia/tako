@@ -23,9 +23,9 @@ var ServicesSchema = map[string]interface{}{
 	"type":    "object",
 	"properties": map[string]interface{}{
 		LabelComponentEnabled:                            map[string]interface{}{"type": "string", "enum": []string{"false", "true"}},
-		LabelServiceType:                                 map[string]interface{}{"type": "string", "enum": []string{"None", "Headless", "ClusterIP", "Nodeport", "LoadBalancer"}},
+		LabelServiceType:                                 map[string]interface{}{"type": "string", "pattern": `^(?i)(None|Headless|ClusterIP|Nodeport|LoadBalancer)$`},
 		LabelWorkloadCPU:                                 map[string]interface{}{"type": "string"},
-		LabelWorkloadImagePullPolicy:                     map[string]interface{}{"type": "string", "enum": []string{"IfNotPresent", "Always"}},
+		LabelWorkloadImagePullPolicy:                     map[string]interface{}{"type": "string", "pattern": `^(?i)(IfNotPresent|Always)$`},
 		LabelWorkloadLivenessProbeCommand:                map[string]interface{}{"type": "string"},
 		LabelWorkloadLivenessProbeDisabled:               map[string]interface{}{"type": "string", "enum": []string{"false", "true"}},
 		LabelWorkloadLivenessProbeInitialDelay:           map[string]interface{}{"type": "string", "format": "duration"},
@@ -47,7 +47,7 @@ var ServicesSchema = map[string]interface{}{
 		LabelWorkloadAutoscaleMemoryUtilizationThreshold: map[string]interface{}{"type": "string", "pattern": `^\d+$`},
 		LabelWorkloadRollingUpdateMaxSurge:               map[string]interface{}{"type": "string", "pattern": `^\d+$`},
 		LabelWorkloadServiceAccountName:                  map[string]interface{}{"type": "string", "pattern": `^[a-zA-Z0-9._-]+$`},
-		LabelWorkloadType:                                map[string]interface{}{"type": "string", "enum": []string{"Pod", "Deployment", "StatefulSet", "Daemonset", "Job"}},
+		LabelWorkloadType:                                map[string]interface{}{"type": "string", "pattern": `^(?i)(Pod|Deployment|StatefulSet|Daemonset|Job)$`},
 	},
 	"required": []string{
 		LabelWorkloadLivenessProbeCommand,
