@@ -1,5 +1,5 @@
 ---
-weight: 2
+weight: 11
 title: How does Kev differ from Kompose?
 ---
 

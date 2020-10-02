@@ -1,5 +1,5 @@
 ---
-weight: 12
+weight: 10
 title: Getting started with Kev
 ---
 
@@ -9,23 +9,23 @@ This tutorial will walk you through how to **connect your Docker Compose Workflo
 
 This is NOT a migration. On the contrary, we're going to create a continuous development workflow.
 
-Meaning, your hard-earned Docker Compose skills will make it faster to develop and iterate on Kubernetes.   
+Meaning, your hard-earned Docker Compose skills will make it faster to develop and iterate on Kubernetes.
 
 We'll set up _Kev_, iterate and deploy a [WordPress application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
 
 The tutorial assumes that you have,
-- Prior [docker-compose](https://docs.docker.com/compose/) experience. 
+- Prior [docker-compose](https://docs.docker.com/compose/) experience.
 - [docker](https://docs.docker.com/engine/install/) & [docker-compose](https://docs.docker.com/compose/install/) installed.
 - [_Kev_ installed](../../README.md#installation).
-- A local Kubernetes installation. This tutorial uses Docker Desktop ([Mac](https://docs.docker.com/docker-for-mac/#kubernetes) / [Windows](https://docs.docker.com/docker-for-windows/#kubernetes)). As an alternative, use [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) or [Kind](https://kind.sigs.k8s.io/).  
+- A local Kubernetes installation. This tutorial uses Docker Desktop ([Mac](https://docs.docker.com/docker-for-mac/#kubernetes) / [Windows](https://docs.docker.com/docker-for-windows/#kubernetes)). As an alternative, use [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) or [Kind](https://kind.sigs.k8s.io/).
 
 As we walk through the tutorial we'll cover some Kubernetes concepts and how they relate to Docker Compose and _Kev_.
 
 These will be explained under a **Kube Notes** heading.
 
-Finally, we'll use the term "Compose" to mean "Docker Compose".  
+Finally, we'll use the term "Compose" to mean "Docker Compose".
 
-## Create your docker-compose config 
+## Create your docker-compose config
 
 Let's start by creating an empty project directory and `cd` into it.
 ```shell script
@@ -43,20 +43,20 @@ services:
     ports:
       - "8000:80"
     restart: always
-EOT 
-``` 
+EOT
+```
 
 This Compose config,
 - Sets a `wordpress` service.
 - Exposes the service on port `8000`.
-- Adds a `restart` always restart policy. 
+- Adds a `restart` always restart policy.
 
 To confirm this is a valid configuration, let's start `wordpress` locally,
 ```shell script
 $ docker-compose up -d    # Run in the background. Force recreate the containers.
 ```
 
-Navigating to [http://0.0.0.0:8000](http://0.0.0.0:8000) in a browser, should display `wordpress`'s setup page. 
+Navigating to [http://0.0.0.0:8000](http://0.0.0.0:8000) in a browser, should display `wordpress`'s setup page.
 
 Ace, we're all good, let's stop the service,
 ```shell script
@@ -76,18 +76,18 @@ Describing Compose services as a Kubernetes application requires an extra layer 
 Furthermore, on Kubernetes, you might also want to deploy or promote your app to different "stages", commonly known as environments. Application configuration may vary depending on the environment it is deployed to due to various infrastructure or operational constraints.
 
 So, a good approach to managing your app configuration in different environments is a must.
-     
+
 _Kev_ will help you with all the above! So let's get cracking.
 
-### Compose + Kev 
+### Compose + Kev
 
-Let's instruct Kev to track our _source Compose_ file, `docker-compose.yaml`, [that we've just created](#create-your-docker-compose-config). 
+Let's instruct Kev to track our _source Compose_ file, `docker-compose.yaml`, [that we've just created](#create-your-docker-compose-config).
 
 _Kev_ will introspect the Compose config and _infer the key attributes_ to enable Compose services to run on Kubernetes.
 
 Also, as we're moving beyond development, we'll instruct _Kev_ to create two _environment overrides_ to target two different sets of parameters (annotated as service `labels`).
 
-No time to lose, let's get started... 
+No time to lose, let's get started...
 
 ```shell script
 $ kev init -e local -e stage
@@ -161,7 +161,7 @@ However, all the translation wiring is now in place, so let's run it on Kubernet
 First, we instruct _Kev_ to generate manifests for the required Kubernetes resources.
 
 **Kube Notes**
-> Our single `wordpress` Compose service requires [Deployment](https://kubernetes.io/docs/tutorials/kubernetes-basics/deploy-app/deploy-intro/), [Service](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) and (an optional) [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) Kubernetes resources. 
+> Our single `wordpress` Compose service requires [Deployment](https://kubernetes.io/docs/tutorials/kubernetes-basics/deploy-app/deploy-intro/), [Service](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) and (an optional) [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) Kubernetes resources.
 
 Simply run,
 ```shell script
@@ -194,7 +194,7 @@ In this case, _Kev_,
 We're now ready to run our app on Kubernetes!
 
 ### Running on Kubernetes
- 
+
 This means we need to deploy our newly minted manifests to a Kubernetes cluster.
 
 Run the following commands on your local Kubernetes (we use [Docker Desktop](https://docs.docker.com/docker-for-mac/#kubernetes)).
@@ -209,14 +209,14 @@ We'll be deploying our app in `local` environment mode.
 > Our `wordpress` container runs as a single [Pod](https://kubernetes.io/docs/concepts/workloads/pods/) as we're only running 1 replica.
 
 > The `service/wordpress` is a [Service](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) that proxies the `Pod` running the container.
-   
+
 > To access the `wordpress` container from our localhost we [port forward](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/) traffic from `service/wordpress` port `8000` to our localhost on port `8080`.
 
 ```shell script
 $ kubectl create namespace kev-local    # create a namespace to host our app
 # namespace/kev-local created
 
-$ kubectl apply -f k8s/local -n kev-local   # apply the generated k8s/local to our namespace 
+$ kubectl apply -f k8s/local -n kev-local   # apply the generated k8s/local to our namespace
 # networkpolicy.networking.k8s.io/default created
 # deployment.apps/wordpress created
 # service/wordpress created
@@ -233,13 +233,13 @@ Hurray!! We're up and running on K8s using **JUST our Compose config (with sensi
 
 For now, `ctrl+c` to stop the `wordpress` service. We need to move beyond a basic container.
 
-## Add a DB service 
+## Add a DB service
 
-Let's wire in a database to make our basic `wordpress` app more useful.  
+Let's wire in a database to make our basic `wordpress` app more useful.
 
-In this case this means adding a `db` service backed by a `mysql` container to our Compose config.     
+In this case this means adding a `db` service backed by a `mysql` container to our Compose config.
 
-### Update Compose config  
+### Update Compose config
 
 Update the source `docker-compose.yaml` to,
 
@@ -275,7 +275,7 @@ volumes:
 This adds,
 - A new `mysql` service.
 - A volume `db_data` to store the `mysql` data.
-- Environment variables to configure the `mysql` service. 
+- Environment variables to configure the `mysql` service.
 - Environment variables to configure the `wordpress` service to use the `mysql` db.
 
 Running,
@@ -296,7 +296,7 @@ This confirms that all is well.
 Stop the service by running,
 ```shell script
 $ docker-compose down -v    # Stop all containers. Remove named volumes.
-``` 
+```
 
 ### Re-sync Kubernetes
 
@@ -335,19 +335,19 @@ $ kev render
 This time round, _Kev_
 - Has detected and inferred config for the new `mysql` service and `db_data` volume.
 - It assigned sensible defaults for any config it couldn't infer.
-- It re-generated the kubernetes manifests for the `local` and `stage` deployment environments. 
+- It re-generated the kubernetes manifests for the `local` and `stage` deployment environments.
 
 **Kube Notes**
 > To accommodate the `db` service, _Kev_ uses the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) Kubernetes resource as the `db` service requires persistent storage.
 
-> _Kev_ uses the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) resource to provide the `db` service with the required `db_data` volume it needs to store data. 
+> _Kev_ uses the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) resource to provide the `db` service with the required `db_data` volume it needs to store data.
 
 We'll be re-deploying our app in `local` environment mode.
 
 Run the following command on your local Kubernetes instance (we use [Docker Desktop](https://docs.docker.com/docker-for-mac/#kubernetes)).
 
 ```shell script
-$ kubectl apply -f k8s/local -n kev-local   # re-apply the re-generated k8s/local manifests to our namespace 
+$ kubectl apply -f k8s/local -n kev-local   # re-apply the re-generated k8s/local manifests to our namespace
 # persistentvolumeclaim/db-data created
 # service/db created
 # statefulset.apps/db created
@@ -434,7 +434,7 @@ services:
       kev.workload.replicas: "5"
       ...
       ...
-``` 
+```
 
 ### Re-sync Kubernetes
 
@@ -451,7 +451,7 @@ $ kev render
 # INFO 💡: ⚙️  Output format: kubernetes
 ...
 # INFO 💡: 🧰 App render complete!
-```  
+```
 
 Re-deploying the manifests to Kubernetes on a `stage` environment will run 5 `wordpress` [Pods](https://kubernetes.io/docs/concepts/workloads/pods/) on Kubernetes - meaning 5 `wordpress` instances.
 
@@ -473,5 +473,5 @@ We also have an understanding of the **gotchas** we can face when moving from Co
 
 All the generated manifests can be tracked in source control and shared in a team context.
 
-Finally, you can find the artefacts for this tutorial here: [wordpress-mysql example](../../examples/wordpress-mysql/README.md). 
+Finally, you can find the artefacts for this tutorial here: [wordpress-mysql example](../../examples/wordpress-mysql/README.md).
 
