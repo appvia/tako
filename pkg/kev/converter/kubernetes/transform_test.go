@@ -1798,6 +1798,84 @@ var _ = Describe("Transform", func() {
 
 	// @todo
 	Describe("updateKubernetesObjects", func() {
+		var (
+			o    *v1apps.Deployment
+			objs []runtime.Object
+		)
+
+		BeforeEach(func() {
+			o = &v1apps.Deployment{
+				TypeMeta: meta.TypeMeta{
+					Kind:       "Deployment",
+					APIVersion: "apps/v1",
+				},
+				Spec: v1apps.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "foo",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			objs = append(objs, o)
+		})
+
+		Context("readiness probe", func() {
+
+			When("readiness probe is defined for project service", func() {
+				JustBeforeEach(func() {
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeDisabled: "false",
+						config.LabelWorkloadReadinessProbeCommand:  "hello world",
+					}
+				})
+
+				It("includes readiness probe definition in the pod spec", func() {
+					err := k.updateKubernetesObjects(projectService, &objs)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command).To(Equal([]string{"hello world"}))
+				})
+			})
+
+			When("readiness probe is misconfigured", func() {
+				JustBeforeEach(func() {
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeDisabled: "false",
+						config.LabelWorkloadReadinessProbeCommand:  "",
+					}
+				})
+
+				It("logs and returns an error", func() {
+					err := k.updateKubernetesObjects(projectService, &objs)
+					Expect(err).To(HaveOccurred())
+
+					assertLog(logrus.ErrorLevel,
+						"Couldn't update k8s object",
+						map[string]string{})
+
+					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe).To(BeNil())
+				})
+			})
+
+			When("readiness probe is not defined or disabled", func() {
+				JustBeforeEach(func() {
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeDisabled: "true",
+					}
+				})
+
+				It("doesn't include readiness probe definition in the pod spec", func() {
+					err := k.updateKubernetesObjects(projectService, &objs)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe).To(BeNil())
+				})
+			})
+		})
 	})
 
 	Describe("sortServicesFirst", func() {
