@@ -16,6 +16,7 @@
 
 package config
 
+// ServicesSchema defines validation rules for service labels
 var ServicesSchema = map[string]interface{}{
 	"$schema": "http://json-schema.org/draft/2019-09/schema#",
 	"$id":     "http://appvia.io/schemas/kev-service-labels-schema.json",
@@ -31,6 +32,12 @@ var ServicesSchema = map[string]interface{}{
 		LabelWorkloadLivenessProbeInterval:               map[string]interface{}{"type": "string", "format": "duration"},
 		LabelWorkloadLivenessProbeRetries:                map[string]interface{}{"type": "string", "pattern": `^\d+$`},
 		LabelWorkloadLivenessProbeTimeout:                map[string]interface{}{"type": "string", "format": "duration"},
+		LabelWorkloadReadinessProbeCommand:               map[string]interface{}{"type": "string"},
+		LabelWorkloadReadinessProbeDisabled:              map[string]interface{}{"type": "string", "enum": []string{"false", "true"}},
+		LabelWorkloadReadinessProbeInitialDelay:          map[string]interface{}{"type": "string", "format": "duration"},
+		LabelWorkloadReadinessProbeInterval:              map[string]interface{}{"type": "string", "format": "duration"},
+		LabelWorkloadReadinessProbeRetries:               map[string]interface{}{"type": "string", "pattern": `^\d+$`},
+		LabelWorkloadReadinessProbeTimeout:               map[string]interface{}{"type": "string", "format": "duration"},
 		LabelWorkloadMaxCPU:                              map[string]interface{}{"type": "string"},
 		LabelWorkloadMaxMemory:                           map[string]interface{}{"type": "string", "pattern": `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`},
 		LabelWorkloadMemory:                              map[string]interface{}{"type": "string", "pattern": "^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$"},
@@ -49,6 +56,7 @@ var ServicesSchema = map[string]interface{}{
 	"additionalProperties": false,
 }
 
+// VolumesSchema defines validation rules for volume labels
 var VolumesSchema = map[string]interface{}{
 	"$schema": "http://json-schema.org/draft/2019-09/schema#",
 	"$id":     "http://appvia.io/schemas/kev-service-labels-schema.json",
