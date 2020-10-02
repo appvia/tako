@@ -33,7 +33,7 @@ func setReporting(verbose bool) {
 }
 
 func displayCmdStarted(cmdName string) {
-	_, _ = os.Stdout.Write([]byte("᛬" + cmdName + " ...\n"))
+	_, _ = os.Stdout.Write([]byte("> " + cmdName + "...\n"))
 }
 
 func displayError(err error) error {
