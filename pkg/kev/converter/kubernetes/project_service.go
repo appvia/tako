@@ -627,7 +627,7 @@ func (p *ProjectService) livenessProbeInterval() int32 {
 		return *i
 	}
 
-	i, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInterval)
+	i, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
 	return *i
 }
 
@@ -643,7 +643,7 @@ func (p *ProjectService) livenessProbeTimeout() int32 {
 		return *to
 	}
 
-	to, _ := durationStrToSecondsInt(config.DefaultLivenessProbeTimeout)
+	to, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
 	return *to
 }
 
@@ -659,7 +659,7 @@ func (p *ProjectService) livenessProbeInitialDelay() int32 {
 		return *d
 	}
 
-	d, _ := durationStrToSecondsInt(config.DefaultLivenessProbeInitialDelay)
+	d, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
 	return *d
 }
 
@@ -674,13 +674,23 @@ func (p *ProjectService) livenessProbeRetries() int32 {
 		return int32(*p.HealthCheck.Retries)
 	}
 
-	return int32(config.DefaultLivenessProbeRetries)
+	return int32(config.DefaultProbeRetries)
 }
 
 // livenessProbeDisabled tells whether liveness probe should be activated
 func (p *ProjectService) livenessProbeDisabled() bool {
 	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeDisabled]; ok {
-		return val == "true"
+		if v, err := strconv.ParseBool(val); err == nil {
+			return v
+		}
+
+		log.WarnfWithFields(log.Fields{
+			"project-service": p.Name,
+			"enabled":         val,
+		}, "Unable to extract Bool value from %s label. Liveness probe will be disabled.",
+			config.LabelWorkloadLivenessProbeDisabled)
+
+		return true
 	}
 
 	if p.HealthCheck != nil && p.HealthCheck.Disable == true {
@@ -688,4 +698,119 @@ func (p *ProjectService) livenessProbeDisabled() bool {
 	}
 
 	return false
+}
+
+// readinessProbe returns project service readiness probe
+func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
+
+	if !p.readinessProbeDisabled() {
+		command := p.readinessProbeCommand()
+		timoutSeconds := p.readinessProbeTimeout()
+		periodSeconds := p.readinessProbeInterval()
+		initialDelaySeconds := p.readinessProbeInitialDelay()
+		failureThreshold := p.readinessProbeRetries()
+
+		if len(command) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+			initialDelaySeconds == 0 || failureThreshold == 0 {
+			log.Error("Readiness probe misconfigured")
+			return nil, errors.New("Readiness probe misconfigured")
+		}
+
+		probe := &v1.Probe{
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: command,
+				},
+			},
+			TimeoutSeconds:      timoutSeconds,
+			PeriodSeconds:       periodSeconds,
+			InitialDelaySeconds: initialDelaySeconds,
+			FailureThreshold:    failureThreshold,
+		}
+
+		return probe, nil
+	}
+
+	return nil, nil
+}
+
+// readinessProbeCommand returns readiness probe command
+func (p *ProjectService) readinessProbeCommand() []string {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeCommand]; ok {
+		isList, _ := regexp.MatchString(`\[.*\]`, val)
+		if isList {
+			list := strings.Split(strings.ReplaceAll(strings.Trim(val, "[]"), "\"", ""), ", ")
+
+			switch list[0] {
+			case "NONE", "CMD", "CMD-SHELL":
+				return list[1:]
+			}
+
+			return list
+		}
+
+		return []string{val}
+	}
+
+	return []string{}
+}
+
+// readinessProbeInterval returns readiness probe interval
+func (p *ProjectService) readinessProbeInterval() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeInterval]; ok {
+		i, _ := durationStrToSecondsInt(val)
+		return *i
+	}
+
+	i, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
+	return *i
+}
+
+// readinessProbeTimeout returns readiness probe timeout
+func (p *ProjectService) readinessProbeTimeout() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeTimeout]; ok {
+		to, _ := durationStrToSecondsInt(val)
+		return *to
+	}
+
+	to, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
+	return *to
+}
+
+// readinessProbeInitialDelay returns readiness probe initial delay
+func (p *ProjectService) readinessProbeInitialDelay() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeInitialDelay]; ok {
+		d, _ := durationStrToSecondsInt(val)
+		return *d
+	}
+
+	d, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
+	return *d
+}
+
+// readinessProbeRetries returns number of retries for the probe
+func (p *ProjectService) readinessProbeRetries() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeRetries]; ok {
+		r, _ := strconv.Atoi(val)
+		return int32(r)
+	}
+
+	return int32(config.DefaultProbeRetries)
+}
+
+// readinessProbeDisabled tells whether readiness probe should be activated
+func (p *ProjectService) readinessProbeDisabled() bool {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeDisabled]; ok {
+		if v, err := strconv.ParseBool(val); err == nil {
+			return v
+		}
+
+		log.WarnfWithFields(log.Fields{
+			"project-service": p.Name,
+			"enabled":         val,
+		}, "Unable to extract Bool value from %s label. Readiness probe will be disabled.",
+			config.LabelWorkloadReadinessProbeDisabled)
+	}
+
+	return true
 }
