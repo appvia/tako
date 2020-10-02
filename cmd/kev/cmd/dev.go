@@ -110,6 +110,10 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
+			if err := runDetectSecretsCmd(cmd, args); err != nil {
+				return err
+			}
+
 			// re-render manifests for specified environments only
 			if err := runRenderCmd(cmd, args); err != nil {
 				return err
