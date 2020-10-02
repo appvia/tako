@@ -124,18 +124,18 @@ const (
 	// DefaultLivenessProbeCommand default command
 	DefaultLivenessProbeCommand = "Define healthcheck command for service %s"
 
-	// DefaultLivenessProbeTimeout default 10s
-	DefaultLivenessProbeTimeout = "10s"
+	// DefaultProbeTimeout default 10s
+	DefaultProbeTimeout = "10s"
 
-	// DefaultLivenessProbeInterval default 1m (1 minute)
-	DefaultLivenessProbeInterval = "1m"
+	// DefaultProbeInterval default 1m (1 minute)
+	DefaultProbeInterval = "1m"
 
-	// DefaultLivenessProbeInitialDelay default 1m (1 minute)
-	DefaultLivenessProbeInitialDelay = "1m"
+	// DefaultProbeInitialDelay default 1m (1 minute)
+	DefaultProbeInitialDelay = "1m"
 
-	// DefaultLivenessProbeRetries default 3. Number of retries for liveness probe command
-	DefaultLivenessProbeRetries = 3
+	// DefaultProbeRetries default 3. Number of retries for liveness probe command
+	DefaultProbeRetries = 3
 
-	// DefaultLivenessProbeDisable default false. Enabled by default
-	DefaultLivenessProbeDisable = false
+	// DefaultProbeDisable default false. Enabled by default
+	DefaultProbeDisable = false
 )
