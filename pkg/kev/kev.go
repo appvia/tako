@@ -142,8 +142,8 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 func Watch(workDir string, envs []string, change chan<- string) error {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
-		log.Error("Unable to load app manifest")
-		return err
+		log.Errorf("Unable to load app manifest - %s", err)
+		os.Exit(1)
 	}
 
 	watcher, err := fsnotify.NewWatcher()
