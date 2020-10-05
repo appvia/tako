@@ -40,6 +40,22 @@ func init() {
 
 var _ = Describe("Skaffold", func() {
 
+	Describe("NewSkaffoldManifest", func() {
+		var (
+			skaffoldManifest *kev.SkaffoldManifest
+			err              error
+		)
+
+		JustBeforeEach(func() {
+			skaffoldManifest, err = kev.NewSkaffoldManifest([]string{}, &kev.ComposeProject{})
+		})
+
+		It("generates skaffold config for the project", func() {
+			Expect(skaffoldManifest).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
 	Describe("BaseSkaffoldManifest", func() {
 		It("returns base skaffold", func() {
 			Expect(kev.BaseSkaffoldManifest()).To(Equal(
