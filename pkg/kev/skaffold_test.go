@@ -24,6 +24,7 @@ import (
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	"github.com/appvia/kev/pkg/kev/log"
+	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -295,6 +296,7 @@ var _ = Describe("Skaffold", func() {
 
 		var (
 			skaffoldManifest *kev.SkaffoldManifest
+			project          *kev.ComposeProject
 			analysis         *kev.Analysis
 		)
 
@@ -305,7 +307,7 @@ var _ = Describe("Skaffold", func() {
 			})
 
 			JustBeforeEach(func() {
-				skaffoldManifest.SetBuildArtifacts(analysis)
+				skaffoldManifest.SetBuildArtifacts(analysis, project)
 			})
 
 			// Note, service name is derived from the Dockerfile location path
@@ -317,6 +319,7 @@ var _ = Describe("Skaffold", func() {
 						Dockerfiles: []string{"src/myservice/Dockerfile"},
 						Images:      []string{"quay.io/myorg/myservice", "myservice"},
 					}
+					project = &kev.ComposeProject{}
 				})
 
 				It("picks remote registry image path and sets correct Build configuration", func() {
@@ -340,8 +343,90 @@ var _ = Describe("Skaffold", func() {
 					Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
 				})
 			})
-
 		})
 
+		When("skaffold analysis Images haven't been detected (due to missing k8s manifests)", func() {
+			BeforeEach(func() {
+				skaffoldManifest = &kev.SkaffoldManifest{}
+			})
+
+			JustBeforeEach(func() {
+				skaffoldManifest.SetBuildArtifacts(analysis, project)
+			})
+
+			Context("It falls back to Docker Compose source files for extraction of images and build contexts", func() {
+				BeforeEach(func() {
+					analysis = &kev.Analysis{
+						Images: []string{},
+					}
+				})
+
+				When("Docker Compose project has services referencing images with build contexts", func() {
+					image := "quay.io/org/myimage:latest"
+					context := "my/context"
+
+					BeforeEach(func() {
+						project = &kev.ComposeProject{
+							Project: &composego.Project{
+								Services: composego.Services(
+									[]composego.ServiceConfig{
+										{
+											Name:  "svc1",
+											Image: image,
+											Build: &composego.BuildConfig{
+												Context: context,
+											},
+										},
+									},
+								),
+							},
+						}
+					})
+
+					It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
+						Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
+						Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(image))
+						Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal(context))
+					})
+				})
+
+				When("Docker Compose project doens't have services referencing images with build contexts", func() {
+					image := "quay.io/org/myimage:latest"
+
+					BeforeEach(func() {
+						project = &kev.ComposeProject{
+							Project: &composego.Project{
+								Services: composego.Services(
+									[]composego.ServiceConfig{
+										{
+											Name:  "svc1",
+											Image: image,
+										},
+									},
+								),
+							},
+						}
+					})
+
+					It("skips Docker Compose images without build context defined", func() {
+						Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+					})
+				})
+
+				When("Docker Compose project doens't have services", func() {
+					BeforeEach(func() {
+						project = &kev.ComposeProject{
+							Project: &composego.Project{
+								Services: composego.Services{},
+							},
+						}
+					})
+
+					It("doesn't add skaffold build artefacts for project without services specified", func() {
+						Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+					})
+				})
+			})
+		})
 	})
 })
