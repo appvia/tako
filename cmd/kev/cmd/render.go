@@ -109,5 +109,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	os.Stdout.Write([]byte("\n"))
+
 	return nil
 }
