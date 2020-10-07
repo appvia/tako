@@ -3,6 +3,7 @@
 **/kev.yaml
 **/kev.yml
 **/docker-compose.kev.*.yaml
+k8s/*
 !/pkg/kev/testdata/**/*.yaml
 !/examples/**/*.yaml
 
