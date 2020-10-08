@@ -94,7 +94,6 @@ var _ = Describe("Skaffold", func() {
 								},
 							},
 						},
-						KubeContext: envs[i] + "-context",
 					}))
 				}
 			})
@@ -171,15 +170,78 @@ var _ = Describe("Skaffold", func() {
 			Expect(manifest.Profiles).To(HaveLen(4))
 		})
 
-		It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
-			Expect(manifest.Profiles).To(ContainElement(latest.Profile{
-				Name: "zz-minikube",
-				Activation: []latest.Activation{
-					{
-						KubeContext: "minikube",
+		Context("minikube", func() {
+			It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
+				Expect(manifest.Profiles).To(ContainElement(latest.Profile{
+					Name: "kev-minikube",
+					Activation: []latest.Activation{
+						{
+							KubeContext: "minikube",
+						},
 					},
-				},
-			}))
+					Pipeline: latest.Pipeline{
+						Deploy: latest.DeployConfig{
+							KubeContext: "minikube",
+						},
+					},
+				}))
+			})
+		})
+
+		Context("docker-desktop", func() {
+			It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
+				Expect(manifest.Profiles).To(ContainElement(latest.Profile{
+					Name: "kev-docker-desktop",
+					Activation: []latest.Activation{
+						{
+							KubeContext: "docker-desktop",
+						},
+					},
+					Pipeline: latest.Pipeline{
+						Deploy: latest.DeployConfig{
+							KubeContext: "docker-desktop",
+						},
+					},
+				}))
+			})
+		})
+
+		Context("ci-build-no-push", func() {
+			enabled := false
+
+			It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
+				Expect(manifest.Profiles).To(ContainElement(latest.Profile{
+					Name: "kev-ci-build-no-push",
+					Pipeline: latest.Pipeline{
+						Build: latest.BuildConfig{
+							BuildType: latest.BuildType{
+								LocalBuild: &latest.LocalBuild{
+									Push: &enabled,
+								},
+							},
+						},
+					},
+				}))
+			})
+		})
+
+		Context("ci-build-and-push", func() {
+			enabled := true
+
+			It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
+				Expect(manifest.Profiles).To(ContainElement(latest.Profile{
+					Name: "kev-ci-build-and-push",
+					Pipeline: latest.Pipeline{
+						Build: latest.BuildConfig{
+							BuildType: latest.BuildType{
+								LocalBuild: &latest.LocalBuild{
+									Push: &enabled,
+								},
+							},
+						},
+					},
+				}))
+			})
 		})
 
 		When("profile of the same name already exists in skaffold profiles", func() {

@@ -52,7 +52,7 @@ const (
 	SkaffoldFileName = "skaffold.yaml"
 
 	// ProfileNamePrefix is a prefix to the added skaffold aprofile
-	ProfileNamePrefix = "zz-"
+	ProfileNamePrefix = "kev-"
 
 	// EnvProfileNameSuffix is a suffix added to environment specific profile name
 	EnvProfileNameSuffix = "-env"
@@ -209,9 +209,6 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 							},
 						},
 					},
-					// @todo define convention on how kubernetes context are named.
-					// for now simply user environment name with `-context` suffix.
-					KubeContext: e + EnvProfileKubeContextSuffix,
 				},
 				Test:        []*latest.TestCase{},
 				PortForward: []*latest.PortForwardResource{},
@@ -232,6 +229,11 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 					KubeContext: "minikube",
 				},
 			},
+			Pipeline: latest.Pipeline{
+				Deploy: latest.DeployConfig{
+					KubeContext: "minikube",
+				},
+			},
 		})
 	}
 
@@ -241,6 +243,11 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 			Name: ProfileNamePrefix + "docker-desktop",
 			Activation: []latest.Activation{
 				{
+					KubeContext: "docker-desktop",
+				},
+			},
+			Pipeline: latest.Pipeline{
+				Deploy: latest.DeployConfig{
 					KubeContext: "docker-desktop",
 				},
 			},
