@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -118,21 +119,25 @@ func UpdateSkaffoldProfiles(path string, envToOutputPath map[string]string) erro
 		return err
 	}
 
-	skaffold.UpdateProfiles(envToOutputPath)
+	if changed := skaffold.UpdateProfiles(envToOutputPath); changed {
+		file, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		if _, err := skaffold.WriteTo(file); err != nil {
+			return err
+		}
+		return file.Close()
+	}
 
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	if _, err := skaffold.WriteTo(file); err != nil {
-		return err
-	}
-	return file.Close()
+	return nil
 }
 
 // UpdateProfiles updates profile for each environment with its K8s output path
 // Note, currently the only supported format is native kubernetes manifests
-func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) {
+func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) bool {
+	changed := false
+
 	for _, p := range s.Profiles {
 
 		// envToOutputPath is keyed by canonical environment name, however
@@ -148,11 +153,21 @@ func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) {
 				manifestsPath = outputPath
 			}
 
-			p.Deploy.KubectlDeploy.Manifests = []string{
+			manifests := []string{
 				manifestsPath,
+			}
+
+			// only update when necessary
+			if !reflect.DeepEqual(p.Deploy.KubectlDeploy.Manifests, manifests) {
+				p.Deploy.KubectlDeploy.Manifests = []string{
+					manifestsPath,
+				}
+				changed = true
 			}
 		}
 	}
+
+	return changed
 }
 
 // BaseSkaffoldManifest returns base Skaffold manifest
