@@ -25,6 +25,11 @@ export GREEN='\e[0;32m'
 export YELLOW='\e[0;33m'
 export RED='\e[0;31m'
 export PATH=${PATH}:${PWD}/bin
+export KUBECTL="kubectl"
+export E2E_KUBECONFIG="${PWD}/hack/e2e/kubeconfig"
+export E2E_KEV_ENV='e2e'
+export KUBECONFIG_SAVED=$KUBECONFIG
+export KUBECONFIG=$E2E_KUBECONFIG
 
 log()      { (2>/dev/null printf "$@${NC}\n"); }
 announce() { log "${GREEN}[$(date +"%T")] [INFO] $@"; }
@@ -65,27 +70,21 @@ create-cluster() {
   kind create cluster --kubeconfig hack/e2e/kubeconfig
 }
 
-create-temp-manifests-dir() {
-  announce "Creating temporary manifests directory"
-  mkdir -p e2e/k8s
-}
-
 run-tests() {
   announce "Running e2e tests"
-  bats e2e/*
+  bats e2e/**/*.bats
 }
 
 finally() {
-  announce "Removing temporary manifests directory"
-  rm -rf e2e/k8s
-
   announce "Removing kind cluster"
   kind delete cluster --kubeconfig hack/e2e/kubeconfig
+
+  announce "Reset KUBECONFIG"
+  export KUBECONFIG=$KUBECONFIG_SAVED
 }
 
 build-cli
 create-cluster
-create-temp-manifests-dir
 run-tests || {
   finally
   exit 1
