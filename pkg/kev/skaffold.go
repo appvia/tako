@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -52,7 +53,7 @@ const (
 	SkaffoldFileName = "skaffold.yaml"
 
 	// ProfileNamePrefix is a prefix to the added skaffold aprofile
-	ProfileNamePrefix = "zz-"
+	ProfileNamePrefix = "kev-"
 
 	// EnvProfileNameSuffix is a suffix added to environment specific profile name
 	EnvProfileNameSuffix = "-env"
@@ -67,7 +68,7 @@ var (
 )
 
 // NewSkaffoldManifest returns a new SkaffoldManifest struct.
-func NewSkaffoldManifest(envs []string) (*SkaffoldManifest, error) {
+func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManifest, error) {
 
 	analysis, err := analyzeProject()
 	if err != nil {
@@ -76,7 +77,7 @@ func NewSkaffoldManifest(envs []string) (*SkaffoldManifest, error) {
 	}
 
 	manifest := BaseSkaffoldManifest()
-	manifest.SetBuildArtifacts(analysis)
+	manifest.SetBuildArtifacts(analysis, project)
 	manifest.SetProfiles(envs)
 	manifest.AdditionalProfiles()
 
@@ -118,21 +119,25 @@ func UpdateSkaffoldProfiles(path string, envToOutputPath map[string]string) erro
 		return err
 	}
 
-	skaffold.UpdateProfiles(envToOutputPath)
+	if changed := skaffold.UpdateProfiles(envToOutputPath); changed {
+		file, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		if _, err := skaffold.WriteTo(file); err != nil {
+			return err
+		}
+		return file.Close()
+	}
 
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	if _, err := skaffold.WriteTo(file); err != nil {
-		return err
-	}
-	return file.Close()
+	return nil
 }
 
 // UpdateProfiles updates profile for each environment with its K8s output path
 // Note, currently the only supported format is native kubernetes manifests
-func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) {
+func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) bool {
+	changed := false
+
 	for _, p := range s.Profiles {
 
 		// envToOutputPath is keyed by canonical environment name, however
@@ -148,11 +153,21 @@ func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) {
 				manifestsPath = outputPath
 			}
 
-			p.Deploy.KubectlDeploy.Manifests = []string{
+			manifests := []string{
 				manifestsPath,
+			}
+
+			// only update when necessary
+			if !reflect.DeepEqual(p.Deploy.KubectlDeploy.Manifests, manifests) {
+				p.Deploy.KubectlDeploy.Manifests = []string{
+					manifestsPath,
+				}
+				changed = true
 			}
 		}
 	}
+
+	return changed
 }
 
 // BaseSkaffoldManifest returns base Skaffold manifest
@@ -209,9 +224,6 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 							},
 						},
 					},
-					// @todo define convention on how kubernetes context are named.
-					// for now simply user environment name with `-context` suffix.
-					KubeContext: e + EnvProfileKubeContextSuffix,
 				},
 				Test:        []*latest.TestCase{},
 				PortForward: []*latest.PortForwardResource{},
@@ -232,6 +244,11 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 					KubeContext: "minikube",
 				},
 			},
+			Pipeline: latest.Pipeline{
+				Deploy: latest.DeployConfig{
+					KubeContext: "minikube",
+				},
+			},
 		})
 	}
 
@@ -241,6 +258,11 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 			Name: ProfileNamePrefix + "docker-desktop",
 			Activation: []latest.Activation{
 				{
+					KubeContext: "docker-desktop",
+				},
+			},
+			Pipeline: latest.Pipeline{
+				Deploy: latest.DeployConfig{
 					KubeContext: "docker-desktop",
 				},
 			},
@@ -285,7 +307,7 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 }
 
 // SetBuildArtifacts detects build artifacts from the current project and adds `build` section to the manifest
-func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis) error {
+func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) error {
 
 	// don't set build artefacts if no analysis available
 	if analysis == nil {
@@ -294,7 +316,7 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis) error {
 
 	artifacts := []*latest.Artifact{}
 
-	for context, image := range collectBuildArtifacts(analysis) {
+	for context, image := range collectBuildArtifacts(analysis, project) {
 		artifacts = append(artifacts, &latest.Artifact{
 			ImageName: image,
 			Workspace: context,
@@ -309,8 +331,22 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis) error {
 }
 
 // collectBuildArtfacts returns a map of build contexts to corresponding image names
-func collectBuildArtifacts(analysis *Analysis) map[string]string {
+func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[string]string {
 	buildArtifacts := map[string]string{}
+
+	if len(analysis.Images) == 0 {
+		// no images detected - usually the case when there are no kubernetes manifests
+		// Extract referenced images and map them to their respective build contexts (if present) from Compose project
+		// Note: It'll miss images without "build" context specified!
+
+		if project.Project != nil && project.Project.Services != nil {
+			for _, s := range project.Project.Services {
+				if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
+					buildArtifacts[s.Build.Context] = s.Image
+				}
+			}
+		}
+	}
 
 	for _, d := range analysis.Dockerfiles {
 

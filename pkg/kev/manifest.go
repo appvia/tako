@@ -147,7 +147,7 @@ func (m *Manifest) ReconcileConfig() (*Manifest, error) {
 func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
 	e.prepareForMergeUsing(m.getSourcesOverride())
 
-	p, err := m.sourcesToComposeProject()
+	p, err := m.SourcesToComposeProject()
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (m *Manifest) getSourcesOverride() *composeOverride {
 	return m.Sources.override
 }
 
-// sourcesToComposeProject returns the manifests compose sources as a ComposeProject.
-func (m *Manifest) sourcesToComposeProject() (*ComposeProject, error) {
+// SourcesToComposeProject returns the manifests compose sources as a ComposeProject.
+func (m *Manifest) SourcesToComposeProject() (*ComposeProject, error) {
 	return m.Sources.toComposeProject()
 }

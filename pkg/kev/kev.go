@@ -48,16 +48,6 @@ func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 	return m.MintEnvironments(envs), nil
 }
 
-// PrepareForSkaffold initialises a skaffold manifest for kev project.
-func PrepareForSkaffold(envs []string) (*SkaffoldManifest, error) {
-	s, err := NewSkaffoldManifest(envs)
-	if err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
-
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
 func Reconcile(workingDir string) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)

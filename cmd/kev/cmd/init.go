@@ -130,7 +130,12 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		// set skaffold path in kev manifest
 		manifest.Skaffold = kev.SkaffoldFileName
 
-		if err := createOrUpdateSkaffoldManifest(skaffoldManifestPath, envs, &results); err != nil {
+		project, err := manifest.SourcesToComposeProject()
+		if err != nil {
+			return displayError(err)
+		}
+
+		if err := createOrUpdateSkaffoldManifest(skaffoldManifestPath, envs, project, &results); err != nil {
 			return displayError(err)
 		}
 	}
@@ -164,7 +169,7 @@ func writeTo(filePath string, w io.WriterTo) error {
 	return file.Close()
 }
 
-func createOrUpdateSkaffoldManifest(path string, envs []string, results *[]skippableFile) error {
+func createOrUpdateSkaffoldManifest(path string, envs []string, project *kev.ComposeProject, results *[]skippableFile) error {
 	if manifestExistsForPath(path) {
 		// skaffold manifest already present - add additional profiles to it!
 		// Note: kev will skip profiles with names matching those of existing
@@ -185,7 +190,7 @@ func createOrUpdateSkaffoldManifest(path string, envs []string, results *[]skipp
 
 	} else {
 
-		skaffoldManifest, err := kev.PrepareForSkaffold(envs)
+		skaffoldManifest, err := kev.NewSkaffoldManifest(envs, project)
 		if err != nil {
 			return displayError(err)
 		}
