@@ -79,11 +79,14 @@ func init() {
 		"Specify an environment\n(default: dev)",
 	)
 
+	flags.BoolP("skaffold", "", false, "activates Skaffold dev loop")
+
 	rootCmd.AddCommand(devCmd)
 }
 
 func runDevCmd(cmd *cobra.Command, args []string) error {
 	envs, err := cmd.Flags().GetStringSlice("environment")
+	skaffold, err := cmd.Flags().GetBool("skaffold")
 	if err != nil {
 		return err
 	}
@@ -97,6 +100,10 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		log.Error("Couldn't get working directory")
 		return err
+	}
+
+	if skaffold {
+		go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{"dev-env"}, "node", "")
 	}
 
 	go kev.Watch(workDir, envs, change)

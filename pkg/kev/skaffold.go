@@ -18,25 +18,36 @@ package kev
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/analyze"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/build"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/config"
+	initconfig "github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/deploy"
+	kubectx "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/context"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/runcontext"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/defaults"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/validation"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml"
 	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // SkaffoldManifest is a wrapper around latest SkaffoldConfig
@@ -383,7 +394,7 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 
 // analyzeProject analyses the project and returns Analysis report object
 func analyzeProject() (*Analysis, error) {
-	c := config.Config{
+	c := initconfig.Config{
 		Analyze:             true,
 		EnableNewInitFormat: false,
 	}
@@ -451,4 +462,117 @@ func (s *SkaffoldManifest) sortProfiles() {
 	sort.Slice(s.Profiles, func(i, j int) bool {
 		return s.Profiles[i].Name < s.Profiles[j].Name
 	})
+}
+
+// RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
+func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx string) error {
+
+	logrus.SetLevel(logrus.WarnLevel)
+
+	opts := config.SkaffoldOptions{
+		ConfigurationFile:     path.Join(".", SkaffoldFileName),
+		ProfileAutoActivation: true,
+		Trigger:               "polling",
+		WatchPollInterval:     100,
+		AutoBuild:             true,
+		AutoSync:              true,
+		AutoDeploy:            true,
+		Profiles:              profiles,
+		Namespace:             ns,
+		KubeContext:           kubeCtx,
+	}
+
+	runCtx, cfg, err := runContext(opts)
+
+	r, err := runner.NewForConfig(runCtx)
+
+	if err != nil {
+		log.Error("Skaffold dev failed", err)
+		return err
+	}
+
+	prune := func() {}
+	if opts.Prune() {
+		defer func() {
+			prune()
+		}()
+	}
+
+	cleanup := func() {}
+	if opts.Cleanup {
+		defer func() {
+			cleanup()
+		}()
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			err := r.Dev(ctx, out, cfg.Build.Artifacts)
+			if err != nil {
+				if errors.Is(err, runner.ErrorConfigurationChanged) {
+					log.Error("Skaffold config has changed! Please restart `kev dev`.")
+				} else {
+					log.Error("Something went wrong in the skaffold dev... ", err)
+				}
+				return err
+			}
+
+			if r.HasDeployed() {
+				cleanup = func() {
+					if err := r.Cleanup(context.Background(), out); err != nil {
+						logrus.Warnln("Skaffold deployer cleanup:", err)
+					}
+				}
+			}
+
+			if r.HasBuilt() {
+				prune = func() {
+					if err := r.Prune(context.Background(), out); err != nil {
+						logrus.Warnln("Skaffold builder cleanup:", err)
+					}
+				}
+			}
+		}
+	}
+}
+
+// runContext returns runner context and config for Skaffold dev mode
+func runContext(opts config.SkaffoldOptions) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
+	parsed, err := schema.ParseConfigAndUpgrade(opts.ConfigurationFile, latest.Version)
+	if err != nil {
+		if os.IsNotExist(errors.Unwrap(err)) {
+			return nil, nil, fmt.Errorf("skaffold config file %s not found - check your current working directory, or try running `skaffold init`", opts.ConfigurationFile)
+		}
+
+		// If the error is NOT that the file doesn't exist, then we warn the user
+		// that maybe they are using an outdated version of Skaffold that's unable to read
+		// the configuration.
+		return nil, nil, fmt.Errorf("parsing skaffold config: %w", err)
+	}
+
+	config := parsed.(*latest.SkaffoldConfig)
+
+	if err = schema.ApplyProfiles(config, opts); err != nil {
+		return nil, nil, fmt.Errorf("applying profiles: %w", err)
+	}
+
+	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext, config.Deploy.KubeContext)
+
+	if err := defaults.Set(config); err != nil {
+		return nil, nil, fmt.Errorf("setting default values: %w", err)
+	}
+
+	if err := validation.Process(config); err != nil {
+		return nil, nil, fmt.Errorf("invalid skaffold config: %w", err)
+	}
+
+	runCtx, err := runcontext.GetRunContext(opts, config.Pipeline)
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting run context: %w", err)
+	}
+
+	return runCtx, config, nil
 }
