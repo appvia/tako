@@ -38,6 +38,9 @@ var devLongDesc = `(dev) Continuously watches and reconciles changes to the sour
 
    ### Run Kev in dev mode and render manifests to custom directory
    $ kev dev -d my-manifests
+
+   ### Run Kev in dev mode with Skaffold dev loop activated
+   $ kev dev --skaffold
  `
 
 var devCmd = &cobra.Command{
