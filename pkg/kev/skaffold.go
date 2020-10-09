@@ -465,7 +465,12 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx string) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx string, pollInterval int) error {
+
+	if pollInterval == 0 {
+		// 100 ms by default if interval not specified
+		pollInterval = 100
+	}
 
 	logrus.SetLevel(logrus.WarnLevel)
 
@@ -473,7 +478,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		ConfigurationFile:     path.Join(".", SkaffoldFileName),
 		ProfileAutoActivation: true,
 		Trigger:               "polling",
-		WatchPollInterval:     100,
+		WatchPollInterval:     pollInterval,
 		AutoBuild:             true,
 		AutoSync:              true,
 		AutoDeploy:            true,

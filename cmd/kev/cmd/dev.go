@@ -44,8 +44,13 @@ var devCmd = &cobra.Command{
 	Use:   "dev",
 	Short: "Watches changes to the source Compose files and re-renders K8s manifests.",
 	Long:  devLongDesc,
-	RunE:  runDevCmd,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return verifySkaffoldExpectedFlags(cmd)
+	},
+	RunE: runDevCmd,
 }
+
+const skaffoldNamespace = "default"
 
 func init() {
 	flags := devCmd.Flags()
@@ -76,17 +81,74 @@ func init() {
 		"environment",
 		"e",
 		[]string{"dev"},
-		"Specify an environment\n(default: dev)",
+		"Specify an environment",
 	)
 
-	flags.BoolP("skaffold", "", false, "activates Skaffold dev loop")
+	flags.BoolP("skaffold", "", false, "[Experimental] Activates Skaffold dev loop.")
+
+	flags.StringP(
+		"namespace",
+		"n",
+		skaffoldNamespace, // default: will be default kubernetes namespace...
+		"[Experimental] Kubernetes namespaces to which Skaffold dev deploys the application.",
+	)
+
+	flags.StringP(
+		"kubecontext",
+		"k",
+		"", // default: it'll use currently set kubecontext...
+		"[Experimental] Kubernetes context to be used by Skaffold dev.",
+	)
+
+	flags.StringP(
+		"kev-env",
+		"",
+		"", // default: it'll use the first element from `environment` slice...
+		"[Experimental] Kev environment that will be deployed by Skaffold. If not specified it'll use the first env name passed in '--environment' flag.",
+	)
 
 	rootCmd.AddCommand(devCmd)
+}
+
+func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
+	envs, _ := cmd.Flags().GetStringSlice("environment")
+	skaffold, _ := cmd.Flags().GetBool("skaffold")
+	namespace, _ := cmd.Flags().GetString("namespace")
+	kubecontext, _ := cmd.Flags().GetString("kubecontext")
+	kevenv, _ := cmd.Flags().GetString("kev-env")
+
+	if skaffold {
+		if len(namespace) == 0 {
+			log.Warnf("Skaffold `namespace` not specified - will use `%s`", skaffoldNamespace)
+			cmd.Flag("namespace").Value.Set(skaffoldNamespace)
+		} else {
+			log.Infof("Skaffold dev loop will deploy to `%s` namespace", namespace)
+		}
+
+		if len(kubecontext) == 0 {
+			log.Warn("Skaffold `kubecontext` not specified - will use current kubectl context")
+		} else {
+			log.Infof("Skaffold dev loop will use `%s` kube context", kubecontext)
+		}
+
+		if len(kevenv) == 0 {
+			log.Warnf("Kev environment not specified. Skaffold will use profile pointing at default `%s` environment", envs[0])
+			cmd.Flag("kev-env").Value.Set(envs[0])
+		} else {
+			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
+		}
+	}
+
+	return nil
 }
 
 func runDevCmd(cmd *cobra.Command, args []string) error {
 	envs, err := cmd.Flags().GetStringSlice("environment")
 	skaffold, err := cmd.Flags().GetBool("skaffold")
+	namespace, err := cmd.Flags().GetString("namespace")
+	kubecontext, err := cmd.Flags().GetString("kubecontext")
+	kevenv, err := cmd.Flags().GetString("kev-env")
+
 	if err != nil {
 		return err
 	}
@@ -103,7 +165,8 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if skaffold {
-		go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{"dev-env"}, "node", "")
+		profileName := kevenv + kev.EnvProfileNameSuffix
+		go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, 1000)
 	}
 
 	go kev.Watch(workDir, envs, change)
