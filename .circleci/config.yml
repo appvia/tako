@@ -11,11 +11,33 @@ jobs:
       tag: '1.14'
     steps:
      - checkout
+     - go/load-cache
+     - go/mod-download
+     - go/save-cache
      - go/test:
         covermode: atomic
         failfast: true
         race: true
+
+  e2e:
+    machine:
+      enabled: true
+    steps:
+      - checkout
+      - run: make setup-kind e2e
+
 workflows:
   main:
     jobs:
       - build
+
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 * * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - e2e
