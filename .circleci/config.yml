@@ -31,7 +31,7 @@ workflows:
     jobs:
       - build
 
-  nightly:
+  hourly:
     triggers:
       - schedule:
           cron: "0 * * * *"
