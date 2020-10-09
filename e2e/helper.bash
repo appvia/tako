@@ -102,7 +102,7 @@ check-app-is-running(){
     if eval "$KUBECTL -n ${namespace} exec $($KUBECTL get pod -n "${namespace}" -l "${label}" -o name) --  curl -sLI localhost:${port}" ; then
       return 0
     else
-      sleep 3
+      sleep 5
     fi
   done
 
