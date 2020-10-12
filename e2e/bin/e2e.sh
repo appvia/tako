@@ -17,7 +17,6 @@
 
 ## Set the defaults
 BUILD_CLI=true
-VERSION=""
 
 # Make this pretty
 export NC='\e[0m'
@@ -38,8 +37,7 @@ failed()   { log "${YELLOW}[$(date +"%T")] [FAIL] $@"; }
 usage() {
   cat <<EOF
   Usage: $(basename $0)
-  --build-cli    <bool>    : indicates should should build the kore cli (defaults: ${BUILD_CLI})
-  --version      <string>  : is the version name to build the components (default: "")
+  --build-cli    <bool>    : indicates should build the kev cli (defaults: ${BUILD_CLI})
   -h|--help                : display this usage menu
 EOF
   if [[ -n $@ ]]; then
@@ -52,7 +50,6 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
   --build-cli)      BUILD_CLI=${2};        shift 2; ;;
-  --version)        VERSION=${2};          shift 2; ;;
   -h|--help)        usage;                          ;;
   *)                                       shift 1; ;;
   esac

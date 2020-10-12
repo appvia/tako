@@ -56,7 +56,7 @@ wait-on-deployment() {
       return 0
     else
       echo "failed to run command: retrying (attempt/max = ${i}/60)"
-      sleep 3
+      sleep 2
     fi
   done
 
@@ -98,8 +98,9 @@ check-app-is-running(){
   local label=$2
   local port=$3
 
+  podname=$($KUBECTL get pod -n "${namespace}" -l "${label}" -o name)
   for ((i=0; i<=60; i++)); do
-    if eval "$KUBECTL -n ${namespace} exec $($KUBECTL get pod -n "${namespace}" -l "${label}" -o name) --  curl -sLI localhost:${port}" ; then
+    if eval "$KUBECTL -n ${namespace} exec ${podname} --  curl -sLI localhost:${port}" ; then
       return 0
     else
       sleep 5
