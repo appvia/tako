@@ -17,9 +17,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/log"
@@ -174,6 +177,11 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if skaffold {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		catchCtrlC(cancel)
+
 		skaffoldConfigPath, skaffoldConfig, err := kev.ActivateSkaffoldDevLoop(workDir)
 		if err != nil {
 			return displayError(err)
@@ -184,7 +192,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		profileName := kevenv + kev.EnvProfileNameSuffix
-		go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
+		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
 	}
 
 	go kev.Watch(workDir, envs, change)
@@ -226,4 +234,20 @@ func runCommands(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func catchCtrlC(cancel context.CancelFunc) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals,
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGPIPE,
+	)
+
+	go func() {
+		<-signals
+		signal.Stop(signals)
+		cancel()
+	}()
 }

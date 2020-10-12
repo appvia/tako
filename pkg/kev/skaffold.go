@@ -486,6 +486,13 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		Profiles:              profiles,
 		Namespace:             ns,
 		KubeContext:           kubeCtx,
+		Cleanup:               true,
+		NoPrune:               false,
+		NoPruneChildren:       false,
+		CacheArtifacts:        false,
+		PortForward: config.PortForwardOptions{
+			Enabled: true,
+		},
 	}
 
 	runCtx, cfg, err := runContext(opts)
@@ -493,8 +500,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 	r, err := runner.NewForConfig(runCtx)
 
 	if err != nil {
-		log.Error("Skaffold dev failed", err)
-		return err
+		return errors.Wrap(err, "Skaffold dev failed")
 	}
 
 	prune := func() {}
@@ -516,30 +522,36 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		case <-ctx.Done():
 			return nil
 		default:
-			err := r.Dev(ctx, out, cfg.Build.Artifacts)
-			if err != nil {
-				if errors.Is(err, runner.ErrorConfigurationChanged) {
-					log.Error("Skaffold config has changed! Please restart `kev dev`.")
-				} else {
-					log.Error("Something went wrong in the skaffold dev... ", err)
+			err := func() error {
+
+				err := r.Dev(ctx, out, cfg.Build.Artifacts)
+
+				if r.HasDeployed() {
+					cleanup = func() {
+						if err := r.Cleanup(context.Background(), out); err != nil {
+							log.Warnf("Skaffold deployer cleanup: %s", err)
+						}
+					}
 				}
+
+				if r.HasBuilt() {
+					prune = func() {
+						if err := r.Prune(context.Background(), out); err != nil {
+							log.Warnf("Skaffold builder cleanup: %s", err)
+						}
+					}
+				}
+
 				return err
-			}
+			}()
 
-			if r.HasDeployed() {
-				cleanup = func() {
-					if err := r.Cleanup(context.Background(), out); err != nil {
-						log.Warn("Skaffold deployer cleanup:", err)
-					}
+			if err != nil {
+				if !errors.Is(err, runner.ErrorConfigurationChanged) {
+					return errors.Wrap(err, "Something went wrong in the skaffold dev... ")
 				}
-			}
 
-			if r.HasBuilt() {
-				prune = func() {
-					if err := r.Prune(context.Background(), out); err != nil {
-						log.Warn("Skaffold builder cleanup:", err)
-					}
-				}
+				log.Error("Skaffold config has changed! Please restart `kev dev`.")
+				return err
 			}
 		}
 	}
