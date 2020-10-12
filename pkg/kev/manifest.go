@@ -89,6 +89,15 @@ func (m *Manifest) GetEnvironments(filter []string) (Environments, error) {
 	return out, nil
 }
 
+// GetEnvironmentsNames returns a slice of all defined environment names
+func (m *Manifest) GetEnvironmentsNames() []string {
+	out := []string{}
+	for _, e := range m.Environments {
+		out = append(out, e.Name)
+	}
+	return out
+}
+
 // CalculateSourcesBaseOverride extracts the base override from the manifest's docker-compose source files.
 func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Manifest, error) {
 	if err := m.Sources.CalculateBaseOverride(opts...); err != nil {

@@ -24,7 +24,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -125,6 +124,10 @@ func AddProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldM
 // Note, it'll persist updated profiles in the skaffold.yaml file.
 // Important: This will always persist the last rendered directory as Deploy manifests source!
 func UpdateSkaffoldProfiles(path string, envToOutputPath map[string]string) error {
+	if !fileExists(path) {
+		return fmt.Errorf("skaffold config file (%s) doesn't exist", path)
+	}
+
 	skaffold, err := LoadSkaffoldManifest(path)
 	if err != nil {
 		return err
@@ -465,17 +468,15 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx string, pollInterval int) error {
-
+func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, pollInterval int) error {
 	if pollInterval == 0 {
-		// 100 ms by default if interval not specified
-		pollInterval = 100
+		pollInterval = 100 // 100 ms by default if interval not specified
 	}
 
 	logrus.SetLevel(logrus.WarnLevel)
 
 	opts := config.SkaffoldOptions{
-		ConfigurationFile:     path.Join(".", SkaffoldFileName),
+		ConfigurationFile:     skaffoldFile,
 		ProfileAutoActivation: true,
 		Trigger:               "polling",
 		WatchPollInterval:     pollInterval,
@@ -528,7 +529,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 			if r.HasDeployed() {
 				cleanup = func() {
 					if err := r.Cleanup(context.Background(), out); err != nil {
-						logrus.Warnln("Skaffold deployer cleanup:", err)
+						log.Warn("Skaffold deployer cleanup:", err)
 					}
 				}
 			}
@@ -536,7 +537,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 			if r.HasBuilt() {
 				prune = func() {
 					if err := r.Prune(context.Background(), out); err != nil {
-						logrus.Warnln("Skaffold builder cleanup:", err)
+						log.Warn("Skaffold builder cleanup:", err)
 					}
 				}
 			}

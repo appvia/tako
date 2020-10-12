@@ -18,6 +18,7 @@ package kev
 
 import (
 	"os"
+	"path"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
@@ -120,7 +121,7 @@ func Render(format string, singleFile bool, dir string, envs []string) error {
 
 	if len(manifest.Skaffold) > 0 {
 		if err := UpdateSkaffoldProfiles(manifest.Skaffold, outputPaths); err != nil {
-			log.Errorf("Couldn't update skaffold.yaml profiles")
+			log.Errorf("Couldn't update Skaffold profiles: %s", err)
 			return err
 		}
 	}
@@ -182,4 +183,42 @@ func Watch(workDir string, envs []string, change chan<- string) error {
 	<-done
 
 	return nil
+}
+
+// ActivateSkaffoldDevLoop returns true when skaffold dev can be activated, false otherwise.
+// It'll also attempt to reconcile Skaffold profiles before starting dev loop - this is done
+// so that necessary profiles are added to the skaffold config as environment specific profile is
+// supplied to skaffold so it knows what manifests to deploy.
+func ActivateSkaffoldDevLoop(workDir string) (string, *SkaffoldManifest, bool) {
+	manifest, err := LoadManifest(workDir)
+	if err != nil {
+		log.Errorf("Unable to load app manifest - %s", err)
+		return "", nil, false
+	}
+
+	if len(manifest.Skaffold) == 0 {
+		// kev wasn't initiated with --skaffold
+		log.Warn(`Can't activate Skaffold dev loop. Kev wasn't initialized with --skaffold.
+	If you don't currently have skaffold.yaml in your project you may bootstrap a new one with "skaffold init" command.
+	Once you have skaffold.yaml in your project, make sure that Kev references it by adding "skaffold: skaffold.yaml" in kev.yaml!`)
+		return "", nil, false
+	}
+
+	configPath := path.Join(workDir, manifest.Skaffold)
+
+	if !fileExists(configPath) {
+		log.Error(`Can't file Skaffold config file referenced by Kev manifest. Have you initialized Kev with --skaffold?
+	If you don't currently have skaffold.yaml in your project you may bootstrap a new one with "skaffold init" command.
+	Once you have skaffold.yaml in your project, make sure that Kev references it by adding "skaffold: skaffold.yaml" in kev.yaml!`)
+		return "", nil, false
+	}
+
+	// Reconcile skaffold config and add potentially missing profiles before starting dev loop
+	reconciledSkaffoldConfig, err := AddProfiles(configPath, manifest.GetEnvironmentsNames(), true)
+	if err != nil {
+		log.Warnf("Couldn't reconcile Skaffold config: %s. Required profiles haven't been added.", err)
+		return "", nil, false
+	}
+
+	return configPath, reconciledSkaffoldConfig, true
 }

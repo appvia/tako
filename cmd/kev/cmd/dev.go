@@ -135,7 +135,7 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 		}
 
 		if len(kevenv) == 0 {
-			log.Warnf("Kev environment not specified. Skaffold will use profile pointing at default `%s` environment", envs[0])
+			log.Warnf("Skaffold will use profile pointing at default `%s` environment. You may override it with `--kev-dev` flag.", envs[0])
 			cmd.Flag("kev-env").Value.Set(envs[0])
 		} else {
 			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
@@ -167,9 +167,21 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// initial manifests generation for specified environments only
+	if err := runRenderCmd(cmd, args); err != nil {
+		return err
+	}
+
 	if skaffold {
-		profileName := kevenv + kev.EnvProfileNameSuffix
-		go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, 1000)
+		if skaffoldConfigPath, skaffoldConfig, ok := kev.ActivateSkaffoldDevLoop(workDir); ok {
+			if err := writeTo(skaffoldConfigPath, skaffoldConfig); err != nil {
+				log.Warnf("Couldn't write Skaffold config: %s.", err)
+				return err
+			}
+
+			profileName := kevenv + kev.EnvProfileNameSuffix
+			go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
+		}
 	}
 
 	go kev.Watch(workDir, envs, change)
