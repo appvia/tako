@@ -23,6 +23,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -164,25 +165,26 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 
 	workDir, err := os.Getwd()
 	if err != nil {
-		log.Error("Couldn't get working directory")
-		return err
+		return displayError(err)
 	}
 
 	// initial manifests generation for specified environments only
 	if err := runCommands(cmd, args); err != nil {
-		return err
+		return displayError(err)
 	}
 
 	if skaffold {
-		if skaffoldConfigPath, skaffoldConfig, ok := kev.ActivateSkaffoldDevLoop(workDir); ok {
-			if err := writeTo(skaffoldConfigPath, skaffoldConfig); err != nil {
-				log.Warnf("Couldn't write Skaffold config: %s.", err)
-				return err
-			}
-
-			profileName := kevenv + kev.EnvProfileNameSuffix
-			go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
+		skaffoldConfigPath, skaffoldConfig, err := kev.ActivateSkaffoldDevLoop(workDir)
+		if err != nil {
+			return displayError(err)
 		}
+
+		if err := writeTo(skaffoldConfigPath, skaffoldConfig); err != nil {
+			return displayError(errors.Wrap(err, "Couldn't write Skaffold config"))
+		}
+
+		profileName := kevenv + kev.EnvProfileNameSuffix
+		go kev.RunSkaffoldDev(cmd.Context(), cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
 	}
 
 	go kev.Watch(workDir, envs, change)
@@ -193,7 +195,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 			fmt.Printf("\n♻️  %s changed! Re-rendering manifests...\n\n", ch)
 
 			if err := runCommands(cmd, args); err != nil {
-				return err
+				return displayError(err)
 			}
 
 			// empty the buffer as we only ever do one re-render cycle per a batch of changes
