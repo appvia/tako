@@ -113,6 +113,7 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 }
 
+// verifies skaffold required flags and sets appropriate defaults
 func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
@@ -168,7 +169,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// initial manifests generation for specified environments only
-	if err := runRenderCmd(cmd, args); err != nil {
+	if err := runCommands(cmd, args); err != nil {
 		return err
 	}
 
@@ -191,16 +192,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		if len(ch) > 0 {
 			fmt.Printf("\n♻️  %s changed! Re-rendering manifests...\n\n", ch)
 
-			if err := runReconcileCmd(cmd, args); err != nil {
-				return err
-			}
-
-			if err := runDetectSecretsCmd(cmd, args); err != nil {
-				return err
-			}
-
-			// re-render manifests for specified environments only
-			if err := runRenderCmd(cmd, args); err != nil {
+			if err := runCommands(cmd, args); err != nil {
 				return err
 			}
 
@@ -214,4 +206,22 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+}
+
+// runCommands execute all commands required in dev loop
+func runCommands(cmd *cobra.Command, args []string) error {
+	if err := runReconcileCmd(cmd, args); err != nil {
+		return err
+	}
+
+	if err := runDetectSecretsCmd(cmd, args); err != nil {
+		return err
+	}
+
+	// re-render manifests for specified environments only
+	if err := runRenderCmd(cmd, args); err != nil {
+		return err
+	}
+
+	return nil
 }

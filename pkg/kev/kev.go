@@ -187,8 +187,8 @@ func Watch(workDir string, envs []string, change chan<- string) error {
 
 // ActivateSkaffoldDevLoop returns true when skaffold dev can be activated, false otherwise.
 // It'll also attempt to reconcile Skaffold profiles before starting dev loop - this is done
-// so that necessary profiles are added to the skaffold config as environment specific profile is
-// supplied to skaffold so it knows what manifests to deploy.
+// so that necessary profiles are added to the skaffold config. This is necessary as environment
+// specific profile is supplied to skaffold so it knows what manifests to deploy and to which cluster.
 func ActivateSkaffoldDevLoop(workDir string) (string, *SkaffoldManifest, bool) {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
