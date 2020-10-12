@@ -16,7 +16,10 @@
 
 package kev
 
-import "sort"
+import (
+	"os"
+	"sort"
+)
 
 // contains returns true of slice of strings contains a given string
 func contains(src []string, s string) bool {
@@ -32,4 +35,13 @@ func keys(src map[string]string) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// fileExists checks if a file exists and is not a directory
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
