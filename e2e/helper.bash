@@ -51,16 +51,7 @@ wait-on-deployment() {
   local namespace=$1
   local labels=$2
 
-  for ((i=0; i<=60; i++)); do
-    if eval "$KUBECTL -n ${namespace} get po -l ${labels} --field-selector=status.phase=Running --no-headers | grep -i running"; then
-      return 0
-    else
-      echo "failed to run command: retrying (attempt/max = ${i}/60)"
-      sleep 2
-    fi
-  done
-
-  return 1
+  attempt 60 2 "$KUBECTL -n ${namespace} get po -l ${labels} --field-selector=status.phase=Running --no-headers | grep -i running"
 }
 
 ensure-deployment-type(){
@@ -99,13 +90,21 @@ check-app-is-running(){
   local port=$3
 
   podname=$($KUBECTL get pod -n "${namespace}" -l "${label}" -o name)
-  for ((i=0; i<=60; i++)); do
-    if eval "$KUBECTL -n ${namespace} exec ${podname} --  curl -sLI localhost:${port}" ; then
+  attempt 60 5 "$KUBECTL -n ${namespace} exec ${podname} --  curl -sLI localhost:${port}"
+}
+
+attempt() {
+  local max_attempts=$1
+  local delay=$2; shift 2;
+
+  for ((i=1; i<=max_attempts; i++)); do
+    if eval "$@"; then
       return 0
     else
-      sleep 5
+      printf "\nfailed to run command: %s, retrying (attempt/max = ${i}/${max_attempts})" "${@}"
+      sleep ${delay}
     fi
   done
-
   return 1
 }
+
