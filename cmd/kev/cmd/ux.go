@@ -37,7 +37,7 @@ func displayCmdStarted(cmdName string) {
 }
 
 func displayDevModeStarted(envs []string) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... listing environments:\n")
+	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watched environments:\n")
 	for _, env := range envs {
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m → "+env+"\n")
 	}
