@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/appvia/kev/pkg/kev"
@@ -161,7 +160,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Infof(`Running Kev in development mode... Watched environments: %s`, strings.Join(envs, ", "))
+	displayDevModeStarted(envs)
 
 	change := make(chan string, 50)
 	defer close(change)
@@ -203,7 +202,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 			fmt.Printf("\n♻️  %s changed! Re-rendering manifests...\n\n", ch)
 
 			if err := runCommands(cmd, args); err != nil {
-				return displayError(err)
+				log.ErrorDetail(err)
 			}
 
 			// empty the buffer as we only ever do one re-render cycle per a batch of changes
