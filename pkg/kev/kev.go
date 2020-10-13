@@ -23,7 +23,6 @@ import (
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
-	composego "github.com/compose-spec/compose-go/types"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
@@ -75,54 +74,14 @@ func DetectSecrets(workingDir string) error {
 }
 
 // Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info
-func Render(format string, singleFile bool, dir string, envs []string) error {
-	// @todo filter specified envs, or all if none provided
-	workDir, err := os.Getwd()
-	if err != nil {
-		return errors.Wrap(err, "Couldn't get working directory")
-	}
-
-	manifest, err := LoadManifest(workDir)
+func Render(workingDir string, format string, singleFile bool, dir string, envs []string) error {
+	manifest, err := LoadManifest(workingDir)
 	if err != nil {
 		return errors.Wrap(err, "Unable to load app manifest")
 	}
 
-	if _, err := manifest.CalculateSourcesBaseOverride(); err != nil {
-		return errors.Wrap(err, "Unable to render")
-	}
-
-	filteredEnvs, err := manifest.GetEnvironments(envs)
-	if err != nil {
-		return errors.Wrap(err, "Unable to render")
-	}
-
-	rendered := map[string][]byte{}
-	projects := map[string]*composego.Project{}
-	files := map[string][]string{}
-	sourcesFiles := manifest.GetSourcesFiles()
-
-	for _, env := range filteredEnvs {
-		p, err := manifest.MergeEnvIntoSources(env)
-		if err != nil {
-			return errors.Wrap(err, "Couldn't calculate compose project representation")
-		}
-		projects[env.Name] = p.Project
-		files[env.Name] = append(sourcesFiles, env.File)
-	}
-
-	c := converter.Factory(format)
-	outputPaths, err := c.Render(singleFile, dir, manifest.getWorkingDir(), projects, files, rendered)
-	if err != nil {
-		return errors.Wrap(err, "Couldn't render manifests")
-	}
-
-	if len(manifest.Skaffold) > 0 {
-		if err := UpdateSkaffoldProfiles(manifest.Skaffold, outputPaths); err != nil {
-			return errors.Wrap(err, "Couldn't update Skaffold profiles")
-		}
-	}
-
-	return nil
+	_, err = manifest.RenderWithConvertor(converter.Factory(format), dir, singleFile, envs)
+	return err
 }
 
 // Watch continuously watches source compose files & environment overrides and notifies changes to a channel
