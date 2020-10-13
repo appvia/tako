@@ -24,7 +24,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
+	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -164,6 +167,45 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 		return nil, err
 	}
 	return p, nil
+}
+
+func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string) (*Manifest, error) {
+	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
+		return nil, err
+	}
+
+	filteredEnvs, err := m.GetEnvironments(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	rendered := map[string][]byte{}
+	projects := map[string]*composego.Project{}
+	files := map[string][]string{}
+	sourcesFiles := m.GetSourcesFiles()
+
+	for _, env := range filteredEnvs {
+		p, err := m.MergeEnvIntoSources(env)
+		if err != nil {
+			return nil, errors.Wrap(err, "Couldn't calculate compose project representation")
+		}
+		projects[env.Name] = p.Project
+		files[env.Name] = append(sourcesFiles, env.File)
+	}
+
+	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered)
+	if err != nil {
+		log.Errorf("Couldn't render manifests")
+		return nil, err
+	}
+
+	if len(m.Skaffold) > 0 {
+		if err := UpdateSkaffoldProfiles(m.Skaffold, outputPaths); err != nil {
+			log.Errorf("Couldn't update skaffold.yaml profiles")
+			return nil, err
+		}
+	}
+	return m, nil
 }
 
 // DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.

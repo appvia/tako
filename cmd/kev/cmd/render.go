@@ -104,8 +104,14 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 
 	setReporting(verbose)
 	displayCmdStarted(cmdName)
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return displayError(err)
+	}
+
 	log.DebugTitlef("Output format: %s", format)
-	if err := kev.Render(format, singleFile, dir, envs); err != nil {
+	if err := kev.Render(workingDir, format, singleFile, dir, envs); err != nil {
 		return err
 	}
 
