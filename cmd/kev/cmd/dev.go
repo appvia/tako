@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/appvia/kev/pkg/kev"
@@ -161,7 +160,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Infof(`Running Kev in development mode... Watched environments: %s`, strings.Join(envs, ", "))
+	displayDevModeStarted(envs)
 
 	change := make(chan string, 50)
 	defer close(change)
