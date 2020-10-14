@@ -39,7 +39,7 @@ In order to take advantage of Skaffold, you must prepare your project accordingl
 
 > Run Kev in dev mode with Skaffold dev loop enabled.
 ```sh
-# 1) Starts watch loop an automatically re-renders K8s manifests
+# 1) Starts watch loop and automatically re-renders K8s manifests
 #    for specified environments.
 # 2) Observes application source code and K8s manifests changes
 #    and triggers build/push/deploy.
