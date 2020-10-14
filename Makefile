@@ -26,7 +26,7 @@ CLI_PLATFORMS=darwin linux windows
 CLI_ARCHITECTURES=386 amd64
 export GOFLAGS = -mod=vendor
 
-.PHONY: test authors changelog build release check vet golangci-lint
+.PHONY: test e2e authors changelog build release check vet golangci-lint setup-kind
 
 default: build
 
@@ -120,10 +120,19 @@ test:
 	@echo "--> Running the tests"
 	@go test --cover -v $(PACKAGES)
 
+
 all: test
 	@echo "--> Performing all tests"
 	@$(MAKE) bench
 	@$(MAKE) coverage
+
+e2e:
+	@echo "--> Running e2e tests"
+	@./e2e/bin/e2e.sh --build-cli true
+
+setup-kind:
+	@echo "--> Setting up kind"
+	@./hack/e2e/setup-kind.sh
 
 gen-cli-docs:
 	@echo "--> Generate CLI reference docs"
