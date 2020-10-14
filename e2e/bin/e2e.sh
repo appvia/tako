@@ -26,10 +26,8 @@ export YELLOW='\e[0;33m'
 export RED='\e[0;31m'
 export PATH=${PATH}:${PWD}/bin
 export KUBECTL="kubectl"
-export E2E_KUBECONFIG="${PWD}/hack/e2e/kubeconfig"
 export E2E_KEV_ENV='e2e'
-export KUBECONFIG_SAVED="${KUBECONFIG:-''}"
-export KUBECONFIG=$E2E_KUBECONFIG
+export E2E_KUBECONFIG="${PWD}/hack/e2e/kubeconfig"
 
 log() { (printf 2>/dev/null "$@${NC}\n"); }
 announce() { log "${GREEN}[$(date +"%T")] [INFO] $@"; }
@@ -59,6 +57,20 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+can-run-e2e(){
+  if ! command -v kind &> /dev/null
+  then
+    failed "Kind could not be found"
+    exit 1
+  fi
+
+  if ! command -v bats &> /dev/null
+  then
+    failed "bats (Bash Automated Testing System) could not be found"
+    exit 1
+  fi
+}
+
 build-cli() {
   if [[ ${BUILD_CLI} == true ]]; then
     announce "Building Kev"
@@ -69,6 +81,11 @@ build-cli() {
 create-cluster() {
   announce "Provisioning kind cluster"
   kind create cluster --name "${CLUSTER_NAME}" --kubeconfig hack/e2e/kubeconfig
+}
+
+configure-kubeconfig(){
+  export KUBECONFIG_SAVED="${KUBECONFIG:-''}"
+  export KUBECONFIG=$E2E_KUBECONFIG
 }
 
 run-tests() {
@@ -88,8 +105,10 @@ finally() {
   fi
 }
 
+can-run-e2e
 build-cli
 create-cluster
+configure-kubeconfig
 run-tests || {
   finally
   exit 1
