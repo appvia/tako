@@ -43,6 +43,7 @@ In order to take advantage of Skaffold, you must prepare your project accordingl
 #    for specified environments.
 # 2) Observes application source code and K8s manifests changes
 #    and triggers build/push/deploy.
+
 kev init --skaffold -e dev -e ...
 ```
 This command prepares your application and bootstraps a new Skaffold config (_skaffold.yaml_) if it doesn't already exist. Alternatively, it'll add environment & helper profiles to already existing Skaffold config automatically. The profiles added by Kev can be used to control which application Kubernetes manifests should be deployed and to which K8s cluster, be it local or remote. They should also come handy when defining steps in CI/CD pipelines.
@@ -57,6 +58,7 @@ Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Kev abo
 ```sh
 # It'll interactively build skaffold.yaml based on user choices.
 # The configuration will be saved in skaffold.yaml file.
+
 skaffold init
 ```
 
