@@ -87,7 +87,7 @@ The command will start two watch loops,
 1) one responsible for reconciling changes in your Docker Compose project source and environment override files to produce up-to-date Kubernetes manifests for each of specified environments (or default `dev` environment if none provided),
 2) a second loop responsible for watching changes in your project source code and deployment manifests.
 
-Every change made to Docker Compose project will produce an updated set of K8s manifests for your app, which in turn will inform Skaffold to trigger another Build/Push/Deploy iteration. This will deploy a fresh set of manifests to the target Kuberentes cluster.
+Every change made to the Docker Compose project will produce an updated set of K8s manifests for your app, which in turn will inform Skaffold to trigger another Build/Push/Deploy iteration. This will deploy a fresh set of manifests to the target Kuberentes cluster.
 
 There are a few extra bits of information that Skaffold requires to perform its intended task, all of which are itemised below:
 
