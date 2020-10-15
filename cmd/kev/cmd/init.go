@@ -43,7 +43,10 @@ Examples:
   $ kev init -e staging
 
   ### Use multiple specified environments.
-  $ kev init -e staging`
+  $ kev init -e staging -e production
+
+  ### Prepare project for use with Skaffold.
+  $ kev init -e staging --skaffold`
 
 var initCmd = &cobra.Command{
 	Use:   "init",
