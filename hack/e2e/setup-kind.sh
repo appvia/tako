@@ -16,25 +16,25 @@
 #
 
 # standard bash error handling
-set -o errexit;
-set -o pipefail;
-set -o nounset;
+set -o errexit
+set -o pipefail
+set -o nounset
 # debug commands
-set -x;
+set -x
 
-# working dir to install binaries etc, cleaned up on exit
-BIN_DIR="$(mktemp -d)"
+# bin dir to install binaries
+BIN_DIR=${PWD}/bin
 # kind binary will be here
 KIND="${BIN_DIR}/kind"
-
-CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-KIND_CONFIG="${CWD}/kind-config.yaml"
 
 # util to install a released kind version into ${BIN_DIR}
 install_kind_release() {
   VERSION="v0.9.0"
   KIND_BINARY_URL="https://github.com/kubernetes-sigs/kind/releases/download/${VERSION}/kind-linux-amd64"
-  wget -O "${KIND}" "${KIND_BINARY_URL}"
+  mkdir -p "${BIN_DIR}"
+  curl --request GET -sL \
+    --url "${KIND_BINARY_URL}" \
+    --output "${KIND}"
   chmod +x "${KIND}"
 }
 
