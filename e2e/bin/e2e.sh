@@ -17,6 +17,7 @@
 
 ## Set the defaults
 BUILD_CLI=true
+CLUSTER_NAME="cluster-$(uuidgen | tr "[:upper:]" "[:lower:]")"
 
 # Make this pretty
 export NC='\e[0m'
@@ -25,14 +26,12 @@ export YELLOW='\e[0;33m'
 export RED='\e[0;31m'
 export PATH=${PATH}:${PWD}/bin
 export KUBECTL="kubectl"
-export E2E_KUBECONFIG="${PWD}/hack/e2e/kubeconfig"
 export E2E_KEV_ENV='e2e'
-export KUBECONFIG_SAVED=$KUBECONFIG
-export KUBECONFIG=$E2E_KUBECONFIG
+export E2E_KUBECONFIG="${PWD}/hack/e2e/kubeconfig"
 
-log()      { (2>/dev/null printf "$@${NC}\n"); }
+log() { (printf 2>/dev/null "$@${NC}\n"); }
 announce() { log "${GREEN}[$(date +"%T")] [INFO] $@"; }
-failed()   { log "${YELLOW}[$(date +"%T")] [FAIL] $@"; }
+failed() { log "${YELLOW}[$(date +"%T")] [FAIL] $@"; }
 
 usage() {
   cat <<EOF
@@ -49,11 +48,28 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-  --build-cli)      BUILD_CLI=${2};        shift 2; ;;
-  -h|--help)        usage;                          ;;
-  *)                                       shift 1; ;;
+  --build-cli)
+    BUILD_CLI=${2}
+    shift 2
+    ;;
+  -h | --help) usage ;;
+  *) shift 1 ;;
   esac
 done
+
+can-run-e2e(){
+  if ! command -v kind &> /dev/null
+  then
+    failed "Kind could not be found"
+    exit 1
+  fi
+
+  if ! command -v bats &> /dev/null
+  then
+    failed "bats (Bash Automated Testing System) could not be found"
+    exit 1
+  fi
+}
 
 build-cli() {
   if [[ ${BUILD_CLI} == true ]]; then
@@ -64,7 +80,12 @@ build-cli() {
 
 create-cluster() {
   announce "Provisioning kind cluster"
-  kind create cluster --kubeconfig hack/e2e/kubeconfig
+  kind create cluster --name "${CLUSTER_NAME}" --kubeconfig hack/e2e/kubeconfig
+}
+
+configure-kubeconfig(){
+  export KUBECONFIG_SAVED="${KUBECONFIG:-''}"
+  export KUBECONFIG=$E2E_KUBECONFIG
 }
 
 run-tests() {
@@ -74,14 +95,20 @@ run-tests() {
 
 finally() {
   announce "Removing kind cluster"
-  kind delete cluster --kubeconfig hack/e2e/kubeconfig
+  kind delete cluster --name "${CLUSTER_NAME}" --kubeconfig hack/e2e/kubeconfig
 
   announce "Reset KUBECONFIG"
-  export KUBECONFIG=$KUBECONFIG_SAVED
+  if [[ -z "${KUBECONFIG_SAVED}" ]]; then
+    unset KUBECONFIG
+  else
+    export KUBECONFIG=$KUBECONFIG_SAVED
+  fi
 }
 
+can-run-e2e
 build-cli
 create-cluster
+configure-kubeconfig
 run-tests || {
   finally
   exit 1
