@@ -491,7 +491,8 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
 		PortForward: config.PortForwardOptions{
-			Enabled: true,
+			Enabled:     true,
+			ForwardPods: true,
 		},
 	}
 
