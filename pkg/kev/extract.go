@@ -82,19 +82,7 @@ func extractServiceTypeLabels(source composego.ServiceConfig, target *ServiceCon
 	if source.Ports == nil {
 		target.Labels.Add(config.LabelServiceType, config.NoService)
 	} else {
-		for _, p := range source.Ports {
-			if p.Published != 0 && p.Mode == "host" {
-				target.Labels.Add(config.LabelServiceType, config.NodePortService)
-			} else if p.Published != 0 && p.Mode == "ingress" {
-				target.Labels.Add(config.LabelServiceType, config.LoadBalancerService)
-			} else if p.Published != 0 || (p.Published == 0 && p.Target != 0) {
-				target.Labels.Add(config.LabelServiceType, config.ClusterIPService)
-			} else if p.Published == 0 {
-				target.Labels.Add(config.LabelServiceType, config.HeadlessService)
-			}
-			// @todo: Processing just the first port for now!
-			break
-		}
+		target.Labels.Add(config.LabelServiceType, config.ClusterIPService)
 	}
 }
 
