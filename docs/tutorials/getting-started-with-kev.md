@@ -123,7 +123,7 @@ environments:
 
 The created `local` and `stage` _Compose environment overrides_ are currently identical.
 
-The `labels` section for each service enable you to control how the app runs on Kubernetes. See the [configuration reference](../reference/config-params.md) to understand how these affect deployments.
+The `labels` section for each service enables you to control how the app runs on Kubernetes. See the [configuration reference](../reference/config-params.md) to find all the available options and understand how they affect deployments.
 
 We'll be adjusting these values soon per target environment. For now, they look as below,
 
@@ -132,22 +132,8 @@ version: "3.7"
 services:
   wordpress:
     labels:
-      kev.service.type: LoadBalancer
-      kev.workload.image-pull-policy: IfNotPresent
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
-      kev.workload.liveness-probe-disabled: "false"
-      kev.workload.liveness-probe-initial-delay: 1m0s
-      kev.workload.liveness-probe-interval: 1m0s
-      kev.workload.liveness-probe-retries: "3"
-      kev.workload.liveness-probe-timeout: 10s
-      kev.workload.max-cpu: "0.5"
-      kev.workload.cpu: "0.1"
-      kev.workload.max-memory: 500Mi
-      kev.workload.memory: 10Mi
       kev.workload.replicas: "1"
-      kev.workload.rolling-update-max-surge: "1"
-      kev.workload.service-account-name: default
-      kev.workload.type: Deployment
 ```
 
 ## Moving to Kubernetes
@@ -430,10 +416,7 @@ services:
   wordpress:
     labels:
       ...
-      ...
       kev.workload.replicas: "5"
-      ...
-      ...
 ```
 
 ### Re-sync Kubernetes
