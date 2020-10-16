@@ -639,14 +639,9 @@ Defines type of Kubernetes service for specific workload. See official K8s [docu
 The following heuristic is used to determine service type for application component:
 
 * If compose project service publishes a port (i.e. defines a port mapping between host and container ports):
-    * and specifies a mode as `host`
-        * It will assume `NodePort` service type
-    * and specifies a mode as `ingress`
-        * It will assume `LoadBalancer` service type
-    * and doesn't specify port mode
-        * It will assume `ClusterIP` service type
-* If compose service doesn't publish a port but defines container port.
-    * It will assume `Headless` service type
+    * It will assume `ClusterIP` service type
+* If compose project service does not publish a port:
+    * It will assume `None` service type
 
 ### Default: `None` - no service will be created for the workload by default!
 
@@ -661,6 +656,8 @@ services:
       kev.service.type: LoadBalancer
 ...
 ```
+
+#### None
 
 ## kev.service.nodeport.port
 
@@ -684,7 +681,7 @@ services:
 
 ## kev.service.expose
 
-Defines whether to expose the service to external world. This detail can't be easily derived from the compose file and so in order to expose a service to external workld user must explicitly instruct Kev to do so. By default all component services aren't exposed i.e. have no ingress attached to them.
+Defines whether to expose the service to external world. This detail can't be easily derived from the compose file and so in order to expose a service to external world user must explicitly instruct Kev to do so. By default all component services aren't exposed i.e. have no ingress attached to them.
 
 ### Default: `""` - No ingress will be created!
 
