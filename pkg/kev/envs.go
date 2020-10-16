@@ -176,7 +176,6 @@ func (e *Environment) patch(cset changeset) {
 
 func (e *Environment) prepareForMergeUsing(override *composeOverride) {
 	e.override = e.override.expandLabelsFrom(override)
-	e.override.overrideServiceTypeFrom(override)
 }
 
 func (e *Environment) mergeInto(p *ComposeProject) error {

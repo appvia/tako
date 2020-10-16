@@ -136,19 +136,6 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 	return out
 }
 
-func (o *composeOverride) overrideServiceTypeFrom(other *composeOverride) {
-	var services Services
-	for _, otherSvc := range other.Services {
-		dstSvc, err := o.getService(otherSvc.Name)
-		if err != nil {
-			continue
-		}
-		dstSvc.Labels[config.LabelServiceType] = otherSvc.Labels[config.LabelServiceType]
-		services = append(services, dstSvc)
-	}
-	o.Services = services
-}
-
 // diff detects changes between an override against another override.
 func (o *composeOverride) diff(other *composeOverride) changeset {
 	return newChangeset(other, o)
