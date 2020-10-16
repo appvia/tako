@@ -662,6 +662,7 @@ services:
       kev.service.type: LoadBalancer
 ...
 ```
+
 #### None
 
 Simply, no service will be created.
@@ -702,6 +703,46 @@ Again, it is ideal for exposing a service or app to the internet under a single 
 
 Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.     
 
+
+#### None
+
+Simply, no service will be created.
+
+#### ClusterIP
+
+Choosing this type makes the Service only reachable internally from within the cluster by other services. There is no external access.
+
+In development, you can access this service on your localhost using [Port Forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/).
+
+It is ideal for an internal service or locally testing an app before exposing it externally.
+
+#### Nodeport
+
+This service type is the most basic way to get external traffic directly to your service.
+
+Its opens a specific port on each of the K8s cluster Nodes, and any traffic that is sent to this port is forwarded to the ClusterIP service which is automatically created.
+
+You'll be able to contact the NodePort Service, from outside the cluster, by requesting `<NodeIP>:<NodePort>`.
+
+It is ideal for running a service with limited availability, e.g. a demo app.
+
+#### Headless
+
+This is the same as a `ClusterIP` service type, but lacks load balancing or proxying. Allowing you to connect to a Pod directly.
+
+Specifically, it does have a service IP, but instead of load-balancing it will return the IPs of the associated Pods.
+
+It is ideal for scenarios such as Pod to Pod communication or clustered applications node discovery.
+
+#### LoadBalancer
+
+This service type is the standard way to expose a service to the internet.
+
+All traffic on the port you specify will be forwarded to the service allowing any kind of traffic to it, e.g. HTTP, TCP, UDP, Websockets, gRPC, etc...
+
+Again, it is ideal for exposing a service or app to the internet under a single IP address.
+
+Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.     
 
 ## kev.service.nodeport.port
 

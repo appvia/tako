@@ -58,7 +58,6 @@ func newChangeset(dst *composeOverride, src *composeOverride) changeset {
 	detectServicesCreate(dst, src, &cset)
 	detectServicesDelete(dst, src, &cset)
 	detectServicesEnvironmentDelete(dst, src, &cset)
-	detectServicesUpdate(dst, src, &cset)
 	detectVolumesCreate(dst, src, &cset)
 	detectVolumesDelete(dst, src, &cset)
 	return cset
@@ -110,26 +109,6 @@ func detectServicesEnvironmentDelete(dst *composeOverride, src *composeOverride,
 					Target: envVarKey,
 				})
 			}
-		}
-	}
-}
-
-func detectServicesUpdate(dst *composeOverride, src *composeOverride, cset *changeset) {
-	srcSvcMapping := src.Services.Map()
-	for index, dstSvc := range dst.Services {
-		srcSvc, ok := srcSvcMapping[dstSvc.Name]
-		if !ok {
-			continue
-		}
-
-		if srcSvc.GetLabels()[config.LabelServiceType] != dstSvc.GetLabels()[config.LabelServiceType] {
-			cset.services = append(cset.services, change{
-				Type:   UPDATE,
-				Index:  index,
-				Parent: "labels",
-				Target: config.LabelServiceType,
-				Value:  srcSvc.GetLabels()[config.LabelServiceType],
-			})
 		}
 	}
 }

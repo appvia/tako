@@ -184,9 +184,9 @@ var _ = Describe("Reconcile", func() {
 					Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
 				})
 
-				It("should update the label in all environments", func() {
+				It("should not update the label in all environments", func() {
 					s, _ := env.GetService("wordpress")
-					Expect(s.Labels["kev.service.type"]).To(Equal("ClusterIP"))
+					Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
 				})
 
 				It("should log the change summary using the debug level", func() {
@@ -195,11 +195,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("should create a change summary", func() {
 					Expect(loggedMsgs).To(ContainSubstring(env.Name))
-					Expect(loggedMsgs).To(ContainSubstring("wordpress"))
-					Expect(loggedMsgs).To(ContainSubstring("updated"))
-					Expect(loggedMsgs).To(ContainSubstring(config.LabelServiceType))
-					Expect(loggedMsgs).To(ContainSubstring("LoadBalancer"))
-					Expect(loggedMsgs).To(ContainSubstring("ClusterIP"))
+					Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 				})
 
 				It("should not error", func() {
