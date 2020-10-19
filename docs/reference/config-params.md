@@ -634,18 +634,20 @@ The `service` group contains configuration detail around Kubernetes services and
 
 ## kev.service.type
 
-Defines type of Kubernetes service for specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/). Kev will attempt to extract that information from the compose configuration.
+Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/). Kev will attempt to extract that information from the compose configuration.
 
-The following heuristic is used to determine service type for application component:
+The following heuristic determines the service type for application component:
 
 * If compose project service publishes a port (i.e. defines a port mapping between host and container ports):
-    * It will assume `ClusterIP` service type
+    * It will assume a `ClusterIP` service type
 * If compose project service does not publish a port:
-    * It will assume `None` service type
+    * It will assume a `None` service type
 
 ### Default: `None` - no service will be created for the workload by default!
 
-### Possible options: `None`, `Headless`, `ClusterIP`, `Nodeport`, `LoadBalancer`.
+### Possible options: `None`, `ClusterIP`, `Nodeport`, `Headless`,  `LoadBalancer`.
+
+These options are useful for exposing a Service either internally or externally onto an external IP address, that's outside of your cluster.
 
 > kev.service.type:
 ```yaml
@@ -656,8 +658,46 @@ services:
       kev.service.type: LoadBalancer
 ...
 ```
-
 #### None
+
+Simply, no service will be created.
+
+#### ClusterIP
+
+Choosing this type makes the Service only reachable internally from within the cluster by other services. There is no external access.
+
+In development, you can access this service on your localhost using [Port Forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/).
+
+It is ideal for an internal service or locally testing an app before exposing it externally.
+
+#### Nodeport
+
+This service type is the most basic way to get external traffic directly to your service.
+
+Its opens a specific port on all the Nodes (the VMs), and any traffic that is sent to this port is forwarded to the service.
+
+You'll be able to contact the NodePort Service, from outside the cluster, by requesting `<NodeIP>:<NodePort>`.
+
+It is ideal for running a service with limited availability, e.g. a demo app.
+
+#### Headless
+
+This is the same as a `ClusterIP` service type, but lacks load balancing or proxying. Allowing you to connect to a Pod directly.
+
+Specifically, it does have a service IP, but instead of load-balancing it will return the IPs of the associated Pods.
+
+It is ideal for scenarios like Pod to Pod communication.
+
+#### LoadBalancer
+
+This service type is the standard way to expose a service to the internet.
+
+All traffic on the port you specify will be forwarded to the service allowing any kind of traffic to it, e.g. HTTP, TCP, UDP, Websockets, gRPC, etc...
+
+Again, it is ideal for exposing a service or app to the internet under a single IP address.
+
+Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.     
+
 
 ## kev.service.nodeport.port
 
