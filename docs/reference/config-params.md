@@ -634,23 +634,24 @@ The `service` group contains configuration detail around Kubernetes services and
 
 ## kev.service.type
 
-Defines type of Kubernetes service for specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/). Kev will attempt to extract that information from the compose configuration.
+Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
 
-The following heuristic is used to determine service type for application component:
+Although Kev provides a variety of types you can use, it only tries to extract two types of services from the compose configuration, namely `None` or `ClusterIP`.
+
+If you need a different type, please configure it manually. The different types are listed and explained below. Related official K8s
+
+Here is the heuristic used to extract a service type:
 
 * If compose project service publishes a port (i.e. defines a port mapping between host and container ports):
-    * and specifies a mode as `host`
-        * It will assume `NodePort` service type
-    * and specifies a mode as `ingress`
-        * It will assume `LoadBalancer` service type
-    * and doesn't specify port mode
-        * It will assume `ClusterIP` service type
-* If compose service doesn't publish a port but defines container port.
-    * It will assume `Headless` service type
+    * It will assume a `ClusterIP` service type
+* If compose project service does not publish a port:
+    * It will assume a `None` service type
 
 ### Default: `None` - no service will be created for the workload by default!
 
-### Possible options: `None`, `Headless`, `ClusterIP`, `Nodeport`, `LoadBalancer`.
+### Possible options: `None`, `ClusterIP`, `Nodeport`, `Headless`,  `LoadBalancer`.
+
+These options are useful for exposing a Service either internally or externally onto an external IP address, that's outside of your cluster.
 
 > kev.service.type:
 ```yaml
@@ -661,6 +662,46 @@ services:
       kev.service.type: LoadBalancer
 ...
 ```
+#### None
+
+Simply, no service will be created.
+
+#### ClusterIP
+
+Choosing this type makes the Service only reachable internally from within the cluster by other services. There is no external access.
+
+In development, you can access this service on your localhost using [Port Forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/).
+
+It is ideal for an internal service or locally testing an app before exposing it externally.
+
+#### Nodeport
+
+This service type is the most basic way to get external traffic directly to your service.
+
+Its opens a specific port on each of the K8s cluster Nodes, and any traffic that is sent to this port is forwarded to the ClusterIP service which is automatically created.
+
+You'll be able to contact the NodePort Service, from outside the cluster, by requesting `<NodeIP>:<NodePort>`.
+
+It is ideal for running a service with limited availability, e.g. a demo app.
+
+#### Headless
+
+This is the same as a `ClusterIP` service type, but lacks load balancing or proxying. Allowing you to connect to a Pod directly.
+
+Specifically, it does have a service IP, but instead of load-balancing it will return the IPs of the associated Pods.
+
+It is ideal for scenarios such as Pod to Pod communication or clustered applications node discovery.
+
+#### LoadBalancer
+
+This service type is the standard way to expose a service to the internet.
+
+All traffic on the port you specify will be forwarded to the service allowing any kind of traffic to it, e.g. HTTP, TCP, UDP, Websockets, gRPC, etc...
+
+Again, it is ideal for exposing a service or app to the internet under a single IP address.
+
+Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.     
+
 
 ## kev.service.nodeport.port
 
@@ -684,7 +725,7 @@ services:
 
 ## kev.service.expose
 
-Defines whether to expose the service to external world. This detail can't be easily derived from the compose file and so in order to expose a service to external workld user must explicitly instruct Kev to do so. By default all component services aren't exposed i.e. have no ingress attached to them.
+Defines whether to expose the service to external world. This detail can't be easily derived from the compose file and so in order to expose a service to external world user must explicitly instruct Kev to do so. By default all component services aren't exposed i.e. have no ingress attached to them.
 
 ### Default: `""` - No ingress will be created!
 

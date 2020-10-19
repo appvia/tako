@@ -50,7 +50,7 @@ load ../helper
   echo $output
   [ "$status" -eq 0 ]
 
-  run ensure-service-type "$E2E_NS" "io.kev.service=wordpress" "loadbalancer"
+  run ensure-service-type "$E2E_NS" "io.kev.service=wordpress" "clusterip"
   echo $output
   [ "$status" -eq 0 ]
 
