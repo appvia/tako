@@ -634,9 +634,13 @@ The `service` group contains configuration detail around Kubernetes services and
 
 ## kev.service.type
 
-Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/). Kev will attempt to extract that information from the compose configuration.
+Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/).
 
-The following heuristic determines the service type for application component:
+Although Kev provides a variety of types you can use, it only tries to extract two types of services from the compose configuration, namely `None` or `ClusterIP`.
+
+If you need a different type, please configure it manually. The different types are listed and explained below. 
+
+Here is the heuristic used to extract a `None` or `ClusterIP` type:
 
 * If compose project service publishes a port (i.e. defines a port mapping between host and container ports):
     * It will assume a `ClusterIP` service type
