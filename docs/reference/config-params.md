@@ -634,13 +634,13 @@ The `service` group contains configuration detail around Kubernetes services and
 
 ## kev.service.type
 
-Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/).
+Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
 
 Although Kev provides a variety of types you can use, it only tries to extract two types of services from the compose configuration, namely `None` or `ClusterIP`.
 
-If you need a different type, please configure it manually. The different types are listed and explained below. 
+If you need a different type, please configure it manually. The different types are listed and explained below. Related official K8s
 
-Here is the heuristic used to extract a `None` or `ClusterIP` type:
+Here is the heuristic used to extract a service type:
 
 * If compose project service publishes a port (i.e. defines a port mapping between host and container ports):
     * It will assume a `ClusterIP` service type
@@ -678,7 +678,7 @@ It is ideal for an internal service or locally testing an app before exposing it
 
 This service type is the most basic way to get external traffic directly to your service.
 
-Its opens a specific port on all the Nodes (the VMs), and any traffic that is sent to this port is forwarded to the service.
+Its opens a specific port on each of the K8s cluster Nodes, and any traffic that is sent to this port is forwarded to the ClusterIP service which is automatically created.
 
 You'll be able to contact the NodePort Service, from outside the cluster, by requesting `<NodeIP>:<NodePort>`.
 
@@ -690,7 +690,7 @@ This is the same as a `ClusterIP` service type, but lacks load balancing or prox
 
 Specifically, it does have a service IP, but instead of load-balancing it will return the IPs of the associated Pods.
 
-It is ideal for scenarios like Pod to Pod communication.
+It is ideal for scenarios such as Pod to Pod communication or clustered applications node discovery.
 
 #### LoadBalancer
 
