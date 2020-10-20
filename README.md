@@ -156,8 +156,6 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 - [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
 - [Iterate on the app with Kev and Skaffold](docs/tutorials/kev-dev-with-skaffold.md)
 
-  This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
-
 ## Configuration
 
 As mentioned in the [Quickstart](#quickstart) section above, the environment specific configuration lives in a set of docker-compose override files. Each environment override file holds simplified Kubernetes configuration parameters for each of the application components.
