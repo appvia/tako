@@ -27,7 +27,7 @@ kev dev
 kev dev -e myenv
 ````
 
-It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for environments specified via `--environment | -e` flag(s). If no environments have been specified it defaults to `dev` environment.
+It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for environments specified via `--environment | -e` flag(s). If no environments have been specified it defaults to all environments.
 
 ## Automatic Develop / Build / Push / Deploy
 
@@ -42,7 +42,9 @@ In order to take advantage of Skaffold, you must prepare your project accordingl
 kev init --skaffold -e dev -e ...
 ```
 
-This command prepares your application and bootstraps a new Skaffold config (_skaffold.yaml_) if it doesn't already exist. Alternatively, it'll add environment & helper profiles to already existing Skaffold config automatically. The profiles added by Kev can be used to control which application Kubernetes manifests should be deployed and to which K8s cluster, be it local or remote. They should also come handy when defining steps in CI/CD pipelines.
+This command prepares your application and bootstraps a new Skaffold config (_skaffold.yaml_) if it doesn't already exist. Alternatively, it'll add environment & helper profiles to already existing Skaffold config automatically.
+
+The profiles added by Kev can be used to control which application Kubernetes manifests should be deployed and to which K8s cluster, be it local or remote. They should also come handy when defining steps in CI/CD pipelines.
 
 ## ⚬ Retrofit Skaffold support in existing Kev project
 
@@ -71,7 +73,7 @@ skaffold: skaffold.yaml # <= tell Kev that skaffold is now initialised
 
 ## ⚬ Kev + Skaffold
 
-At this point all you need to do to take advantage of Skaffold integration is to start _Kev_ in [development](cli/kev_dev.md) mode with Skaffold hook enabled:
+Now start _Kev_ in [development](cli/kev_dev.md) mode with Skaffold hook enabled:
 
 > Start Kev in development with Skaffold integration activated
 ```sh
@@ -84,17 +86,24 @@ kev dev --skaffold
 ```
 
 The command will start two watch loops,
-1) one responsible for reconciling changes in your Docker Compose project source and environment override files to produce up-to-date Kubernetes manifests for each of specified environments (or default `dev` environment if none provided),
-2) a second loop responsible for watching changes in your project source code and deployment manifests.
 
-Every change made to the Docker Compose project will produce an updated set of K8s manifests for your app, which in turn will inform Skaffold to trigger another Build/Push/Deploy iteration. This will deploy a fresh set of manifests to the target Kuberentes cluster.
+1) A Kev Loop:
+    - Is responsible for reconciling changes in your Docker Compose project source and environment override files.
+    - Rendering up-to-date Kubernetes manifests for each of the specified environments (or default `dev` environment if none provided).
 
-There are a few extra bits of information that Skaffold requires to perform its intended task, all of which are itemised below:
+2) A Skaffold Loop:
+    - Is responsible for watching changes in your project source code and deployment manifests.
 
+All of this equates to a very productive pipeline:
+- Every change made to the Docker Compose project will produce an updated set of K8s manifests for your app.
+- In turn informing Skaffold to trigger another Build/Push/Deploy iteration.
+- Deploying a fresh set of manifests to the target Kubernetes cluster.
+
+To correctly perform its intended task, Skaffold requires:
 * `--namespace | -n` - Informs Skaffold which namespace the application should be deployed to. Default: `default`.
-* `--kubecontext | -k` - Specified kubectl context to be used by Skaffold. This determines the cluster to which your application will be deployed to. If not specified it will default to current [kebectl context](https://kubernetes.io/docs/reference/kubectl/cheatsheet/#kubectl-context-and-configuration).
-* `--kev-env` - Kev tracked environment name of which Kubernetes manifests will be deployed to a target cluster/namespace. Defaults to the first specified environment passed via `--environment (-e)` flag. If no environments have been specified it will default to `dev` environment.
+* `--kubecontext | -k` - Specifies what kubectl context Skaffold should use. This determines the cluster where your application will be deployed. If not specified, defaults to the current [kubectl context](https://kubernetes.io/docs/reference/kubectl/cheatsheet/#kubectl-context-and-configuration).
+* `--kev-env` - Kev tracked environment name of which Kubernetes manifests should be deployed. Defaults to the first specified environment previously passed via the `--environment (-e)` flag (if no environments have been specified it will default to `dev` environment).
 
-When the dev loop is interrupted with Ctrl+C it will automatically cleanup all deployed K8s objects from a target namespace and attempt to prune locally built docker images.
+Interrupting the dev loop using Ctrl+C will automatically cleanup all deployed K8s objects from a target namespace and attempt to prune locally built docker images.
 
 _NOTE: Image pruning might take some time and in some cases won't remove stale docker images. it's therefore advised that local images are periodically (manually) pruned._
