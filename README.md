@@ -18,7 +18,7 @@ _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kuber
 
 ## Features
 
-* **Simplicity** - Based on familiar Docker Compose specification. There is no new framework to learn, no new specification to embrace, and vastness of Kubernetes reduced to a limited set of easy to follow configuration parameters. You focus on the app development. Kev will prepare it for deployment in Kubernetes.
+* **Simplicity** - Based on the familiar Docker Compose specification. There is no new framework to learn, no new specification to embrace, and vastness of Kubernetes reduced to a limited set of easy to follow configuration parameters. You focus on the app development. Kev will prepare it for deployment in Kubernetes.
 
 * **Multi-environment support** - Parameterisation enabled with the same configuration primitives you're already familiar with. Each defined environment gets its own docker-compose override file, which is there to control the behaviour of your application in Kubernetes in a simple and consistent way.
 
@@ -28,7 +28,7 @@ _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kuber
 
 * **No vendor lock-in** - Because you already use docker-compose, you can keep using it, even if _Kev_ turns out to be not your cup of tea.
 
-* **Easy integrations** - You may use generated Kubernetes manifests with any tool / framework of your choice. We aim at adding some useful integrations further improving developer experience.
+* **Easy integrations** - You may use generated Kubernetes manifests with any tool / framework of your choice. Check out our [Skaffold Integration](docs/tutorials/kev-dev-with-skaffold.md).
 
 ## Contents
 
