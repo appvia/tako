@@ -27,7 +27,9 @@ kev dev
 kev dev -e myenv
 ````
 
-It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for environments specified via `--environment | -e` flag(s). If no environments have been specified it defaults to all environments.
+It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for environments specified via `--environment | -e` flag(s).
+
+If no environments have ever been specified it defaults to the `dev` environment created implicitly during `kev init`.
 
 ## Automatic Develop / Build / Push / Deploy
 
