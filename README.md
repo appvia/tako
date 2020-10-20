@@ -153,7 +153,7 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 ## Tutorials and guides
 
 - [How does Kev differ from Kompose?](docs/tutorials/how-kev-differs-from-kompose.md)
-- [Getting started with Kev.](docs/tutorials/getting-started-with-kev.md)
+- [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
 - [Iterate on the app with Kev and Skaffold](docs/tutorials/kev-dev-with-skaffold.md)
 
   This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
