@@ -5,21 +5,21 @@ title: Getting started with Kev
 
 # Getting started with Kev
 
-This tutorial will walk you through how to **connect your Docker Compose Workflow to Kubernetes** - using _Kev_.
+This tutorial will walk you through how to **connect your Docker Compose Workflow to Kubernetes** - using Kev.
 
 This is NOT a migration. On the contrary, we're going to create a continuous development workflow.
 
 Meaning, your hard-earned Docker Compose skills will make it faster to develop and iterate on Kubernetes.
 
-We'll set up _Kev_, iterate and deploy a [WordPress application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
+We'll set up Kev, iterate and deploy a [WordPress application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
 
 The tutorial assumes that you have,
 - Prior [docker-compose](https://docs.docker.com/compose/) experience.
 - [docker](https://docs.docker.com/engine/install/) & [docker-compose](https://docs.docker.com/compose/install/) installed.
-- [_Kev_ installed](../../README.md#installation).
+- [Kev installed](../../README.md#installation).
 - A local Kubernetes installation. This tutorial uses Docker Desktop ([Mac](https://docs.docker.com/docker-for-mac/#kubernetes) / [Windows](https://docs.docker.com/docker-for-windows/#kubernetes)). As an alternative, use [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) or [Kind](https://kind.sigs.k8s.io/).
 
-As we walk through the tutorial we'll cover some Kubernetes concepts and how they relate to Docker Compose and _Kev_.
+As we walk through the tutorial we'll cover some Kubernetes concepts and how they relate to Docker Compose and Kev.
 
 These will be explained under a **Kube Notes** heading.
 
@@ -77,15 +77,17 @@ Furthermore, on Kubernetes, you might also want to deploy or promote your app to
 
 So, a good approach to managing your app configuration in different environments is a must.
 
-_Kev_ will help you with all the above! So let's get cracking.
+Kev will help you with all the above! So let's get cracking.
 
 ### Compose + Kev
 
 Let's instruct Kev to track our _source Compose_ file, `docker-compose.yaml`, [that we've just created](#create-your-docker-compose-config).
 
-_Kev_ will introspect the Compose config and _infer the key attributes_ to enable Compose services to run on Kubernetes.
+Kev will introspect the Compose config and _infer the key attributes_ to enable Compose services to run on Kubernetes.
 
-Also, as we're moving beyond development, we'll instruct _Kev_ to create two _environment overrides_ to target two different sets of parameters (annotated as service `labels`).
+Also, as we're moving beyond development, we'll instruct Kev to create two _environment overrides_ to target two different sets of parameters (annotated as service `labels`).
+
+Please note, a `dev` sandbox environment is always created alongside any specified environments.
 
 No time to lose, let's get started...
 
@@ -93,19 +95,20 @@ No time to lose, let's get started...
 $ kev init -e local -e stage
 # ✓ Init
 #  → Creating kev.yaml ... Done
+#  → Creating docker-compose.kev.dev.yaml ... Done
 #  → Creating docker-compose.kev.local.yaml ... Done
 #  → Creating docker-compose.kev.stage.yaml ... Done
 ```
 
-_Kev_ has now been initialised and configured. It has,
+Kev has now been initialised and configured. It has,
 - Started tracking the `docker-compose.yaml` file as the _source application definition_.
 - Inferred configuration details from the `docker-compose.yaml` file.
 - Assigned sensible defaults for any config it couldn't infer.
-- Created `local` (useful for testing on our own machine) and `staging` (useful for testing on a remote machine) _Compose environment overrides_.
+- Created `dev` (a sandbox used by Kev for continuous development), `local` (useful for testing on our own machine) and `staging` (useful for testing on a remote machine) _Compose environment overrides_.
 
 It has also generated three files:
 - `kev.yaml`, a manifest that describes our _source application definition_ and _Compose environment overrides_.
-- `docker-compose.kev.*.yaml`, two files to represent our _Compose environment overrides_.
+- `docker-compose.kev.*.yaml`, three files to represent our _Compose environment overrides_.
 
 #### Manifest: kev.yaml
 
@@ -114,6 +117,7 @@ The `kev.yaml` manifest file confirm a successful `init`,
 compose:
   - docker-compose.yaml
 environments:
+  dev: docker-compose.kev.dev.yaml
   local: docker-compose.kev.local.yaml
   stage: docker-compose.kev.stage.yaml
 ...
@@ -121,7 +125,7 @@ environments:
 
 #### Compose environment overrides: docker-compose.kev.*.yaml
 
-The created `local` and `stage` _Compose environment overrides_ are currently identical.
+The created `dev`, `local` and `stage` _Compose environment overrides_ are currently identical.
 
 The `labels` section for each service enables you to control how the app runs on Kubernetes. See the [configuration reference](../reference/config-params.md) to find all the available options and understand how they affect deployments.
 
@@ -144,7 +148,7 @@ However, all the translation wiring is now in place, so let's run it on Kubernet
 
 ### Generate Kubernetes manifests
 
-First, we instruct _Kev_ to generate manifests for the required Kubernetes resources.
+First, we instruct Kev to generate manifests for the required Kubernetes resources.
 
 **Kube Notes**
 > Our single `wordpress` Compose service requires [Deployment](https://kubernetes.io/docs/tutorials/kubernetes-basics/deploy-app/deploy-intro/), [Service](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) and (an optional) [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) Kubernetes resources.
@@ -152,30 +156,17 @@ First, we instruct _Kev_ to generate manifests for the required Kubernetes resou
 Simply run,
 ```shell script
 $ kev render
-# ✓ Reconciling environment [local]
-# → nothing to update
-# ✓ Reconciling environment [stage]
-# → nothing to update
-# ...............................
+# > Reconcile...
 
-# INFO 💡: ⚙️  Output format: kubernetes
-# INFO 💡: 🖨️  Rendering local environment
-# INFO 💡: Target Dir: k8s/local
-# INFO 💡: ⎈  kubernetes file "k8s/local/wordpress-service.yaml" created
-# INFO 💡: ⎈  kubernetes file "k8s/local/wordpress-deployment.yaml" created
-# INFO 💡: ⎈  kubernetes file "k8s/local/default-networkpolicy.yaml" created
-# INFO 💡: 🖨️  Rendering stage environment
-# INFO 💡: Target Dir: k8s/stage
-# INFO 💡: ⎈  kubernetes file "k8s/stage/wordpress-service.yaml" created
-# INFO 💡: ⎈  kubernetes file "k8s/stage/wordpress-deployment.yaml" created
-# INFO 💡: ⎈  kubernetes file "k8s/stage/default-networkpolicy.yaml" created
-# INFO 💡: 🧰 App render complete!
+# > Detect secrets...
+
+# > Render...
 ```
 
-In this case, _Kev_,
+In this case, Kev,
 - Has re-introspected our _source application definition_.
 - Has NOT detected any config changes that need to be applied to our _Compose environment overrides_.
-- Has generated manifests to enable our app to run in both a `local` and `stage` mode.
+- Has generated manifests to enable our app to run in `dev`, `local` and `stage` mode.
 
 We're now ready to run our app on Kubernetes!
 
@@ -215,7 +206,7 @@ $ kubectl port-forward service/wordpress 8080:8000 -n kev-local    # make the wo
 
 Navigate to [http://localhost:8080](http://localhost:8080]) in your browser. This should display `wordpress`'s setup page. The same `wordpress` web page you saw when we ran `docker-compose up -d` earlier.
 
-Hurray!! We're up and running on K8s using **JUST our Compose config (with sensible _Kev_ defaults)**.
+Hurray!! We're up and running on K8s using **JUST our Compose config (with sensible Kev defaults)**.
 
 For now, `ctrl+c` to stop the `wordpress` service. We need to move beyond a basic container.
 
@@ -286,47 +277,31 @@ $ docker-compose down -v    # Stop all containers. Remove named volumes.
 
 ### Re-sync Kubernetes
 
-Now, that we have a new `db` service and `db_data` volume we need to let _Kev_ _infer the key attributes_ to enable the new Compose service and volume to run on Kubernetes.
+Now, that we have a new `db` service and `db_data` volume we need to let Kev _infer the key attributes_ to enable the new Compose service and volume to run on Kubernetes.
 
-Also, we've made some minor adjustments to the `wordpress` service. _Kev_ will reconcile those changes.
+Also, we've made some minor adjustments to the `wordpress` service. Kev will reconcile those changes.
 
 This will be applied to all _Compose environment overrides_.
 
 Simply, re-run,
 ```shell script
 $ kev render
-# ✓ Reconciling environment [local]
-# ...
-# ...
-# ✓ Reconciling environment [stage]
-# ...
-# ...
-# ...............................
-# INFO 💡: ⚙️  Output format: kubernetes
-# INFO 💡: 🖨️  Rendering stage environment
-# INFO 💡: Target Dir: k8s/stage
-# ...
-# INFO 💡: ⎈  kubernetes file "k8s/stage/db-statefulset.yaml" created
-# INFO 💡: ⎈  kubernetes file "k8s/stage/db-data-persistentvolumeclaim.yaml" created
-# ...
-# INFO 💡: 🖨️  Rendering local environment
-# INFO 💡: Target Dir: k8s/local
-# ...
-# INFO 💡: ⎈  kubernetes file "k8s/local/db-statefulset.yaml" created
-# INFO 💡: ⎈  kubernetes file "k8s/local/db-data-persistentvolumeclaim.yaml" created
-# ...
-# INFO 💡: 🧰 App render complete!
+# > Reconcile...
+
+# > Detect secrets...
+
+# > Render...
 ```
 
-This time round, _Kev_
+This time round, Kev
 - Has detected and inferred config for the new `mysql` service and `db_data` volume.
 - It assigned sensible defaults for any config it couldn't infer.
-- It re-generated the kubernetes manifests for the `local` and `stage` deployment environments.
+- It re-generated the kubernetes manifests for the `dev`, `local` and `stage` deployment environments.
 
 **Kube Notes**
-> To accommodate the `db` service, _Kev_ uses the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) Kubernetes resource as the `db` service requires persistent storage.
+> To accommodate the `db` service, Kev uses the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) Kubernetes resource as the `db` service requires persistent storage.
 
-> _Kev_ uses the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) resource to provide the `db` service with the required `db_data` volume it needs to store data.
+> Kev uses the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) resource to provide the `db` service with the required `db_data` volume it needs to store data.
 
 We'll be re-deploying our app in `local` environment mode.
 
@@ -352,7 +327,7 @@ This is not an issue for dependent Compose services as containers connected to t
 
 **Kubernetes is different**. To help our `wordpress` containers connect to the `db`, Kubernetes requires an explicit `Service` resource.
 
-The fix is simple, we need to instruct _Kev_ to recognise `db` as service that will be accessed from other services.
+The fix is simple, we need to instruct Kev to recognise `db` as service that will be accessed from other services.
 
 Simply add the `ports` attribute like below,
 
@@ -374,15 +349,11 @@ volumes:
 Then, re-render and re-deploy,
 ```shell script
 $ kev render
-# ...
-# INFO 💡: Target Dir: k8s/local
-# ...
-# INFO 💡: ⎈  kubernetes file "k8s/stage/db-service.yaml" created
-# ...
-# INFO 💡: Target Dir: k8s/stage
-#...
-# INFO 💡: ⎈  kubernetes file "k8s/stage/db-service.yaml" created
-# ...
+# > Reconcile...
+
+# > Detect secrets...
+
+# > Render...
 
 $ kubectl apply -f k8s/local -n kev-local   # re-apply the re-generated k8s/local manifests to our namespace
 # service/db created
@@ -421,24 +392,21 @@ services:
 
 ### Re-sync Kubernetes
 
-When we re-sync _Kev_, the `stage` environment's generated manifests will reflect the new number of `replicas`.
+When we re-sync Kev, the `stage` environment's generated manifests will reflect the new number of `replicas`.
 
 ```shell script
 $ kev render
-# ✓ Reconciling environment [local]
-#  → nothing to update
-# ✓ Reconciling environment [stage]
-#  → nothing to update
-# ..............................
+# > Reconcile...
 
-# INFO 💡: ⚙️  Output format: kubernetes
-...
-# INFO 💡: 🧰 App render complete!
+# > Detect secrets...
+
+# > Render...
 ```
 
 Re-deploying the manifests to Kubernetes on a `stage` environment will run 5 `wordpress` [Pods](https://kubernetes.io/docs/concepts/workloads/pods/) on Kubernetes - meaning 5 `wordpress` instances.
 
-We now have 2 different target environments,
+We now have 3 different target environments,
+- `dev` will only run a single `wordpress` instance.
 - `local` will only run a single `wordpress` instance.
 - `stage` will only run a 5 `wordpress` instances.
 
@@ -450,7 +418,7 @@ Check the [configuration reference](../reference/config-params.md) if you want t
 
 We have successfully moved a `wordpress` app from a local Docker Compose development flow to a connected multi-environment Kubernetes setup.
 
-_Kev_ facilitated all the heavy lifting. It enabled us to easily iterate on and manage our target environments.
+Kev facilitated all the heavy lifting. It enabled us to easily iterate on and manage our target environments.
 
 We also have an understanding of the **gotchas** we can face when moving from Compose to Kubernetes.
 
