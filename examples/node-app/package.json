@@ -1,0 +1,13 @@
+{
+  "name": "kev-node-app",
+  "version": "1.0.0",
+  "description": "Docker-Compose Node.js app on Kubernetes",
+  "author": "Appvia Ltd <info@appvia.io>",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.16.1"
+  }
+}
