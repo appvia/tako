@@ -72,7 +72,7 @@ Open the browser at `http://localhost:8080`. You should see `Hello World` displa
 
 *IMPORTANT*: If `--kubecontext` is pointing at remote Kubernetes cluster you need to make sure that you adjust `image` in docker-compose.yaml file so that it points at registry you control and are able to push to. Should that be a private registry then make sure that the remote Kubernetes cluster is able to [pull images from it](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
 
-Once the app has been build, pushed and deployed via _Kev's_ Skaffold integration you may inspect that the Node app is running in your cluster:
+Once the app has been built, pushed and deployed via _Kev's_ Skaffold integration you may inspect that the Node app is running in your cluster:
 
 > List Kubernetes application pods for the Node.js app:
 ```sh
