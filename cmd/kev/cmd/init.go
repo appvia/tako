@@ -30,7 +30,7 @@ var initLongDesc = `Tracks compose sources & creates deployment environments.
 
 Examples:
 
-  ### Initialise kev.yaml with root docker-compose.yml and override file tracking. Adds the default dev deployment environment.
+  ### Initialise kev.yaml with root docker-compose.yml and override file tracking. Adds a sandbox dev deployment environment.
   $ kev init
 
   ### Use an alternate docker-compose.yml file.
@@ -39,10 +39,10 @@ Examples:
   ### Use multiple alternate docker-compose.yml files.
   $ kev init -f docker-compose.alternate.yaml -f docker-compose.other.yaml
 
-  ### Use a specified environment.
+  ### Use a specified environment - in addition to a sandbox dev deployment environment.
   $ kev init -e staging
 
-  ### Use multiple specified environments.
+  ### Use multiple specified environments - in addition to the sandbox dev deployment environment.
   $ kev init -e staging -e production
 
   ### Prepare project for use with Skaffold.
