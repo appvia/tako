@@ -21,6 +21,7 @@ kev init -e dev -e staging -e prod --skaffold
 
 You will notice that 3 separate environment specific configuration files have been created:
 
+> Added environment specific override files:
 ```
 |- docker-compose.kev.dev.yaml
 |- docker-compose.kev.staging.yaml
@@ -37,6 +38,7 @@ It'll also bootstrap the Skaffold config file (`skaffold.yaml`). If skaffold.yam
 
 Once changes to base & environment specific Compose file(s) have been made
 
+> One-off Kubernetes manifests render:
 ```sh
 kev render
 ```
@@ -49,6 +51,7 @@ Inspect produced Kubernetes manifests at default `k8s` directory.
 
 Run the command below to continously watch for changes made to any of the source / environment Compose files related to your application and automatically rebuild Kubernetes manifests for all environments. See [help](../../docs/cli/kev_dev.md) for usage examples.
 
+> Watch Compose changes and auto render Kubernetes manifests:
 ```sh
 kev dev
 ```
@@ -57,6 +60,7 @@ kev dev
 
 Watch for the changes to your application Compose files, as well as application source code and automatically rebuild the K8s manifests and Build/Push/Deploy the app (via Skaffold dev loop) to any Kubernetes cluster upon detected changes. See [help](../../docs/cli/kev_dev.md) for usage examples.
 
+> Watch Compose and App source code changes, render manifests and build/push/deploy with Skaffold:
 ```sh
 kev dev --skaffold
 ```
@@ -70,6 +74,7 @@ Open the browser at `http://localhost:8080`. You should see `Hello World` displa
 
 Once the app has been build, pushed and deployed via _Kev's_ Skaffold integration you may inspect that the Node app is running in your cluster:
 
+> List Kubernetes application pods for the Node.js app:
 ```sh
 $ kubectl --context docker-desktop -n default get po
 
@@ -79,8 +84,10 @@ app-69d87ffbc8-pq4bs   1/1     Running   0          9s
 
 Now, try to adjust number of replicas for the app by modifying `kev.workload.replicas` label value to "2". You should observe `dev` loop pick up all the changes and do the hard work of generating K8s manifests, building, pushing and deploying your application automatically.
 
+> List Kubernetes application pods for the Node.js app after change to desired replicas number:
 ```sh
-$ k -n default get po
+$ kubectl --context docker-desktop -n default get po
+
 NAME                   READY   STATUS        RESTARTS   AGE
 app-85b85cf987-8ngks   1/1     Running       0          14s
 app-85b85cf987-h9l2m   1/1     Running       0          16s
