@@ -217,7 +217,7 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
 						LocalBuild: &latest.LocalBuild{
-							Push: &disabled,
+							Push: &enabled,
 						},
 					},
 					TagPolicy: latest.TagPolicy{

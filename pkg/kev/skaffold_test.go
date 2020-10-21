@@ -99,13 +99,13 @@ var _ = Describe("Skaffold", func() {
 			})
 
 			It("generates correct pipeline Build section for each environment", func() {
-				disabled := false
+				enabled := true
 
 				for _, p := range manifest.Profiles {
 					Expect(p.Build).To(Equal(latest.BuildConfig{
 						BuildType: latest.BuildType{
 							LocalBuild: &latest.LocalBuild{
-								Push: &disabled,
+								Push: &enabled,
 							},
 						},
 						TagPolicy: latest.TagPolicy{
