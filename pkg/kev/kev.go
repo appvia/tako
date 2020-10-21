@@ -30,11 +30,12 @@ import (
 const (
 	// ManifestName main application manifest
 	ManifestName = "kev.yaml"
-	defaultEnv   = "dev"
+	sandboxEnv   = "dev"
 )
 
 // Init initialises a kev manifest including source compose files and environments.
-// A default environment will be allocated if no environments were provided.
+// If no composeSources are provided, the working directory is introspected for valid compose files to act as sources.
+// Also, an implicit sandbox environment will always be created.
 func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
 	m, err := NewManifest(composeSources, workingDir)
 	if err != nil {

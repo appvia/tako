@@ -28,11 +28,12 @@ var _ = Describe("Init", func() {
 		workingDir string
 		manifest   *kev.Manifest
 		mErr       error
+		envs       []string
 		env        *kev.Environment
 	)
 
 	JustBeforeEach(func() {
-		manifest, mErr = kev.Init([]string{}, []string{}, workingDir)
+		manifest, mErr = kev.Init([]string{}, envs, workingDir)
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}
@@ -120,6 +121,30 @@ var _ = Describe("Init", func() {
 
 			It("should not error", func() {
 				Expect(mErr).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Context("sandbox dev environment", func() {
+		When("dev is not supplied as an environment", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-default/compose-yaml"
+				envs = []string{"stage"}
+			})
+			It("is created implicitly", func() {
+				Expect(mErr).NotTo(HaveOccurred())
+				Expect(manifest.GetEnvironmentsNames()).Should(ConsistOf("dev", "stage"))
+			})
+		})
+
+		When("dev is supplied as an environment", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-default/compose-yaml"
+				envs = []string{"stage", "dev"}
+			})
+			It("is only created once", func() {
+				Expect(mErr).NotTo(HaveOccurred())
+				Expect(manifest.GetEnvironmentsNames()).Should(ConsistOf("dev", "stage"))
 			})
 		})
 	})

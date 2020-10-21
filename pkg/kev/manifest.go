@@ -110,13 +110,13 @@ func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Mani
 }
 
 // MintEnvironments create new environments based on candidate environments and manifest base labels.
-// If no environments are provided, a default environment will be created.
+// This includes an implicit sandbox environment that will always be created.
 func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	fileNameTemplate := m.GetEnvironmentFileNameTemplate()
 
 	m.Environments = Environments{}
-	if len(candidates) == 0 {
-		candidates = append(candidates, defaultEnv)
+	if !contains(candidates, sandboxEnv) {
+		candidates = append(candidates, sandboxEnv)
 	}
 
 	override := m.getSourcesOverride().toBaseLabels()
