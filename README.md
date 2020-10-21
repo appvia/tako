@@ -8,13 +8,13 @@
 ![License: Apache-2.0](https://img.shields.io/github/license/appvia/kev)
 
 
-_Kev_ helps developers port and iterate Docker Compose apps onto Kubernetes. It understands the Docker Compose application topology and prepares it for deployment in (multiple) target environments, with minimal user input.
+Kev helps developers port and iterate Docker Compose apps onto Kubernetes. It understands the Docker Compose application topology and prepares it for deployment in (multiple) target environments, with minimal user input.
 
 We leverage the [Docker Compose](https://docs.docker.com/compose/compose-file/) specification and allow for target-specific configurations to be applied to each component of the application stack, simply.
 
-_Kev_ is opinionated in its choice of Kubernetes elements you should be able to control. It automatically infers key config parameters by analysing and reconciling changes in the project source compose file(s). The configuration parameters can be manually overridden to allow for better control of a cloud application deployment on Kubernetes.
+Kev is opinionated in its choice of Kubernetes elements you should be able to control. It automatically infers key config parameters by analysing and reconciling changes in the project source compose file(s). The configuration parameters can be manually overridden to allow for better control of a cloud application deployment on Kubernetes.
 
-_Kev_ reduces the need for Kubernetes expertise in the team. The generated Kubernetes deployment configuration follows best industry practices, with a thin layer of config options to enable further control. See [kev reference documentation](docs/reference/config-params.md) for a list of available options.
+Kev reduces the need for Kubernetes expertise in the team. The generated Kubernetes deployment configuration follows best industry practices, with a thin layer of config options to enable further control. See [kev reference documentation](docs/reference/config-params.md) for a list of available options.
 
 ## Features
 
@@ -24,9 +24,9 @@ _Kev_ reduces the need for Kubernetes expertise in the team. The generated Kuber
 
 * **Best practice out of the box** - Best practice is codified and embedded in the translation layer, so you don't have to think about what's required to run your project application on Kubernetes.
 
-* **Secure** - _Kev_ is opinionated about the secret management. At this stage of its relatively short life it delegates that responsibility to the user, to remove the risk of potential uncontrolled secrets leak. No secrets == No leaks!
+* **Secure** - Kev is opinionated about the secret management. At this stage of its relatively short life it delegates that responsibility to the user, to remove the risk of potential uncontrolled secrets leak. No secrets == No leaks!
 
-* **No vendor lock-in** - Because you already use docker-compose, you can keep using it, even if _Kev_ turns out to be not your cup of tea.
+* **No vendor lock-in** - Because you already use docker-compose, you can keep using it, even if Kev turns out to be not your cup of tea.
 
 * **Easy integrations** - You may use generated Kubernetes manifests with any tool / framework of your choice. Check out our [Skaffold Integration](docs/tutorials/kev-dev-with-skaffold.md).
 
@@ -63,7 +63,7 @@ kev init
 
 This identifies the default `docker-compose.yaml` and (if present) `docker-compose.override.yaml` files in your project directory. They will be used as the source of truth for your application deployment in Kubernetes.
 
-Also, it creates a default `dev` environment and its Compose override file.
+Also, it creates an implicit sandbox `dev` environment and its Compose override file.
 
 Here's another example. It uses an alternate `docker-compose` file with `stage` & `prod` environments:
 
@@ -78,18 +78,19 @@ It makes use of,
 Creating the files below in your project directory:
 
 ```sh
-├── docker-compose.kev.stage.yaml       # stage Compose environment override file
+├── docker-compose.kev.stage.yaml       # dev sandbox Compose environment override file
 ├── docker-compose.kev.prod.yaml        # prod Compose environment override file
+├── docker-compose.kev.stage.yaml       # stage Compose environment override file
 ├── kev.yaml                            # kev project manifest
 ├── ...
 ```
 
-Here's what happened, _Kev_ has,
+Here's what happened, Kev has,
 - Inferred the configuration details already present in your compose Kubernetes deployment sources.
 - Assigned sensible defaults for any config it couldn't infer.
-- Created Compose overrides files for the `stage` and `prod` environments.
+- Created Compose overrides files for the `dev`, `prod` and `stage` environments.
 
-That's it, your _Kev_ project is now ready!
+That's it, your Kev project is now ready!
 
 From now on it can,
 - Detect edits in your source compose file.
@@ -118,9 +119,11 @@ The directory below should now appear in your project directory:
 
 ```sh
 ├── k8s         # stores the Kubernetes manifests for all target deployment environments.
-├──── prod      # prod deploymeny environment
+├──── dev       # dev deployment environment
+├────── ...     # dev manifests
+├──── prod      # prod deployment environment
 ├────── ...     # prod manifests
-├──── stage     # stage deploymeny environment
+├──── stage     # stage deployment environment
 ├────── ...     # stage manifests
 ```
 
@@ -146,7 +149,7 @@ kubectl apply -f k8s/stage     # deploys your app with stage settings onto the d
 
 #### Other deployment tooling
 
-With _Kev_, you can use any Kubernetes deployment tool or framework you're familiar with, e.g `skaffold`, `tilt`, etc...
+With Kev, you can use any Kubernetes deployment tool or framework you're familiar with, e.g `skaffold`, `tilt`, etc...
 
 Check our [Roadmap][roadmap] for upcoming planned integrations.
 
@@ -157,7 +160,7 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 - [Develop the app with Kev and Skaffold](docs/tutorials/kev-dev-with-skaffold.md)
 - [Simple Node.js app development workflow example](docs/tutorials/simple-nodejs-app-workflow.md)
 
-  This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
+  This is an example of how to use Kev to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
 
 ## Configuration
 
@@ -171,17 +174,17 @@ See the [configuration reference](docs/reference/config-params.md) for details.
 
 ## Similar tools
 
-_Kev_ is inspired by the simple, easy to use and well adopted Docker Compose specification, as well as several other tools in the Kubernetes manifests generation and templating space such as Kompose, Ksonnet and Kustomize, to name a few.
+Kev is inspired by the simple, easy to use and well adopted Docker Compose specification, as well as several other tools in the Kubernetes manifests generation and templating space such as Kompose, Ksonnet and Kustomize, to name a few.
 
 See how [Kev differs from Kompose.](docs/tutorials/how-kev-differs-from-kompose.md)
 
 Each of the solutions above, however, come with their own set of challenges and are lacking in various areas. Some have been discontinued, some see very few contributions or updates, others require a great deal of prior Kubernetes expertise to find them useful.
 
-_Kev_ bridges the gaps in the existing tooling, helping developers familiar with Docker & Compose to easily get up and running with Kubernetes.
+Kev bridges the gaps in the existing tooling, helping developers familiar with Docker & Compose to easily get up and running with Kubernetes.
 
 ## Contributing to Kev
 
-We welcome any contributions from the community! Have a look at our [contribution](CONTRIBUTING.md) guide for more information on how to get started. If you use _Kev_, find it useful, or are generally interested in improving Developer Experience on Kubernetes then please let us know by **Starring** and **Watching** this repo. Thanks!
+We welcome any contributions from the community! Have a look at our [contribution](CONTRIBUTING.md) guide for more information on how to get started. If you use Kev, find it useful, or are generally interested in improving Developer Experience on Kubernetes then please let us know by **Starring** and **Watching** this repo. Thanks!
 
 ## Roadmap
 
