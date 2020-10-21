@@ -3,7 +3,7 @@ weight: 12
 title: Kev workflow example with a simple Node.js App
 ---
 
-# Workflow example with a simple Node.js App
+# Development workflow example with a simple Node.js app
 
 ## Get Kev
 
