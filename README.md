@@ -154,8 +154,8 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 
 - [How does Kev differ from Kompose?](docs/tutorials/how-kev-differs-from-kompose.md)
 - [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
-- [Iterate on the app with Kev and Skaffold](docs/tutorials/kev-dev-with-skaffold.md)
-- [Simple Node.js app workflow example](docs/tutorials/simple-nodejs-app-workflow.md)
+- [Develop the app with Kev and Skaffold](docs/tutorials/kev-dev-with-skaffold.md)
+- [Simple Node.js app development workflow example](docs/tutorials/simple-nodejs-app-workflow.md)
 
   This is an example of how to use _Kev_ to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
 
