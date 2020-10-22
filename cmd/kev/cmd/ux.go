@@ -37,7 +37,7 @@ func displayCmdStarted(cmdName string) {
 }
 
 func displayDevModeStarted() {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watched all environments\n")
+	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watching for changes\n")
 	resetFormatting()
 }
 
@@ -61,4 +61,4 @@ func displayInitSuccess(w io.Writer, files []skippableFile) {
 	}
 }
 
-func resetFormatting() { fmt.Print(" \033[0m") }
+func resetFormatting() { fmt.Print(" \033[0m\n") }
