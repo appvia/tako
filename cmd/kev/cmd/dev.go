@@ -80,6 +80,9 @@ func init() {
 		"Override default Kubernetes manifests output directory. Default: k8s/<env>",
 	)
 
+	flags.StringSlice("environment", []string{}, "")
+	_ = flags.MarkHidden("environment")
+
 	flags.BoolP("skaffold", "", false, "[Experimental] Activates Skaffold dev loop.")
 
 	flags.StringP(
@@ -215,7 +218,6 @@ func runCommands(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// re-render manifests for specified environments only
 	if err := runRenderCmd(cmd, args); err != nil {
 		return err
 	}
