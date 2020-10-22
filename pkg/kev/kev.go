@@ -129,7 +129,6 @@ func Watch(workDir string, change chan<- string) error {
 	}()
 
 	files := manifest.GetSourcesFiles()
-	// filteredEnvs, err := manifest.GetEnvironments(envs)
 	filteredEnvs, err := manifest.GetEnvironments([]string{})
 	for _, e := range filteredEnvs {
 		files = append(files, e.File)
