@@ -202,7 +202,7 @@ func BaseSkaffoldManifest() *SkaffoldManifest {
 func (s *SkaffoldManifest) SetProfiles(envs []string) {
 
 	if len(envs) == 0 {
-		envs = []string{sandboxEnv}
+		envs = []string{SandboxEnv}
 	}
 
 	for _, e := range envs {

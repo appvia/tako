@@ -30,7 +30,7 @@ import (
 const (
 	// ManifestName main application manifest
 	ManifestName = "kev.yaml"
-	sandboxEnv   = "dev"
+	SandboxEnv   = "dev"
 )
 
 // Init initialises a kev manifest including source compose files and environments.
