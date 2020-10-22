@@ -5,7 +5,7 @@ title: Kev dev with skaffold
 
 # Kev Dev w/Skaffold
 
-This tutorial will walk you through how to iterate on a Kubernetes application using the _Kev_ `dev` command with an optional [Skaffold](https://skaffold.dev/) hook.
+This tutorial will walk you through how to iterate on a Kubernetes application using the Kev `dev` command with an optional [Skaffold](https://skaffold.dev/) hook.
 
 We encourage everyone to get familiar with the [Getting started with Kev](getting-started-with-kev.md) tutorial before proceeding with this guide.
 
@@ -16,22 +16,18 @@ with a simple `kev render` command.
 
 However, when frequent changes are made to any of the source or environment specific compose files, this becomes cumbersome.
 
-To automate the process of rendering K8s manifests, run _Kev_ in development mode (see command [reference](cli/kev_dev.md) for details)
+To automate the process of rendering K8s manifests, run Kev in development mode (see command [reference](cli/kev_dev.md) for details)
 
-> Run Kev in dev mode. Starts the watch loop and automatically re-renders K8s manifests.
+> Run Kev in dev mode: starts the watch loop and automatically re-renders K8s manifests for affected environments.
 ```sh
-# for all environments
 kev dev
-
-# for specified environment(s)
-kev dev -e myenv
 ````
 
-It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for environments specified via `--environment | -e` flag(s). If no environments have been specified it defaults to `dev` environment.
+It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for the affected environments.
 
 ## Automatic Develop / Build / Push / Deploy
 
-This section will describe how to take advantage of existing Development Lifecycle tools enhancing developer experience when iterating on the Kubernetes application locally. We'll focus on _Kev_'s [Skaffold](https://skaffold.dev/) integration.
+This section will describe how to take advantage of existing Development Lifecycle tools enhancing developer experience when iterating on the Kubernetes application locally. We'll focus on Kev's [Skaffold](https://skaffold.dev/) integration.
 
 ## ⚬ Initialise Kev project with Skaffold support
 
@@ -48,7 +44,7 @@ This command prepares your application and bootstraps a new Skaffold config (_sk
 
 If a Kev project has been previously initialised without Skaffold support, the easiest way forward to adopt Skaffold is to remove _kev.yaml_ file and initialize the project again.
 
-**Note:** Be mindful that names of all the environments you want to track must be specified - _Kev_ `init` won't automatically discover existing environment override files!
+**Note:** Be mindful that names of all the environments you want to track must be specified - Kev `init` won't automatically discover existing environment override files!
 
 Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Kev about the fact by adding the following line in _kev.yaml_ file:
 
@@ -71,7 +67,7 @@ skaffold: skaffold.yaml # <= tell Kev that skaffold is now initialised
 
 ## ⚬ Kev + Skaffold
 
-At this point all you need to do to take advantage of Skaffold integration is to start _Kev_ in [development](cli/kev_dev.md) mode with Skaffold hook enabled:
+At this point all you need to do to take advantage of Skaffold integration is to start Kev in [development](cli/kev_dev.md) mode with Skaffold hook enabled:
 
 > Start Kev in development with Skaffold integration activated
 ```sh
