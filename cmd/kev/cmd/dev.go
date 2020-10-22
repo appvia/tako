@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var devLongDesc = `(dev) Watches to reconcile changes from source compose files and environments then re-renders K8s manifests.
+var devLongDesc = `(dev) Continuous reconcile and re-render of K8s manifests with optional project build, push and deploy (using --skaffold).
 
 Examples:
 
@@ -45,7 +45,7 @@ Examples:
 
 var devCmd = &cobra.Command{
 	Use:   "dev",
-	Short: "Watches to reconcile changes from source compose files and environments then re-renders K8s manifests.",
+	Short: "Continuous reconcile and re-render of K8s manifests with optional project build, push and deploy (using --skaffold).",
 	Long:  devLongDesc,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return verifySkaffoldExpectedFlags(cmd)
