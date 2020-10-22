@@ -29,11 +29,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var devLongDesc = `(dev) Continuously reconciles changes from all source compose files and re-renders K8s manifests.
+var devLongDesc = `(dev) Watches to reconcile changes from source compose files and environments then re-renders K8s manifests.
 
 Examples:
 
-   ### Run Kev in dev mode against all environments
+   ### Run Kev in dev mode
    $ kev dev
 
    ### Use a custom directory to render manifests 
@@ -45,7 +45,7 @@ Examples:
 
 var devCmd = &cobra.Command{
 	Use:   "dev",
-	Short: "Watches changes to the source Compose files and re-renders K8s manifests.",
+	Short: "Watches to reconcile changes from source compose files and environments then re-renders K8s manifests.",
 	Long:  devLongDesc,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return verifySkaffoldExpectedFlags(cmd)
