@@ -18,12 +18,12 @@ However, when frequent changes are made to any of the source or environment spec
 
 To automate the process of rendering K8s manifests, run Kev in development mode (see command [reference](cli/kev_dev.md) for details)
 
-> Run Kev in dev mode: starts the watch loop and automatically re-renders K8s manifests for affected environments.
+> Run Kev in dev mode: starts the watch loop and automatically re-renders K8s manifests for changed environments.
 ```sh
 kev dev
 ````
 
-It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for the affected environments.
+It will start the watch loop over source compose & environment override files. When a modification is detected it automatically re-renders Kubernetes manifests for the changed environments.
 
 ## Automatic Develop / Build / Push / Deploy
 
