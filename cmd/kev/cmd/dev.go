@@ -102,8 +102,8 @@ func init() {
 	flags.StringP(
 		"kev-env",
 		"",
-		"", // default: it'll use the first element from `environment` slice...
-		"[Experimental] Kev environment that will be deployed by Skaffold. If not specified it'll use the first env name passed in '--environment' flag.",
+		kev.SandboxEnv,
+		fmt.Sprintf("[Experimental] Kev environment that will be deployed by Skaffold. If not specified it'll use the sandbox %s env.", kev.SandboxEnv),
 	)
 
 	rootCmd.AddCommand(devCmd)
@@ -119,7 +119,7 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	if skaffold {
 		if len(namespace) == 0 {
 			log.Warnf("Skaffold `namespace` not specified - will use `%s`", skaffoldNamespace)
-			cmd.Flag("namespace").Value.Set(skaffoldNamespace)
+			_ = cmd.Flag("namespace").Value.Set(skaffoldNamespace)
 		} else {
 			log.Infof("Skaffold dev loop will deploy to `%s` namespace", namespace)
 		}
@@ -131,8 +131,7 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 		}
 
 		if len(kevenv) == 0 {
-			log.Warnf("Skaffold will use profile pointing at default `%s` environment. You may override it with `--kev-dev` flag.", "dev")
-			cmd.Flag("kev-env").Value.Set("dev")
+			log.Warnf("Skaffold will use profile pointing at the sandbox `%s` environment. You may override it with `--kev-env` flag.", kev.SandboxEnv)
 		} else {
 			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
 		}

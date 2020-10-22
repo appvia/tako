@@ -35,7 +35,7 @@ In order to take advantage of Skaffold, you must prepare your project accordingl
 
 > Initialise Kev project with Skaffold support
 ```sh
-kev init --skaffold -e dev -e ...
+kev init --skaffold -e stage 
 ```
 
 This command prepares your application and bootstraps a new Skaffold config (_skaffold.yaml_) if it doesn't already exist. Alternatively, it'll add environment & helper profiles to already existing Skaffold config automatically. The profiles added by Kev can be used to control which application Kubernetes manifests should be deployed and to which K8s cluster, be it local or remote. They should also come handy when defining steps in CI/CD pipelines.
@@ -80,7 +80,7 @@ kev dev --skaffold
 ```
 
 The command will start two watch loops,
-1) one responsible for reconciling changes in your Docker Compose project source and environment override files to produce up-to-date Kubernetes manifests for each of specified environments (or default `dev` environment if none provided),
+1) one responsible for reconciling changes in your Docker Compose project source and environment override files to produce up-to-date Kubernetes manifests for changed environments,
 2) a second loop responsible for watching changes in your project source code and deployment manifests.
 
 Every change made to the Docker Compose project will produce an updated set of K8s manifests for your app, which in turn will inform Skaffold to trigger another Build/Push/Deploy iteration. This will deploy a fresh set of manifests to the target Kuberentes cluster.
@@ -89,7 +89,7 @@ There are a few extra bits of information that Skaffold requires to perform its 
 
 * `--namespace | -n` - Informs Skaffold which namespace the application should be deployed to. Default: `default`.
 * `--kubecontext | -k` - Specified kubectl context to be used by Skaffold. This determines the cluster to which your application will be deployed to. If not specified it will default to current [kebectl context](https://kubernetes.io/docs/reference/kubectl/cheatsheet/#kubectl-context-and-configuration).
-* `--kev-env` - Kev tracked environment name of which Kubernetes manifests will be deployed to a target cluster/namespace. Defaults to the first specified environment passed via `--environment (-e)` flag. If no environments have been specified it will default to `dev` environment.
+* `--kev-env` - Kev tracked environment name of which Kubernetes manifests will be deployed to a target cluster/namespace. Defaults to the sandbox `dev` environment, if no environments have been specified.
 
 When the dev loop is interrupted with Ctrl+C it will automatically cleanup all deployed K8s objects from a target namespace and attempt to prune locally built docker images.
 

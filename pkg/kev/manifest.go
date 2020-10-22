@@ -115,8 +115,8 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	fileNameTemplate := m.GetEnvironmentFileNameTemplate()
 
 	m.Environments = Environments{}
-	if !contains(candidates, sandboxEnv) {
-		candidates = append(candidates, sandboxEnv)
+	if !contains(candidates, SandboxEnv) {
+		candidates = append(candidates, SandboxEnv)
 	}
 
 	override := m.getSourcesOverride().toBaseLabels()
