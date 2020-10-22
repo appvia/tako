@@ -29,20 +29,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var devLongDesc = `(dev) Continuously watches and reconciles changes to the source compose files and re-renders K8s manifests.
+var devLongDesc = `(dev) Continuously reconciles changes from all source compose files and re-renders K8s manifests.
 
-  Examples:
+Examples:
 
-   ### Run Kev in dev mode
+   ### Run Kev in dev mode against all environments
    $ kev dev
 
-   ### Run Kev in dev mode for a particular environment only
-   $ kev dev -e dev -e prod
-
-   ### Run Kev in dev mode and render manifests to custom directory
+   ### Use a custom directory to render manifests 
    $ kev dev -d my-manifests
 
-   ### Run Kev in dev mode with Skaffold dev loop activated
+   ### Activate the Skaffold dev loop to build, push and deploy your project
    $ kev dev --skaffold
  `
 
@@ -83,13 +80,6 @@ func init() {
 		"Override default Kubernetes manifests output directory. Default: k8s/<env>",
 	)
 
-	flags.StringSliceP(
-		"environment",
-		"e",
-		[]string{"dev"},
-		"Specify an environment",
-	)
-
 	flags.BoolP("skaffold", "", false, "[Experimental] Activates Skaffold dev loop.")
 
 	flags.StringP(
@@ -116,9 +106,8 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 }
 
-// verifies skaffold required flags and sets appropriate defaults
+// verifySkaffoldExpectedFlags verifies Skaffold required flags and sets appropriate defaults
 func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
-	envs, _ := cmd.Flags().GetStringSlice("environment")
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
 	namespace, _ := cmd.Flags().GetString("namespace")
 	kubecontext, _ := cmd.Flags().GetString("kubecontext")
@@ -139,8 +128,8 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 		}
 
 		if len(kevenv) == 0 {
-			log.Warnf("Skaffold will use profile pointing at default `%s` environment. You may override it with `--kev-dev` flag.", envs[0])
-			cmd.Flag("kev-env").Value.Set(envs[0])
+			log.Warnf("Skaffold will use profile pointing at default `%s` environment. You may override it with `--kev-dev` flag.", "dev")
+			cmd.Flag("kev-env").Value.Set("dev")
 		} else {
 			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
 		}
@@ -150,7 +139,6 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 }
 
 func runDevCmd(cmd *cobra.Command, args []string) error {
-	envs, err := cmd.Flags().GetStringSlice("environment")
 	skaffold, err := cmd.Flags().GetBool("skaffold")
 	namespace, err := cmd.Flags().GetString("namespace")
 	kubecontext, err := cmd.Flags().GetString("kubecontext")
@@ -160,7 +148,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	displayDevModeStarted(envs)
+	displayDevModeStarted()
 
 	change := make(chan string, 50)
 	defer close(change)
@@ -194,7 +182,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
 	}
 
-	go kev.Watch(workDir, envs, change)
+	go kev.Watch(workDir, change)
 
 	for {
 		ch := <-change

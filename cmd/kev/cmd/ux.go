@@ -36,11 +36,8 @@ func displayCmdStarted(cmdName string) {
 	_, _ = os.Stdout.Write([]byte("> " + cmdName + "...\n"))
 }
 
-func displayDevModeStarted(envs []string) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watched environments:\n")
-	for _, env := range envs {
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m → "+env+"\n")
-	}
+func displayDevModeStarted() {
+	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watched all environments\n")
 	resetFormatting()
 }
 
@@ -64,4 +61,4 @@ func displayInitSuccess(w io.Writer, files []skippableFile) {
 	}
 }
 
-func resetFormatting() { fmt.Print(" \033[0m\n") }
+func resetFormatting() { fmt.Print(" \033[0m") }
