@@ -49,7 +49,9 @@ Inspect produced Kubernetes manifests at default `k8s` directory.
 
 ### Watch for Compose changes and auto-rebuild K8s manifests
 
-Run the command below to continously watch for changes made to any of the source / environment Compose files related to your application and automatically rebuild Kubernetes manifests for all environments. See [help](../../docs/cli/kev_dev.md) for usage examples.
+Run the command below to continuously watch for changes made to any of the source / environment Compose files related to your application and automatically rebuild Kubernetes manifests for changed environments.
+
+See [help](../../docs/cli/kev_dev.md) for usage examples.
 
 > Watch Compose changes and auto render Kubernetes manifests:
 ```sh
@@ -58,7 +60,9 @@ kev dev
 
 ### Watch for Compose and Application source code changes with Build/Push/Deploy loop enabled
 
-Watch for the changes to your application Compose files, as well as application source code and automatically rebuild the K8s manifests and Build/Push/Deploy the app (via Skaffold dev loop) to any Kubernetes cluster upon detected changes. See [help](../../docs/cli/kev_dev.md) for usage examples.
+Watch for changes to your application's Compose files plus project source code. Then, automatically rebuild the K8s manifests and build/push/deploy the app via Skaffold dev loop to any Kubernetes cluster upon detected changes.
+
+See [help](../../docs/cli/kev_dev.md) for usage examples.
 
 > Watch Compose and App source code changes, render manifests and build/push/deploy with Skaffold:
 ```sh
@@ -70,9 +74,9 @@ Open the browser at `http://localhost:8080`. You should see `Hello World` displa
 
 *NOTE*: The command above will use current kubectl context, and will attempt to deploy your app to `default` namespace. Those can be adjusted with `--kubecontext=<context>` & `--namespace=<ns>` options added to the command above.
 
-*IMPORTANT*: If `--kubecontext` is pointing at remote Kubernetes cluster you need to make sure that you adjust `image` in docker-compose.yaml file so that it points at registry you control and are able to push to. Should that be a private registry then make sure that the remote Kubernetes cluster is able to [pull images from it](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+**IMPORTANT**: If `--kubecontext` is pointing at remote Kubernetes cluster you need to make sure you adjust the `image` in docker-compose.yaml file so that it points at registry you control and are able to push to. Should that be a private registry then make sure that the remote Kubernetes cluster is able to [pull images from it](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
 
-Once the app has been built, pushed and deployed via _Kev's_ Skaffold integration you may inspect that the Node app is running in your cluster:
+Once the app has been built, pushed and deployed via Kev's Skaffold integration you may inspect that the Node app is running in your cluster:
 
 > List Kubernetes application pods for the Node.js app:
 ```sh

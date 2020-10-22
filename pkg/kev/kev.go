@@ -69,8 +69,13 @@ func DetectSecrets(workingDir string) error {
 	if err != nil {
 		return err
 	}
-	m.DetectSecretsInSources(config.SecretMatchers)
-	m.DetectSecretsInEnvs(config.SecretMatchers)
+
+	if err := m.DetectSecretsInSources(config.SecretMatchers); err != nil {
+		return err
+	}
+	if err := m.DetectSecretsInEnvs(config.SecretMatchers); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -86,7 +91,7 @@ func Render(workingDir string, format string, singleFile bool, dir string, envs 
 }
 
 // Watch continuously watches source compose files & environment overrides and notifies changes to a channel
-func Watch(workDir string, envs []string, change chan<- string) error {
+func Watch(workDir string, change chan<- string) error {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
 		log.Errorf("Unable to load app manifest - %s", err)
@@ -124,7 +129,7 @@ func Watch(workDir string, envs []string, change chan<- string) error {
 	}()
 
 	files := manifest.GetSourcesFiles()
-	filteredEnvs, err := manifest.GetEnvironments(envs)
+	filteredEnvs, err := manifest.GetEnvironments([]string{})
 	for _, e := range filteredEnvs {
 		files = append(files, e.File)
 	}
@@ -143,8 +148,8 @@ func Watch(workDir string, envs []string, change chan<- string) error {
 
 // ActivateSkaffoldDevLoop checks whether skaffold dev loop can be activated, and returns an error if not.
 // It'll also attempt to reconcile Skaffold profiles before starting dev loop - this is done
-// so that necessary profiles are added to the skaffold config. It's necessary as environment
-// specific profile is supplied to skaffold so it knows what manifests to deploy and to which k8s cluster.
+// so that necessary profiles are added to the Skaffold config. It's necessary as environment
+// specific profile is supplied to Skaffold so it knows what manifests to deploy and to which k8s cluster.
 func ActivateSkaffoldDevLoop(workDir string) (string, *SkaffoldManifest, error) {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {

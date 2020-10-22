@@ -58,10 +58,10 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 func displayReconcileRules(verbose bool) {
 	if verbose {
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m -- HOW DOES RECONCILE WORK? --\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Environment settings always override project settings.\n")
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ New services & volumes in a project will be added to all environments.\n")
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Removed services & volumes from a project will be removed from all environments.\n")
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ Environment settings trump project settings, with the exception of ports.\n")
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ An environment can only override a service's Env Vars.\n")
+		_, _ = fmt.Fprintf(os.Stdout, "\033[2m᛫ A service's Env Vars can be overridden by an environment.\n")
 		_, _ = fmt.Fprintf(os.Stdout, "\033[2m ------------------------------\n")
 	}
 }

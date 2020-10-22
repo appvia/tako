@@ -36,11 +36,8 @@ func displayCmdStarted(cmdName string) {
 	_, _ = os.Stdout.Write([]byte("> " + cmdName + "...\n"))
 }
 
-func displayDevModeStarted(envs []string) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watched environments:\n")
-	for _, env := range envs {
-		_, _ = fmt.Fprintf(os.Stdout, "\033[2m → "+env+"\n")
-	}
+func displayDevModeStarted() {
+	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watching for changes\n")
 	resetFormatting()
 }
 
