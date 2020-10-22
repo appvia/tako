@@ -49,7 +49,7 @@ Inspect produced Kubernetes manifests at default `k8s` directory.
 
 ### Watch for Compose changes and auto-rebuild K8s manifests
 
-Run the command below to continuously watch for changes made to any of the source / environment Compose files related to your application and automatically rebuild Kubernetes manifests for affected environments.
+Run the command below to continuously watch for changes made to any of the source / environment Compose files related to your application and automatically rebuild Kubernetes manifests for changed environments.
 
 See [help](../../docs/cli/kev_dev.md) for usage examples.
 
