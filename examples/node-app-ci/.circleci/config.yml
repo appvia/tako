@@ -1,0 +1,52 @@
+---
+version: 2.1
+
+orbs:
+  kube-orb: circleci/kubernetes@0.11.1
+  docker: circleci/docker@1.5.0
+
+jobs:
+  stage:
+    environment:
+      KUBE_CONFIG_FILE: /etc/deploy/config
+    machine:
+      docker_layer_caching: true
+      image: ubuntu-1604:202007-01
+    steps:
+      - docker/check:
+          docker-username: DOCKER_USERNAME
+          docker-password: DOCKER_TOKEN
+          registry: quay.io
+      - checkout
+      - kube-orb/install-kubectl:
+          kubectl-version: latest
+      - run:
+          name: Setup
+          command: |
+            mkdir -p bin
+            mkdir -p /etc/deploy
+            echo ${KUBE_CONFIG} | base64 -d > ${KUBE_CONFIG_FILE}
+            export PATH=${PATH}:${PWD}/bin
+      - run:
+          name: Installing dependencies
+          command: |
+            sudo apt-get update
+            sudo apt install -y curl git
+      - run:
+          name: Installing Kev and Skaffold
+          command: |
+            curl --request GET -sL \
+                --url https://storage.googleapis.com/skaffold/releases/latest/skaffold-darwin-amd64 \
+                --output bin/skaffold
+            chmod +x bin/skaffold
+            make build
+      - run:
+          name: Deploy
+          command: |
+            kev render -e staging
+            skaffold run --kubeconfig ${KUBE_CONFIG_FILE} -p staging-env
+
+workflows:
+  deploy-staging:
+    jobs:
+      - stage
