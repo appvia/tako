@@ -81,6 +81,8 @@ Adjust your Kubernetes `staging` application parameters for each of the componen
 
 Also, you'll find that Kev has bootstrapped a Skaffold config file (`skaffold.yaml`). If a `skaffold.yaml` file previously existed, then the additional profiles will be added there.
 
+Our CI pipeline will be using this Skaffold config file to power builds, pushes and deployments.  
+
 ## Iterate on the application and commit
 
 Iterate on the application as [described here](simple-nodejs-app-workflow.md#iterate-on-the-application).
