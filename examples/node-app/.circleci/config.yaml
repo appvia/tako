@@ -1,0 +1,55 @@
+---
+version: 2.1
+
+orbs:
+  kube-orb: circleci/kubernetes@0.11.1
+  docker: circleci/docker@1.5.0
+
+jobs:
+  stage:
+    environment:
+    machine:
+      image: ubuntu-1604:202007-01
+    steps:
+      - docker/check:
+          docker-username: DOCKER_USERNAME
+          docker-password: DOCKER_TOKEN
+          registry: quay.io
+      - checkout
+      - kube-orb/install-kubectl:
+          kubectl-version: latest
+      - run:
+          name: Setup
+          command: |
+            mkdir -p bin
+            mkdir -p hacks/deploy
+      - run:
+          name: Installing dependencies
+          command: |
+            sudo apt-get update
+            sudo apt install -y curl git
+      - run:
+          name: Installing Kev
+          command: |
+            curl --request GET -sL \
+                --url https://github.com/appvia/kev/releases/latest/download/kev-linux-amd64 \
+                --output bin/kev
+            chmod +x bin/kev
+      - run:
+          name: Installing Skaffold
+          command: |
+            curl --request GET -sL \
+                --url https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 \
+                --output bin/skaffold
+            chmod +x bin/skaffold
+      - run:
+          name: Deploy
+          command: |
+            echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
+            ./bin/kev/kev render -e staging
+            ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
+
+workflows:
+  deploy-staging:
+    jobs:
+      - stage

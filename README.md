@@ -159,8 +159,7 @@ Check our [Roadmap][roadmap] for upcoming planned integrations.
 - [Getting started with Kev](docs/tutorials/getting-started-with-kev.md)
 - [Develop the app with Kev and Skaffold](docs/tutorials/kev-dev-with-skaffold.md)
 - [Simple Node.js app development workflow example](docs/tutorials/simple-nodejs-app-workflow.md)
-
-  This is an example of how to use Kev to iterate and deploy a [WordPress Docker Compose application](https://docs.docker.com/compose/wordpress/) onto Kubernetes.
+- [Simple Node.js app CI workflow example](docs/tutorials/simple-nodejs-app-ci-workflow.md)
 
 ## Configuration
 
