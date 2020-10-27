@@ -8,9 +8,7 @@ orbs:
 jobs:
   stage:
     environment:
-      KUBE_CONFIG_FILE: /etc/deploy/config
     machine:
-      docker_layer_caching: true
       image: ubuntu-1604:202007-01
     steps:
       - docker/check:
@@ -24,27 +22,32 @@ jobs:
           name: Setup
           command: |
             mkdir -p bin
-            mkdir -p /etc/deploy
-            echo ${KUBE_CONFIG} | base64 -d > ${KUBE_CONFIG_FILE}
-            export PATH=${PATH}:${PWD}/bin
+            mkdir -p hacks/deploy
       - run:
           name: Installing dependencies
           command: |
             sudo apt-get update
             sudo apt install -y curl git
       - run:
-          name: Installing Kev and Skaffold
+          name: Installing Kev
           command: |
             curl --request GET -sL \
-                --url https://storage.googleapis.com/skaffold/releases/latest/skaffold-darwin-amd64 \
+                --url https://github.com/appvia/kev/releases/latest/download/kev-linux-amd64 \
+                --output bin/kev
+            chmod +x bin/kev
+      - run:
+          name: Installing Skaffold
+          command: |
+            curl --request GET -sL \
+                --url https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 \
                 --output bin/skaffold
             chmod +x bin/skaffold
-            make build
       - run:
           name: Deploy
           command: |
-            kev render -e staging
-            skaffold run --kubeconfig ${KUBE_CONFIG_FILE} -p staging-env
+            echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
+            ./bin/kev/kev render -e staging
+            ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
 
 workflows:
   deploy-staging:

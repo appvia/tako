@@ -7,7 +7,7 @@ title: Kev CI workflow example with a simple Node.js App
 
 This example walks through using Kev in a commit based CI pipeline.
 
-You will setup CircleCI to reconcile, render, build, push and deploy to a remote staging environment. 
+You will setup CircleCI to render, build, push and deploy to a remote staging environment. 
 
 We assume that you,
 - Use [`git`](https://git-scm.com/) for source control and can push to a remote Git repo.
@@ -22,13 +22,42 @@ We assume that you,
 
 ### kube-config file
 
-We will encode our kube-config file into base64.
+We need to connect our CI deployment to a remote cluster using a `kube-context` setup to access the remote cluster. This context will be defined in a `kube-config` file.
 
-```shell script
-cat ~/path/to/your/kube/config | base64
+Make a copy of this `kube-config` file and remove any kube-contexts that do not relate to our final deployment.
+
+> kube-config file: slimmed kube-context example.
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    insecure-skip-tls-verify: false
+    server: https://xx.xx.xx.xx
+  name: remote-cluster
+contexts:
+- context:
+    cluster: remote-cluster
+    user: a-user
+  name: remote-cluster-context
+current-context: remote-cluster-context
+preferences: {}
+users:
+- name: a-user
+  user:
+    auth-provider:
+...
 ```
 
-Then create `KUBE_CONFIG`, a [CircleCI Project Environment Variable](https://circleci.com/docs/2.0/env-vars/#setting-an-environment-variable-in-a-project), and store the base64 value there.
+Now encode the slimmed down `kube-config` file into base64.
+
+```shell script
+cat ~/path/to/remote/cluster/kube/config | base64
+```
+
+Then create the following [CircleCI Project Environment Variables](https://circleci.com/docs/2.0/env-vars/#setting-an-environment-variable-in-a-project),
+- `KUBE_CONFIG_STAGING`, to store the `kube-config` base64 value there.
+- `KUBE_CONTEXT_STAGING`, to store the value of the `kube-context` there.
 
 ### Docker registry
 
@@ -38,30 +67,31 @@ These allow us to push our app's image to a secure docker registry. Should that 
 
 ### config.yaml
 
-Here is the [CircleCI config file](../../examples/node-app-ci/.circleci/config.yml). It will create a CI pipeline that is triggered by a commit to your Git repo.
+Here is the [CircleCI config file](../../examples/node-app/.circleci/config.yml). It will create a CI pipeline that is triggered by a commit to your Git repo.
 
-It assumes the necessary **CircleCI Environment Variables have been setup**.
+It assumes the necessary **CircleCI Environment Variables have been setup**, and the target cluster has a `staging` namespace already setup.
 
-Also, it depends on the staging environment that we will be creating shortly. Here's the relevant step that performs the actual deployment,
+It also depends on the Kev staging environment that we will be creating shortly. Here's the relevant step that performs the actual deployment,
 
-> CircleCI Deploy step: reconcile and render staging, use Skaffold to build, push and deploy your app to Kubernetes. 
+> CircleCI Deploy step: render staging, use Skaffold to build, push and deploy your app to Kubernetes. 
 ```yaml
 ...
 ...
       - run:
           name: Deploy
           command: |
-            kev render -e stage
-            skaffold run --kubeconfig ${KUBE_CONFIG_FILE} -p staging-env
+            echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
+            ./bin/kev/kev render -e staging
+            ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
 ...
 ...
-```
-
-Commit the latest and push it to your Git repo. 
+``` 
 
 ## Initialise project
 
-> Inside the project directory (`./examples/node-app-ci`) instruct Kev to:
+To follow the tutorial, make a copy of the project directory (`./examples/node-app`).
+
+> Inside the copied project directory (`./examples/node-app`) instruct Kev to:
 > * create a `staging` based Kubernetes environment configuration.
 > * prepare the app for use with [Skaffold](https://skaffold.dev/).
 
@@ -87,7 +117,7 @@ Our CI pipeline will be using this Skaffold config file to power builds, pushes 
 
 Iterate on the application as [described here](simple-nodejs-app-workflow.md#iterate-on-the-application).
 
-When your happy commit the latest and push.
+When you're happy, commit the latest and push.
 
 ## App deployed to staging
 
@@ -97,7 +127,7 @@ After the `stage` job successfully finishes, inspect that the Node app is runnin
 
 > List Kubernetes application pods for the Node.js app:
 ```sh
-$ kubectl --context <remote_cluster_context> -n default get po
+$ kubectl --context <remote_cluster_context> -n staging get po
 
 NAME                   READY   STATUS    RESTARTS   AGE
 app-69d87ffbc8-wgs6   1/1     Running   0          9s

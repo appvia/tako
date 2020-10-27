@@ -1,3 +1,5 @@
 # Node.js app example
 
-See [workflow example with a simple Node.js App tutorial](../../docs/tutorials/simple-nodejs-app-workflow.md) for details.
+Used by: 
+- [Simple Node.js app development workflow example](../../docs/tutorials/simple-nodejs-app-workflow.md) for details.
+- [Simple Node.js app CI workflow example](../../docs/tutorials/simple-nodejs-app-ci-workflow.md) for details.
