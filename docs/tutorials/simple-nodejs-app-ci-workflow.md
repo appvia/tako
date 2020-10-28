@@ -81,7 +81,7 @@ It also depends on the Kev staging environment that we will be creating shortly.
           name: Deploy
           command: |
             echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
-            ./bin/kev/kev render -e staging
+            ./bin/kev render -e staging
             ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
 ...
 ...
