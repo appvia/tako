@@ -8,6 +8,7 @@ orbs:
 jobs:
   stage:
     environment:
+      KUBE_CONFIG_STAGING_FILE: hacks/deploy/config
     machine:
       image: ubuntu-1604:202007-01
     steps:
@@ -46,7 +47,7 @@ jobs:
           name: Deploy
           command: |
             echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
-            ./bin/kev/kev render -e staging
+            ./bin/kev render -e staging
             ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
 
 workflows:
