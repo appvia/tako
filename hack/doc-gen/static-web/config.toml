@@ -1,8 +1,10 @@
 theme = "docuapi"
 themesdir = "themes"
 languageCode = "en-gb"
-baseurl = "https://kev.io/"
+baseurl = "https://docs.appvia.io/kev"
 title = "Kev Reference"
+relativeurls = true
+canonifyurls = true
 
 disableKinds = ["taxonomyTerm"]
 
