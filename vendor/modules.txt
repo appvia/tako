@@ -909,7 +909,7 @@ k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.19.2 => k8s.io/apimachinery v0.17.4
+# k8s.io/apimachinery v0.19.3 => k8s.io/apimachinery v0.17.4
 ## explicit
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors

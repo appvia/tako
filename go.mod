@@ -20,7 +20,7 @@ require (
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	k8s.io/api v0.18.8
-	k8s.io/apimachinery v0.19.2
+	k8s.io/apimachinery v0.19.3
 )
 
 replace (
