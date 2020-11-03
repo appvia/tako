@@ -59,7 +59,7 @@ See https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works`)
 		return fmt.Errorf("unable to connect to Kubernetes: %w", err)
 	}
 
-	if config.IsImageLoadingRequired(r.runCtx.GetKubeContext()) {
+	if r.imagesAreLocal && config.IsImageLoadingRequired(r.runCtx.GetKubeContext()) {
 		err := r.loadImagesIntoCluster(ctx, out, artifacts)
 		if err != nil {
 			return err
@@ -74,15 +74,21 @@ See https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works`)
 	event.DeployInProgress()
 	namespaces, err := r.deployer.Deploy(ctx, deployOut, artifacts)
 	r.hasDeployed = true
-	postDeployFn(err)
+	postDeployFn()
 	if err != nil {
 		event.DeployFailed(err)
 		return err
 	}
 
+	statusCheckOut, postStatusCheckFn, err := deployutil.WithStatusCheckLogFile(time.Now().Format(deployutil.TimeFormat)+".log", out, r.runCtx.Muted())
+	postStatusCheckFn()
+	if err != nil {
+		return err
+	}
 	event.DeployComplete()
 	r.runCtx.UpdateNamespaces(namespaces)
-	return r.performStatusCheck(ctx, out)
+	sErr := r.performStatusCheck(ctx, statusCheckOut)
+	return sErr
 }
 
 func (r *SkaffoldRunner) loadImagesIntoCluster(ctx context.Context, out io.Writer, artifacts []build.Artifact) error {
