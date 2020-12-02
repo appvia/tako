@@ -599,7 +599,7 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -1143,6 +1143,7 @@ knative.dev/pkg/kmp
 knative.dev/pkg/tracker
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
+# golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 # github.com/containerd/containerd => github.com/containerd/containerd v1.4.0
 # github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200221181110-62bd5a33f707
 # k8s.io/api => k8s.io/api v0.17.4

@@ -23,6 +23,7 @@ require (
 )
 
 replace (
+	golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 	github.com/containerd/containerd => github.com/containerd/containerd v1.4.0
 	github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200221181110-62bd5a33f707
 	k8s.io/api => k8s.io/api v0.17.4
