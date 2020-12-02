@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
@@ -63,7 +64,7 @@ type LocalDaemon interface {
 	ExtraEnv() []string
 	ServerVersion(ctx context.Context) (types.Version, error)
 	ConfigFile(ctx context.Context, image string) (*v1.ConfigFile, error)
-	Build(ctx context.Context, out io.Writer, workspace string, a *latest.DockerArtifact, ref string, mode config.RunMode) (string, error)
+	Build(ctx context.Context, out io.Writer, workspace string, a *latest.DockerArtifact, opts BuildOptions) (string, error)
 	Push(ctx context.Context, out io.Writer, ref string) (string, error)
 	Pull(ctx context.Context, out io.Writer, ref string) error
 	Load(ctx context.Context, out io.Writer, input io.Reader, ref string) (string, error)
@@ -73,8 +74,17 @@ type LocalDaemon interface {
 	ImageInspectWithRaw(ctx context.Context, image string) (types.ImageInspect, []byte, error)
 	ImageRemove(ctx context.Context, image string, opts types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error)
 	ImageExists(ctx context.Context, ref string) bool
-	Prune(ctx context.Context, out io.Writer, images []string, pruneChildren bool) error
+	ImageList(ctx context.Context, ref string) ([]types.ImageSummary, error)
+	Prune(ctx context.Context, images []string, pruneChildren bool) ([]string, error)
+	DiskUsage(ctx context.Context) (uint64, error)
 	RawClient() client.CommonAPIClient
+}
+
+// BuildOptions provides parameters related to the LocalDaemon build.
+type BuildOptions struct {
+	Tag            string
+	Mode           config.RunMode
+	ExtraBuildArgs map[string]*string
 }
 
 type localDaemon struct {
@@ -157,21 +167,20 @@ func (l *localDaemon) ConfigFile(ctx context.Context, image string) (*v1.ConfigF
 }
 
 func (l *localDaemon) CheckCompatible(a *latest.DockerArtifact) error {
-	if a.Secret != nil {
-		return fmt.Errorf("docker build secrets require BuildKit - set `useBuildkit: true` in your config, or run with `DOCKER_BUILDKIT=1`")
+	if a.Secret != nil || a.SSH != "" {
+		return fmt.Errorf("docker build options, secrets and ssh, require BuildKit - set `useBuildkit: true` in your config, or run with `DOCKER_BUILDKIT=1`")
 	}
 	return nil
 }
 
 // Build performs a docker build and returns the imageID.
-func (l *localDaemon) Build(ctx context.Context, out io.Writer, workspace string, a *latest.DockerArtifact, ref string, mode config.RunMode) (string, error) {
+func (l *localDaemon) Build(ctx context.Context, out io.Writer, workspace string, a *latest.DockerArtifact, opts BuildOptions) (string, error) {
 	logrus.Debugf("Running docker build: context: %s, dockerfile: %s", workspace, a.DockerfilePath)
 
 	if err := l.CheckCompatible(a); err != nil {
 		return "", err
 	}
-
-	buildArgs, err := EvalBuildArgs(mode, workspace, a)
+	buildArgs, err := EvalBuildArgs(opts.Mode, workspace, a.DockerfilePath, a.BuildArgs, opts.ExtraBuildArgs)
 	if err != nil {
 		return "", fmt.Errorf("unable to evaluate build args: %w", err)
 	}
@@ -197,7 +206,7 @@ func (l *localDaemon) Build(ctx context.Context, out io.Writer, workspace string
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
 
 	resp, err := l.apiClient.ImageBuild(ctx, body, types.ImageBuildOptions{
-		Tags:        []string{ref},
+		Tags:        []string{opts.Tag},
 		Dockerfile:  a.DockerfilePath,
 		BuildArgs:   buildArgs,
 		CacheFrom:   a.CacheFrom,
@@ -233,7 +242,7 @@ func (l *localDaemon) Build(ctx context.Context, out io.Writer, workspace string
 	if imageID == "" {
 		// Maybe this version of Docker doesn't return the digest of the image
 		// that has been built.
-		imageID, err = l.ImageID(ctx, ref)
+		imageID, err = l.ImageID(ctx, opts.Tag)
 		if err != nil {
 			return "", fmt.Errorf("getting digest: %w", err)
 		}
@@ -264,7 +273,7 @@ func (l *localDaemon) Push(ctx context.Context, out io.Writer, ref string) (stri
 		RegistryAuth: registryAuth,
 	})
 	if err != nil {
-		return "", fmt.Errorf("%s %q: %w", sErrors.PushImageErrPrefix, ref, err)
+		return "", fmt.Errorf("%s %q: %w", sErrors.PushImageErr, ref, err)
 	}
 	defer rc.Close()
 
@@ -283,7 +292,7 @@ func (l *localDaemon) Push(ctx context.Context, out io.Writer, ref string) (stri
 	}
 
 	if err := streamDockerMessages(out, rc, auxCallback); err != nil {
-		return "", fmt.Errorf("%s %q: %w", sErrors.PushImageErrPrefix, ref, err)
+		return "", fmt.Errorf("%s %q: %w", sErrors.PushImageErr, ref, err)
 	}
 
 	if digest == "" {
@@ -413,7 +422,7 @@ func (l *localDaemon) ImageID(ctx context.Context, ref string) (string, error) {
 		if client.IsErrNotFound(err) {
 			return "", nil
 		}
-		return "", err
+		return "", localDigestGetErr(ref, err)
 	}
 
 	return image.ID, nil
@@ -439,7 +448,20 @@ func (l *localDaemon) ImageRemove(ctx context.Context, image string, opts types.
 		}
 		time.Sleep(sleepTime)
 	}
-	return nil, fmt.Errorf("could not remove image after %d retries", retries)
+	return nil, fmt.Errorf("could not remove image %q after %d retries", image, retries)
+}
+
+func (l *localDaemon) ImageList(ctx context.Context, ref string) ([]types.ImageSummary, error) {
+	return l.apiClient.ImageList(ctx, types.ImageListOptions{
+		Filters: filters.NewArgs(filters.Arg("reference", ref)),
+	})
+}
+func (l *localDaemon) DiskUsage(ctx context.Context) (uint64, error) {
+	usage, err := l.apiClient.DiskUsage(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(usage.LayersSize), nil
 }
 
 func ToCLIBuildArgs(a *latest.DockerArtifact, evaluatedArgs map[string]*string) ([]string, error) {
@@ -488,27 +510,36 @@ func ToCLIBuildArgs(a *latest.DockerArtifact, evaluatedArgs map[string]*string) 
 		args = append(args, "--secret", secretString)
 	}
 
+	if a.SSH != "" {
+		args = append(args, "--ssh", a.SSH)
+	}
+
 	return args, nil
 }
 
-func (l *localDaemon) Prune(ctx context.Context, out io.Writer, images []string, pruneChildren bool) error {
+func (l *localDaemon) Prune(ctx context.Context, images []string, pruneChildren bool) ([]string, error) {
+	var pruned []string
+	var errRt error
 	for _, id := range images {
 		resp, err := l.ImageRemove(ctx, id, types.ImageRemoveOptions{
 			Force:         true,
 			PruneChildren: pruneChildren,
 		})
-		if err != nil {
-			return fmt.Errorf("pruning images: %w", err)
+		if err == nil {
+			pruned = append(pruned, id)
+		} else if errRt == nil {
+			// save the first error
+			errRt = fmt.Errorf("pruning images: %w", err)
 		}
+
 		for _, r := range resp {
 			if r.Deleted != "" {
-				fmt.Fprintf(out, "deleted image %s\n", r.Deleted)
+				logrus.Debugf("deleted image %s\n", r.Deleted)
 			}
 			if r.Untagged != "" {
-				fmt.Fprintf(out, "untagged image %s\n", r.Untagged)
+				logrus.Debugf("untagged image %s\n", r.Untagged)
 			}
 		}
 	}
-
-	return nil
+	return pruned, errRt
 }
