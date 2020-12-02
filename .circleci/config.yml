@@ -14,6 +14,10 @@ jobs:
      - checkout
      - go/load-cache
      - go/mod-download
+     - run:
+        name: Vendor
+        command: |
+          go mod vendor
      - go/save-cache
      - go/test:
         covermode: atomic
@@ -47,10 +51,10 @@ workflows:
     jobs:
       - build
 
-  hourly:
+  nightly:
     triggers:
       - schedule:
-          cron: "0 * * * *"
+          cron: "0 0 * * *"
           filters:
             branches:
               only:
