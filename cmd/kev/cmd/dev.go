@@ -41,7 +41,19 @@ Examples:
 
    ### Activate the Skaffold dev loop to build, push and deploy your project
    $ kev dev --skaffold
- `
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project to a particular namespace
+   $ kev dev --skaffold --namespace myspace
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project using a specific kubecontext
+   $ kev dev --skaffold --namespace myspace --kubecontext mycontext
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project and tail deployed app logs
+   $ kev dev --skaffold --tail
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project "staging" configuration
+   $ kev dev --skaffold --kev-env staging
+`
 
 var devCmd = &cobra.Command{
 	Use:   "dev",
@@ -106,6 +118,13 @@ func init() {
 		fmt.Sprintf("[Experimental] Kev environment that will be deployed by Skaffold. If not specified it'll use the sandbox %s env.", kev.SandboxEnv),
 	)
 
+	flags.BoolP(
+		"tail",
+		"t",
+		false,
+		"[Experimental] Enable Skaffold deployed application log tailing.",
+	)
+
 	rootCmd.AddCommand(devCmd)
 }
 
@@ -115,6 +134,7 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	namespace, _ := cmd.Flags().GetString("namespace")
 	kubecontext, _ := cmd.Flags().GetString("kubecontext")
 	kevenv, _ := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
 
 	if skaffold {
 		log.Info("Skaffold dev loop activated")
@@ -137,6 +157,10 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 		} else {
 			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
 		}
+
+		if tail {
+			log.Info("Skaffold will tail logs of deployed application")
+		}
 	}
 
 	return nil
@@ -147,6 +171,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	namespace, err := cmd.Flags().GetString("namespace")
 	kubecontext, err := cmd.Flags().GetString("kubecontext")
 	kevenv, err := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
 	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
@@ -184,7 +209,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		profileName := kevenv + kev.EnvProfileNameSuffix
-		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000, verbose)
+		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000, tail, verbose)
 	}
 
 	go kev.Watch(workDir, change)
