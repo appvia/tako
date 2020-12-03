@@ -469,7 +469,7 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, pollInterval int, verbose bool) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, pollInterval int, tailLogs, verbose bool) error {
 	if pollInterval == 0 {
 		pollInterval = 100 // 100 ms by default if interval not specified
 	}
@@ -500,6 +500,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
 		StatusCheck:           true,
+		Tail:                  tailLogs,
 		PortForward: config.PortForwardOptions{
 			Enabled:     true,
 			ForwardPods: true,
