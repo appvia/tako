@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/analyze"
@@ -505,6 +506,11 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		},
 		Muted: config.Muted{
 			Phases: mutedPhases,
+		},
+		WaitForDeletions: config.WaitForDeletions{
+			Max:     60 * time.Second,
+			Delay:   2 * time.Second,
+			Enabled: true,
 		},
 	}
 
