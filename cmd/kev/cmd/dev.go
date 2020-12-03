@@ -36,7 +36,7 @@ Examples:
    ### Run Kev in dev mode
    $ kev dev
 
-   ### Use a custom directory to render manifests 
+   ### Use a custom directory to render manifests
    $ kev dev -d my-manifests
 
    ### Activate the Skaffold dev loop to build, push and deploy your project
@@ -117,6 +117,8 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	kevenv, _ := cmd.Flags().GetString("kev-env")
 
 	if skaffold {
+		log.Info("Skaffold dev loop activated")
+
 		if len(namespace) == 0 {
 			log.Warnf("Skaffold `namespace` not specified - will use `%s`", skaffoldNamespace)
 			_ = cmd.Flag("namespace").Value.Set(skaffoldNamespace)
@@ -145,6 +147,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	namespace, err := cmd.Flags().GetString("namespace")
 	kubecontext, err := cmd.Flags().GetString("kubecontext")
 	kevenv, err := cmd.Flags().GetString("kev-env")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
 		return err
@@ -181,7 +184,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		profileName := kevenv + kev.EnvProfileNameSuffix
-		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
+		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000, verbose)
 	}
 
 	go kev.Watch(workDir, change)
@@ -237,5 +240,6 @@ func catchCtrlC(cancel context.CancelFunc) {
 		<-signals
 		signal.Stop(signals)
 		cancel()
+		log.Info("Stopping Skaffold dev loop! Kev will continue to reconcile and re-render K8s manifests for your application. Press Ctrl+C to stop.")
 	}()
 }
