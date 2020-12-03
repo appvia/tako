@@ -512,6 +512,12 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 			Delay:   2 * time.Second,
 			Enabled: true,
 		},
+		CustomLabels: []string{
+			"io.kev.dev/profile=" + profiles[0],
+			"io.kev.dev/kubecontext=" + kubeCtx,
+			"io.kev.dev/namespace=" + ns,
+			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
+		},
 	}
 
 	runCtx, cfg, err := runContext(opts)
