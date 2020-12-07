@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/analyze"
@@ -468,9 +469,17 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, pollInterval int) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, pollInterval int, tailLogs, verbose bool) error {
 	if pollInterval == 0 {
 		pollInterval = 100 // 100 ms by default if interval not specified
+	}
+
+	var mutedPhases []string
+
+	if verbose {
+		mutedPhases = []string{}
+	} else {
+		mutedPhases = []string{"build"} // possible options "build", "deploy", "status-check"
 	}
 
 	logrus.SetLevel(logrus.WarnLevel)
@@ -490,9 +499,25 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		NoPrune:               false,
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
+		StatusCheck:           true,
+		Tail:                  tailLogs,
 		PortForward: config.PortForwardOptions{
 			Enabled:     true,
 			ForwardPods: true,
+		},
+		Muted: config.Muted{
+			Phases: mutedPhases,
+		},
+		WaitForDeletions: config.WaitForDeletions{
+			Max:     60 * time.Second,
+			Delay:   2 * time.Second,
+			Enabled: true,
+		},
+		CustomLabels: []string{
+			"io.kev.dev/profile=" + profiles[0],
+			"io.kev.dev/kubecontext=" + kubeCtx,
+			"io.kev.dev/namespace=" + ns,
+			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
 		},
 	}
 

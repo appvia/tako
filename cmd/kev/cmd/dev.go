@@ -36,12 +36,24 @@ Examples:
    ### Run Kev in dev mode
    $ kev dev
 
-   ### Use a custom directory to render manifests 
+   ### Use a custom directory to render manifests
    $ kev dev -d my-manifests
 
    ### Activate the Skaffold dev loop to build, push and deploy your project
    $ kev dev --skaffold
- `
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project to a particular namespace
+   $ kev dev --skaffold --namespace myspace
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project using a specific kubecontext
+   $ kev dev --skaffold --namespace myspace --kubecontext mycontext
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project and tail deployed app logs
+   $ kev dev --skaffold --tail
+
+   ### Activate the Skaffold dev loop to build, push and deploy your project "staging" configuration
+   $ kev dev --skaffold --kev-env staging
+`
 
 var devCmd = &cobra.Command{
 	Use:   "dev",
@@ -106,6 +118,13 @@ func init() {
 		fmt.Sprintf("[Experimental] Kev environment that will be deployed by Skaffold. If not specified it'll use the sandbox %s env.", kev.SandboxEnv),
 	)
 
+	flags.BoolP(
+		"tail",
+		"t",
+		false,
+		"[Experimental] Enable Skaffold deployed application log tailing.",
+	)
+
 	rootCmd.AddCommand(devCmd)
 }
 
@@ -115,8 +134,11 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	namespace, _ := cmd.Flags().GetString("namespace")
 	kubecontext, _ := cmd.Flags().GetString("kubecontext")
 	kevenv, _ := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
 
 	if skaffold {
+		log.Info("Skaffold dev loop activated")
+
 		if len(namespace) == 0 {
 			log.Warnf("Skaffold `namespace` not specified - will use `%s`", skaffoldNamespace)
 			_ = cmd.Flag("namespace").Value.Set(skaffoldNamespace)
@@ -135,6 +157,10 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 		} else {
 			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
 		}
+
+		if tail {
+			log.Info("Skaffold will tail logs of deployed application")
+		}
 	}
 
 	return nil
@@ -145,6 +171,8 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	namespace, err := cmd.Flags().GetString("namespace")
 	kubecontext, err := cmd.Flags().GetString("kubecontext")
 	kevenv, err := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
 		return err
@@ -181,7 +209,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		profileName := kevenv + kev.EnvProfileNameSuffix
-		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000)
+		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000, tail, verbose)
 	}
 
 	go kev.Watch(workDir, change)
@@ -237,5 +265,6 @@ func catchCtrlC(cancel context.CancelFunc) {
 		<-signals
 		signal.Stop(signals)
 		cancel()
+		log.Info("Stopping Skaffold dev loop! Kev will continue to reconcile and re-render K8s manifests for your application. Press Ctrl+C to stop.")
 	}()
 }
