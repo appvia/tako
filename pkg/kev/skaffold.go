@@ -469,12 +469,18 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, pollInterval int, tailLogs, verbose bool) error {
-	if pollInterval == 0 {
-		pollInterval = 100 // 100 ms by default if interval not specified
-	}
-
+func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, manualTrigger, tailLogs, verbose bool) error {
 	var mutedPhases []string
+	var trigger string
+	var pollInterval int
+
+	if manualTrigger {
+		trigger = "manual"
+		pollInterval = 0
+	} else {
+		trigger = "polling"
+		pollInterval = 100 // 100ms by default
+	}
 
 	if verbose {
 		mutedPhases = []string{}
@@ -487,7 +493,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 	opts := config.SkaffoldOptions{
 		ConfigurationFile:     skaffoldFile,
 		ProfileAutoActivation: true,
-		Trigger:               "polling",
+		Trigger:               trigger,
 		WatchPollInterval:     pollInterval,
 		AutoBuild:             true,
 		AutoSync:              true,
