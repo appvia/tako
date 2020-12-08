@@ -30,6 +30,10 @@ jobs:
       image: ubuntu-1604:202007-01
     steps:
       - checkout
+      - run:
+          name: Vendor
+          command: |
+            go mod vendor
       - kube-orb/install-kubectl:
           kubectl-version: latest
       - run:
