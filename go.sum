@@ -102,8 +102,8 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/GoogleCloudPlatform/k8s-cloud-provider v0.0.0-20190822182118-27a4ced34534/go.mod h1:iroGtC8B3tQiqtds1l+mgk/BBOrxbqjH+eUfFQYRc14=
-github.com/GoogleContainerTools/skaffold v1.17.1 h1:99RtqgDrCG0OqSxgzNZkZEE2EtxOKrP7o5D1Tj36dZo=
-github.com/GoogleContainerTools/skaffold v1.17.1/go.mod h1:GJSNpSA1cVIFYJbNseSzYvDum/HAdFkpScSCwTSP1to=
+github.com/GoogleContainerTools/skaffold v1.17.2 h1:VsDscFpHZjFOcqi2Po0u/7wgB1VQo83EIqmz/CBw7uc=
+github.com/GoogleContainerTools/skaffold v1.17.2/go.mod h1:GJSNpSA1cVIFYJbNseSzYvDum/HAdFkpScSCwTSP1to=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd h1:sjQovDkwrZp8u+gxLtPgKGjk5hCxuy2hrRejBTA9xFU=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=
