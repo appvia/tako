@@ -26,29 +26,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func TestManifestMarshalsCorrectly(t *testing.T) {
-	files := []string{"testdata/in-cluster-wordpress/docker-compose.yaml"}
-	manifest, err := kev.Init(files, []string{}, "")
-	if err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-
-	var actual bytes.Buffer
-	if _, err := manifest.WriteTo(&actual); err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-
-	expected, err := ioutil.ReadFile("testdata/in-cluster-wordpress/kev.yaml")
-	if err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-
-	diff := cmp.Diff(expected, actual.Bytes())
-	if diff != "" {
-		t.Fatalf("actual does not match expected\n%s", diff)
-	}
-}
-
 func TestInitProvidesEnvironmentConfig(t *testing.T) {
 	files := []string{"testdata/in-cluster-wordpress/docker-compose.yaml"}
 	manifest, err := kev.Init(files, []string{}, "")
@@ -78,6 +55,7 @@ func TestInitProvidesEnvironmentConfig(t *testing.T) {
 
 func TestCanLoadAManifest(t *testing.T) {
 	expected := &kev.Manifest{
+		Id: "random-uuid",
 		Sources: &kev.Sources{
 			Files: []string{
 				"testdata/in-cluster-wordpress/docker-compose.yaml",
@@ -96,6 +74,7 @@ func TestCanLoadAManifest(t *testing.T) {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}
 
+	expected.Id = actual.Id
 	diff := cmp.Diff(expected, actual, cmpopts.IgnoreUnexported(kev.Sources{}, kev.Environment{}))
 	if diff != "" {
 		t.Fatalf("actual does not match expected:\n%s", diff)

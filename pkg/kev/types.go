@@ -22,6 +22,7 @@ import (
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments
 type Manifest struct {
+	Id           string       `yaml:"id,omitempty" json:"id,omitempty"`
 	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
 	Skaffold     string       `yaml:"skaffold,omitempty" json:"skaffold,omitempty"`
