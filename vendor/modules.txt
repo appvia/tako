@@ -30,7 +30,7 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/GoogleContainerTools/skaffold v1.17.1
+# github.com/GoogleContainerTools/skaffold v1.17.2
 ## explicit
 github.com/GoogleContainerTools/skaffold/pkg/diag
 github.com/GoogleContainerTools/skaffold/pkg/diag/recommender
