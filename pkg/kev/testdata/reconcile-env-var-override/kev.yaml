@@ -1,3 +1,4 @@
+id: 10b5c35d-8b9a-42af-a16e-ed758a06c231
 compose:
   - testdata/reconcile-env-var-override/docker-compose.yaml
 environments:

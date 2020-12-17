@@ -17,6 +17,8 @@
 package kev_test
 
 import (
+	"bytes"
+
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
 	. "github.com/onsi/ginkgo"
@@ -37,6 +39,30 @@ var _ = Describe("Init", func() {
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}
+	})
+
+	Context("manifest", func() {
+		BeforeEach(func() {
+			workingDir = "./testdata/init-default/compose-yml"
+		})
+
+		It("should contain an id attribute", func() {
+			Expect(manifest.Id).ToNot(BeEmpty())
+		})
+
+		Context("marshalling", func() {
+			It("should write out a yaml file with manifest data", func() {
+				var actual bytes.Buffer
+				_, err := manifest.WriteTo(&actual)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(actual.String()).To(MatchRegexp(`id: [a-z0-9]+`))
+				Expect(actual.String()).To(ContainSubstring("compose:"))
+				Expect(actual.String()).To(MatchRegexp(`.*- .*compose.yml`))
+				Expect(actual.String()).To(ContainSubstring("environments:"))
+				Expect(actual.String()).To(MatchRegexp(`dev: .*compose.kev.dev.yml`))
+			})
+		})
 	})
 
 	Context("with no alternate compose files supplied", func() {
