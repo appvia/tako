@@ -7,6 +7,7 @@ require (
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/go-cmp v0.5.4
+	github.com/google/uuid v1.1.2
 	github.com/imdario/mergo v0.3.11
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/onsi/ginkgo v1.14.2
@@ -19,5 +20,5 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.19.4
-	k8s.io/apimachinery v0.19.4
+	k8s.io/apimachinery v0.20.0
 )
