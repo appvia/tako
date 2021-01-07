@@ -13,6 +13,9 @@ services:
       - MYSQL_PASSWORD=wordpress
       - OVERRIDE_ME_EMPTY
       - OVERRIDE_ME_WITH_VAL=value
+    x-an-extension:
+      key: "value"
+      override-key: "value"
 volumes:
   db_data:
 
