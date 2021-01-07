@@ -173,6 +173,9 @@ func (o *composeOverride) mergeServicesInto(p *ComposeProject) error {
 		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge labels for service %s", override.Name)
 		}
+		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
+			return errors.Wrapf(err, "cannot merge extensions for service %s", override.Name)
+		}
 		if err := mergo.Merge(&base.Environment, &override.Environment, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge env vars for service %s", override.Name)
 		}

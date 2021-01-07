@@ -67,6 +67,12 @@ var _ = Describe("Manifest", func() {
 				Expect(mergedSvc.Labels).To(Equal(envSvc.Labels))
 			})
 
+			It("merged the environment extensions into sources", func() {
+				mergedSvc, _ := merged.GetService("db")
+				envSvc, _ := env.GetService("db")
+				Expect(mergedSvc.Extensions["x-an-extension"]).To(Equal(envSvc.Extensions["x-an-extension"]))
+			})
+
 			It("merged the environment env var overrides into sources", func() {
 				mergedSvc, _ := merged.GetService("db")
 				envSvc, _ := env.GetService("db")

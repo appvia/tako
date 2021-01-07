@@ -18,6 +18,8 @@ services:
       kev.workload.rolling-update-max-surge: "1"
       kev.workload.service-account-name: default
       kev.workload.type: StatefulSet
+    x-an-extension:
+      key: "value"
     environment:
       - OVERRIDE_ME_EMPTY=empty-overridden
       - OVERRIDE_ME_WITH_VAL=val-overridden
