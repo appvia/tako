@@ -70,7 +70,12 @@ var _ = Describe("Manifest", func() {
 			It("merged the environment extensions into sources", func() {
 				mergedSvc, _ := merged.GetService("db")
 				envSvc, _ := env.GetService("db")
-				Expect(mergedSvc.Extensions["x-an-extension"]).To(Equal(envSvc.Extensions["x-an-extension"]))
+
+				mergedSvcExt := mergedSvc.Extensions["x-an-extension"].(map[string]interface{})
+				envSvcExt := envSvc.Extensions["x-an-extension"].(map[string]interface{})
+
+				Expect(mergedSvcExt["key"]).To(Equal("value"))
+				Expect(mergedSvcExt["override-key"]).To(Equal(envSvcExt["override-key"]))
 			})
 
 			It("merged the environment env var overrides into sources", func() {

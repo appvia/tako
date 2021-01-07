@@ -19,7 +19,7 @@ services:
       kev.workload.service-account-name: default
       kev.workload.type: StatefulSet
     x-an-extension:
-      key: "value"
+      override-key: "value-overridden"
     environment:
       - OVERRIDE_ME_EMPTY=empty-overridden
       - OVERRIDE_ME_WITH_VAL=val-overridden
