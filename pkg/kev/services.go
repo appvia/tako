@@ -28,7 +28,7 @@ import (
 )
 
 func newServiceConfig(s composego.ServiceConfig) (ServiceConfig, error) {
-	config := ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment}
+	config := ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment, Extensions: s.Extensions}
 	return config, config.validate()
 }
 

@@ -67,6 +67,24 @@ var _ = Describe("Manifest", func() {
 				Expect(mergedSvc.Labels).To(Equal(envSvc.Labels))
 			})
 
+			It("merged the environment extensions into sources", func() {
+				sources, _ := manifest.SourcesToComposeProject()
+
+				srcSvc, _ := sources.GetService("db")
+				mergedSvc, _ := merged.GetService("db")
+				envSvc, _ := env.GetService("db")
+
+				Expect(srcSvc.Extensions).To(HaveLen(1))
+				Expect(mergedSvc.Extensions).To(HaveLen(2))
+				Expect(mergedSvc.Extensions["x-other-extension"]).To(Equal(envSvc.Extensions["x-other-extension"]))
+
+				mergedSvcAnExt := mergedSvc.Extensions["x-an-extension"].(map[string]interface{})
+				envSvcAnExt := envSvc.Extensions["x-an-extension"].(map[string]interface{})
+
+				Expect(mergedSvcAnExt["key"]).To(Equal("value"))
+				Expect(mergedSvcAnExt["override-key"]).To(Equal(envSvcAnExt["override-key"]))
+			})
+
 			It("merged the environment env var overrides into sources", func() {
 				mergedSvc, _ := merged.GetService("db")
 				envSvc, _ := env.GetService("db")
