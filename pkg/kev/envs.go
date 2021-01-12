@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Appvia Ltd <info@appvia.io>
+ * Copyright 2021 Appvia Ltd <info@appvia.io>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -71,6 +72,42 @@ func (e *Environment) GetServices() Services {
 // GetService retrieves the specific service by name from the environment's override.
 func (e *Environment) GetService(name string) (ServiceConfig, error) {
 	return e.override.getService(name)
+}
+
+// UpdateExtensions updates a service's extensions. Any new extensions included will be created.
+func (e *Environment) UpdateExtensions(svcName string, ext map[string]interface{}) error {
+	if _, err := e.GetService(svcName); err != nil {
+		return err
+	}
+
+	var services Services
+	for _, svc := range e.GetServices() {
+		if svc.Name == svcName {
+			if err := mergo.Merge(&svc.Extensions, ext, mergo.WithOverride); err != nil {
+				return err
+			}
+		}
+		services = append(services, svc)
+	}
+	e.override.Services = services
+	return nil
+}
+
+// RemoveExtension removes an extension from a service's extensions using its key.
+func (e *Environment) RemoveExtension(svcName string, key string) error {
+	if _, err := e.GetService(svcName); err != nil {
+		return err
+	}
+
+	var services Services
+	for _, svc := range e.GetServices() {
+		if svc.Name == svcName {
+			delete(svc.Extensions, key)
+		}
+		services = append(services, svc)
+	}
+	e.override.Services = services
+	return nil
 }
 
 // GetEnvVarsForService retrieves the env vars for a specific service from the environment's override.

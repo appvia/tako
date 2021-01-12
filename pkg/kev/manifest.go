@@ -27,6 +27,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -37,7 +38,10 @@ func NewManifest(files []string, workingDir string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Manifest{Sources: s}, nil
+	return &Manifest{
+		Id:      uuid.New().String(),
+		Sources: s,
+	}, nil
 }
 
 // LoadManifest returns application manifests.

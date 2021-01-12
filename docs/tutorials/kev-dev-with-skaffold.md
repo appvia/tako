@@ -35,7 +35,7 @@ In order to take advantage of Skaffold, you must prepare your project accordingl
 
 > Initialise Kev project with Skaffold support
 ```sh
-kev init --skaffold -e stage 
+kev init --skaffold -e stage
 ```
 
 This command prepares your application and bootstraps a new Skaffold config (_skaffold.yaml_) if it doesn't already exist. Alternatively, it'll add environment & helper profiles to already existing Skaffold config automatically. The profiles added by Kev can be used to control which application Kubernetes manifests should be deployed and to which K8s cluster, be it local or remote. They should also come handy when defining steps in CI/CD pipelines.
@@ -90,6 +90,11 @@ There are a few extra bits of information that Skaffold requires to perform its 
 * `--namespace | -n` - Informs Skaffold which namespace the application should be deployed to. Default: `default`.
 * `--kubecontext | -k` - Specified kubectl context to be used by Skaffold. This determines the cluster to which your application will be deployed to. If not specified it will default to current [kebectl context](https://kubernetes.io/docs/reference/kubectl/cheatsheet/#kubectl-context-and-configuration).
 * `--kev-env` - Kev tracked environment name of which Kubernetes manifests will be deployed to a target cluster/namespace. Defaults to the sandbox `dev` environment, if no environments have been specified.
+
+Additional OPTIONAL flags for Skaffold enabled workflow:
+
+* `--manual-trigger | -m` - Triggers Skaffold's build/push/deploy only after manual user action (hit ENTER to release)
+* `--tail | -t` - Will stream application logs once it's deployed to Kubernetes cluster.
 
 When the dev loop is interrupted with Ctrl+C it will automatically cleanup all deployed K8s objects from a target namespace and attempt to prune locally built docker images.
 

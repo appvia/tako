@@ -53,6 +53,9 @@ Examples:
 
    ### Activate the Skaffold dev loop to build, push and deploy your project "staging" configuration
    $ kev dev --skaffold --kev-env staging
+
+   ### Activate the Skaffold dev loop and manually trigger build, push and deploy of your project (useful for stacking up code changes before deployment)
+   $ kev dev --skaffold --manual-trigger
 `
 
 var devCmd = &cobra.Command{
@@ -125,6 +128,13 @@ func init() {
 		"[Experimental] Enable Skaffold deployed application log tailing.",
 	)
 
+	flags.BoolP(
+		"manual-trigger",
+		"m",
+		false,
+		"[Experimental] Expect user to manually trigger Skaffold's build/push/deploy. Useful for batching source code changes before release.",
+	)
+
 	rootCmd.AddCommand(devCmd)
 }
 
@@ -135,32 +145,44 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	kubecontext, _ := cmd.Flags().GetString("kubecontext")
 	kevenv, _ := cmd.Flags().GetString("kev-env")
 	tail, _ := cmd.Flags().GetBool("tail")
+	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
 
 	if skaffold {
-		log.Info("Skaffold dev loop activated")
+		fmt.Println("=========================================")
+		fmt.Println("Kev dev activated with Skaffold dev loop ")
+		fmt.Println("-----------------------------------------")
 
 		if len(namespace) == 0 {
-			log.Warnf("Skaffold `namespace` not specified - will use `%s`", skaffoldNamespace)
+			fmt.Printf("⏣  Will deploy to `%s` namespace. You may override it with '--namespace' flag.\n", skaffoldNamespace)
 			_ = cmd.Flag("namespace").Value.Set(skaffoldNamespace)
 		} else {
-			log.Infof("Skaffold dev loop will deploy to `%s` namespace", namespace)
+			fmt.Printf("⏣  Will deploy to '%s' namespace. You may override it with '--namespace' flag.\n", namespace)
 		}
 
 		if len(kubecontext) == 0 {
-			log.Warn("Skaffold `kubecontext` not specified - will use current kubectl context")
+			fmt.Println("⏣  Will use current kubectl context. You may override it with '--kubecontext' flag.")
 		} else {
-			log.Infof("Skaffold dev loop will use `%s` kube context", kubecontext)
+			fmt.Printf("⏣  Will use '%s' kube context. You may override it with '--kubecontext' flag.\n", kubecontext)
 		}
 
 		if len(kevenv) == 0 {
-			log.Warnf("Skaffold will use profile pointing at the sandbox `%s` environment. You may override it with `--kev-env` flag.", kev.SandboxEnv)
+			fmt.Printf("⏣  Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.\n", kev.SandboxEnv)
 		} else {
-			log.Infof("Skaffold will use profile pointing at Kev `%s` environment", kevenv)
+			fmt.Printf("⏣  Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.\n", kevenv)
 		}
 
 		if tail {
-			log.Info("Skaffold will tail logs of deployed application")
+			fmt.Println("⏣  Will tail logs of deployed application.")
+		} else {
+			fmt.Println("⏣  Won't tail logs of deployed application. To enable log tailing use '--tail' flag.")
 		}
+
+		if manualTrigger {
+			fmt.Println("⏣  Will stack up all the code changes and only perform build/push/deploy when triggered manually by hitting ENTER.")
+		} else {
+			fmt.Println("⏣  Will automatically trigger build/push/deploy on each application code change. To trigger changes manually use '--manual-trigger' flag.")
+		}
+		fmt.Println("=========================================")
 	}
 
 	return nil
@@ -172,6 +194,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	kubecontext, err := cmd.Flags().GetString("kubecontext")
 	kevenv, err := cmd.Flags().GetString("kev-env")
 	tail, _ := cmd.Flags().GetBool("tail")
+	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
 	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
@@ -209,7 +232,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		profileName := kevenv + kev.EnvProfileNameSuffix
-		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, 1000, tail, verbose)
+		go kev.RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, manualTrigger, tail, verbose)
 	}
 
 	go kev.Watch(workDir, change)
@@ -265,6 +288,8 @@ func catchCtrlC(cancel context.CancelFunc) {
 		<-signals
 		signal.Stop(signals)
 		cancel()
-		log.Info("Stopping Skaffold dev loop! Kev will continue to reconcile and re-render K8s manifests for your application. Press Ctrl+C to stop.")
+		fmt.Println("-----------------------------------------")
+		fmt.Println("⏣  Stopping Skaffold dev loop! Kev will continue to reconcile and re-render K8s manifests for your application. Press Ctrl+C to stop.")
+		fmt.Println("-----------------------------------------")
 	}()
 }

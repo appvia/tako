@@ -4,12 +4,18 @@
 **/kev.yml
 **/docker-compose.kev.*.yaml
 k8s/*
+docker-compose.yaml
 !/pkg/kev/testdata/**/*.yaml
 !/examples/**/*.yaml
+skaffold.yaml
 
 ### IDEs ###
 .idea/*
-/bin/
+
+# Build binary
+bin/*
+dist/*
+release/*
 
 ### Git meld ###
 *.orig
