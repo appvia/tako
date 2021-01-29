@@ -32,7 +32,6 @@ import (
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	deployerr "github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/error"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/kubectl"
-	deployutil "github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/util"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/event"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/manifest"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
@@ -101,22 +100,22 @@ type Deployer struct {
 	useKubectlKustomize bool
 }
 
-func NewDeployer(cfg kubectl.Config, labels map[string]string) (*Deployer, error) {
+func NewDeployer(cfg kubectl.Config, labels map[string]string, d *latest.KustomizeDeploy) (*Deployer, error) {
 	defaultNamespace := ""
-	if cfg.Pipeline().Deploy.KustomizeDeploy.DefaultNamespace != nil {
+	if d.DefaultNamespace != nil {
 		var err error
-		defaultNamespace, err = util.ExpandEnvTemplate(*cfg.Pipeline().Deploy.KustomizeDeploy.DefaultNamespace, nil)
+		defaultNamespace, err = util.ExpandEnvTemplate(*d.DefaultNamespace, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	kubectl := kubectl.NewCLI(cfg, cfg.Pipeline().Deploy.KustomizeDeploy.Flags, defaultNamespace)
+	kubectl := kubectl.NewCLI(cfg, d.Flags, defaultNamespace)
 	// if user has kustomize binary, prioritize that over kubectl kustomize
 	useKubectlKustomize := !kustomizeBinaryCheck() && kubectlVersionCheck(kubectl)
 
 	return &Deployer{
-		KustomizeDeploy:     cfg.Pipeline().Deploy.KustomizeDeploy,
+		KustomizeDeploy:     d,
 		kubectl:             kubectl,
 		insecureRegistries:  cfg.GetInsecureRegistries(),
 		globalConfig:        cfg.GlobalConfig(),
@@ -218,7 +217,7 @@ func (k *Deployer) Cleanup(ctx context.Context, out io.Writer) error {
 
 // Dependencies lists all the files that describe what needs to be deployed.
 func (k *Deployer) Dependencies() ([]string, error) {
-	deps := deployutil.NewStringSet()
+	deps := util.NewStringSet()
 	for _, kustomizePath := range k.KustomizePaths {
 		depsForKustomization, err := DependenciesForKustomization(kustomizePath)
 		if err != nil {

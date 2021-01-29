@@ -2,7 +2,7 @@
 4d63.com/embedfiles
 # 4d63.com/tz v1.1.0
 4d63.com/tz
-# cloud.google.com/go v0.65.0
+# cloud.google.com/go v0.72.0
 cloud.google.com/go
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
@@ -10,8 +10,13 @@ cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
+cloud.google.com/go/monitoring/apiv3/v2
 # cloud.google.com/go/storage v1.10.0
 cloud.google.com/go/storage
+# github.com/AlecAivazis/survey/v2 v2.0.5
+github.com/AlecAivazis/survey/v2
+github.com/AlecAivazis/survey/v2/core
+github.com/AlecAivazis/survey/v2/terminal
 # github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
@@ -30,8 +35,11 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/GoogleContainerTools/skaffold v1.17.2
+# github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.13.0
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric
+# github.com/GoogleContainerTools/skaffold v1.19.0
 ## explicit
+github.com/GoogleContainerTools/skaffold/cmd/skaffold/app/cmd/statik
 github.com/GoogleContainerTools/skaffold/pkg/diag
 github.com/GoogleContainerTools/skaffold/pkg/diag/recommender
 github.com/GoogleContainerTools/skaffold/pkg/diag/validator
@@ -78,6 +86,8 @@ github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/config
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/deploy
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/errors
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/prompt
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/util
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/instrumentation
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubectl
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client
@@ -123,6 +133,7 @@ github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2alpha2
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2alpha3
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2alpha4
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta1
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta10
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta2
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta3
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/v2beta4
@@ -138,6 +149,7 @@ github.com/GoogleContainerTools/skaffold/pkg/skaffold/sync
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/test
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/test/structure
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/trigger
+github.com/GoogleContainerTools/skaffold/pkg/skaffold/trigger/fsnotify
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/util
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/version
 github.com/GoogleContainerTools/skaffold/pkg/skaffold/walk
@@ -219,6 +231,8 @@ github.com/compose-spec/compose-go/types
 github.com/containerd/containerd/errdefs
 github.com/containerd/containerd/log
 github.com/containerd/containerd/platforms
+# github.com/containerd/typeurl v1.0.1
+github.com/containerd/typeurl
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/davecgh/go-spew v1.1.1
@@ -318,6 +332,7 @@ github.com/go-openapi/swag
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
+github.com/gogo/protobuf/types
 # github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 github.com/golang/glog
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
@@ -428,11 +443,12 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/ioprogress
 # github.com/mitchellh/mapstructure v1.3.3
 github.com/mitchellh/mapstructure
-# github.com/moby/buildkit v0.3.3
+# github.com/moby/buildkit v0.8.0
 github.com/moby/buildkit/frontend/dockerfile/command
 github.com/moby/buildkit/frontend/dockerfile/instructions
 github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
+github.com/moby/buildkit/util/stack
 # github.com/moby/sys/mount v0.2.0
 github.com/moby/sys/mount
 # github.com/moby/sys/mountinfo v0.4.0
@@ -519,6 +535,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rakyll/statik v0.1.7
+github.com/rakyll/statik/fs
 # github.com/rjeczalik/notify v0.9.2
 github.com/rjeczalik/notify
 # github.com/russross/blackfriday/v2 v2.0.1
@@ -579,6 +597,7 @@ go.opencensus.io/internal
 go.opencensus.io/internal/tagencoding
 go.opencensus.io/metric/metricdata
 go.opencensus.io/metric/metricproducer
+go.opencensus.io/plugin/ocgrpc
 go.opencensus.io/plugin/ochttp
 go.opencensus.io/plugin/ochttp/propagation/b3
 go.opencensus.io/resource
@@ -590,7 +609,34 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+# go.opentelemetry.io/otel v0.13.0
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/api/global
+go.opentelemetry.io/otel/api/global/internal
+go.opentelemetry.io/otel/api/metric
+go.opentelemetry.io/otel/api/metric/metrictest
+go.opentelemetry.io/otel/api/metric/registry
+go.opentelemetry.io/otel/api/trace
+go.opentelemetry.io/otel/codes
+go.opentelemetry.io/otel/internal
+go.opentelemetry.io/otel/internal/baggage
+go.opentelemetry.io/otel/internal/trace/noop
+go.opentelemetry.io/otel/label
+go.opentelemetry.io/otel/unit
+# go.opentelemetry.io/otel/sdk v0.13.0
+go.opentelemetry.io/otel/sdk
+go.opentelemetry.io/otel/sdk/export/metric
+go.opentelemetry.io/otel/sdk/export/metric/aggregation
+go.opentelemetry.io/otel/sdk/metric
+go.opentelemetry.io/otel/sdk/metric/aggregator
+go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue
+go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount
+go.opentelemetry.io/otel/sdk/metric/aggregator/sum
+go.opentelemetry.io/otel/sdk/metric/controller/push
+go.opentelemetry.io/otel/sdk/metric/controller/time
+go.opentelemetry.io/otel/sdk/metric/processor/basic
+go.opentelemetry.io/otel/sdk/resource
+# golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
@@ -632,7 +678,7 @@ golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
+# golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 golang.org/x/oauth2
 golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
@@ -643,9 +689,12 @@ golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.3
+# golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
+golang.org/x/term
+# golang.org/x/text v0.3.4
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -669,7 +718,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200916195026-c9a70fc28ce3
+# golang.org/x/tools v0.0.0-20201110124207-079ba7bd75cd
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
@@ -687,7 +736,7 @@ golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # gomodules.xyz/jsonpatch/v2 v2.1.0
 gomodules.xyz/jsonpatch/v2
-# google.golang.org/api v0.34.0
+# google.golang.org/api v0.35.0
 google.golang.org/api/cloudbuild/v1
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -700,10 +749,11 @@ google.golang.org/api/option
 google.golang.org/api/option/internaloption
 google.golang.org/api/storage/v1
 google.golang.org/api/transport/cert
+google.golang.org/api/transport/grpc
 google.golang.org/api/transport/http
 google.golang.org/api/transport/http/internal/propagation
 google.golang.org/api/transport/internal/dca
-# google.golang.org/appengine v1.6.6
+# google.golang.org/appengine v1.6.7
 google.golang.org/appengine
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/app_identity
@@ -712,28 +762,48 @@ google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20201022181438-0ff5f38871d5
+# google.golang.org/genproto v0.0.0-20201202151023-55d61f90c1ce
+google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/api/distribution
 google.golang.org/genproto/googleapis/api/httpbody
+google.golang.org/genproto/googleapis/api/label
+google.golang.org/genproto/googleapis/api/metric
+google.golang.org/genproto/googleapis/api/monitoredres
 google.golang.org/genproto/googleapis/iam/v1
+google.golang.org/genproto/googleapis/monitoring/v3
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
+google.golang.org/genproto/googleapis/type/calendarperiod
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.33.1
+# google.golang.org/grpc v1.33.2
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
+google.golang.org/grpc/balancer/grpclb
+google.golang.org/grpc/balancer/grpclb/grpc_lb_v1
 google.golang.org/grpc/balancer/grpclb/state
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/alts
+google.golang.org/grpc/credentials/alts/internal
+google.golang.org/grpc/credentials/alts/internal/authinfo
+google.golang.org/grpc/credentials/alts/internal/conn
+google.golang.org/grpc/credentials/alts/internal/handshaker
+google.golang.org/grpc/credentials/alts/internal/handshaker/service
+google.golang.org/grpc/credentials/alts/internal/proto/grpc_gcp
+google.golang.org/grpc/credentials/google
+google.golang.org/grpc/credentials/oauth
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/grpclog
@@ -800,13 +870,10 @@ google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/fieldmaskpb
+google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
 google.golang.org/protobuf/types/pluginpb
-# gopkg.in/AlecAivazis/survey.v1 v1.8.8
-gopkg.in/AlecAivazis/survey.v1
-gopkg.in/AlecAivazis/survey.v1/core
-gopkg.in/AlecAivazis/survey.v1/terminal
 # gopkg.in/evanphx/json-patch.v4 v4.9.0
 gopkg.in/evanphx/json-patch.v4
 # gopkg.in/inf.v0 v0.9.1

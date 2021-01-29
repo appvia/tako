@@ -17,8 +17,6 @@ limitations under the License.
 package build
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/build/tag"
@@ -67,18 +65,18 @@ func Artifacts(artifactInfos []ArtifactInfo) []*latest.Artifact {
 	var artifacts []*latest.Artifact
 
 	for _, info := range artifactInfos {
-		artifact := &latest.Artifact{
-			ImageName:    info.ImageName,
-			ArtifactType: info.Builder.ArtifactType(),
-		}
-
 		workspace := info.Workspace
 		if workspace == "" {
 			workspace = filepath.Dir(info.Builder.Path())
 		}
+		artifact := &latest.Artifact{
+			ImageName:    info.ImageName,
+			ArtifactType: info.Builder.ArtifactType(workspace),
+		}
+
 		if workspace != "." {
-			fmt.Fprintf(os.Stdout, "using non standard workspace: %s\n", workspace)
-			artifact.Workspace = workspace
+			// to make skaffold.yaml more portable across OS-es we should always generate /-delimited filepaths
+			artifact.Workspace = filepath.ToSlash(workspace)
 		}
 
 		artifacts = append(artifacts, artifact)
