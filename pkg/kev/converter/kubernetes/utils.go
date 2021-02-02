@@ -962,3 +962,28 @@ func contains(strs []string, s string) bool {
 	i := sort.SearchStrings(strs, s)
 	return i < len(strs) && strs[i] == s
 }
+
+// runtimeObjectConvertToTarget converts runtime object into a target
+func runtimeObjectConvertToTarget(o runtime.Object, target interface{}) error {
+	unstructured, err := ToUnstructured(o)
+	if err != nil {
+		return err
+	}
+
+	return FromUnstructured(unstructured, target)
+}
+
+// ToUnstructured converts runtime.Object to unstructured map[string]interface{}
+func ToUnstructured(o runtime.Object) (map[string]interface{}, error) {
+	unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return unstructured, nil
+}
+
+// FromUnstructured converts unstructured to target object
+func FromUnstructured(unstructured map[string]interface{}, target interface{}) error {
+	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured, target)
+}

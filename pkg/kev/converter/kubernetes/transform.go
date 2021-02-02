@@ -51,8 +51,9 @@ import (
 
 // Kubernetes transformer
 type Kubernetes struct {
-	Opt     ConvertOptions // user provided options from the command line
-	Project *composego.Project
+	Opt      ConvertOptions     // user provided options from the command line
+	Project  *composego.Project // docker compose project
+	Excluded []string           // docker compose service names that should be excluded
 }
 
 // Transform converts compose project to set of k8s objects
@@ -79,6 +80,11 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 	// @step iterate over sorted service definitions
 	for _, pSvc := range k.Project.Services {
+		// @step skip service if excluded
+		if contains(k.Excluded, pSvc.Name) {
+			continue
+		}
+
 		var objects []runtime.Object
 
 		projectService := ProjectService(pSvc)

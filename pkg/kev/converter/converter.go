@@ -25,7 +25,12 @@ import (
 // Converter is an interface implemented by each converter kind
 type Converter interface {
 	// Render builds an output for an app
-	Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) (map[string]string, error)
+	Render(singleFile bool,
+		dir, workDir string,
+		projects map[string]*composego.Project,
+		files map[string][]string,
+		rendered map[string][]byte,
+		excluded map[string][]string) (map[string]string, error)
 }
 
 // Factory returns a converter
