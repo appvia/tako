@@ -42,7 +42,12 @@ func New() *K8s {
 }
 
 // Render generates outcome
-func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) (map[string]string, error) {
+func (c *K8s) Render(singleFile bool,
+	dir, workDir string,
+	projects map[string]*composego.Project,
+	files map[string][]string,
+	rendered map[string][]byte,
+	excluded map[string][]string) (map[string]string, error) {
 
 	renderOutputPaths := map[string]string{}
 
@@ -82,8 +87,16 @@ func (c *K8s) Render(singleFile bool, dir, workDir string, projects map[string]*
 
 		renderOutputPaths[env] = outFilePath
 
-		// @step Get Kubernete transformer that maps compose project to Kubernetes primitives
-		k := &Kubernetes{Opt: convertOpts, Project: project}
+		// @step set excluded docker compose services for current project
+		exc := []string{}
+		if excluded != nil {
+			if e, ok := excluded[env]; ok {
+				exc = e
+			}
+		}
+
+		// @step Get Kubernetes transformer that maps compose project to Kubernetes primitives
+		k := &Kubernetes{Opt: convertOpts, Project: project, Excluded: exc}
 
 		// @step Do the transformation
 		objects, err := k.Transform()

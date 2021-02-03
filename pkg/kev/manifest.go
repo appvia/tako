@@ -173,7 +173,11 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 	return p, nil
 }
 
-func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string) (*Manifest, error) {
+// RenderWithConvertor renders K8s manifests with specific converter
+func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (
+	*Manifest,
+	error,
+) {
 	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
 		return nil, err
 	}
@@ -197,7 +201,7 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		files[env.Name] = append(sourcesFiles, env.File)
 	}
 
-	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered)
+	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered, excluded)
 	if err != nil {
 		log.Errorf("Couldn't render manifests")
 		return nil, err

@@ -33,7 +33,14 @@ func New() *Dummy {
 }
 
 // Render generates outcome
-func (c *Dummy) Render(singleFile bool, dir, workDir string, projects map[string]*composego.Project, files map[string][]string, rendered map[string][]byte) (map[string]string, error) {
+func (c *Dummy) Render(singleFile bool,
+	dir, workDir string,
+	projects map[string]*composego.Project,
+	files map[string][]string,
+	rendered map[string][]byte,
+	excluded map[string][]string) (map[string]string, error) {
+
 	log.Infof("Hello from %s adapter Render()", Name)
 	return nil, nil
+
 }
