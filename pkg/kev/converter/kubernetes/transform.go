@@ -836,7 +836,7 @@ func (k *Kubernetes) configPorts(projectService ProjectService) []v1.ContainerPo
 		protocol := strings.ToUpper(port.Protocol)
 
 		// @step skip port if already processed
-		if exist[string(port.Target)+protocol] {
+		if exist[fmt.Sprint(port.Target)+protocol] {
 			continue
 		}
 
@@ -846,7 +846,7 @@ func (k *Kubernetes) configPorts(projectService ProjectService) []v1.ContainerPo
 			HostIP:        port.HostIP,
 		})
 
-		exist[string(port.Target)+protocol] = true
+		exist[fmt.Sprint(port.Target)+protocol] = true
 	}
 
 	return ports
@@ -1122,17 +1122,19 @@ func (k *Kubernetes) configVolumes(projectService ProjectService) ([]v1.VolumeMo
 				"project-service": projectService.Name,
 			}, "Use configmap volume")
 
-			if cm, err := k.initConfigMapFromFileOrDir(projectService, volumeName, volume.Host); err != nil {
+			cm, err := k.initConfigMapFromFileOrDir(projectService, volumeName, volume.Host)
+			if err != nil {
 				log.Error("Couldn't create ConfigMap volume source")
 				return nil, nil, nil, nil, err
-			} else {
-				cms = append(cms, cm)
-				volsource = k.configConfigMapVolumeSource(volumeName, volume.Container, cm)
-
-				if useSubPathMount(cm) {
-					volMount.SubPath = volsource.ConfigMap.Items[0].Path
-				}
 			}
+
+			cms = append(cms, cm)
+			volsource = k.configConfigMapVolumeSource(volumeName, volume.Container, cm)
+
+			if useSubPathMount(cm) {
+				volMount.SubPath = volsource.ConfigMap.Items[0].Path
+			}
+
 		} else {
 			log.DebugWithFields(log.Fields{
 				"project-service": projectService.Name,
