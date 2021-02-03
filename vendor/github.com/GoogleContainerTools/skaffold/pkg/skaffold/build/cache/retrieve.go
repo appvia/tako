@@ -30,6 +30,7 @@ import (
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/docker"
 	sErrors "github.com/GoogleContainerTools/skaffold/pkg/skaffold/errors"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/util"
 )
 
 func (c *cache) Build(ctx context.Context, out io.Writer, tags tag.ImageTags, artifacts []*latest.Artifact, buildAndTest BuildAndTestFn) ([]build.Artifact, error) {
@@ -81,7 +82,11 @@ func (c *cache) Build(ctx context.Context, out io.Writer, tags tag.ImageTags, ar
 			}
 
 		default:
-			if c.imagesAreLocal {
+			isLocal, err := c.isLocalImage(artifact.ImageName)
+			if err != nil {
+				return nil, err
+			}
+			if isLocal {
 				color.Green.Fprintln(out, "Found Locally")
 			} else {
 				color.Green.Fprintln(out, "Found Remotely")
@@ -95,7 +100,11 @@ func (c *cache) Build(ctx context.Context, out io.Writer, tags tag.ImageTags, ar
 		tag := tags[artifact.ImageName]
 
 		var uniqueTag string
-		if c.imagesAreLocal {
+		isLocal, err := c.isLocalImage(artifact.ImageName)
+		if err != nil {
+			return nil, err
+		}
+		if isLocal {
 			var err error
 			uniqueTag, err = build.TagWithImageID(ctx, tag, entry.ID, c.client)
 			if err != nil {
@@ -111,7 +120,7 @@ func (c *cache) Build(ctx context.Context, out io.Writer, tags tag.ImageTags, ar
 		})
 	}
 
-	logrus.Infoln("Cache check complete in", time.Since(start))
+	logrus.Infoln("Cache check completed in", util.ShowHumanizeTime(time.Since(start)))
 
 	bRes, err := buildAndTest(ctx, out, tags, needToBuild)
 	if err != nil {
@@ -149,7 +158,11 @@ func maintainArtifactOrder(built []build.Artifact, artifacts []*latest.Artifact)
 func (c *cache) addArtifacts(ctx context.Context, bRes []build.Artifact, hashByName map[string]string) error {
 	for _, a := range bRes {
 		entry := ImageDetails{}
-		if c.imagesAreLocal {
+		isLocal, err := c.isLocalImage(a.ImageName)
+		if err != nil {
+			return err
+		}
+		if isLocal {
 			imageID, err := c.client.ImageID(ctx, a.Tag)
 			if err != nil {
 				return err

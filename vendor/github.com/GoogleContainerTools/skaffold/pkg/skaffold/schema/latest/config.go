@@ -17,13 +17,16 @@ limitations under the License.
 package latest
 
 import (
+	"encoding/json"
+
 	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/util"
 )
 
 // !!! WARNING !!! This config version is already released, please DO NOT MODIFY the structs in this file.
-const Version string = "skaffold/v2beta10"
+const Version string = "skaffold/v2beta11"
 
 // NewSkaffoldConfig creates a SkaffoldConfig
 func NewSkaffoldConfig() util.VersionedConfig {
@@ -40,6 +43,9 @@ type SkaffoldConfig struct {
 
 	// Metadata holds additional information about the config.
 	Metadata Metadata `yaml:"metadata,omitempty"`
+
+	// Dependencies describes a list of other required configs for the current config.
+	Dependencies []ConfigDependency `yaml:"requires,omitempty"`
 
 	// Pipeline defines the Build/Test/Deploy phases.
 	Pipeline `yaml:",inline"`
@@ -67,6 +73,28 @@ type Pipeline struct {
 
 	// PortForward describes user defined resources to port-forward.
 	PortForward []*PortForwardResource `yaml:"portForward,omitempty"`
+}
+
+// ConfigDependency describes a dependency on another skaffold configuration.
+type ConfigDependency struct {
+	// Names describes the names of the required configs.
+	Names []string `yaml:"configs,omitempty"`
+
+	// Path describes the path to the file containing the required configs.
+	Path string `yaml:"path" skaffold:"filepath"`
+
+	// ActiveProfiles describes the list of profiles to activate when resolving the required configs. These profiles must exist in the imported config.
+	ActiveProfiles []ProfileDependency `yaml:"activeProfiles,omitempty"`
+}
+
+// ProfileDependency describes a mapping from referenced config profiles to the current config profiles.
+// If the current config is activated with a profile in this mapping then the dependency configs are also activated with the corresponding mapped profiles.
+type ProfileDependency struct {
+	// Name describes name of the profile to activate in the dependency config. It should exist in the dependency config.
+	Name string `yaml:"name" yamltags:"required"`
+
+	// ActivatedBy describes a list of profiles in the current config that when activated will also activate the named profile in the dependency config. If empty then the named profile is always activated.
+	ActivatedBy []string `yaml:"activatedBy,omitempty"`
 }
 
 func (c *SkaffoldConfig) GetVersion() string {
@@ -148,6 +176,9 @@ type GitTagger struct {
 
 	// Prefix adds a fixed prefix to the tag.
 	Prefix string `yaml:"prefix,omitempty"`
+
+	// IgnoreChanges specifies whether to omit the `-dirty` postfix if there are uncommitted changes.
+	IgnoreChanges bool `yaml:"ignoreChanges,omitempty"`
 }
 
 // EnvTemplateTagger *beta* tags images with a configurable template string.
@@ -469,7 +500,7 @@ type DeployType struct {
 type KubectlDeploy struct {
 	// Manifests lists the Kubernetes yaml or json manifests.
 	// Defaults to `["k8s/*.yaml"]`.
-	Manifests []string `yaml:"manifests,omitempty"`
+	Manifests []string `yaml:"manifests,omitempty" skaffold:"filepath"`
 
 	// RemoteManifests lists Kubernetes manifests in remote clusters.
 	RemoteManifests []string `yaml:"remoteManifests,omitempty"`
@@ -526,7 +557,7 @@ type HelmDeployFlags struct {
 type KustomizeDeploy struct {
 	// KustomizePaths is the path to Kustomization files.
 	// Defaults to `["."]`.
-	KustomizePaths []string `yaml:"paths,omitempty"`
+	KustomizePaths []string `yaml:"paths,omitempty" skaffold:"filepath"`
 
 	// Flags are additional flags passed to `kubectl`.
 	Flags KubectlFlags `yaml:"flags,omitempty"`
@@ -544,7 +575,7 @@ type KptDeploy struct {
 	// By default, the Dir contains the application configurations,
 	// [kustomize config files](https://kubectl.docs.kubernetes.io/pages/examples/kustomize.html)
 	// and [declarative kpt functions](https://googlecontainertools.github.io/kpt/guides/consumer/function/#declarative-run).
-	Dir string `yaml:"dir" yamltags:"required"`
+	Dir string `yaml:"dir" yamltags:"required" skaffold:"filepath"`
 
 	// Fn adds additional configurations for `kpt fn`.
 	Fn KptFn `yaml:"fn,omitempty"`
@@ -557,7 +588,7 @@ type KptDeploy struct {
 type KptFn struct {
 	// FnPath is the directory to discover the declarative kpt functions.
 	// If not provided, kpt deployer uses `kpt.Dir`.
-	FnPath string `yaml:"fnPath,omitempty"`
+	FnPath string `yaml:"fnPath,omitempty" skaffold:"filepath"`
 
 	// Image is a kpt function image to run the configs imperatively. If provided, kpt.fn.fnPath
 	// will be ignored.
@@ -576,7 +607,7 @@ type KptFn struct {
 	Mount []string `yaml:"mount,omitempty"`
 
 	// SinkDir is the directory to where the manipulated resource output is stored.
-	SinkDir string `yaml:"sinkDir,omitempty"`
+	SinkDir string `yaml:"sinkDir,omitempty" skaffold:"filepath"`
 }
 
 // KptLive adds additional configurations used when calling `kpt live`.
@@ -623,13 +654,14 @@ type KptApplyOptions struct {
 // HelmRelease describes a helm release to be deployed.
 type HelmRelease struct {
 	// Name is the name of the Helm release.
+	// It accepts environment variables via the go template syntax.
 	Name string `yaml:"name,omitempty" yamltags:"required"`
 
 	// ChartPath is the path to the Helm chart.
-	ChartPath string `yaml:"chartPath,omitempty" yamltags:"required"`
+	ChartPath string `yaml:"chartPath,omitempty" yamltags:"required" skaffold:"filepath"`
 
 	// ValuesFiles are the paths to the Helm `values` files.
-	ValuesFiles []string `yaml:"valuesFiles,omitempty"`
+	ValuesFiles []string `yaml:"valuesFiles,omitempty" skaffold:"filepath"`
 
 	// ArtifactOverrides are key value pairs where the
 	// key represents the parameter used in the `--set-string` Helm CLI flag to define a container
@@ -754,7 +786,7 @@ type Artifact struct {
 
 	// Workspace is the directory containing the artifact's sources.
 	// Defaults to `.`.
-	Workspace string `yaml:"context,omitempty"`
+	Workspace string `yaml:"context,omitempty" skaffold:"filepath"`
 
 	// Sync *beta* lists local files synced to pods instead
 	// of triggering an image build when modified.
@@ -1112,6 +1144,7 @@ type DockerArtifact struct {
 	// is configured in the underlying docker daemon. Valid modes are
 	// `host`: use the host's networking stack.
 	// `bridge`: use the bridged network configuration.
+	// `container:<name|id>`: reuse another container's network stack.
 	// `none`: no networking in the container.
 	NetworkMode string `yaml:"network,omitempty"`
 
@@ -1121,6 +1154,9 @@ type DockerArtifact struct {
 
 	// NoCache used to pass in --no-cache to docker build to prevent caching.
 	NoCache bool `yaml:"noCache,omitempty"`
+
+	// Squash is used to pass in --squash to docker build to squash docker image layers into single layer.
+	Squash bool `yaml:"squash,omitempty"`
 
 	// Secret contains information about a local secret passed to `docker build`,
 	// along with optional destination information.
@@ -1171,4 +1207,179 @@ type JibArtifact struct {
 
 	// BaseImage overrides the configured jib base image.
 	BaseImage string `yaml:"fromImage,omitempty"`
+}
+
+// UnmarshalYAML provides a custom unmarshaller to deal with
+// https://github.com/GoogleContainerTools/skaffold/issues/4175
+func (clusterDetails *ClusterDetails) UnmarshalYAML(value *yaml.Node) error {
+	// We do this as follows
+	// 1. We zero out the fields in the node that require custom processing
+	// 2. We unmarshal all the non special fields using the aliased type resource
+	//    we use an alias type to avoid recursion caused by invoking this function infinitely
+	// 3. We deserialize the special fields as required.
+	type ClusterDetailsForUnmarshaling ClusterDetails
+
+	volumes, remaining, err := util.UnmarshalClusterVolumes(value)
+
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal the remaining values
+	aux := (*ClusterDetailsForUnmarshaling)(clusterDetails)
+	err = yaml.Unmarshal(remaining, aux)
+
+	if err != nil {
+		return err
+	}
+
+	clusterDetails.Volumes = volumes
+	return nil
+}
+
+// UnmarshalYAML provides a custom unmarshaller to deal with
+// https://github.com/GoogleContainerTools/skaffold/issues/4175
+func (ka *KanikoArtifact) UnmarshalYAML(value *yaml.Node) error {
+	// We do this as follows
+	// 1. We zero out the fields in the node that require custom processing
+	// 2. We unmarshal all the non special fields using the aliased type resource
+	//    we use an alias type to avoid recursion caused by invoking this function infinitely
+	// 3. We deserialize the special fields as required.
+	type KanikoArtifactForUnmarshaling KanikoArtifact
+
+	mounts, remaining, err := util.UnmarshalKanikoArtifact(value)
+
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal the remaining values
+	aux := (*KanikoArtifactForUnmarshaling)(ka)
+	err = yaml.Unmarshal(remaining, aux)
+
+	if err != nil {
+		return err
+	}
+
+	ka.VolumeMounts = mounts
+	return nil
+}
+
+// MarshalYAML provides a custom marshaller to deal with
+// https://github.com/GoogleContainerTools/skaffold/issues/4175
+func (clusterDetails *ClusterDetails) MarshalYAML() (interface{}, error) {
+	// We do this as follows
+	// 1. We zero out the fields in the node that require custom processing
+	// 2. We marshall all the non special fields using the aliased type resource
+	//    we use an alias type to avoid recursion caused by invoking this function infinitely
+	// 3. We unmarshal to a map
+	// 4. We marshal the special fields to json and unmarshal to a map
+	//    * This leverages the json struct annotations to marshal as expected
+	// 5. We combine the two maps and return
+	type ClusterDetailsForUnmarshaling ClusterDetails
+
+	// Marshal volumes to a list. Use json because the Kubernetes resources have json annotations.
+	volumes := clusterDetails.Volumes
+
+	j, err := json.Marshal(volumes)
+
+	if err != nil {
+		return err, nil
+	}
+
+	vList := []interface{}{}
+
+	if err := json.Unmarshal(j, &vList); err != nil {
+		return nil, err
+	}
+
+	// Make a deep copy of clusterDetails because we need to zero out volumes and we don't want to modify the
+	// current object.
+	aux := &ClusterDetailsForUnmarshaling{}
+
+	b, err := json.Marshal(clusterDetails)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(b, aux); err != nil {
+		return nil, err
+	}
+
+	aux.Volumes = nil
+
+	marshaled, err := yaml.Marshal(aux)
+
+	if err != nil {
+		return nil, err
+	}
+
+	m := map[string]interface{}{}
+
+	err = yaml.Unmarshal(marshaled, m)
+
+	if len(vList) > 0 {
+		m["volumes"] = vList
+	}
+	return m, err
+}
+
+// MarshalYAML provides a custom marshaller to deal with
+// https://github.com/GoogleContainerTools/skaffold/issues/4175
+func (ka *KanikoArtifact) MarshalYAML() (interface{}, error) {
+	// We do this as follows
+	// 1. We zero out the fields in the node that require custom processing
+	// 2. We marshal all the non special fields using the aliased type resource
+	//    we use an alias type to avoid recursion caused by invoking this function infinitely
+	// 3. We unmarshal to a map
+	// 4. We marshal the special fields to json and unmarshal to a map
+	//    * This leverages the json struct annotations to marshal as expected
+	// 5. We combine the two maps and return
+	type KanikoArtifactForUnmarshaling KanikoArtifact
+
+	// Marshal volumes to a map. User json because the Kubernetes resources have json annotations.
+	volumeMounts := ka.VolumeMounts
+
+	j, err := json.Marshal(volumeMounts)
+
+	if err != nil {
+		return err, nil
+	}
+
+	vList := []interface{}{}
+
+	if err := json.Unmarshal(j, &vList); err != nil {
+		return nil, err
+	}
+
+	// Make a deep copy of kanikoArtifact because we need to zero out volumeMounts and we don't want to modify the
+	// current object.
+	aux := &KanikoArtifactForUnmarshaling{}
+
+	b, err := json.Marshal(ka)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(b, aux); err != nil {
+		return nil, err
+	}
+	aux.VolumeMounts = nil
+
+	marshaled, err := yaml.Marshal(aux)
+
+	if err != nil {
+		return nil, err
+	}
+
+	m := map[string]interface{}{}
+
+	err = yaml.Unmarshal(marshaled, m)
+
+	if len(vList) > 0 {
+		m["volumeMounts"] = vList
+	}
+	return m, err
 }

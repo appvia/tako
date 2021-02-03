@@ -527,7 +527,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		},
 	}
 
-	runCtx, cfg, err := runContext(opts)
+	runCtx, cfg, err := runContext(opts, profiles)
 
 	r, err := runner.NewForConfig(runCtx)
 
@@ -590,7 +590,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 }
 
 // runContext returns runner context and config for Skaffold dev mode
-func runContext(opts config.SkaffoldOptions) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
+func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
 	parsed, err := schema.ParseConfigAndUpgrade(opts.ConfigurationFile, latest.Version)
 	if err != nil {
 		if os.IsNotExist(errors.Unwrap(err)) {
@@ -603,23 +603,31 @@ func runContext(opts config.SkaffoldOptions) (*runcontext.RunContext, *latest.Sk
 		return nil, nil, fmt.Errorf("parsing skaffold config: %w", err)
 	}
 
-	config := parsed.(*latest.SkaffoldConfig)
+	configs := []*latest.SkaffoldConfig{}
 
-	if err = schema.ApplyProfiles(config, opts); err != nil {
+	for _, p := range parsed {
+		configs = append(configs, p.(*latest.SkaffoldConfig))
+	}
+
+	config := configs[0]
+
+	appliedProfiles, err := schema.ApplyProfiles(config, opts, profiles)
+	if err != nil {
 		return nil, nil, fmt.Errorf("applying profiles: %w", err)
 	}
+	fmt.Println("Applied profiles:", appliedProfiles)
 
 	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext, config.Deploy.KubeContext)
 
-	if err := defaults.Set(config); err != nil {
+	if err := defaults.Set(configs[0]); err != nil {
 		return nil, nil, fmt.Errorf("setting default values: %w", err)
 	}
 
-	if err := validation.Process(config); err != nil {
+	if err := validation.Process(configs); err != nil {
 		return nil, nil, fmt.Errorf("invalid skaffold config: %w", err)
 	}
 
-	runCtx, err := runcontext.GetRunContext(opts, config.Pipeline)
+	runCtx, err := runcontext.GetRunContext(opts, []latest.Pipeline{config.Pipeline})
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting run context: %w", err)
 	}

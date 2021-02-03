@@ -36,8 +36,9 @@ type InitBuilder interface {
 	// Must be unique between artifacts.
 	Describe() string
 
-	// ArtifactType returns the type of the artifact to be built.
-	ArtifactType() latest.ArtifactType
+	// ArtifactType returns the type of the artifact to be built.  Paths should be relative to the workspace.
+	// To make skaffold.yaml more portable across OS-es we should always generate /-delimited filepaths.
+	ArtifactType(workspace string) latest.ArtifactType
 
 	// ConfiguredImage returns the target image configured by the builder, or an empty string if no image is configured.
 	// This should be a cheap operation.
@@ -66,11 +67,11 @@ type Initializer interface {
 	// contained in the initializer with the provided images from the deploy initializer
 	ProcessImages([]string) error
 	// BuildConfig returns the processed build config to be written to the skaffold.yaml
-	BuildConfig() latest.BuildConfig
+	BuildConfig() (latest.BuildConfig, []*latest.PortForwardResource)
 	// PrintAnalysis writes the project analysis to the provided out stream
 	PrintAnalysis(io.Writer) error
 	// GenerateManifests generates image names and manifests for all unresolved pairs
-	GenerateManifests() (map[GeneratedArtifactInfo][]byte, error)
+	GenerateManifests(io.Writer, bool) (map[GeneratedArtifactInfo][]byte, error)
 }
 
 type emptyBuildInitializer struct {
@@ -80,15 +81,15 @@ func (e *emptyBuildInitializer) ProcessImages([]string) error {
 	return nil
 }
 
-func (e *emptyBuildInitializer) BuildConfig() latest.BuildConfig {
-	return latest.BuildConfig{}
+func (e *emptyBuildInitializer) BuildConfig() (latest.BuildConfig, []*latest.PortForwardResource) {
+	return latest.BuildConfig{}, nil
 }
 
 func (e *emptyBuildInitializer) PrintAnalysis(io.Writer) error {
 	return nil
 }
 
-func (e *emptyBuildInitializer) GenerateManifests() (map[GeneratedArtifactInfo][]byte, error) {
+func (e *emptyBuildInitializer) GenerateManifests(io.Writer, bool) (map[GeneratedArtifactInfo][]byte, error) {
 	return nil, nil
 }
 
@@ -96,7 +97,7 @@ func NewInitializer(builders []InitBuilder, c config.Config) Initializer {
 	switch {
 	case c.SkipBuild:
 		return &emptyBuildInitializer{}
-	case c.CliArtifacts != nil:
+	case len(c.CliArtifacts) > 0:
 		return &cliBuildInitializer{
 			cliArtifacts:    c.CliArtifacts,
 			builders:        builders,

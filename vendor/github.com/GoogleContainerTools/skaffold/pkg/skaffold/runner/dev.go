@@ -30,10 +30,12 @@ import (
 	sErrors "github.com/GoogleContainerTools/skaffold/pkg/skaffold/errors"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/event"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/filemon"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/instrumentation"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/portforward"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/sync"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/util"
 	"github.com/GoogleContainerTools/skaffold/proto"
 )
 
@@ -66,12 +68,15 @@ func (r *SkaffoldRunner) doDev(ctx context.Context, out io.Writer, logger *kuber
 	defer r.listener.LogWatchToUser(out)
 	event.DevLoopInProgress(r.devIteration)
 	defer func() { r.devIteration++ }()
+
+	meterUpdated := false
 	if needsSync {
 		defer func() {
 			r.changeSet.resetSync()
 			r.intents.resetSync()
 		}()
-
+		instrumentation.AddDevIteration("sync")
+		meterUpdated = true
 		for _, s := range r.changeSet.needsResync {
 			fileCount := len(s.Copy) + len(s.Delete)
 			color.Default.Fprintf(out, "Syncing %d files for %s\n", fileCount, s.Image)
@@ -94,11 +99,23 @@ func (r *SkaffoldRunner) doDev(ctx context.Context, out io.Writer, logger *kuber
 			r.changeSet.resetBuild()
 			r.intents.resetBuild()
 		}()
-
-		if _, err := r.BuildAndTest(ctx, out, r.changeSet.needsRebuild); err != nil {
-			logrus.Warnln("Skipping deploy due to error:", err)
+		if !meterUpdated {
+			instrumentation.AddDevIteration("build")
+			meterUpdated = true
+		}
+		bRes, err := r.Build(ctx, out, r.changeSet.needsRebuild)
+		if err != nil {
+			logrus.Warnln("Skipping test and deploy due to build error:", err)
 			event.DevLoopFailedInPhase(r.devIteration, sErrors.Build, err)
 			return nil
+		}
+		// TODO(modali): Add skipTest boolean to Tester itself to avoid this check.
+		if !r.runCtx.SkipTests() {
+			if err = r.Test(ctx, out, bRes); err != nil {
+				logrus.Warnln("Skipping deploy due to test error:", err)
+				event.DevLoopFailedInPhase(r.devIteration, sErrors.Build, err)
+				return nil
+			}
 		}
 	}
 
@@ -110,6 +127,9 @@ func (r *SkaffoldRunner) doDev(ctx context.Context, out io.Writer, logger *kuber
 		}()
 
 		forwarderManager.Stop()
+		if !meterUpdated {
+			instrumentation.AddDevIteration("deploy")
+		}
 		if err := r.Deploy(ctx, out, r.builds); err != nil {
 			logrus.Warnln("Skipping deploy due to error:", err)
 			event.DevLoopFailedInPhase(r.devIteration, sErrors.Deploy, err)
@@ -124,7 +144,7 @@ func (r *SkaffoldRunner) doDev(ctx context.Context, out io.Writer, logger *kuber
 	return nil
 }
 
-// Dev watches for changes and runs the skaffold build and deploy
+// Dev watches for changes and runs the skaffold build, test and deploy
 // config until interrupted by the user.
 func (r *SkaffoldRunner) Dev(ctx context.Context, out io.Writer, artifacts []*latest.Artifact) error {
 	event.DevLoopInProgress(r.devIteration)
@@ -195,7 +215,7 @@ func (r *SkaffoldRunner) Dev(ctx context.Context, out io.Writer, artifacts []*la
 		return fmt.Errorf("watching skaffold configuration %q: %w", r.runCtx.ConfigurationFile(), err)
 	}
 
-	logrus.Infoln("List generated in", time.Since(start))
+	logrus.Infoln("List generated in", util.ShowHumanizeTime(time.Since(start)))
 
 	// Init Sync State
 	if err := sync.Init(ctx, artifacts); err != nil {
@@ -204,10 +224,16 @@ func (r *SkaffoldRunner) Dev(ctx context.Context, out io.Writer, artifacts []*la
 	}
 
 	// First build
-	bRes, err := r.BuildAndTest(ctx, out, artifacts)
+	bRes, err := r.Build(ctx, out, artifacts)
 	if err != nil {
 		event.DevLoopFailedInPhase(r.devIteration, sErrors.Build, err)
 		return fmt.Errorf("exiting dev mode because first build failed: %w", err)
+	}
+	if !r.runCtx.SkipTests() {
+		if err = r.Test(ctx, out, bRes); err != nil {
+			event.DevLoopFailedInPhase(r.devIteration, sErrors.Build, err)
+			return fmt.Errorf("exiting dev mode because test failed after first build: %w", err)
+		}
 	}
 
 	logger := r.createLogger(out, bRes)
