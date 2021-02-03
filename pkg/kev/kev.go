@@ -80,13 +80,14 @@ func DetectSecrets(workingDir string) error {
 }
 
 // Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info
-func Render(workingDir string, format string, singleFile bool, dir string, envs []string) error {
+// It takes optional exclusion list as map of environment name to a slice of excluded docker compose service names.
+func Render(workingDir string, format string, singleFile bool, dir string, envs []string, excluded map[string][]string) error {
 	manifest, err := LoadManifest(workingDir)
 	if err != nil {
 		return errors.Wrap(err, "Unable to load app manifest")
 	}
 
-	_, err = manifest.RenderWithConvertor(converter.Factory(format), dir, singleFile, envs)
+	_, err = manifest.RenderWithConvertor(converter.Factory(format), dir, singleFile, envs, excluded)
 	return err
 }
 

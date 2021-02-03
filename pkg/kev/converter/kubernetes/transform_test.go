@@ -45,6 +45,7 @@ var _ = Describe("Transform", func() {
 	var k Kubernetes
 	var project composego.Project
 	var projectService ProjectService
+	var excluded []string
 
 	BeforeEach(func() {
 		project = composego.Project{
@@ -61,9 +62,44 @@ var _ = Describe("Transform", func() {
 		project.Services = append(project.Services, composego.ServiceConfig(projectService))
 
 		k = Kubernetes{
-			Opt:     ConvertOptions{},
-			Project: &project,
+			Opt:      ConvertOptions{},
+			Project:  &project,
+			Excluded: excluded,
 		}
+	})
+
+	Describe("Transform", func() {
+
+		When("service exclusion list is empty", func() {
+
+			It("includes kubernetes objects for project services", func() {
+				objs, err := k.Transform()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(objs)).To(Equal(1))
+
+				u, err := ToUnstructured(objs[0])
+				name := u["metadata"].(map[string]interface{})["name"]
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(name).To(Equal(projectService.Name))
+			})
+
+		})
+
+		When("excluded services are specified", func() {
+
+			BeforeEach(func() {
+				excluded = []string{projectService.Name}
+			})
+
+			It("doesn't include kubernetes objects for excluded project services", func() {
+				objs, err := k.Transform()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(objs)).To(Equal(0))
+			})
+
+		})
+
 	})
 
 	Describe("initPodSpec", func() {
