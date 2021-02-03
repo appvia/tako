@@ -17,11 +17,13 @@ limitations under the License.
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/instrumentation"
 	"github.com/GoogleContainerTools/skaffold/proto"
 )
 
@@ -73,12 +75,14 @@ func ActionableErr(phase Phase, err error) *proto.ActionableErr {
 
 func ShowAIError(err error) error {
 	if IsSkaffoldErr(err) {
+		instrumentation.SetErrorCode(err.(Error).StatusCode())
 		return err
 	}
 
 	var knownProblems = append(knownBuildProblems, knownDeployProblems...)
 	for _, v := range append(knownProblems, knownInitProblems...) {
 		if v.regexp.MatchString(err.Error()) {
+			instrumentation.SetErrorCode(v.errCode)
 			if suggestions := v.suggestion(skaffoldOpts); suggestions != nil {
 				description := fmt.Sprintf("%s\n", err)
 				if v.description != nil {
@@ -104,9 +108,11 @@ func IsOldImageManifestProblem(err error) (string, bool) {
 }
 
 func getErrorCodeFromError(phase Phase, err error) (proto.StatusCode, []*proto.Suggestion) {
-	if t, ok := err.(Error); ok {
-		return t.StatusCode(), t.Suggestions()
+	var sErr Error
+	if errors.As(err, &sErr) {
+		return sErr.StatusCode(), sErr.Suggestions()
 	}
+
 	if problems, ok := allErrors[phase]; ok {
 		for _, v := range problems {
 			if v.regexp.MatchString(err.Error()) {
