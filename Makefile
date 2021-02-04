@@ -23,7 +23,7 @@ endif
 
 LFLAGS ?= -X github.com/appvia/kev/pkg/${NAME}.Tag=${GIT_LAST_TAG} -X github.com/appvia/kev/pkg/${NAME}.GitSHA=${GIT_SHA} -X github.com/appvia/kev/pkg/${NAME}.Compiled=${BUILD_TIME} -X github.com/appvia/kev/pkg/${NAME}.Release=${VERSION} -X github.com/appvia/kev/pkg/${NAME}.GitBranch=${GIT_BRANCH}
 CLI_PLATFORMS=darwin linux windows
-CLI_ARCHITECTURES=386 amd64
+CLI_ARCHITECTURES=amd64
 export GOFLAGS = -mod=vendor
 
 .PHONY: test e2e authors changelog build release check vet golangci-lint setup-kind
