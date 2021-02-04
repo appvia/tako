@@ -63,7 +63,7 @@ var devCmd = &cobra.Command{
 	Short: "Continuous reconcile and re-render of K8s manifests with optional project build, push and deploy (using --skaffold).",
 	Long:  devLongDesc,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return verifySkaffoldExpectedFlags(cmd)
+		return VerifySkaffoldExpectedFlags(cmd)
 	},
 	RunE: runDevCmd,
 }
@@ -138,8 +138,8 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 }
 
-// verifySkaffoldExpectedFlags verifies Skaffold required flags and sets appropriate defaults
-func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
+// VerifySkaffoldExpectedFlags verifies Skaffold required flags and sets appropriate defaults
+func VerifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
 	namespace, _ := cmd.Flags().GetString("namespace")
 	kubecontext, _ := cmd.Flags().GetString("kubecontext")
@@ -148,9 +148,9 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
 
 	if skaffold {
-		fmt.Println("=========================================")
-		fmt.Println("Kev dev activated with Skaffold dev loop ")
-		fmt.Println("-----------------------------------------")
+		fmt.Println("==================================================")
+		fmt.Println("Dev mode activated with Skaffold dev loop enabled ")
+		fmt.Println("--------------------------------------------------")
 
 		if len(namespace) == 0 {
 			fmt.Printf("⏣  Will deploy to `%s` namespace. You may override it with '--namespace' flag.\n", skaffoldNamespace)
@@ -182,7 +182,7 @@ func verifySkaffoldExpectedFlags(cmd *cobra.Command) error {
 		} else {
 			fmt.Println("⏣  Will automatically trigger build/push/deploy on each application code change. To trigger changes manually use '--manual-trigger' flag.")
 		}
-		fmt.Println("=========================================")
+		fmt.Println("==================================================")
 	}
 
 	return nil
