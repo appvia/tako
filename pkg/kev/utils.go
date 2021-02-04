@@ -17,6 +17,7 @@
 package kev
 
 import (
+	"io"
 	"os"
 	"sort"
 )
@@ -44,4 +45,16 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+// WriteTo writes content to file
+func WriteTo(filePath string, w io.WriterTo) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	if _, err := w.WriteTo(file); err != nil {
+		return err
+	}
+	return file.Close()
 }

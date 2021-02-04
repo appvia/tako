@@ -45,7 +45,7 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 
 	for _, environment := range manifest.Environments {
 		filePath := path.Join(workingDir, environment.File)
-		if err := writeTo(filePath, environment); err != nil {
+		if err := kev.WriteTo(filePath, environment); err != nil {
 			return displayError(err)
 		}
 	}

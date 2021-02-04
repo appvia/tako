@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 
@@ -118,7 +117,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	for _, environment := range manifest.Environments {
 		envPath := path.Join(workingDirAbs, environment.File)
 
-		if err := writeTo(envPath, environment); err != nil {
+		if err := kev.WriteTo(envPath, environment); err != nil {
 			return displayError(err)
 		}
 
@@ -143,7 +142,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	if err := writeTo(manifestPath, manifest); err != nil {
+	if err := kev.WriteTo(manifestPath, manifest); err != nil {
 		return displayError(err)
 	}
 
@@ -161,17 +160,6 @@ func manifestExistsForPath(manifestPath string) bool {
 	return err == nil
 }
 
-func writeTo(filePath string, w io.WriterTo) error {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	if _, err := w.WriteTo(file); err != nil {
-		return err
-	}
-	return file.Close()
-}
-
 func createOrUpdateSkaffoldManifest(path string, envs []string, project *kev.ComposeProject, results *[]skippableFile) error {
 	if manifestExistsForPath(path) {
 		// Skaffold manifest already present - add additional profiles to it!
@@ -182,7 +170,7 @@ func createOrUpdateSkaffoldManifest(path string, envs []string, project *kev.Com
 		if err != nil {
 			return displayError(err)
 		}
-		if err := writeTo(path, updatedSkaffold); err != nil {
+		if err := kev.WriteTo(path, updatedSkaffold); err != nil {
 			return displayError(err)
 		}
 
@@ -198,7 +186,7 @@ func createOrUpdateSkaffoldManifest(path string, envs []string, project *kev.Com
 			return displayError(err)
 		}
 
-		if err := writeTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
+		if err := kev.WriteTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
 			return displayError(err)
 		}
 
