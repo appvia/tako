@@ -17,14 +17,16 @@
 package kev
 
 import (
+	"context"
+	"fmt"
 	"os"
-	"path"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -147,35 +149,79 @@ func Watch(workDir string, change chan<- string) error {
 	return nil
 }
 
-// ActivateSkaffoldDevLoop checks whether skaffold dev loop can be activated, and returns an error if not.
-// It'll also attempt to reconcile Skaffold profiles before starting dev loop - this is done
-// so that necessary profiles are added to the Skaffold config. It's necessary as environment
-// specific profile is supplied to Skaffold so it knows what manifests to deploy and to which k8s cluster.
-func ActivateSkaffoldDevLoop(workDir string) (string, *SkaffoldManifest, error) {
-	manifest, err := LoadManifest(workDir)
+// Dev contains dev command business logic
+func Dev(cmd *cobra.Command, args []string, workDir string, preRunCommands []PreRunCmd, errHandler ErrorHandler, changeHandler ChangeHandler) error {
+	skaffold, err := cmd.Flags().GetBool("skaffold")
+	namespace, err := cmd.Flags().GetString("namespace")
+	kubecontext, err := cmd.Flags().GetString("kubecontext")
+	kevenv, err := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
+	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
+
 	if err != nil {
-		return "", nil, errors.Wrap(err, "Unable to load app manifest")
+		return err
 	}
 
-	msg := `
-	If you don't currently have skaffold.yaml in your project you may bootstrap a new one with "skaffold init" command.
-	Once you have skaffold.yaml in your project, make sure that Kev references it by adding "skaffold: skaffold.yaml" in kev.yaml!`
-
-	if len(manifest.Skaffold) == 0 {
-		return "", nil, errors.New("Can't activate Skaffold dev loop. Kev wasn't initialized with --skaffold." + msg)
+	runPreCommands := func() error {
+		for _, preRunCmd := range preRunCommands {
+			if err := preRunCmd(cmd, args); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
-	configPath := path.Join(workDir, manifest.Skaffold)
+	change := make(chan string, 50)
+	defer close(change)
 
-	if !fileExists(configPath) {
-		return "", nil, errors.New("Can't find Skaffold config file referenced by Kev manifest. Have you initialized Kev with --skaffold?" + msg)
+	// initial manifests generation for specified environments only
+	if err := runPreCommands(); err != nil {
+		return errHandler(err)
 	}
 
-	// Reconcile skaffold config and add potentially missing profiles before starting dev loop
-	reconciledSkaffoldConfig, err := AddProfiles(configPath, manifest.GetEnvironmentsNames(), true)
-	if err != nil {
-		return "", nil, errors.Wrap(err, "Couldn't reconcile Skaffold config - required profiles haven't been added.")
+	if skaffold {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		catchCtrlC(cancel)
+
+		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(workDir)
+		if err != nil {
+			return errHandler(err)
+		}
+
+		if err := WriteTo(skaffoldConfigPath, skaffoldConfig); err != nil {
+			return errHandler(errors.Wrap(err, "Couldn't write Skaffold config"))
+		}
+
+		profileName := kevenv + EnvProfileNameSuffix
+		go RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, manualTrigger, tail, verbose)
 	}
 
-	return configPath, reconciledSkaffoldConfig, nil
+	go Watch(workDir, change)
+
+	for {
+		ch := <-change
+		if len(ch) > 0 {
+			fmt.Printf("\n♻️  %s changed! Re-rendering manifests...\n\n", ch)
+
+			if changeHandler != nil {
+				changeHandler(ch)
+			}
+
+			if err := runPreCommands(); err != nil {
+				errHandler(err)
+			}
+
+			// empty the buffer as we only ever do one re-render cycle per a batch of changes
+			if len(change) > 0 {
+				for range change {
+					if len(change) == 0 {
+						break
+					}
+				}
+			}
+		}
+	}
 }

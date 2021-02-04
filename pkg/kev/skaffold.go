@@ -24,11 +24,14 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/signal"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
@@ -48,6 +51,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 // SkaffoldManifest is a wrapper around latest SkaffoldConfig
@@ -71,6 +75,9 @@ const (
 
 	// EnvProfileKubeContextSuffix is a suffix added to environment specific profile kube-context
 	EnvProfileKubeContextSuffix = "-context"
+
+	// DefaultSkaffoldNamespace is a default namespace to which Skaffold will deploy manifests
+	DefaultSkaffoldNamespace = "default"
 )
 
 var (
@@ -633,4 +640,108 @@ func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.Run
 	}
 
 	return runCtx, config, nil
+}
+
+// VerifySkaffoldExpectedFlags verifies Skaffold required flags and sets appropriate defaults
+func VerifySkaffoldExpectedFlags(cmd *cobra.Command) error {
+	skaffold, _ := cmd.Flags().GetBool("skaffold")
+	namespace, _ := cmd.Flags().GetString("namespace")
+	kubecontext, _ := cmd.Flags().GetString("kubecontext")
+	kevenv, _ := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
+	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
+
+	if skaffold {
+		fmt.Println("==================================================")
+		fmt.Println("Dev mode activated with Skaffold dev loop enabled ")
+		fmt.Println("--------------------------------------------------")
+
+		if len(namespace) == 0 {
+			fmt.Printf("⏣  Will deploy to `%s` namespace. You may override it with '--namespace' flag.\n", DefaultSkaffoldNamespace)
+			_ = cmd.Flag("namespace").Value.Set(DefaultSkaffoldNamespace)
+		} else {
+			fmt.Printf("⏣  Will deploy to '%s' namespace. You may override it with '--namespace' flag.\n", namespace)
+		}
+
+		if len(kubecontext) == 0 {
+			fmt.Println("⏣  Will use current kubectl context. You may override it with '--kubecontext' flag.")
+		} else {
+			fmt.Printf("⏣  Will use '%s' kube context. You may override it with '--kubecontext' flag.\n", kubecontext)
+		}
+
+		if len(kevenv) == 0 {
+			fmt.Printf("⏣  Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.\n", SandboxEnv)
+		} else {
+			fmt.Printf("⏣  Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.\n", kevenv)
+		}
+
+		if tail {
+			fmt.Println("⏣  Will tail logs of deployed application.")
+		} else {
+			fmt.Println("⏣  Won't tail logs of deployed application. To enable log tailing use '--tail' flag.")
+		}
+
+		if manualTrigger {
+			fmt.Println("⏣  Will stack up all the code changes and only perform build/push/deploy when triggered manually by hitting ENTER.")
+		} else {
+			fmt.Println("⏣  Will automatically trigger build/push/deploy on each application code change. To trigger changes manually use '--manual-trigger' flag.")
+		}
+		fmt.Println("==================================================")
+	}
+
+	return nil
+}
+
+// catchCtrlC catches ctrl+c in skaffold dev
+func catchCtrlC(cancel context.CancelFunc) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals,
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGPIPE,
+	)
+
+	go func() {
+		<-signals
+		signal.Stop(signals)
+		cancel()
+		fmt.Println("-----------------------------------------")
+		fmt.Println("⏣  Stopping Skaffold dev loop! Kev will continue to reconcile and")
+		fmt.Println("   re-render K8s manifests for your application. Press Ctrl+C to stop.")
+		fmt.Println("-----------------------------------------")
+	}()
+}
+
+// ActivateSkaffoldDevLoop checks whether skaffold dev loop can be activated, and returns an error if not.
+// It'll also attempt to reconcile Skaffold profiles before starting dev loop - this is done
+// so that necessary profiles are added to the Skaffold config. It's necessary as environment
+// specific profile is supplied to Skaffold so it knows what manifests to deploy and to which k8s cluster.
+func ActivateSkaffoldDevLoop(workDir string) (string, *SkaffoldManifest, error) {
+	manifest, err := LoadManifest(workDir)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "Unable to load app manifest")
+	}
+
+	msg := `
+	If you don't currently have skaffold.yaml in your project you may bootstrap a new one with "skaffold init" command.
+	Once you have skaffold.yaml in your project, make sure that Kev references it by adding "skaffold: skaffold.yaml" in kev.yaml!`
+
+	if len(manifest.Skaffold) == 0 {
+		return "", nil, errors.New("Can't activate Skaffold dev loop. Kev wasn't initialized with --skaffold." + msg)
+	}
+
+	configPath := path.Join(workDir, manifest.Skaffold)
+
+	if !fileExists(configPath) {
+		return "", nil, errors.New("Can't find Skaffold config file referenced by Kev manifest. Have you initialized Kev with --skaffold?" + msg)
+	}
+
+	// Reconcile skaffold config and add potentially missing profiles before starting dev loop
+	reconciledSkaffoldConfig, err := AddProfiles(configPath, manifest.GetEnvironmentsNames(), true)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "Couldn't reconcile Skaffold config - required profiles haven't been added.")
+	}
+
+	return configPath, reconciledSkaffoldConfig, nil
 }
