@@ -475,12 +475,12 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, do *DevOptions) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, opts *DevOptions) error {
 	var mutedPhases []string
 	var trigger string
 	var pollInterval int
 
-	if do.ManualTrigger {
+	if opts.ManualTrigger {
 		trigger = "manual"
 		pollInterval = 0
 	} else {
@@ -488,7 +488,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		pollInterval = 100 // 100ms by default
 	}
 
-	if do.Verbose {
+	if opts.Verbose {
 		mutedPhases = []string{}
 	} else {
 		mutedPhases = []string{"build"} // possible options "build", "deploy", "status-check"
@@ -496,7 +496,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 
 	logrus.SetLevel(logrus.WarnLevel)
 
-	opts := config.SkaffoldOptions{
+	skaffoldOpts := config.SkaffoldOptions{
 		ConfigurationFile:     skaffoldFile,
 		ProfileAutoActivation: true,
 		Trigger:               trigger,
@@ -505,14 +505,14 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		AutoSync:              true,
 		AutoDeploy:            true,
 		Profiles:              profiles,
-		Namespace:             do.Namespace,
-		KubeContext:           do.Kubecontext,
+		Namespace:             opts.Namespace,
+		KubeContext:           opts.Kubecontext,
 		Cleanup:               true,
 		NoPrune:               false,
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
 		StatusCheck:           true,
-		Tail:                  do.Tail,
+		Tail:                  opts.Tail,
 		PortForward: config.PortForwardOptions{
 			Enabled:     true,
 			ForwardPods: true,
@@ -527,13 +527,13 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		},
 		CustomLabels: []string{
 			"io.kev.dev/profile=" + profiles[0],
-			"io.kev.dev/kubecontext=" + do.Kubecontext,
-			"io.kev.dev/namespace=" + do.Namespace,
+			"io.kev.dev/kubecontext=" + opts.Kubecontext,
+			"io.kev.dev/namespace=" + opts.Namespace,
 			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
 		},
 	}
 
-	runCtx, cfg, err := runContext(opts, profiles)
+	runCtx, cfg, err := runContext(skaffoldOpts, profiles)
 
 	r, err := runner.NewForConfig(runCtx)
 
@@ -542,14 +542,14 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	}
 
 	prune := func() {}
-	if opts.Prune() {
+	if skaffoldOpts.Prune() {
 		defer func() {
 			prune()
 		}()
 	}
 
 	cleanup := func() {}
-	if opts.Cleanup {
+	if skaffoldOpts.Cleanup {
 		defer func() {
 			cleanup()
 		}()
