@@ -149,7 +149,7 @@ func Watch(workDir string, change chan<- string) error {
 }
 
 // Dev contains dev command business logic
-func Dev(opts *DevOptions, workDir string, preRunCommands []RunCmd, errHandler ErrorHandler, changeHandler ChangeHandler) error {
+func Dev(opts *DevOptions, workDir string, preRunCommands []RunFunc, errHandler ErrorHandler, changeHandler ChangeHandler) error {
 
 	runPreCommands := func() error {
 		for _, preRunCmd := range preRunCommands {

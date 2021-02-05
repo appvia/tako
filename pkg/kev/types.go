@@ -108,8 +108,8 @@ type ErrorHandler func(error) error
 // ChangeHandler is a callback function that handles change and returns error, e.g. change event when in dev mode
 type ChangeHandler func(string) error
 
-// RunCmd is a command expected to run before/after the current command
-type RunCmd func() error
+// RunFunc is a callback function expected to run before/after the current command
+type RunFunc func() error
 
 // DevOptions contains parameters required for Dev loop
 type DevOptions struct {

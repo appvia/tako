@@ -143,7 +143,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 
 	displayDevModeStarted()
 
-	preRunCmds := []kev.RunCmd{
+	preRunCmds := []kev.RunFunc{
 		func() error {
 			return runReconcileCmd(cmd, args)
 		},
