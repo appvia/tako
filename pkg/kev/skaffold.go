@@ -51,7 +51,6 @@ import (
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 // SkaffoldManifest is a wrapper around latest SkaffoldConfig
@@ -476,12 +475,12 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, kubeCtx, skaffoldFile string, manualTrigger, tailLogs, verbose bool) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, do *DevOptions) error {
 	var mutedPhases []string
 	var trigger string
 	var pollInterval int
 
-	if manualTrigger {
+	if do.ManualTrigger {
 		trigger = "manual"
 		pollInterval = 0
 	} else {
@@ -489,7 +488,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		pollInterval = 100 // 100ms by default
 	}
 
-	if verbose {
+	if do.Verbose {
 		mutedPhases = []string{}
 	} else {
 		mutedPhases = []string{"build"} // possible options "build", "deploy", "status-check"
@@ -506,14 +505,14 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		AutoSync:              true,
 		AutoDeploy:            true,
 		Profiles:              profiles,
-		Namespace:             ns,
-		KubeContext:           kubeCtx,
+		Namespace:             do.Namespace,
+		KubeContext:           do.Kubecontext,
 		Cleanup:               true,
 		NoPrune:               false,
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
 		StatusCheck:           true,
-		Tail:                  tailLogs,
+		Tail:                  do.Tail,
 		PortForward: config.PortForwardOptions{
 			Enabled:     true,
 			ForwardPods: true,
@@ -528,8 +527,8 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, profiles []string, ns, k
 		},
 		CustomLabels: []string{
 			"io.kev.dev/profile=" + profiles[0],
-			"io.kev.dev/kubecontext=" + kubeCtx,
-			"io.kev.dev/namespace=" + ns,
+			"io.kev.dev/kubecontext=" + do.Kubecontext,
+			"io.kev.dev/namespace=" + do.Namespace,
 			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
 		},
 	}
@@ -642,54 +641,45 @@ func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.Run
 	return runCtx, config, nil
 }
 
-// VerifySkaffoldExpectedFlags verifies Skaffold required flags and sets appropriate defaults
-func VerifySkaffoldExpectedFlags(cmd *cobra.Command) error {
-	skaffold, _ := cmd.Flags().GetBool("skaffold")
-	namespace, _ := cmd.Flags().GetString("namespace")
-	kubecontext, _ := cmd.Flags().GetString("kubecontext")
-	kevenv, _ := cmd.Flags().GetString("kev-env")
-	tail, _ := cmd.Flags().GetBool("tail")
-	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
-
-	if skaffold {
+// DisplaySkaffoldInfo looks at Skaffold related flags and displays a summary of parameters used
+func DisplaySkaffoldInfo(opts *DevOptions) {
+	if opts.Skaffold {
 		fmt.Println("==================================================")
 		fmt.Println("Dev mode activated with Skaffold dev loop enabled ")
 		fmt.Println("--------------------------------------------------")
 
-		if len(namespace) == 0 {
+		if len(opts.Namespace) == 0 {
 			fmt.Printf("⏣  Will deploy to `%s` namespace. You may override it with '--namespace' flag.\n", DefaultSkaffoldNamespace)
-			_ = cmd.Flag("namespace").Value.Set(DefaultSkaffoldNamespace)
+			opts.Namespace = DefaultSkaffoldNamespace
 		} else {
-			fmt.Printf("⏣  Will deploy to '%s' namespace. You may override it with '--namespace' flag.\n", namespace)
+			fmt.Printf("⏣  Will deploy to '%s' namespace. You may override it with '--namespace' flag.\n", opts.Namespace)
 		}
 
-		if len(kubecontext) == 0 {
+		if len(opts.Kubecontext) == 0 {
 			fmt.Println("⏣  Will use current kubectl context. You may override it with '--kubecontext' flag.")
 		} else {
-			fmt.Printf("⏣  Will use '%s' kube context. You may override it with '--kubecontext' flag.\n", kubecontext)
+			fmt.Printf("⏣  Will use '%s' kube context. You may override it with '--kubecontext' flag.\n", opts.Kubecontext)
 		}
 
-		if len(kevenv) == 0 {
+		if len(opts.Kevenv) == 0 {
 			fmt.Printf("⏣  Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.\n", SandboxEnv)
 		} else {
-			fmt.Printf("⏣  Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.\n", kevenv)
+			fmt.Printf("⏣  Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.\n", opts.Kevenv)
 		}
 
-		if tail {
+		if opts.Tail {
 			fmt.Println("⏣  Will tail logs of deployed application.")
 		} else {
 			fmt.Println("⏣  Won't tail logs of deployed application. To enable log tailing use '--tail' flag.")
 		}
 
-		if manualTrigger {
+		if opts.ManualTrigger {
 			fmt.Println("⏣  Will stack up all the code changes and only perform build/push/deploy when triggered manually by hitting ENTER.")
 		} else {
 			fmt.Println("⏣  Will automatically trigger build/push/deploy on each application code change. To trigger changes manually use '--manual-trigger' flag.")
 		}
 		fmt.Println("==================================================")
 	}
-
-	return nil
 }
 
 // catchCtrlC catches ctrl+c in skaffold dev

@@ -18,7 +18,6 @@ package kev
 
 import (
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/spf13/cobra"
 )
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments
@@ -109,5 +108,16 @@ type ErrorHandler func(error) error
 // ChangeHandler is a callback function that handles change and returns error, e.g. change event when in dev mode
 type ChangeHandler func(string) error
 
-// PreRunCmd is a command expected to run before the prior to current command
-type PreRunCmd func(*cobra.Command, []string) error
+// RunCmd is a command expected to run before/after the current command
+type RunCmd func() error
+
+// DevOptions contains parameters required for Dev loop
+type DevOptions struct {
+	Skaffold      bool
+	Namespace     string
+	Kubecontext   string
+	Kevenv        string
+	Tail          bool
+	ManualTrigger bool
+	Verbose       bool
+}

@@ -57,10 +57,7 @@ var devCmd = &cobra.Command{
 	Use:   "dev",
 	Short: "Continuous reconcile and re-render of K8s manifests with optional project build, push and deploy (using --skaffold).",
 	Long:  devLongDesc,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return kev.VerifySkaffoldExpectedFlags(cmd)
-	},
-	RunE: runDevCmd,
+	RunE:  runDevCmd,
 }
 
 func init() {
@@ -132,17 +129,28 @@ func init() {
 }
 
 func runDevCmd(cmd *cobra.Command, args []string) error {
+	skaffold, err := cmd.Flags().GetBool("skaffold")
+	namespace, err := cmd.Flags().GetString("namespace")
+	kubecontext, err := cmd.Flags().GetString("kubecontext")
+	kevenv, err := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
+	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
+
+	if err != nil {
+		return err
+	}
 
 	displayDevModeStarted()
 
-	preRunCmds := []kev.PreRunCmd{
-		func(cmd *cobra.Command, args []string) error {
+	preRunCmds := []kev.RunCmd{
+		func() error {
 			return runReconcileCmd(cmd, args)
 		},
-		func(cmd *cobra.Command, args []string) error {
+		func() error {
 			return runDetectSecretsCmd(cmd, args)
 		},
-		func(cmd *cobra.Command, args []string) error {
+		func() error {
 			return runRenderCmd(cmd, args)
 		},
 	}
@@ -160,6 +168,18 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return errHandler(err)
 	}
 
-	return kev.Dev(cmd, args, workDir, preRunCmds, errHandler, changeHandler)
+	opts := &kev.DevOptions{
+		Skaffold:      skaffold,
+		Namespace:     namespace,
+		Kubecontext:   kubecontext,
+		Kevenv:        kevenv,
+		Tail:          tail,
+		ManualTrigger: manualTrigger,
+		Verbose:       verbose,
+	}
+
+	kev.DisplaySkaffoldInfo(opts)
+
+	return kev.Dev(opts, workDir, preRunCmds, errHandler, changeHandler)
 
 }

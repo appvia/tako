@@ -26,7 +26,6 @@ import (
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -150,22 +149,11 @@ func Watch(workDir string, change chan<- string) error {
 }
 
 // Dev contains dev command business logic
-func Dev(cmd *cobra.Command, args []string, workDir string, preRunCommands []PreRunCmd, errHandler ErrorHandler, changeHandler ChangeHandler) error {
-	skaffold, err := cmd.Flags().GetBool("skaffold")
-	namespace, err := cmd.Flags().GetString("namespace")
-	kubecontext, err := cmd.Flags().GetString("kubecontext")
-	kevenv, err := cmd.Flags().GetString("kev-env")
-	tail, _ := cmd.Flags().GetBool("tail")
-	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
-	verbose, _ := cmd.Root().Flags().GetBool("verbose")
-
-	if err != nil {
-		return err
-	}
+func Dev(opts *DevOptions, workDir string, preRunCommands []RunCmd, errHandler ErrorHandler, changeHandler ChangeHandler) error {
 
 	runPreCommands := func() error {
 		for _, preRunCmd := range preRunCommands {
-			if err := preRunCmd(cmd, args); err != nil {
+			if err := preRunCmd(); err != nil {
 				return err
 			}
 		}
@@ -180,7 +168,7 @@ func Dev(cmd *cobra.Command, args []string, workDir string, preRunCommands []Pre
 		return errHandler(err)
 	}
 
-	if skaffold {
+	if opts.Skaffold {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -195,8 +183,8 @@ func Dev(cmd *cobra.Command, args []string, workDir string, preRunCommands []Pre
 			return errHandler(errors.Wrap(err, "Couldn't write Skaffold config"))
 		}
 
-		profileName := kevenv + EnvProfileNameSuffix
-		go RunSkaffoldDev(ctx, cmd.OutOrStdout(), []string{profileName}, namespace, kubecontext, skaffoldConfigPath, manualTrigger, tail, verbose)
+		profileName := opts.Kevenv + EnvProfileNameSuffix
+		go RunSkaffoldDev(ctx, os.Stdout, skaffoldConfigPath, []string{profileName}, opts)
 	}
 
 	go Watch(workDir, change)
