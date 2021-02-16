@@ -112,7 +112,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 
 	log.DebugTitlef("Output format: %s", format)
 	if err := kev.Render(workingDir, format, singleFile, dir, envs, nil); err != nil {
-		return err
+		return displayError(err)
 	}
 
 	os.Stdout.Write([]byte("\n"))
