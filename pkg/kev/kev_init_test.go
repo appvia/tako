@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Init", func() {
+var _ = Describe("InitBase", func() {
 	var (
 		workingDir string
 		manifest   *kev.Manifest
@@ -35,7 +35,7 @@ var _ = Describe("Init", func() {
 	)
 
 	JustBeforeEach(func() {
-		manifest, mErr = kev.Init([]string{}, envs, workingDir)
+		manifest, mErr = kev.InitBase(workingDir, []string{}, envs)
 		if mErr == nil {
 			env, _ = manifest.GetEnvironment("dev")
 		}

@@ -28,7 +28,7 @@ import (
 
 func TestInitProvidesEnvironmentConfig(t *testing.T) {
 	files := []string{"testdata/in-cluster-wordpress/docker-compose.yaml"}
-	manifest, err := kev.Init(files, []string{}, "")
+	manifest, err := kev.InitBase("", files, []string{})
 	if err != nil {
 		t.Fatalf("Unexpected error:\n%s", err)
 	}

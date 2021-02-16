@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -278,4 +279,18 @@ func (m *Manifest) getSourcesOverride() *composeOverride {
 // SourcesToComposeProject returns the manifests compose sources as a ComposeProject.
 func (m *Manifest) SourcesToComposeProject() (*ComposeProject, error) {
 	return m.Sources.toComposeProject()
+}
+
+func ManifestExistsForPath(manifestPath string) bool {
+	_, err := os.Stat(manifestPath)
+	return err == nil
+}
+
+func ensureFirstInit(wd string) error {
+	manifestPath := path.Join(wd, ManifestName)
+	if ManifestExistsForPath(manifestPath) {
+		err := fmt.Errorf("kev.yaml already exists at: %s", manifestPath)
+		return err
+	}
+	return nil
 }

@@ -19,7 +19,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/spf13/cobra"
@@ -44,8 +43,7 @@ func runReconcileCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	for _, environment := range manifest.Environments {
-		filePath := path.Join(workingDir, environment.File)
-		if err := kev.WriteTo(filePath, environment); err != nil {
+		if err := kev.WriteTo(environment.File, environment); err != nil {
 			return displayError(err)
 		}
 	}

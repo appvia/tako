@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/sirupsen/logrus"
 )
@@ -46,16 +47,17 @@ func displayError(err error) error {
 	return err
 }
 
-func displayInitSuccess(w io.Writer, files []skippableFile) {
-	for _, file := range files {
-		msg := fmt.Sprintf(" → Creating %s ... Done\n", file.FileName)
+// func displayInitSuccess(w io.Writer, files []skippableFile) {
+func displayInitSuccess(w io.Writer, results kev.WritableResults) {
+	for _, result := range results {
+		msg := fmt.Sprintf(" → Creating %s ... Done\n", result.Filename())
 
-		if file.Updated {
-			msg = fmt.Sprintf(" → Updating %s ... Done\n", file.FileName)
+		if result.Updated {
+			msg = fmt.Sprintf(" → Updating %s ... Done\n", result.Filename())
 		}
 
-		if file.Skipped {
-			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", file.FileName)
+		if result.Skipped {
+			msg = fmt.Sprintf(" → %s already exists ... Skipping\n", result.Filename())
 		}
 		_, _ = w.Write([]byte(msg))
 	}
