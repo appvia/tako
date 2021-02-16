@@ -77,7 +77,7 @@ func InitProjectWithOptions(workingDir string, opts InitOptions) (WritableResult
 // If no composeSources are provided, the working directory is introspected for valid compose files to act as sources.
 // Also, an implicit sandbox environment will always be created.
 func InitBase(workingDir string, composeSources, envs []string) (*Manifest, error) {
-	if err := ensureFirstInit(workingDir); err != nil {
+	if err := EnsureFirstInit(workingDir); err != nil {
 		return nil, err
 	}
 

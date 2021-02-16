@@ -286,7 +286,7 @@ func ManifestExistsForPath(manifestPath string) bool {
 	return err == nil
 }
 
-func ensureFirstInit(wd string) error {
+func EnsureFirstInit(wd string) error {
 	manifestPath := path.Join(wd, ManifestName)
 	if ManifestExistsForPath(manifestPath) {
 		err := fmt.Errorf("kev.yaml already exists at: %s", manifestPath)
