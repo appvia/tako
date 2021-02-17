@@ -80,7 +80,7 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
-	cmdName := "InitBase"
+	cmdName := "Init"
 
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
@@ -88,17 +88,15 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 
 	displayCmdStarted(cmdName)
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return displayError(err)
-	}
-
 	opts := kev.InitOptions{
 		ComposeSources: files,
 		Envs:           envs,
 		Skaffold:       skaffold,
 	}
 
+	// The working directory is always the current directory.
+	// This ensures created manifest yaml entries are portable between users and require no path fixing.
+	wd := "."
 	results, err := kev.InitProjectWithOptions(wd, opts)
 	if err != nil {
 		return displayError(err)

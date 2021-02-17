@@ -16,7 +16,9 @@
 
 package kev
 
-import "path/filepath"
+import (
+	"path/filepath"
+)
 
 // Write writes the results
 func (results WritableResults) Write() error {
@@ -38,5 +40,9 @@ func (r WritableResult) Filename() string {
 
 // Write writes the WriterTo to the filepath
 func (r WritableResult) Write() error {
-	return WriteTo(r.FilePath, r.WriterTo)
+	absPath, err := filepath.Abs(r.FilePath)
+	if err != nil {
+		return err
+	}
+	return WriteTo(absPath, r.WriterTo)
 }
