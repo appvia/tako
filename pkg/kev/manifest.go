@@ -119,6 +119,8 @@ func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Mani
 func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	fileNameTemplate := m.GetEnvironmentFileNameTemplate()
 
+	symbol := strings.TrimSuffix(ManifestName, filepath.Ext(ManifestName))
+
 	m.Environments = Environments{}
 	if !contains(candidates, SandboxEnv) {
 		candidates = append(candidates, SandboxEnv)
@@ -129,7 +131,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		m.Environments = append(m.Environments, &Environment{
 			Name:     env,
 			override: override,
-			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
+			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, symbol, env)),
 		})
 	}
 	return m
@@ -141,7 +143,7 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 	firstSrc := filepath.Base(m.Sources.Files[0])
 	parts := strings.Split(firstSrc, ".")
 	ext := parts[len(parts)-1]
-	return strings.ReplaceAll(firstSrc, ext, "kev.%s."+ext)
+	return strings.ReplaceAll(firstSrc, ext, "%s.%s."+ext)
 }
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.

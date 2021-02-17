@@ -29,10 +29,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
+var (
 	// ManifestName main application manifest
 	ManifestName = "kev.yaml"
-	SandboxEnv   = "dev"
+)
+
+const (
+	// SandboxEnv is a default environment name
+	SandboxEnv = "dev"
 )
 
 // InitProjectWithOptions initialises a kev project using provided options

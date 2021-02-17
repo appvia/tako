@@ -128,7 +128,7 @@ var _ = Describe("Manifest", func() {
 			})
 
 			It("returns environment file name template as expected", func() {
-				Expect(m.GetEnvironmentFileNameTemplate()).To(Equal("my-custom-docker-compose.kev.%s.yaml"))
+				Expect(m.GetEnvironmentFileNameTemplate()).To(Equal("my-custom-docker-compose.%s.%s.yaml"))
 			})
 		})
 
@@ -140,7 +140,7 @@ var _ = Describe("Manifest", func() {
 			})
 
 			It("returns environment file name template as expected", func() {
-				Expect(m.GetEnvironmentFileNameTemplate()).To(Equal("compose.kev.%s.yml"))
+				Expect(m.GetEnvironmentFileNameTemplate()).To(Equal("compose.%s.%s.yml"))
 			})
 		})
 	})
