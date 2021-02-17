@@ -24,7 +24,6 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/compose-spec/compose-go/cli"
-	"github.com/compose-spec/compose-go/errdefs"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -147,19 +146,12 @@ func findDefaultComposeIn(workingDir string) (string, error) {
 		pwd = wd
 	}
 
-	for {
-		found := findFirstFileFromFilesInDir(defaultComposeFileNames, pwd)
-		if len(found) > 0 {
-			return found, nil
-		}
-
-		parent := filepath.Dir(pwd)
-		noParents := parent == pwd
-		if noParents {
-			return "", errors.Wrap(errdefs.ErrNotFound, "can't find a suitable configuration file in this directory or any parent")
-		}
-		pwd = parent
+	found := findFirstFileFromFilesInDir(defaultComposeFileNames, pwd)
+	if len(found) > 0 {
+		return found, nil
 	}
+
+	return "", errors.New("can't find any docker compose file in this directory")
 }
 
 func findOptionalOverrideComposeIn(composeFileDir string) string {
