@@ -57,6 +57,23 @@ func (e Environments) MarshalJSON() ([]byte, error) {
 	return json.MarshalIndent(data, "", "  ")
 }
 
+// toWritableResults returns the environments as WritableResults.
+func (e Environments) toWritableResults() WritableResults {
+	var out []WritableResult
+	for _, environment := range e {
+		out = append(out, WritableResult{
+			WriterTo: environment,
+			FilePath: environment.File,
+		})
+	}
+	return out
+}
+
+// Write is a convenience method to write out the environment's overrides to disk
+func (e Environments) Write() error {
+	return e.toWritableResults().Write()
+}
+
 // GetVersion gets the environment's override version.
 func (e *Environment) GetVersion() string {
 	return e.override.Version

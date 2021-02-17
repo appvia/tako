@@ -48,12 +48,7 @@ func InitProjectWithOptions(workingDir string, opts InitOptions) (WritableResult
 		WriterTo: m,
 		FilePath: path.Join(workingDir, ManifestName),
 	})
-	for _, environment := range m.Environments {
-		out = append(out, WritableResult{
-			WriterTo: environment,
-			FilePath: environment.File,
-		})
-	}
+	out = append(out, m.Environments.toWritableResults()...)
 
 	if !opts.Skaffold {
 		return out, nil
