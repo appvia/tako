@@ -17,9 +17,7 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
-	"path"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/spf13/cobra"
@@ -58,12 +56,6 @@ var initCmd = &cobra.Command{
 	},
 }
 
-type skippableFile struct {
-	FileName string
-	Skipped  bool
-	Updated  bool
-}
-
 func init() {
 	flags := initCmd.Flags()
 	flags.SortFlags = false
@@ -96,104 +88,25 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 
 	displayCmdStarted(cmdName)
 
-	workingDirAbs, err := os.Getwd()
+	opts := kev.InitOptions{
+		ComposeSources: files,
+		Envs:           envs,
+		Skaffold:       skaffold,
+	}
+
+	// The working directory is always the current directory.
+	// This ensures created manifest yaml entries are portable between users and require no path fixing.
+	wd := "."
+	results, err := kev.InitProjectWithOptions(wd, opts)
 	if err != nil {
 		return displayError(err)
 	}
 
-	manifestPath := path.Join(workingDirAbs, kev.ManifestName)
-	if manifestExistsForPath(manifestPath) {
-		err := fmt.Errorf("kev.yaml already exists at: %s", manifestPath)
-		return displayError(err)
+	if err := results.Write(); err != nil {
+		return err
 	}
-
-	manifest, err := kev.Init(files, envs, ".")
-	if err != nil {
-		return displayError(err)
-	}
-
-	var results []skippableFile
-
-	for _, environment := range manifest.Environments {
-		envPath := path.Join(workingDirAbs, environment.File)
-
-		if err := kev.WriteTo(envPath, environment); err != nil {
-			return displayError(err)
-		}
-
-		results = append(results, skippableFile{
-			FileName: environment.File,
-		})
-	}
-
-	if skaffold {
-		skaffoldManifestPath := path.Join(workingDirAbs, kev.SkaffoldFileName)
-
-		// set skaffold path in kev manifest
-		manifest.Skaffold = kev.SkaffoldFileName
-
-		project, err := manifest.SourcesToComposeProject()
-		if err != nil {
-			return displayError(err)
-		}
-
-		if err := createOrUpdateSkaffoldManifest(skaffoldManifestPath, manifest.GetEnvironmentsNames(), project, &results); err != nil {
-			return displayError(err)
-		}
-	}
-
-	if err := kev.WriteTo(manifestPath, manifest); err != nil {
-		return displayError(err)
-	}
-
-	results = append([]skippableFile{{
-		FileName: kev.ManifestName,
-	}}, results...)
 
 	displayInitSuccess(os.Stdout, results)
-
-	return nil
-}
-
-func manifestExistsForPath(manifestPath string) bool {
-	_, err := os.Stat(manifestPath)
-	return err == nil
-}
-
-func createOrUpdateSkaffoldManifest(path string, envs []string, project *kev.ComposeProject, results *[]skippableFile) error {
-	if manifestExistsForPath(path) {
-		// Skaffold manifest already present - add additional profiles to it!
-		// Note: kev will skip profiles with names matching those of existing
-		// profile names defined in Skaffold to avoid profile "hijack".
-
-		updatedSkaffold, err := kev.AddProfiles(path, envs, true)
-		if err != nil {
-			return displayError(err)
-		}
-		if err := kev.WriteTo(path, updatedSkaffold); err != nil {
-			return displayError(err)
-		}
-
-		*results = append(*results, skippableFile{
-			FileName: kev.SkaffoldFileName,
-			Updated:  true,
-		})
-
-	} else {
-
-		skaffoldManifest, err := kev.NewSkaffoldManifest(envs, project)
-		if err != nil {
-			return displayError(err)
-		}
-
-		if err := kev.WriteTo(kev.SkaffoldFileName, skaffoldManifest); err != nil {
-			return displayError(err)
-		}
-
-		*results = append(*results, skippableFile{
-			FileName: kev.SkaffoldFileName,
-		})
-	}
 
 	return nil
 }

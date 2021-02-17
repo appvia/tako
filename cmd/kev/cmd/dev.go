@@ -181,5 +181,4 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	kev.DisplaySkaffoldInfo(opts)
 
 	return kev.Dev(opts, workDir, preRunCmds, errHandler, changeHandler)
-
 }

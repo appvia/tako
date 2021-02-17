@@ -17,6 +17,8 @@
 package kev
 
 import (
+	"io"
+
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -111,6 +113,13 @@ type ChangeHandler func(string) error
 // RunFunc is a callback function expected to run before/after the current command
 type RunFunc func() error
 
+// InitOptions contains parameters required to initialise a kev project
+type InitOptions struct {
+	ComposeSources []string
+	Envs           []string
+	Skaffold       bool
+}
+
 // DevOptions contains parameters required for Dev loop
 type DevOptions struct {
 	Skaffold      bool
@@ -120,4 +129,15 @@ type DevOptions struct {
 	Tail          bool
 	ManualTrigger bool
 	Verbose       bool
+}
+
+// WritableResults is a collection of WritableResult
+type WritableResults []WritableResult
+
+// WritableResult used to return results that can be written out to disk
+type WritableResult struct {
+	WriterTo io.WriterTo
+	FilePath string
+	Skipped  bool
+	Updated  bool
 }

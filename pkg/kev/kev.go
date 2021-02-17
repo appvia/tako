@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
@@ -34,10 +35,47 @@ const (
 	SandboxEnv   = "dev"
 )
 
-// Init initialises a kev manifest including source compose files and environments.
+// InitProjectWithOptions initialises a kev project using provided options
+func InitProjectWithOptions(workingDir string, opts InitOptions) (WritableResults, error) {
+	var out []WritableResult
+
+	m, err := InitBase(workingDir, opts.ComposeSources, opts.Envs)
+	if err != nil {
+		return nil, err
+	}
+
+	out = append(out, WritableResult{
+		WriterTo: m,
+		FilePath: path.Join(workingDir, ManifestName),
+	})
+	out = append(out, m.Environments.toWritableResults()...)
+
+	if !opts.Skaffold {
+		return out, nil
+	}
+
+	m.Skaffold = SkaffoldFileName
+	project, err := m.SourcesToComposeProject()
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := CreateOrUpdateSkaffoldManifest(path.Join(workingDir, SkaffoldFileName), m.GetEnvironmentsNames(), project)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(out, results...), nil
+}
+
+// InitBase initialises a kev manifest including source compose files and environments.
 // If no composeSources are provided, the working directory is introspected for valid compose files to act as sources.
 // Also, an implicit sandbox environment will always be created.
-func Init(composeSources, envs []string, workingDir string) (*Manifest, error) {
+func InitBase(workingDir string, composeSources, envs []string) (*Manifest, error) {
+	if err := EnsureFirstInit(workingDir); err != nil {
+		return nil, err
+	}
+
 	m, err := NewManifest(composeSources, workingDir)
 	if err != nil {
 		return nil, err
