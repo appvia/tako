@@ -743,9 +743,9 @@ func ActivateSkaffoldDevLoop(workDir string) (string, *SkaffoldManifest, error) 
 		return "", nil, errors.Wrap(err, "Unable to load app manifest")
 	}
 
-	msg := `
+	msg := fmt.Sprintf(`
 	If you don't currently have skaffold.yaml in your project you may bootstrap a new one with "skaffold init" command.
-	Once you have skaffold.yaml in your project, make sure that Kev references it by adding "skaffold: skaffold.yaml" in kev.yaml!`
+	Once you have skaffold.yaml in your project, make sure that Kev references it by adding "skaffold: skaffold.yaml" in %s!`, ManifestFilename)
 
 	if len(manifest.Skaffold) == 0 {
 		return "", nil, errors.New("Can't activate Skaffold dev loop. Kev wasn't initialized with --skaffold." + msg)

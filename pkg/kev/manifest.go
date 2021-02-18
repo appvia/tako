@@ -47,12 +47,17 @@ func NewManifest(files []string, workingDir string) (*Manifest, error) {
 
 // LoadManifest returns application manifests.
 func LoadManifest(workingDir string) (*Manifest, error) {
-	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
+	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestFilename))
 	if err != nil {
 		return nil, err
 	}
 	var m *Manifest
 	return m, yaml.Unmarshal(data, &m)
+}
+
+// GetManifestName returns base manifest file name (without extension)
+func GetManifestName() string {
+	return strings.TrimSuffix(ManifestFilename, filepath.Ext(ManifestFilename))
 }
 
 // WriteTo writes out a manifest to a writer.
@@ -129,7 +134,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		m.Environments = append(m.Environments, &Environment{
 			Name:     env,
 			override: override,
-			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, env)),
+			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env)),
 		})
 	}
 	return m
@@ -141,7 +146,7 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 	firstSrc := filepath.Base(m.Sources.Files[0])
 	parts := strings.Split(firstSrc, ".")
 	ext := parts[len(parts)-1]
-	return strings.ReplaceAll(firstSrc, ext, "kev.%s."+ext)
+	return strings.ReplaceAll(firstSrc, ext, "%s.%s."+ext)
 }
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
@@ -287,9 +292,9 @@ func ManifestExistsForPath(manifestPath string) bool {
 }
 
 func EnsureFirstInit(wd string) error {
-	manifestPath := path.Join(wd, ManifestName)
+	manifestPath := path.Join(wd, ManifestFilename)
 	if ManifestExistsForPath(manifestPath) {
-		err := fmt.Errorf("%s already exists at: %s", ManifestName, manifestPath)
+		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, manifestPath)
 		return err
 	}
 	return nil

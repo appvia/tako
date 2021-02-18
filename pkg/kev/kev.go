@@ -30,9 +30,13 @@ import (
 )
 
 const (
-	// ManifestName main application manifest
-	ManifestName = "kev.yaml"
-	SandboxEnv   = "dev"
+	// SandboxEnv is a default environment name
+	SandboxEnv = "dev"
+)
+
+var (
+	// ManifestFilename is a name of main application manifest file
+	ManifestFilename = "kev.yaml"
 )
 
 // InitProjectWithOptions initialises a kev project using provided options
@@ -46,7 +50,7 @@ func InitProjectWithOptions(workingDir string, opts InitOptions) (WritableResult
 
 	out = append(out, WritableResult{
 		WriterTo: m,
-		FilePath: path.Join(workingDir, ManifestName),
+		FilePath: path.Join(workingDir, ManifestFilename),
 	})
 	out = append(out, m.Environments.toWritableResults()...)
 
