@@ -47,12 +47,17 @@ func NewManifest(files []string, workingDir string) (*Manifest, error) {
 
 // LoadManifest returns application manifests.
 func LoadManifest(workingDir string) (*Manifest, error) {
-	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestName))
+	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestFilename))
 	if err != nil {
 		return nil, err
 	}
 	var m *Manifest
 	return m, yaml.Unmarshal(data, &m)
+}
+
+// GetManifestName returns base manifest file name (without extension)
+func GetManifestName() string {
+	return strings.TrimSuffix(ManifestFilename, filepath.Ext(ManifestFilename))
 }
 
 // WriteTo writes out a manifest to a writer.
@@ -119,8 +124,6 @@ func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Mani
 func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	fileNameTemplate := m.GetEnvironmentFileNameTemplate()
 
-	symbol := strings.TrimSuffix(ManifestName, filepath.Ext(ManifestName))
-
 	m.Environments = Environments{}
 	if !contains(candidates, SandboxEnv) {
 		candidates = append(candidates, SandboxEnv)
@@ -131,7 +134,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		m.Environments = append(m.Environments, &Environment{
 			Name:     env,
 			override: override,
-			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, symbol, env)),
+			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env)),
 		})
 	}
 	return m
@@ -289,9 +292,9 @@ func ManifestExistsForPath(manifestPath string) bool {
 }
 
 func EnsureFirstInit(wd string) error {
-	manifestPath := path.Join(wd, ManifestName)
+	manifestPath := path.Join(wd, ManifestFilename)
 	if ManifestExistsForPath(manifestPath) {
-		err := fmt.Errorf("%s already exists at: %s", ManifestName, manifestPath)
+		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, manifestPath)
 		return err
 	}
 	return nil
