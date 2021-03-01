@@ -17,9 +17,8 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/terminal"
 	"github.com/spf13/cobra"
 )
 
@@ -51,8 +50,9 @@ var initCmd = &cobra.Command{
 	Long:  initLongDesc,
 	RunE:  runInitCmd,
 	PostRunE: func(cmd *cobra.Command, args []string) error {
-		os.Stdout.Write([]byte("\n"))
-		return runDetectSecretsCmd(cmd, args)
+		// os.Stdout.Write([]byte("\n"))
+		// return runDetectSecretsCmd(cmd, args)
+		return nil
 	},
 }
 
@@ -80,13 +80,13 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
-	cmdName := "Init"
+	// cmdName := "Init"
 
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
 
-	displayCmdStarted(cmdName)
+	// displayCmdStarted(cmdName)
 
 	opts := kev.InitOptions{
 		ComposeSources: files,
@@ -97,16 +97,22 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
 	wd := "."
-	results, err := kev.InitProjectWithOptions(wd, opts)
+	err := kev.InitProjectWithOptions(wd, terminal.ConsoleUI(), opts)
 	if err != nil {
-		return displayError(err)
-	}
-
-	if err := results.Write(); err != nil {
+		// return displayError(err)
 		return err
 	}
+	// results, err := kev.InitProjectWithOptions(wd, terminal.ConsoleUI(), opts)
+	// if err != nil {
+	// 	// return displayError(err)
+	// 	return err
+	// }
 
-	displayInitSuccess(os.Stdout, results)
+	// if err := results.Write(); err != nil {
+	// 	return err
+	// }
+
+	// displayInitSuccess(os.Stdout, results)
 
 	return nil
 }
