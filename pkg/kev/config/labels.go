@@ -17,116 +17,118 @@
 package config
 
 const (
+	LabelPrefix = "kev."
+
 	// LabelComponentEnabled toggles the project service component
-	LabelComponentEnabled = "kev.component.enabled"
+	LabelComponentEnabled = LabelPrefix + "component.enabled"
 
 	// LabelWorkloadType defines type of workload controller
-	LabelWorkloadType = "kev.workload.type"
+	LabelWorkloadType = LabelPrefix + "workload.type"
 
 	// LabelWorkloadReplicas represents number of replicas for given workload. Takes presedence if defined.
-	LabelWorkloadReplicas = "kev.workload.replicas"
+	LabelWorkloadReplicas = LabelPrefix + "workload.replicas"
 
 	// LabelWorkloadAutoscaleMaxReplicas represents maximum number of replicas for given workload. Used in Horizontal Pod Autoscaler.
-	LabelWorkloadAutoscaleMaxReplicas = "kev.workload.autoscale-max-replicas"
+	LabelWorkloadAutoscaleMaxReplicas = LabelPrefix + "workload.autoscale-max-replicas"
 
 	// LabelWorkloadAutoscaleCPUUtilizationThreshold represents a maximum CPU utilization for given workload that instructs horizontal pod autoscaler.
-	LabelWorkloadAutoscaleCPUUtilizationThreshold = "kev.workload.autoscale-cpu-threshold"
+	LabelWorkloadAutoscaleCPUUtilizationThreshold = LabelPrefix + "workload.autoscale-cpu-threshold"
 
 	// LabelWorkloadAutoscaleMemoryUtilizationThreshold represents a maximum Memory utilization for given workload that instructs horizontal pod autoscaler.
-	LabelWorkloadAutoscaleMemoryUtilizationThreshold = "kev.workload.autoscale-mem-threshold"
+	LabelWorkloadAutoscaleMemoryUtilizationThreshold = LabelPrefix + "workload.autoscale-mem-threshold"
 
 	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
-	LabelWorkloadRollingUpdateMaxSurge = "kev.workload.rolling-update-max-surge"
+	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
 
 	// LabelWorkloadMemory defines Memory request for workload
-	LabelWorkloadMemory = "kev.workload.memory"
+	LabelWorkloadMemory = LabelPrefix + "workload.memory"
 
 	// LabelWorkloadCPU defines CPU request for workload
-	LabelWorkloadCPU = "kev.workload.cpu"
+	LabelWorkloadCPU = LabelPrefix + "workload.cpu"
 
 	// LabelWorkloadMaxMemory defines max Memory limit for workload
-	LabelWorkloadMaxMemory = "kev.workload.max-memory"
+	LabelWorkloadMaxMemory = LabelPrefix + "workload.max-memory"
 
 	// LabelWorkloadMaxCPU defines max CPU limit for workload
-	LabelWorkloadMaxCPU = "kev.workload.max-cpu"
+	LabelWorkloadMaxCPU = LabelPrefix + "workload.max-cpu"
 
 	// LabelWorkloadSecurityContextRunAsUser sets pod security context RunAsUser attribute
-	LabelWorkloadSecurityContextRunAsUser = "kev.workload.pod-security-run-as-user"
+	LabelWorkloadSecurityContextRunAsUser = LabelPrefix + "workload.pod-security-run-as-user"
 
 	// LabelWorkloadSecurityContextRunAsGroup sets pod security context RunAsGroup attribute
-	LabelWorkloadSecurityContextRunAsGroup = "kev.workload.pod-security-run-as-group"
+	LabelWorkloadSecurityContextRunAsGroup = LabelPrefix + "workload.pod-security-run-as-group"
 
 	// LabelWorkloadSecurityContextFsGroup sets pod security context FsGroup attribute
-	LabelWorkloadSecurityContextFsGroup = "kev.workload.pod-security-fs-group"
+	LabelWorkloadSecurityContextFsGroup = LabelPrefix + "workload.pod-security-fs-group"
 
 	// LabelWorkloadImagePullPolicy defines when to pull images from registry
-	LabelWorkloadImagePullPolicy = "kev.workload.image-pull-policy"
+	LabelWorkloadImagePullPolicy = LabelPrefix + "workload.image-pull-policy"
 
 	// LabelWorkloadImagePullSecret defines docker registry image pull secret
-	LabelWorkloadImagePullSecret = "kev.workload.image-pull-secret"
+	LabelWorkloadImagePullSecret = LabelPrefix + "workload.image-pull-secret"
 
 	// LabelWorkloadRestartPolicy defines when to restart a pod
-	LabelWorkloadRestartPolicy = "kev.workload.restart-policy"
+	LabelWorkloadRestartPolicy = LabelPrefix + "workload.restart-policy"
 
 	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
-	LabelWorkloadServiceAccountName = "kev.workload.service-account-name"
+	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
 
 	// LabelWorkloadLivenessProbeCommand defines the command for workload liveness probe
-	LabelWorkloadLivenessProbeCommand = "kev.workload.liveness-probe-command"
+	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe-command"
 
 	// LabelWorkloadLivenessProbeInterval defines the interval for workload liveness probe
-	LabelWorkloadLivenessProbeInterval = "kev.workload.liveness-probe-interval"
+	LabelWorkloadLivenessProbeInterval = LabelPrefix + "workload.liveness-probe-interval"
 
 	// LabelWorkloadLivenessProbeTimeout defines the timeout for workload liveness probe
-	LabelWorkloadLivenessProbeTimeout = "kev.workload.liveness-probe-timeout"
+	LabelWorkloadLivenessProbeTimeout = LabelPrefix + "workload.liveness-probe-timeout"
 
 	// LabelWorkloadLivenessProbeInitialDelay defines the initial delay for workload liveness probe
-	LabelWorkloadLivenessProbeInitialDelay = "kev.workload.liveness-probe-initial-delay"
+	LabelWorkloadLivenessProbeInitialDelay = LabelPrefix + "workload.liveness-probe-initial-delay"
 
 	// LabelWorkloadLivenessProbeRetries defines number of times workload liveness probe will retry
-	LabelWorkloadLivenessProbeRetries = "kev.workload.liveness-probe-retries"
+	LabelWorkloadLivenessProbeRetries = LabelPrefix + "workload.liveness-probe-retries"
 
 	// LabelWorkloadLivenessProbeDisabled disables workload liveness probe
-	LabelWorkloadLivenessProbeDisabled = "kev.workload.liveness-probe-disabled"
+	LabelWorkloadLivenessProbeDisabled = LabelPrefix + "workload.liveness-probe-disabled"
 
 	// LabelWorkloadReadinessProbeCommand defines the command for workload liveness probe
-	LabelWorkloadReadinessProbeCommand = "kev.workload.readiness-probe-command"
+	LabelWorkloadReadinessProbeCommand = LabelPrefix + "workload.readiness-probe-command"
 
 	// LabelWorkloadReadinessProbeInterval defines the interval for workload liveness probe
-	LabelWorkloadReadinessProbeInterval = "kev.workload.readiness-probe-interval"
+	LabelWorkloadReadinessProbeInterval = LabelPrefix + "workload.readiness-probe-interval"
 
 	// LabelWorkloadReadinessProbeTimeout defines the timeout for workload liveness probe
-	LabelWorkloadReadinessProbeTimeout = "kev.workload.readiness-probe-timeout"
+	LabelWorkloadReadinessProbeTimeout = LabelPrefix + "workload.readiness-probe-timeout"
 
 	// LabelWorkloadReadinessProbeInitialDelay defines the initial delay for workload liveness probe
-	LabelWorkloadReadinessProbeInitialDelay = "kev.workload.readiness-probe-initial-delay"
+	LabelWorkloadReadinessProbeInitialDelay = LabelPrefix + "workload.readiness-probe-initial-delay"
 
 	// LabelWorkloadReadinessProbeRetries defines number of times workload liveness probe will retry
-	LabelWorkloadReadinessProbeRetries = "kev.workload.readiness-probe-retries"
+	LabelWorkloadReadinessProbeRetries = LabelPrefix + "workload.readiness-probe-retries"
 
 	// LabelWorkloadReadinessProbeDisabled disables workload liveness probe
-	LabelWorkloadReadinessProbeDisabled = "kev.workload.readiness-probe-disabled"
+	LabelWorkloadReadinessProbeDisabled = LabelPrefix + "workload.readiness-probe-disabled"
 
 	// LabelServiceType defines the type of service to be created
-	LabelServiceType = "kev.service.type"
+	LabelServiceType = LabelPrefix + "service.type"
 
 	// LabelServiceNodePortPort defines port number for NodePort k8s service kind
-	LabelServiceNodePortPort = "kev.service.nodeport.port"
+	LabelServiceNodePortPort = LabelPrefix + "service.nodeport.port"
 
 	// LabelServiceExpose informs whether K8s service should be exposed externally. To enable set as "true" or "domain.com,otherdomain.com".
-	LabelServiceExpose = "kev.service.expose"
+	LabelServiceExpose = LabelPrefix + "service.expose"
 
 	// LabelServiceExposeTLSSecret  provides the name of the TLS secret to use with the Kubernetes ingress controller
-	LabelServiceExposeTLSSecret = "kev.service.expose.tls-secret"
+	LabelServiceExposeTLSSecret = LabelPrefix + "service.expose.tls-secret"
 
 	// LabelVolumeSize defines persistent volume size
-	LabelVolumeSize = "kev.volume.size"
+	LabelVolumeSize = LabelPrefix + "volume.size"
 
 	// LabelVolumeSelector defines persistent volume selector
-	LabelVolumeSelector = "kev.volume.selector"
+	LabelVolumeSelector = LabelPrefix + "volume.selector"
 
 	// LabelVolumeStorageClass defines persistent volume storage class
-	LabelVolumeStorageClass = "kev.volume.storage-class"
+	LabelVolumeStorageClass = LabelPrefix + "volume.storage-class"
 )
 
 var BaseServiceLabels = []string{
