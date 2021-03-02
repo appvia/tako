@@ -57,7 +57,7 @@ All you need to get started quickly is the [kev](https://github.com/appvia/kev/r
 
 ## Configuration
 
-As mentioned in the [Quickstart](docs/tutorials/quickstart-guide.md) section above, the environment specific configuration lives in a set of docker-compose override files. Each environment override file holds simplified Kubernetes configuration parameters for each of the application components.
+As mentioned in the [Quickstart](docs/tutorials/quickstart-guide.md), the environment specific configuration lives in a set of docker-compose override files. Each environment override file holds simplified Kubernetes configuration parameters for each of the application components.
 
 Project components (aka services) are configured via a set of labels attached to them, and optionally environment variables section which allows for localised adjustments - the same exact way you'd control those in a regular docker-compose file.
 
