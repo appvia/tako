@@ -590,7 +590,7 @@ func configAnnotations(projectService ProjectService) map[string]string {
 	annotations := map[string]string{}
 	for key, value := range projectService.Labels {
 		// don't turn kev configuration labels into kubernetes annotations!
-		if !strings.HasPrefix(key, "kev.") {
+		if !strings.HasPrefix(key, config.LabelPrefix) {
 			annotations[key] = value
 		}
 	}

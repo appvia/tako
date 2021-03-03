@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
@@ -110,9 +111,23 @@ func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []s
 	return matches
 }
 
+// validate runs validation of kev labels against config schema validation.
+// IMPORTANT: All labels prefixed with `kev.` are always validated!
+//            Other labels are left as is and won't be validated!
+// NOTE: non kev labels are normally converted to annotations which is handy
+// with things like ingress objects accepting a number of custom annotations.
+// @todo(mc): post migrating labels to extensions this could be addressed by
+// dedicated `annotations` section.
 func (sc ServiceConfig) validate() error {
+	svcLabelsToValidate := composego.Labels{}
+	for slk, slv := range sc.Labels {
+		if strings.HasPrefix(slk, config.LabelPrefix) {
+			svcLabelsToValidate[slk] = slv
+		}
+	}
+
 	ls := gojsonschema.NewGoLoader(config.ServicesSchema)
-	ld := gojsonschema.NewGoLoader(sc.Labels)
+	ld := gojsonschema.NewGoLoader(svcLabelsToValidate)
 
 	result, err := gojsonschema.Validate(ls, ld)
 	if err != nil {

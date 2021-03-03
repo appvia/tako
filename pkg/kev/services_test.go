@@ -58,6 +58,11 @@ var _ = Describe("ServiceConfig", func() {
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
 
+			It("ignores non-kev labels and doesn't validate them", func() {
+				serviceConfig.Labels["kubernetes.io/ingress.class"] = "external"
+				Expect(serviceConfig.validate()).Should(Not(HaveOccurred()))
+			})
+
 			It("fails when component enabled label has incorrect value", func() {
 				serviceConfig.Labels[config.LabelComponentEnabled] = "value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
