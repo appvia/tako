@@ -700,7 +700,7 @@ All traffic on the port you specify will be forwarded to the service allowing an
 
 Again, it is ideal for exposing a service or app to the internet under a single IP address.
 
-Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.     
+Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.
 
 
 ## kev.service.nodeport.port
@@ -840,6 +840,21 @@ services:
       ...
     environment:
       ENV_VAR_A: some-literal-value  # Literal value
+```
+
+When there is a need to reference any dependent environment variables it can be achieved by using double curly braces
+
+> Environment variable with as literal string referencing dependent environment variables:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      ...
+    environment:
+      ENV_VAR_A: foo
+      ENV_VAR_B: bar
+      ENV_VAR_C: {{ENV_VAR_A}}/{{ENV_VAR_B}}  # referencing other dependent environment variables
 ```
 
 ## Reference K8s secret key value

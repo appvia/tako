@@ -1526,6 +1526,25 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
+		Context("for env dependend vars containing double curly braces e.g. {{OTHER_ENV_VAR_NAME}} ", func() {
+
+			secretRef := "postgres://{{USER}}:{{PASS}}@{{HOST}}:{{PORT}}/{{DB}}"
+
+			BeforeEach(func() {
+				projectService.Environment = composego.MappingWithEquals{
+					"MY_SECRET": &secretRef,
+				}
+			})
+
+			It("expands that env variable value to reference dependet variables", func() {
+				vars, err := k.configEnvs(projectService)
+
+				Expect(vars[0].Value).To(Equal("postgres://$(USER):$(PASS)@$(HOST):$(PORT)/$(DB)"))
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+		})
+
 		Context("for env vars with symbolic values", func() {
 
 			Context("as secret.secret-name.secret-key", func() {

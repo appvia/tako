@@ -1250,6 +1250,7 @@ func (k *Kubernetes) configPVCVolumeSource(name string, readonly bool) *v1.Volum
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L961
 func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, error) {
 	envs := EnvSort{}
+	envsWithDeps := []v1.EnvVar{}
 
 	// @step load up the environment variables
 	for k, v := range projectService.environment() {
@@ -1347,10 +1348,20 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				}, "Unsupported Container resource reference: %s", resource)
 			}
 		default:
-			envs = append(envs, v1.EnvVar{
-				Name:  k,
-				Value: *v,
-			})
+			if strings.Contains(*v, "{{") && strings.Contains(*v, "}}") {
+				*v = strings.ReplaceAll(*v, "{{", "$(")
+				*v = strings.ReplaceAll(*v, "}}", ")")
+
+				envsWithDeps = append(envsWithDeps, v1.EnvVar{
+					Name:  k,
+					Value: *v,
+				})
+			} else {
+				envs = append(envs, v1.EnvVar{
+					Name:  k,
+					Value: *v,
+				})
+			}
 		}
 	}
 
@@ -1358,6 +1369,12 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 	// we need this because envs are not populated in any random order
 	// this sorting ensures they are populated in a particular order
 	sort.Stable(envs)
+
+	// append dependent env variables at the end to ensure proper expansion in K8s
+	for _, de := range envsWithDeps {
+		envs = append(envs, de)
+	}
+
 	return envs, nil
 }
 
