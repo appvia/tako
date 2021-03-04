@@ -1347,6 +1347,12 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				}, "Unsupported Container resource reference: %s", resource)
 			}
 		default:
+
+			if strings.Contains(*v, "{{") && strings.Contains(*v, "}}") {
+				*v = strings.ReplaceAll(*v, "{{", "$(")
+				*v = strings.ReplaceAll(*v, "}}", ")")
+			}
+
 			envs = append(envs, v1.EnvVar{
 				Name:  k,
 				Value: *v,
