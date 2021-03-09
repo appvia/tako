@@ -172,6 +172,14 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 				return err
 			}
 
+			lines := strings.Split(string(data), "\n")
+			for i := 0; i < len(lines); i++ {
+				if strings.Contains(lines[i], "status: {}") || strings.Contains(lines[i], "creationTimestamp: null") {
+					lines = append(lines[0:i], lines[i+1:]...)
+				}
+			}
+			data = cleanOutput(data)
+
 			var typeMeta meta.TypeMeta
 			var objectMeta meta.ObjectMeta
 
@@ -214,6 +222,18 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 		}
 	}
 	return nil
+}
+
+// remove potentially problematic statements from yaml output
+// this is extremely naive and could remove these properties from unintended places.
+func cleanOutput(data []byte) []byte {
+	lines := strings.Split(string(data), "\n")
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], "status: {}") || strings.Contains(lines[i], "creationTimestamp: null") {
+			lines = append(lines[0:i], lines[i+1:]...)
+		}
+	}
+	return []byte(strings.Join(lines, "\n"))
 }
 
 // print either renders to stdout or to file/s
