@@ -172,12 +172,6 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 				return err
 			}
 
-			lines := strings.Split(string(data), "\n")
-			for i := 0; i < len(lines); i++ {
-				if strings.Contains(lines[i], "status: {}") || strings.Contains(lines[i], "creationTimestamp: null") {
-					lines = append(lines[0:i], lines[i+1:]...)
-				}
-			}
 			data = cleanOutput(data)
 
 			var typeMeta meta.TypeMeta
