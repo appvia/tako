@@ -76,6 +76,12 @@ const (
 	// LabelWorkloadLivenessProbeCommand defines the command for workload liveness probe
 	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe-command"
 
+	// LabelWorkloadLivenessProbeHTTPPort defines the port for the http liveness probe.
+	LabelWorkloadLivenessProbeHTTPPort = LabelPrefix + "workload.liveness-probe-http-port"
+
+	// LabelWorkloadLivenessProbeHTTPPath defines the path for the http liveness probe.
+	LabelWorkloadLivenessProbeHTTPPath = LabelPrefix + "workload.liveness-probe-http-path"
+
 	// LabelWorkloadLivenessProbeInterval defines the interval for workload liveness probe
 	LabelWorkloadLivenessProbeInterval = LabelPrefix + "workload.liveness-probe-interval"
 

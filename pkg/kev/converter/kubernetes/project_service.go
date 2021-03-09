@@ -552,36 +552,62 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 
 // healthcheck returns project service healthcheck probe
 func (p *ProjectService) healthcheck() (*v1.Probe, error) {
-
-	if !p.livenessProbeDisabled() {
-		command := p.livenessProbeCommand()
-		timoutSeconds := p.livenessProbeTimeout()
-		periodSeconds := p.livenessProbeInterval()
-		initialDelaySeconds := p.livenessProbeInitialDelay()
-		failureThreshold := p.livenessProbeRetries()
-
-		if len(command) == 0 || len(command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
-			initialDelaySeconds == 0 || failureThreshold == 0 {
-			log.Error("Health check misconfigured")
-			return nil, errors.New("Health check misconfigured")
-		}
-
-		probe := &v1.Probe{
-			Handler: v1.Handler{
-				Exec: &v1.ExecAction{
-					Command: command,
-				},
-			},
-			TimeoutSeconds:      timoutSeconds,
-			PeriodSeconds:       periodSeconds,
-			InitialDelaySeconds: initialDelaySeconds,
-			FailureThreshold:    failureThreshold,
-		}
-
-		return probe, nil
+	if p.livenessProbeDisabled() {
+		return nil, nil
 	}
 
-	return nil, nil
+	var handler v1.Handler
+
+	// todo: maybe output some debug information if http probe is set but not correct?
+	if hprobe, err := p.livenessHTTPProbe(); err == nil {
+		handler.HTTPGet = &hprobe
+	} else {
+		handler.Exec = &v1.ExecAction{
+			Command: p.livenessProbeCommand(),
+		}
+	}
+
+	timoutSeconds := p.livenessProbeTimeout()
+	periodSeconds := p.livenessProbeInterval()
+	initialDelaySeconds := p.livenessProbeInitialDelay()
+	failureThreshold := p.livenessProbeRetries()
+
+	if len(handler.Exec.Command) == 0 || len(handler.Exec.Command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+		initialDelaySeconds == 0 || failureThreshold == 0 {
+		log.Error("Health check misconfigured")
+		return nil, errors.New("Health check misconfigured")
+	}
+
+	probe := &v1.Probe{
+		Handler:             handler,
+		TimeoutSeconds:      timoutSeconds,
+		PeriodSeconds:       periodSeconds,
+		InitialDelaySeconds: initialDelaySeconds,
+		FailureThreshold:    failureThreshold,
+	}
+
+	return probe, nil
+}
+
+// livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
+func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
+	path, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPath]
+	if !ok {
+		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
+	}
+
+	port, ok := p.Labels[config.LabelServiceNodePortPort]
+	if !ok {
+		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelServiceNodePortPort)
+	}
+
+	return v1.HTTPGetAction{
+		Path: path,
+		Port: intstr.IntOrString{
+			Type:   intstr.String,
+			StrVal: port,
+		},
+	}, nil
 }
 
 // livenessProbeCommand returns liveness probe command

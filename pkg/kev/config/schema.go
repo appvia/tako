@@ -28,6 +28,8 @@ var ServicesSchema = map[string]interface{}{
 		LabelWorkloadImagePullSecret:                     map[string]interface{}{"type": "string"},
 		LabelWorkloadRestartPolicy:                       map[string]interface{}{"type": "string", "pattern": `^(?i)(Always|OnFailure|Never)$`},
 		LabelWorkloadLivenessProbeCommand:                map[string]interface{}{"type": "string"},
+		LabelWorkloadLivenessProbeHTTPPort:               map[string]interface{}{"type": "string"},
+		LabelWorkloadLivenessProbeHTTPPath:               map[string]interface{}{"type": "string"},
 		LabelWorkloadLivenessProbeDisabled:               map[string]interface{}{"type": "string", "enum": []string{"false", "true"}},
 		LabelWorkloadLivenessProbeInitialDelay:           map[string]interface{}{"type": "string", "format": "duration"},
 		LabelWorkloadLivenessProbeInterval:               map[string]interface{}{"type": "string", "format": "duration"},
