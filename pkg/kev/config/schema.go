@@ -60,7 +60,6 @@ var ServicesSchema = map[string]interface{}{
 		LabelServiceExposeTLSSecret:                      map[string]interface{}{"type": "string"},
 	},
 	"required": []string{
-		LabelWorkloadLivenessProbeCommand,
 		LabelWorkloadReplicas,
 	},
 	"additionalProperties": false,

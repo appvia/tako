@@ -562,8 +562,15 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	if hprobe, err := p.livenessHTTPProbe(); err == nil {
 		handler.HTTPGet = &hprobe
 	} else {
+		log.Debugf("http probe misconfigured, falling back to command")
+
 		handler.Exec = &v1.ExecAction{
 			Command: p.livenessProbeCommand(),
+		}
+
+		if handler.Exec == nil || len(handler.Exec.Command) == 0 || len(handler.Exec.Command[0]) == 0 {
+			log.Error("Health check misconfigured")
+			return nil, errors.New("Health check misconfigured")
 		}
 	}
 
@@ -572,8 +579,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	initialDelaySeconds := p.livenessProbeInitialDelay()
 	failureThreshold := p.livenessProbeRetries()
 
-	if len(handler.Exec.Command) == 0 || len(handler.Exec.Command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
-		initialDelaySeconds == 0 || failureThreshold == 0 {
+	if timoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
 		log.Error("Health check misconfigured")
 		return nil, errors.New("Health check misconfigured")
 	}
@@ -596,7 +602,7 @@ func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
 		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
 	}
 
-	port, ok := p.Labels[config.LabelServiceNodePortPort]
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
 	if !ok {
 		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelServiceNodePortPort)
 	}
