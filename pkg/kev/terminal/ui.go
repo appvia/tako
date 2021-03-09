@@ -119,7 +119,7 @@ type UI interface {
 
 	Header(msg string, opts ...Option)
 
-	NamedValues([]NamedValue, ...Option)
+	NamedValues(rows []NamedValue, opts ...Option)
 
 	// StepGroup returns a value that can be used to output individual (possibly
 	// parallel) steps that have their own message, status indicator, spinner, and

@@ -19,8 +19,28 @@ package kev
 import (
 	"io"
 
+	"github.com/appvia/kev/pkg/kev/terminal"
 	composego "github.com/compose-spec/compose-go/types"
 )
+
+type runConfig struct {
+	composeSources []string
+	envs           []string
+	skaffold       bool
+}
+
+type Options func(project *Project, cfg *runConfig)
+
+type Project struct {
+	workingDir string
+	manifest   *Manifest
+	config     runConfig
+	UI         terminal.UI
+}
+
+type InitRunner struct {
+	*Project
+}
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments
 type Manifest struct {
@@ -28,7 +48,7 @@ type Manifest struct {
 	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
 	Skaffold     string       `yaml:"skaffold,omitempty" json:"skaffold,omitempty"`
-	*Presentable `yaml:"-" json:"-"`
+	UI           terminal.UI  `yaml:"-" json:"-"`
 }
 
 // Sources tracks a project's docker-compose sources

@@ -24,9 +24,6 @@ import (
 	sshterm "golang.org/x/crypto/ssh/terminal"
 )
 
-// TODO: create the basicUI
-// type basicUI struct{}
-
 // Returns a UI which will write to the current processes
 // stdout/stderr.
 func ConsoleUI() UI {
@@ -44,8 +41,8 @@ func ConsoleUI() UI {
 	}
 
 	if pterm {
-		return PtermUI()
+		return PTermUI()
 	} else {
-		return PtermUI() // change to a basic buffer based UI for testing
+		return NoOpUI()
 	}
 }

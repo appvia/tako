@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"github.com/appvia/kev/pkg/kev"
-	"github.com/appvia/kev/pkg/kev/terminal"
 	"github.com/spf13/cobra"
 )
 
@@ -80,39 +79,15 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
-	// cmdName := "Init"
-
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
 
-	// displayCmdStarted(cmdName)
-
-	opts := kev.InitOptions{
-		ComposeSources: files,
-		Envs:           envs,
-		Skaffold:       skaffold,
-	}
-
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
 	wd := "."
-	err := kev.InitProjectWithOptions(wd, terminal.ConsoleUI(), opts)
-	if err != nil {
-		// return displayError(err)
-		return err
-	}
-	// results, err := kev.InitProjectWithOptions(wd, terminal.ConsoleUI(), opts)
-	// if err != nil {
-	// 	// return displayError(err)
-	// 	return err
-	// }
-
-	// if err := results.Write(); err != nil {
-	// 	return err
-	// }
-
-	// displayInitSuccess(os.Stdout, results)
-
-	return nil
+	return kev.InitProjectWithOptions(wd,
+		kev.WithComposeSources(files),
+		kev.WithEnvs(envs),
+		kev.WithSkaffold(skaffold))
 }
