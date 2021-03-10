@@ -624,9 +624,9 @@ func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
 		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
 	}
 
-	port, ok := p.Labels[config.LabelWorkloadLivenessProbePort]
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
 	if !ok {
-		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelServiceNodePortPort)
+		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
 	}
 
 	return v1.HTTPGetAction{

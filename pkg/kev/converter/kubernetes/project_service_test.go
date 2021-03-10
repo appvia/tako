@@ -1144,7 +1144,8 @@ var _ = Describe("ProjectService", func() {
 			startPeriod := composego.Duration(time.Duration(10) * time.Second)
 			retries := uint64(3)
 
-			BeforeEach(func() {
+			JustBeforeEach(func() {
+				projectService.Labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
 				healthcheck = composego.HealthCheckConfig{
 					Test: composego.HealthCheckTest{
 						"CMD-SHELL",
@@ -1158,7 +1159,9 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns a Probe as expected", func() {
-				Expect(projectService.healthcheck()).To(Equal(&v1.Probe{
+				result, err := projectService.healthcheck()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(&v1.Probe{
 					Handler: v1.Handler{
 						Exec: &v1.ExecAction{
 							Command: healthcheck.Test[1:],
@@ -1211,6 +1214,57 @@ var _ = Describe("ProjectService", func() {
 						"Health check misconfigured",
 						map[string]string{},
 					)
+				})
+			})
+		})
+	})
+
+	Describe("livenessHTTPProbe", func() {
+		When("defined via labels", func() {
+			Context("with all the parameters", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
+						config.LabelWorkloadLivenessProbeHTTPPort: "8080",
+					}
+				})
+
+				It("retuns a handler", func() {
+					result, err := projectService.livenessHTTPProbe()
+					Expect(err).To(BeNil())
+					Expect(result.Port.StrVal).To(Equal("8080"))
+					Expect(result.Path).To(Equal("/status"))
+				})
+			})
+
+			Context("with missing port", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
+					}
+				})
+
+				It("retuns a handler", func() {
+					_, err := projectService.livenessHTTPProbe()
+					Expect(err).NotTo(BeNil())
+					Expect(err.Error()).To(ContainSubstring("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort))
+				})
+			})
+
+			Context("with missing path", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeHTTPPort: "8080",
+					}
+				})
+
+				It("retuns a handler", func() {
+					_, err := projectService.livenessHTTPProbe()
+					Expect(err).NotTo(BeNil())
+					Expect(err.Error()).To(ContainSubstring("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath))
 				})
 			})
 		})

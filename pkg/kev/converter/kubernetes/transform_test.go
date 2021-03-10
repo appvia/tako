@@ -72,16 +72,30 @@ var _ = Describe("Transform", func() {
 
 		When("service exclusion list is empty", func() {
 
-			It("includes kubernetes objects for project services", func() {
-				objs, err := k.Transform()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(objs)).To(Equal(1))
+			Context("and has probe type", func() {
+				JustBeforeEach(func() {
+					project.Services[0].Labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeDisabled.String())
+				})
 
-				u, err := ToUnstructured(objs[0])
-				name := u["metadata"].(map[string]interface{})["name"]
+				It("includes kubernetes objects for project services", func() {
+					objs, err := k.Transform()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(objs)).To(Equal(1))
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(name).To(Equal(projectService.Name))
+					u, err := ToUnstructured(objs[0])
+					name := u["metadata"].(map[string]interface{})["name"]
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(name).To(Equal(projectService.Name))
+				})
+			})
+
+			Context("and no probe is defined", func() {
+				It("returns a missing probe type error", func() {
+					_, err := k.Transform()
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("probe type not provided"))
+				})
 			})
 
 		})
