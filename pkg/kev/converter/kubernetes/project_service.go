@@ -552,18 +552,18 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 
 // healthcheck returns project service healthcheck probe
 func (p *ProjectService) healthcheck() (*v1.Probe, error) {
-	if p.livenessProbeDisabled() {
-		return nil, nil
+
+	probeType, err := p.livenessProbeType()
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get a valid liveness probe type")
 	}
 
 	var handler v1.Handler
 
-	// todo: maybe output some debug information if http probe is set but not correct?
-	if hprobe, err := p.livenessHTTPProbe(); err == nil {
-		handler.HTTPGet = &hprobe
-	} else {
-		log.Debugf("http probe misconfigured, falling back to command")
-
+	switch probeType {
+	case ProbeTypeDisabled:
+		return nil, nil
+	case ProbeTypeCommand:
 		handler.Exec = &v1.ExecAction{
 			Command: p.livenessProbeCommand(),
 		}
@@ -572,6 +572,14 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 			log.Error("Health check misconfigured")
 			return nil, errors.New("Health check misconfigured")
 		}
+	case ProbeTypeHTTP:
+		hprobe, err := p.livenessHTTPProbe()
+		if err != nil {
+			return nil, err
+		}
+		handler.HTTPGet = &hprobe
+	default:
+		return nil, errors.Errorf("unsupported probe type: %s", probeType)
 	}
 
 	timoutSeconds := p.livenessProbeTimeout()
@@ -595,6 +603,20 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	return probe, nil
 }
 
+func (p *ProjectService) livenessProbeType() (ProbeType, error) {
+	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
+	if !ok {
+		return ProbeTypeDisabled, errors.New("probe type not provided")
+	}
+
+	pt, ok := ProbeTypeFromString(t)
+	if !ok {
+		return ProbeTypeDisabled, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+	}
+
+	return pt, nil
+}
+
 // livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
 func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
 	path, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPath]
@@ -602,7 +624,7 @@ func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
 		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
 	}
 
-	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbePort]
 	if !ok {
 		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelServiceNodePortPort)
 	}
@@ -707,29 +729,6 @@ func (p *ProjectService) livenessProbeRetries() int32 {
 	}
 
 	return int32(config.DefaultProbeRetries)
-}
-
-// livenessProbeDisabled tells whether liveness probe should be activated
-func (p *ProjectService) livenessProbeDisabled() bool {
-	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeDisabled]; ok {
-		if v, err := strconv.ParseBool(val); err == nil {
-			return v
-		}
-
-		log.WarnfWithFields(log.Fields{
-			"project-service": p.Name,
-			"enabled":         val,
-		}, "Unable to extract Bool value from %s label. Liveness probe will be disabled.",
-			config.LabelWorkloadLivenessProbeDisabled)
-
-		return true
-	}
-
-	if p.HealthCheck != nil && p.HealthCheck.Disable == true {
-		return true
-	}
-
-	return false
 }
 
 // readinessProbe returns project service readiness probe

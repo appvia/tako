@@ -73,14 +73,17 @@ const (
 	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
 	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
 
-	// LabelWorkloadLivenessProbeCommand defines the command for workload liveness probe
-	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe-command"
+	// LabelWorkloadLivenessProbeType defines the command for workload liveness probe.
+	LabelWorkloadLivenessProbeType = LabelPrefix + "workload.liveness-probe.type"
 
-	// LabelWorkloadLivenessProbeHTTPPort defines the port for the http liveness probe.
-	LabelWorkloadLivenessProbeHTTPPort = LabelPrefix + "workload.liveness-probe-http-port"
+	// LabelWorkloadLivenessProbeCommand defines the command for workload liveness probe.
+	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe.command"
+
+	// LabelWorkloadLivenessProbePort defines the port for the http liveness probes.
+	LabelWorkloadLivenessProbePort = LabelPrefix + "workload.liveness-probe.http.port"
 
 	// LabelWorkloadLivenessProbeHTTPPath defines the path for the http liveness probe.
-	LabelWorkloadLivenessProbeHTTPPath = LabelPrefix + "workload.liveness-probe-http-path"
+	LabelWorkloadLivenessProbeHTTPPath = LabelPrefix + "workload.liveness-probe.http.path"
 
 	// LabelWorkloadLivenessProbeInterval defines the interval for workload liveness probe
 	LabelWorkloadLivenessProbeInterval = LabelPrefix + "workload.liveness-probe-interval"
@@ -93,9 +96,6 @@ const (
 
 	// LabelWorkloadLivenessProbeRetries defines number of times workload liveness probe will retry
 	LabelWorkloadLivenessProbeRetries = LabelPrefix + "workload.liveness-probe-retries"
-
-	// LabelWorkloadLivenessProbeDisabled disables workload liveness probe
-	LabelWorkloadLivenessProbeDisabled = LabelPrefix + "workload.liveness-probe-disabled"
 
 	// LabelWorkloadReadinessProbeCommand defines the command for workload liveness probe
 	LabelWorkloadReadinessProbeCommand = LabelPrefix + "workload.readiness-probe-command"
@@ -138,6 +138,7 @@ const (
 )
 
 var BaseServiceLabels = []string{
+	LabelWorkloadLivenessProbeType,
 	LabelWorkloadLivenessProbeCommand,
 	LabelWorkloadReplicas,
 }
