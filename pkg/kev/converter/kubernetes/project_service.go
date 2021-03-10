@@ -582,19 +582,19 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 		return nil, errors.Errorf("unsupported probe type: %s", probeType)
 	}
 
-	timoutSeconds := p.livenessProbeTimeout()
+	timeoutSeconds := p.livenessProbeTimeout()
 	periodSeconds := p.livenessProbeInterval()
 	initialDelaySeconds := p.livenessProbeInitialDelay()
 	failureThreshold := p.livenessProbeRetries()
 
-	if timoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
+	if timeoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
 		log.Error("Health check misconfigured")
 		return nil, errors.New("Health check misconfigured")
 	}
 
 	probe := &v1.Probe{
 		Handler:             handler,
-		TimeoutSeconds:      timoutSeconds,
+		TimeoutSeconds:      timeoutSeconds,
 		PeriodSeconds:       periodSeconds,
 		InitialDelaySeconds: initialDelaySeconds,
 		FailureThreshold:    failureThreshold,
@@ -736,12 +736,12 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 
 	if !p.readinessProbeDisabled() {
 		command := p.readinessProbeCommand()
-		timoutSeconds := p.readinessProbeTimeout()
+		timeoutSeconds := p.readinessProbeTimeout()
 		periodSeconds := p.readinessProbeInterval()
 		initialDelaySeconds := p.readinessProbeInitialDelay()
 		failureThreshold := p.readinessProbeRetries()
 
-		if len(command) == 0 || len(command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+		if len(command) == 0 || len(command[0]) == 0 || timeoutSeconds == 0 || periodSeconds == 0 ||
 			initialDelaySeconds == 0 || failureThreshold == 0 {
 			log.Error("Readiness probe misconfigured")
 			return nil, errors.New("Readiness probe misconfigured")
@@ -753,7 +753,7 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 					Command: command,
 				},
 			},
-			TimeoutSeconds:      timoutSeconds,
+			TimeoutSeconds:      timeoutSeconds,
 			PeriodSeconds:       periodSeconds,
 			InitialDelaySeconds: initialDelaySeconds,
 			FailureThreshold:    failureThreshold,
