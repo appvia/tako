@@ -17,8 +17,6 @@
 package kev
 
 import (
-	"fmt"
-
 	"github.com/appvia/kev/pkg/kev/terminal"
 )
 
@@ -31,6 +29,10 @@ func (p *Project) Init(opts ...Options) {
 	if p.UI == nil {
 		p.UI = terminal.ConsoleUI()
 	}
+}
+
+func (p *Project) Manifest() *Manifest {
+	return p.manifest
 }
 
 func WithComposeSources(c []string) Options {
@@ -48,15 +50,14 @@ func WithEnvs(c []string) Options {
 func WithSkaffold(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.skaffold = c
-		fmt.Printf("%v", cfg.skaffold)
 	}
 }
 
-func WithWorkingDir(wd string) Options {
-	return func(project *Project, cfg *runConfig) {
-		project.workingDir = wd
-	}
-}
+// func WithWorkingDir(wd string) Options {
+// 	return func(project *Project, cfg *runConfig) {
+// 		project.workingDir = wd
+// 	}
+// }
 
 func WithUI(ui terminal.UI) Options {
 	return func(project *Project, cfg *runConfig) {

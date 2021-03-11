@@ -24,7 +24,6 @@ import (
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
-	"github.com/appvia/kev/pkg/kev/terminal"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
@@ -41,10 +40,9 @@ var (
 )
 
 func InitProjectWithOptions(workingDir string, opts ...Options) error {
-	runner := &InitRunner{Project: &Project{}}
-	runner.Init(append(opts, WithWorkingDir(workingDir))...)
-
+	runner := NewInitRunner(workingDir, opts...)
 	ui := runner.UI
+
 	results, err := runner.Run()
 	if err != nil {
 		printInitProjectWithOptionsError(ui)
@@ -58,27 +56,6 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 
 	printInitProjectWithOptionsSuccess(ui, runner.manifest.Environments)
 	return nil
-}
-
-// InitBase initialises a kev manifest including source compose files and environments.
-// If no composeSources are provided, the working directory is introspected for valid compose files to act as sources.
-// Also, an implicit sandbox environment will always be created.
-func InitBase(workingDir string, composeSources, envs []string) (*Manifest, error) {
-	if err := EnsureFirstInit(workingDir); err != nil {
-		return nil, err
-	}
-
-	m, err := NewManifest(composeSources, workingDir)
-	if err != nil {
-		return nil, err
-	}
-
-	m.UI = terminal.NoOpUI()
-	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
-		return nil, err
-	}
-
-	return m.MintEnvironments(envs), nil
 }
 
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
@@ -102,8 +79,8 @@ func DetectSecrets(workingDir string) error {
 		return err
 	}
 
-	runner := &InitRunner{Project: &Project{}}
-	runner.Init(WithWorkingDir(workingDir))
+	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
+	runner.Init()
 	if _, err := runner.detectSecretsInSources(m.Sources, config.SecretMatchers); err != nil {
 		return err
 	}

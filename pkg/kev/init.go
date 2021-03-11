@@ -26,6 +26,12 @@ import (
 	"github.com/appvia/kev/pkg/kev/terminal"
 )
 
+func NewInitRunner(workingDir string, opts ...Options) *InitRunner {
+	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
+	runner.Init(opts...)
+	return runner
+}
+
 func (r *InitRunner) Run() (WritableResults, error) {
 	var skManifest *SkaffoldManifest
 
@@ -87,7 +93,6 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 
 			if !fileExists(source) {
 				err := fmt.Errorf("cannot find compose source %q", source)
-				// initStepError(*r.Presentable, s, initStepComposeSource, err)
 				initStepError(r.UI, s, initStepComposeSource, err)
 				return nil, err
 			}

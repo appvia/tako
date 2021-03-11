@@ -17,41 +17,12 @@
 package kev_test
 
 import (
-	"bytes"
-	"io/ioutil"
 	"testing"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
-
-func TestInitProvidesEnvironmentConfig(t *testing.T) {
-	files := []string{"testdata/in-cluster-wordpress/docker-compose.yaml"}
-	manifest, err := kev.InitBase("", files, []string{})
-	if err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-
-	var actual bytes.Buffer
-	env, err := manifest.GetEnvironment("dev")
-	if err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-	if _, err := env.WriteTo(&actual); err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-
-	expected, err := ioutil.ReadFile("testdata/in-cluster-wordpress/docker-compose.kev.dev.yaml")
-	if err != nil {
-		t.Fatalf("Unexpected error:\n%s", err)
-	}
-
-	diff := cmp.Diff(expected, actual.Bytes())
-	if diff != "" {
-		t.Fatalf("actual does not match expected:\n%s", diff)
-	}
-}
 
 func TestCanLoadAManifest(t *testing.T) {
 	expected := &kev.Manifest{
