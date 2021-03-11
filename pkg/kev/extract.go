@@ -174,7 +174,7 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 	)
 
 	if source.HealthCheck.Disable {
-		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeDisabled.String())
+		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeNone.String())
 	} else {
 		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeCommand.String())
 	}

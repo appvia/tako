@@ -79,14 +79,14 @@ func (p ProbeType) String() string {
 }
 
 var probeString map[ProbeType]string = map[ProbeType]string{
-	ProbeTypeDisabled: "disabled",
-	ProbeTypeCommand:  "command",
-	ProbeTypeHTTP:     "http",
+	ProbeTypeNone:    "none",
+	ProbeTypeCommand: "command",
+	ProbeTypeHTTP:    "http",
 }
 
 const (
-	// ProbeTypeDisabled disables probe checks.
-	ProbeTypeDisabled ProbeType = iota
+	// ProbeTypeNone disables probe checks.
+	ProbeTypeNone ProbeType = iota
 	// ProbeTypeCommand uses a shell command for probe checks.
 	ProbeTypeCommand
 	// ProbeTypeHTTP defines an http request which is used by probes checks.
@@ -101,5 +101,5 @@ func ProbeTypeFromString(s string) (ProbeType, bool) {
 		}
 	}
 
-	return ProbeTypeDisabled, false
+	return ProbeTypeNone, false
 }

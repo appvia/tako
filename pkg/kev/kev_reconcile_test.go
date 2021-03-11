@@ -46,7 +46,9 @@ var _ = Describe("Reconcile", func() {
 		hook = testutil.NewLogger(logrus.DebugLevel)
 		manifest, mErr = kev.Reconcile(workingDir)
 		if mErr == nil {
-			env, _ = manifest.GetEnvironment("dev")
+			var err error
+			env, err = manifest.GetEnvironment("dev")
+			Expect(err).NotTo(HaveOccurred())
 		}
 		loggedMsgs = testutil.GetLoggedMsgs(hook)
 	})
@@ -58,8 +60,10 @@ var _ = Describe("Reconcile", func() {
 	Describe("Reconcile changes from overrides", func() {
 		When("the override version has been updated", func() {
 			BeforeEach(func() {
+				var err error
 				workingDir = "testdata/reconcile-override-rollback"
-				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				source, err = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				Expect(err).NotTo(HaveOccurred())
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
@@ -81,7 +85,8 @@ var _ = Describe("Reconcile", func() {
 
 			When("the override service label overrides have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
-					s, _ := override.GetService("db")
+					s, err := override.GetService("db")
+					Expect(err).NotTo(HaveOccurred())
 					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
 					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
 					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
@@ -90,7 +95,8 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("keeps overridden override values", func() {
-					s, _ := env.GetService("db")
+					s, err := env.GetService("db")
+					Expect(err).NotTo(HaveOccurred())
 					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
 					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
 					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))

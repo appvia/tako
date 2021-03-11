@@ -552,7 +552,6 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 
 // healthcheck returns project service healthcheck probe
 func (p *ProjectService) healthcheck() (*v1.Probe, error) {
-
 	probeType, err := p.livenessProbeType()
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get a valid liveness probe type")
@@ -561,7 +560,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	var handler v1.Handler
 
 	switch probeType {
-	case ProbeTypeDisabled:
+	case ProbeTypeNone:
 		return nil, nil
 	case ProbeTypeCommand:
 		handler.Exec = &v1.ExecAction{
@@ -606,12 +605,12 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 func (p *ProjectService) livenessProbeType() (ProbeType, error) {
 	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
 	if !ok {
-		return ProbeTypeDisabled, errors.New("probe type not provided")
+		return ProbeTypeNone, errors.New("probe type not provided")
 	}
 
 	pt, ok := ProbeTypeFromString(t)
 	if !ok {
-		return ProbeTypeDisabled, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+		return ProbeTypeNone, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
 	}
 
 	return pt, nil

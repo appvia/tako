@@ -69,12 +69,22 @@ var _ = Describe("Transform", func() {
 	})
 
 	Describe("Transform", func() {
-
 		When("service exclusion list is empty", func() {
-
 			Context("and has probe type", func() {
 				JustBeforeEach(func() {
-					project.Services[0].Labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeDisabled.String())
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
+					}
+
+					project.Services = []composego.ServiceConfig{
+						composego.ServiceConfig(projectService),
+					}
+
+					k = Kubernetes{
+						Opt:      ConvertOptions{},
+						Project:  &project,
+						Excluded: excluded,
+					}
 				})
 
 				It("includes kubernetes objects for project services", func() {
@@ -1901,12 +1911,14 @@ var _ = Describe("Transform", func() {
 					projectService.Labels = composego.Labels{
 						config.LabelWorkloadReadinessProbeDisabled: "false",
 						config.LabelWorkloadReadinessProbeCommand:  "hello world",
+						config.LabelWorkloadLivenessProbeType:      ProbeTypeNone.String(),
 					}
 				})
 
 				It("includes readiness probe definition in the pod spec", func() {
 					err := k.updateKubernetesObjects(projectService, &objs)
 					Expect(err).ToNot(HaveOccurred())
+
 					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command).To(Equal([]string{"hello world"}))
 				})
 			})
@@ -1934,7 +1946,7 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeDisabled: "true",
+						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
 					}
 				})
 

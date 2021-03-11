@@ -74,10 +74,10 @@ const (
 	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
 
 	// LabelWorkloadLivenessProbeType defines the command for workload liveness probe.
-	LabelWorkloadLivenessProbeType = LabelPrefix + "workload.liveness-probe.type"
+	LabelWorkloadLivenessProbeType = LabelPrefix + "workload.liveness-probe-type"
 
 	// LabelWorkloadLivenessProbeCommand defines the command for workload liveness probe.
-	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe.command"
+	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe-command"
 
 	// LabelWorkloadLivenessProbeHTTPPort defines the port for the http liveness probes.
 	LabelWorkloadLivenessProbeHTTPPort = LabelPrefix + "workload.liveness-probe.http.port"
@@ -138,9 +138,9 @@ const (
 )
 
 var BaseServiceLabels = []string{
+	LabelWorkloadReplicas,
 	LabelWorkloadLivenessProbeType,
 	LabelWorkloadLivenessProbeCommand,
-	LabelWorkloadReplicas,
 }
 
 var BaseVolumeLabels = []string{

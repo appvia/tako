@@ -1176,6 +1176,9 @@ var _ = Describe("ProjectService", func() {
 		})
 
 		Describe("validations", func() {
+			JustBeforeEach(func() {
+				projectService.Labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+			})
 
 			Context("when Test command is not defined", func() {
 				BeforeEach(func() {
@@ -1202,6 +1205,7 @@ var _ = Describe("ProjectService", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
 						config.LabelWorkloadLivenessProbeTimeout: "0",
+						config.LabelWorkloadLivenessProbeType:    ProbeTypeCommand.String(),
 					}
 				})
 
