@@ -58,38 +58,6 @@ func (r *InitRunner) Run() (WritableResults, error) {
 	return createInitWritableResults(r.workingDir, r.manifest, skManifest), nil
 }
 
-// func (r *InitRunner) InitWithOptions(opts InitOptions) (WritableResults, error) {
-// 	var skManifest *SkaffoldManifest
-//
-// 	if err := r.EnsureFirstInit(); err != nil {
-// 		return nil, err
-// 	}
-//
-// 	sources, err := r.DetectSources(opts)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	if err := r.ValidateSources(sources, config.SecretMatchers); err != nil {
-// 		return nil, err
-// 	}
-//
-// 	if err := r.CreateManifestAndDeployments(sources, opts); err != nil {
-// 		return nil, err
-// 	}
-//
-// 	r.UI.Header("Detecting Skaffold settings...")
-// 	if opts.Skaffold {
-// 		if skManifest, err = r.CreateOrUpdateSkaffoldManifest(); err != nil {
-// 			return nil, err
-// 		}
-// 	} else {
-// 		r.UI.Output("Skipping - no Skaffold options detected")
-// 	}
-//
-// 	return createInitWritableResults(r.workingDir, r.manifest, skManifest), nil
-// }
-
 func (r *InitRunner) EnsureFirstInit() error {
 	r.UI.Header("Verifying project...")
 	sg := r.UI.StepGroup()

@@ -84,36 +84,6 @@ var (
 	enabled  = true
 )
 
-// CreateOrUpdateSkaffoldManifest creates a skaffold manifest or updates an existing one.
-func CreateOrUpdateSkaffoldManifest(path string, envs []string, project *ComposeProject) (WritableResults, error) {
-	var out []WritableResult
-	var skManifest *SkaffoldManifest
-	var err error
-	var updated bool
-
-	switch ManifestExistsForPath(path) {
-	case true:
-		// Skaffold manifest already present - add additional profiles to it!
-		// Note: kev will skip profiles with names matching those of existing
-		// profile names defined in Skaffold to avoid profile "hijack".
-		if skManifest, err = AddProfiles(path, envs, true); err != nil {
-			return nil, err
-		}
-		updated = true
-	case false:
-		if skManifest, err = NewSkaffoldManifest(envs, project); err != nil {
-			return nil, err
-		}
-	}
-
-	out = append(out, WritableResult{
-		WriterTo: skManifest,
-		FilePath: path,
-		Updated:  updated,
-	})
-	return out, nil
-}
-
 // NewSkaffoldManifest returns a new SkaffoldManifest struct.
 func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManifest, error) {
 

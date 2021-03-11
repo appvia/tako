@@ -159,6 +159,4 @@ type WritableResults []WritableResult
 type WritableResult struct {
 	WriterTo io.WriterTo
 	FilePath string
-	Skipped  bool
-	Updated  bool
 }
