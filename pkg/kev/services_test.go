@@ -28,12 +28,27 @@ var _ = Describe("ServiceConfig", func() {
 	Context("validation", func() {
 
 		When("base labels", func() {
+
+			// TODO: This needs a better test in a future iteration, the base labels are no longer just the required ones.
 			It("fails when base labels are not present", func() {
-				err := ServiceConfig{Labels: composego.Labels{}}.validate()
+				err := ServiceConfig{Labels: composego.Labels{
+					config.LabelWorkloadReplicas: "1",
+				}}.validate()
+				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[1])))
+
+				err = ServiceConfig{Labels: composego.Labels{
+					config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeCommand.String(),
+				}}.validate()
 				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[0])))
 
-				err = ServiceConfig{Labels: composego.Labels{config.BaseServiceLabels[0]: "value"}}.validate()
-				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[1])))
+				err = ServiceConfig{Labels: composego.Labels{}}.validate()
+				Expect(err).Should(HaveOccurred())
+
+				err = ServiceConfig{Labels: composego.Labels{
+					config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeCommand.String(),
+					config.LabelWorkloadReplicas:          "1",
+				}}.validate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("fails when replicas label is not a number", func() {

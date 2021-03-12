@@ -19,6 +19,7 @@ package kev_test
 import (
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,16 +41,18 @@ var _ = Describe("Reconcile", func() {
 	)
 
 	JustBeforeEach(func() {
+		var err error
 		if len(overrideFiles) > 0 {
-			override, _ = kev.NewComposeProject(overrideFiles)
+			override, err = kev.NewComposeProject(overrideFiles)
+			Expect(err).NotTo(HaveOccurred())
 		}
 		hook = testutil.NewLogger(logrus.DebugLevel)
 		manifest, mErr = kev.Reconcile(workingDir)
-		if mErr == nil {
-			var err error
-			env, err = manifest.GetEnvironment("dev")
-			Expect(err).NotTo(HaveOccurred())
-		}
+		Expect(mErr).NotTo(HaveOccurred())
+
+		env, err = manifest.GetEnvironment("dev")
+		Expect(err).NotTo(HaveOccurred())
+
 		loggedMsgs = testutil.GetLoggedMsgs(hook)
 	})
 
@@ -271,6 +274,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("should configure the added service labels from healthcheck config", func() {
 					expected := newDefaultServiceLabels("wordpress")
+					expected[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
 					expected[config.LabelWorkloadLivenessProbeCommand] = "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
@@ -458,6 +462,7 @@ var _ = Describe("Reconcile", func() {
 
 func newDefaultServiceLabels(name string) map[string]string {
 	return map[string]string{
+		config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
 		config.LabelWorkloadLivenessProbeCommand: "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
 		config.LabelWorkloadReplicas:             "1",
 	}

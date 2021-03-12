@@ -56,7 +56,8 @@ var _ = Describe("Manifest", func() {
 			)
 
 			BeforeEach(func() {
-				manifest, err := kev.LoadManifest(workingDir)
+				var err error
+				manifest, err = kev.LoadManifest(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = manifest.CalculateSourcesBaseOverride()
@@ -78,7 +79,7 @@ var _ = Describe("Manifest", func() {
 				Expect(mergedSvc.Labels).To(Equal(envSvc.Labels))
 			})
 
-			FIt("merged the environment extensions into sources", func() {
+			It("merged the environment extensions into sources", func() {
 				sources, err := manifest.SourcesToComposeProject()
 				Expect(err).NotTo(HaveOccurred())
 
