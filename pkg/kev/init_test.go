@@ -22,7 +22,6 @@ import (
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -45,7 +44,7 @@ var _ = Describe("InitRunner", func() {
 		env, _ = manifest.GetEnvironment("dev")
 	})
 
-	Context("created results", func() {
+	Context("Run results", func() {
 		BeforeEach(func() {
 			workingDir = "./testdata/init-default/compose-yml"
 		})
@@ -65,7 +64,7 @@ var _ = Describe("InitRunner", func() {
 		})
 	})
 
-	Context("created manifest", func() {
+	Context("Created manifest", func() {
 		BeforeEach(func() {
 			workingDir = "./testdata/init-default/compose-yml"
 		})
@@ -87,7 +86,7 @@ var _ = Describe("InitRunner", func() {
 		})
 	})
 
-	Context("with no alternate compose files supplied", func() {
+	When("No alternate compose files supplied", func() {
 		Context("and without any docker-compose file in the directory", func() {
 			BeforeEach(func() {
 				workingDir = "./testdata"
@@ -198,7 +197,7 @@ var _ = Describe("InitRunner", func() {
 		})
 	})
 
-	Context("created environment overrides", func() {
+	Context("Created environment overrides", func() {
 		BeforeEach(func() {
 			workingDir = "./testdata/init-default/compose-yaml"
 		})
