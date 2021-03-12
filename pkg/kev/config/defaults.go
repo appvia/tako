@@ -124,6 +124,9 @@ const (
 	// DefaultLivenessProbeCommand default command
 	DefaultLivenessProbeCommand = "Define healthcheck command for service %s"
 
+	// DefaultLivenessProbeType default probe type.
+	DefaultLivenessProbeType = "command"
+
 	// DefaultProbeTimeout default 10s
 	DefaultProbeTimeout = "10s"
 

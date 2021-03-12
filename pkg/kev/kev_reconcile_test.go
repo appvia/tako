@@ -19,6 +19,7 @@ package kev_test
 import (
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,14 +41,18 @@ var _ = Describe("Reconcile", func() {
 	)
 
 	JustBeforeEach(func() {
+		var err error
 		if len(overrideFiles) > 0 {
-			override, _ = kev.NewComposeProject(overrideFiles)
+			override, err = kev.NewComposeProject(overrideFiles)
+			Expect(err).NotTo(HaveOccurred())
 		}
 		hook = testutil.NewLogger(logrus.DebugLevel)
 		manifest, mErr = kev.Reconcile(workingDir)
-		if mErr == nil {
-			env, _ = manifest.GetEnvironment("dev")
-		}
+		Expect(mErr).NotTo(HaveOccurred())
+
+		env, err = manifest.GetEnvironment("dev")
+		Expect(err).NotTo(HaveOccurred())
+
 		loggedMsgs = testutil.GetLoggedMsgs(hook)
 	})
 
@@ -58,8 +63,10 @@ var _ = Describe("Reconcile", func() {
 	Describe("Reconcile changes from overrides", func() {
 		When("the override version has been updated", func() {
 			BeforeEach(func() {
+				var err error
 				workingDir = "testdata/reconcile-override-rollback"
-				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				source, err = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				Expect(err).NotTo(HaveOccurred())
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 			})
 
@@ -81,7 +88,8 @@ var _ = Describe("Reconcile", func() {
 
 			When("the override service label overrides have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
-					s, _ := override.GetService("db")
+					s, err := override.GetService("db")
+					Expect(err).NotTo(HaveOccurred())
 					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
 					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
 					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
@@ -90,7 +98,8 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("keeps overridden override values", func() {
-					s, _ := env.GetService("db")
+					s, err := env.GetService("db")
+					Expect(err).NotTo(HaveOccurred())
 					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
 					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
 					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
@@ -265,6 +274,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("should configure the added service labels from healthcheck config", func() {
 					expected := newDefaultServiceLabels("wordpress")
+					expected[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
 					expected[config.LabelWorkloadLivenessProbeCommand] = "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
@@ -452,6 +462,7 @@ var _ = Describe("Reconcile", func() {
 
 func newDefaultServiceLabels(name string) map[string]string {
 	return map[string]string{
+		config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
 		config.LabelWorkloadLivenessProbeCommand: "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
 		config.LabelWorkloadReplicas:             "1",
 	}

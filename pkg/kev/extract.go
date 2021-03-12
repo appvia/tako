@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
+
 	composego "github.com/compose-spec/compose-go/types"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -172,7 +174,11 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 		timeout      string
 	)
 
-	target.Labels.Add(config.LabelWorkloadLivenessProbeDisabled, strconv.FormatBool(source.HealthCheck.Disable))
+	if source.HealthCheck.Disable {
+		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeNone.String())
+	} else {
+		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeCommand.String())
+	}
 
 	if source.HealthCheck != nil && source.HealthCheck.Interval != nil {
 		interval = source.HealthCheck.Interval.String()

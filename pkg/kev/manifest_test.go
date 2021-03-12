@@ -52,27 +52,45 @@ var _ = Describe("Manifest", func() {
 				merged   *kev.ComposeProject
 				mergeErr error
 				env      *kev.Environment
+				manifest *kev.Manifest
 			)
 
-			manifest, err := kev.LoadManifest(workingDir)
-			if err == nil {
-				_, _ = manifest.CalculateSourcesBaseOverride()
-				env, _ = manifest.GetEnvironment("dev")
+			BeforeEach(func() {
+				var err error
+				manifest, err = kev.LoadManifest(workingDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = manifest.CalculateSourcesBaseOverride()
+				Expect(err).NotTo(HaveOccurred())
+
+				env, err = manifest.GetEnvironment("dev")
+				Expect(err).NotTo(HaveOccurred())
+
 				merged, mergeErr = manifest.MergeEnvIntoSources(env)
-			}
+				Expect(mergeErr).NotTo(HaveOccurred())
+			})
 
 			It("merged the environment labels into sources", func() {
-				mergedSvc, _ := merged.GetService("db")
-				envSvc, _ := env.GetService("db")
+				var err error
+				mergedSvc, err := merged.GetService("db")
+				Expect(err).NotTo(HaveOccurred())
+				envSvc, err := env.GetService("db")
+				Expect(err).NotTo(HaveOccurred())
 				Expect(mergedSvc.Labels).To(Equal(envSvc.Labels))
 			})
 
 			It("merged the environment extensions into sources", func() {
-				sources, _ := manifest.SourcesToComposeProject()
+				sources, err := manifest.SourcesToComposeProject()
+				Expect(err).NotTo(HaveOccurred())
 
-				srcSvc, _ := sources.GetService("db")
-				mergedSvc, _ := merged.GetService("db")
-				envSvc, _ := env.GetService("db")
+				srcSvc, err := sources.GetService("db")
+				Expect(err).NotTo(HaveOccurred())
+
+				mergedSvc, err := merged.GetService("db")
+				Expect(err).NotTo(HaveOccurred())
+
+				envSvc, err := env.GetService("db")
+				Expect(err).NotTo(HaveOccurred())
 
 				Expect(srcSvc.Extensions).To(HaveLen(1))
 				Expect(mergedSvc.Extensions).To(HaveLen(2))

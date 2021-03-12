@@ -183,7 +183,8 @@ var _ = Describe("InitBase", func() {
 		Context("with services", func() {
 			It("should include a subset of labels as config params", func() {
 				svc, _ := env.GetService("db")
-				Expect(svc.GetLabels()).To(HaveLen(2))
+				Expect(svc.GetLabels()).To(HaveLen(3))
+				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeType))
 				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadReplicas))
 			})

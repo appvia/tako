@@ -5,8 +5,8 @@ services:
       kev.service.type: ClusterIP
       kev.workload.cpu: "0.5"
       kev.workload.image-pull-policy: IfNotPresent
+      kev.workload.liveness-probe-type: command
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.liveness-probe-disabled: "false"
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
       kev.workload.liveness-probe-retries: "3"

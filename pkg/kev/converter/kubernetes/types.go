@@ -22,6 +22,7 @@ package kubernetes
 
 import (
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 )
 
 // ConvertOptions holds all options that controls transformation process
@@ -53,3 +54,52 @@ type Volumes struct {
 
 // ProjectService is a wrapper type around composego.ServiceConfig
 type ProjectService composego.ServiceConfig
+
+// ErrUnsupportedProbeType should be returned when an unsupported probe type is provided.
+var ErrUnsupportedProbeType = errors.New("unsupported probe type")
+
+// ProbeType defines all possible types of kubernetes probes
+type ProbeType int
+
+// Valid checks if a ProbeType contains an expected value.
+func (p ProbeType) Valid() bool {
+	_, ok := probeString[p]
+
+	return ok
+}
+
+// String returns the string representation of a ProbeType.
+func (p ProbeType) String() string {
+	s, ok := probeString[p]
+	if !ok {
+		return ""
+	}
+
+	return s
+}
+
+var probeString map[ProbeType]string = map[ProbeType]string{
+	ProbeTypeNone:    "none",
+	ProbeTypeCommand: "command",
+	ProbeTypeHTTP:    "http",
+}
+
+const (
+	// ProbeTypeNone disables probe checks.
+	ProbeTypeNone ProbeType = iota
+	// ProbeTypeCommand uses a shell command for probe checks.
+	ProbeTypeCommand
+	// ProbeTypeHTTP defines an http request which is used by probes checks.
+	ProbeTypeHTTP
+)
+
+// ProbeTypeFromString finds the ProbeType from it's string representation or returns Disabled as a default.
+func ProbeTypeFromString(s string) (ProbeType, bool) {
+	for k, v := range probeString {
+		if s == v {
+			return k, true
+		}
+	}
+
+	return ProbeTypeNone, false
+}

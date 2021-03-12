@@ -552,36 +552,89 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 
 // healthcheck returns project service healthcheck probe
 func (p *ProjectService) healthcheck() (*v1.Probe, error) {
+	probeType, err := p.livenessProbeType()
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get a valid liveness probe type")
+	}
 
-	if !p.livenessProbeDisabled() {
-		command := p.livenessProbeCommand()
-		timoutSeconds := p.livenessProbeTimeout()
-		periodSeconds := p.livenessProbeInterval()
-		initialDelaySeconds := p.livenessProbeInitialDelay()
-		failureThreshold := p.livenessProbeRetries()
+	var handler v1.Handler
 
-		if len(command) == 0 || len(command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
-			initialDelaySeconds == 0 || failureThreshold == 0 {
+	switch probeType {
+	case ProbeTypeNone:
+		return nil, nil
+	case ProbeTypeCommand:
+		handler.Exec = &v1.ExecAction{
+			Command: p.livenessProbeCommand(),
+		}
+
+		if handler.Exec == nil || len(handler.Exec.Command) == 0 || len(handler.Exec.Command[0]) == 0 {
 			log.Error("Health check misconfigured")
 			return nil, errors.New("Health check misconfigured")
 		}
-
-		probe := &v1.Probe{
-			Handler: v1.Handler{
-				Exec: &v1.ExecAction{
-					Command: command,
-				},
-			},
-			TimeoutSeconds:      timoutSeconds,
-			PeriodSeconds:       periodSeconds,
-			InitialDelaySeconds: initialDelaySeconds,
-			FailureThreshold:    failureThreshold,
+	case ProbeTypeHTTP:
+		hprobe, err := p.livenessHTTPProbe()
+		if err != nil {
+			return nil, err
 		}
-
-		return probe, nil
+		handler.HTTPGet = &hprobe
+	default:
+		return nil, errors.Errorf("unsupported probe type: %s", probeType)
 	}
 
-	return nil, nil
+	timeoutSeconds := p.livenessProbeTimeout()
+	periodSeconds := p.livenessProbeInterval()
+	initialDelaySeconds := p.livenessProbeInitialDelay()
+	failureThreshold := p.livenessProbeRetries()
+
+	if timeoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
+		log.Error("Health check misconfigured")
+		return nil, errors.New("Health check misconfigured")
+	}
+
+	probe := &v1.Probe{
+		Handler:             handler,
+		TimeoutSeconds:      timeoutSeconds,
+		PeriodSeconds:       periodSeconds,
+		InitialDelaySeconds: initialDelaySeconds,
+		FailureThreshold:    failureThreshold,
+	}
+
+	return probe, nil
+}
+
+func (p *ProjectService) livenessProbeType() (ProbeType, error) {
+	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
+	if !ok {
+		return ProbeTypeNone, errors.New("probe type not provided")
+	}
+
+	pt, ok := ProbeTypeFromString(t)
+	if !ok {
+		return ProbeTypeNone, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+	}
+
+	return pt, nil
+}
+
+// livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
+func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
+	path, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPath]
+	if !ok {
+		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
+	}
+
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
+	if !ok {
+		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
+	}
+
+	return v1.HTTPGetAction{
+		Path: path,
+		Port: intstr.IntOrString{
+			Type:   intstr.String,
+			StrVal: port,
+		},
+	}, nil
 }
 
 // livenessProbeCommand returns liveness probe command
@@ -677,40 +730,17 @@ func (p *ProjectService) livenessProbeRetries() int32 {
 	return int32(config.DefaultProbeRetries)
 }
 
-// livenessProbeDisabled tells whether liveness probe should be activated
-func (p *ProjectService) livenessProbeDisabled() bool {
-	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeDisabled]; ok {
-		if v, err := strconv.ParseBool(val); err == nil {
-			return v
-		}
-
-		log.WarnfWithFields(log.Fields{
-			"project-service": p.Name,
-			"enabled":         val,
-		}, "Unable to extract Bool value from %s label. Liveness probe will be disabled.",
-			config.LabelWorkloadLivenessProbeDisabled)
-
-		return true
-	}
-
-	if p.HealthCheck != nil && p.HealthCheck.Disable == true {
-		return true
-	}
-
-	return false
-}
-
 // readinessProbe returns project service readiness probe
 func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 
 	if !p.readinessProbeDisabled() {
 		command := p.readinessProbeCommand()
-		timoutSeconds := p.readinessProbeTimeout()
+		timeoutSeconds := p.readinessProbeTimeout()
 		periodSeconds := p.readinessProbeInterval()
 		initialDelaySeconds := p.readinessProbeInitialDelay()
 		failureThreshold := p.readinessProbeRetries()
 
-		if len(command) == 0 || len(command[0]) == 0 || timoutSeconds == 0 || periodSeconds == 0 ||
+		if len(command) == 0 || len(command[0]) == 0 || timeoutSeconds == 0 || periodSeconds == 0 ||
 			initialDelaySeconds == 0 || failureThreshold == 0 {
 			log.Error("Readiness probe misconfigured")
 			return nil, errors.New("Readiness probe misconfigured")
@@ -722,7 +752,7 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 					Command: command,
 				},
 			},
-			TimeoutSeconds:      timoutSeconds,
+			TimeoutSeconds:      timeoutSeconds,
 			PeriodSeconds:       periodSeconds,
 			InitialDelaySeconds: initialDelaySeconds,
 			FailureThreshold:    failureThreshold,

@@ -69,19 +69,43 @@ var _ = Describe("Transform", func() {
 	})
 
 	Describe("Transform", func() {
-
 		When("service exclusion list is empty", func() {
+			Context("and has probe type", func() {
+				JustBeforeEach(func() {
+					projectService.Labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
+					}
 
-			It("includes kubernetes objects for project services", func() {
-				objs, err := k.Transform()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(objs)).To(Equal(1))
+					project.Services = []composego.ServiceConfig{
+						composego.ServiceConfig(projectService),
+					}
 
-				u, err := ToUnstructured(objs[0])
-				name := u["metadata"].(map[string]interface{})["name"]
+					k = Kubernetes{
+						Opt:      ConvertOptions{},
+						Project:  &project,
+						Excluded: excluded,
+					}
+				})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(name).To(Equal(projectService.Name))
+				It("includes kubernetes objects for project services", func() {
+					objs, err := k.Transform()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(objs)).To(Equal(1))
+
+					u, err := ToUnstructured(objs[0])
+					name := u["metadata"].(map[string]interface{})["name"]
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(name).To(Equal(projectService.Name))
+				})
+			})
+
+			Context("and no probe is defined", func() {
+				It("returns a missing probe type error", func() {
+					_, err := k.Transform()
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("probe type not provided"))
+				})
 			})
 
 		})
@@ -1887,12 +1911,14 @@ var _ = Describe("Transform", func() {
 					projectService.Labels = composego.Labels{
 						config.LabelWorkloadReadinessProbeDisabled: "false",
 						config.LabelWorkloadReadinessProbeCommand:  "hello world",
+						config.LabelWorkloadLivenessProbeType:      ProbeTypeNone.String(),
 					}
 				})
 
 				It("includes readiness probe definition in the pod spec", func() {
 					err := k.updateKubernetesObjects(projectService, &objs)
 					Expect(err).ToNot(HaveOccurred())
+
 					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command).To(Equal([]string{"hello world"}))
 				})
 			})
@@ -1920,7 +1946,7 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeDisabled: "true",
+						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
 					}
 				})
 
