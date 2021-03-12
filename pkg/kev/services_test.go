@@ -34,12 +34,12 @@ var _ = Describe("ServiceConfig", func() {
 				err := ServiceConfig{Labels: composego.Labels{
 					config.LabelWorkloadReplicas: "1",
 				}}.validate()
-				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[1])))
+				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadLivenessProbeType)))
 
 				err = ServiceConfig{Labels: composego.Labels{
 					config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeCommand.String(),
 				}}.validate()
-				Expect(err).Should(MatchError(ContainSubstring(config.BaseServiceLabels[0])))
+				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadReplicas)))
 
 				err = ServiceConfig{Labels: composego.Labels{}}.validate()
 				Expect(err).Should(HaveOccurred())
