@@ -1234,7 +1234,7 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				It("retuns a handler", func() {
+				It("returns a handler", func() {
 					result, err := projectService.livenessHTTPProbe()
 					Expect(err).To(BeNil())
 					Expect(result.Port.StrVal).To(Equal("8080"))
@@ -1250,7 +1250,7 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				It("retuns a handler", func() {
+				It("returns an error", func() {
 					_, err := projectService.livenessHTTPProbe()
 					Expect(err).NotTo(BeNil())
 					Expect(err.Error()).To(ContainSubstring("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort))
@@ -1265,7 +1265,7 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				It("retuns a handler", func() {
+				It("returns an error", func() {
 					_, err := projectService.livenessHTTPProbe()
 					Expect(err).NotTo(BeNil())
 					Expect(err.Error()).To(ContainSubstring("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath))
