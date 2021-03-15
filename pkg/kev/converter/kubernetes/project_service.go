@@ -559,7 +559,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 
 	var handler v1.Handler
 
-	switch probeType {
+	switch *probeType {
 	case ProbeTypeNone:
 		return nil, nil
 	case ProbeTypeCommand:
@@ -576,7 +576,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 		if err != nil {
 			return nil, err
 		}
-		handler.HTTPGet = &hprobe
+		handler.HTTPGet = hprobe
 	default:
 		return nil, errors.Errorf("unsupported probe type: %s", probeType)
 	}
@@ -602,33 +602,33 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	return probe, nil
 }
 
-func (p *ProjectService) livenessProbeType() (ProbeType, error) {
+func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
 	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
 	if !ok {
-		return ProbeTypeNone, errors.New("probe type not provided")
+		return nil, errors.New("probe type not provided")
 	}
 
 	pt, ok := ProbeTypeFromString(t)
 	if !ok {
-		return ProbeTypeNone, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+		return nil, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
 	}
 
-	return pt, nil
+	return &pt, nil
 }
 
 // livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
-func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
+func (p *ProjectService) livenessHTTPProbe() (*v1.HTTPGetAction, error) {
 	path, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPath]
 	if !ok {
-		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
 	}
 
 	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
 	if !ok {
-		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
 	}
 
-	return v1.HTTPGetAction{
+	return &v1.HTTPGetAction{
 		Path: path,
 		Port: intstr.IntOrString{
 			Type:   intstr.String,

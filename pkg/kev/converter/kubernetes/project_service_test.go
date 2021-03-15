@@ -1138,14 +1138,14 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("healthcheck", func() {
 
-		Context("when valid healthcheck is defined in deploy block", func() {
+		Context("when valid healthcheck and probe type are defined", func() {
 			timeout := composego.Duration(time.Duration(10) * time.Second)
 			interval := composego.Duration(time.Duration(10) * time.Second)
 			startPeriod := composego.Duration(time.Duration(10) * time.Second)
 			retries := uint64(3)
 
-			JustBeforeEach(func() {
-				projectService.Labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+			BeforeEach(func() {
+				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
 				healthcheck = composego.HealthCheckConfig{
 					Test: composego.HealthCheckTest{
 						"CMD-SHELL",
@@ -1175,9 +1175,36 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
+		Context("when valid healthcheck and no probe type is defined", func() {
+			timeout := composego.Duration(time.Duration(10) * time.Second)
+			interval := composego.Duration(time.Duration(10) * time.Second)
+			startPeriod := composego.Duration(time.Duration(10) * time.Second)
+			retries := uint64(3)
+
+			BeforeEach(func() {
+				healthcheck = composego.HealthCheckConfig{
+					Test: composego.HealthCheckTest{
+						"CMD-SHELL",
+						"my command",
+					},
+					Timeout:     &timeout,
+					Interval:    &interval,
+					StartPeriod: &startPeriod,
+					Retries:     &retries,
+				}
+			})
+
+			It("returns an error", func() {
+				result, err := projectService.healthcheck()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("probe type not provided"))
+				Expect(result).To(BeNil())
+			})
+		})
+
 		Describe("validations", func() {
-			JustBeforeEach(func() {
-				projectService.Labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+			BeforeEach(func() {
+				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
 			})
 
 			Context("when Test command is not defined", func() {
@@ -1202,8 +1229,8 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			When("any of time based paramaters is set to 0", func() {
-				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
+				BeforeEach(func() {
+					labels = composego.Labels{
 						config.LabelWorkloadLivenessProbeTimeout: "0",
 						config.LabelWorkloadLivenessProbeType:    ProbeTypeCommand.String(),
 					}
