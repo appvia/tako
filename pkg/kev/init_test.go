@@ -214,6 +214,7 @@ services:
   db:
     labels:
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
+      kev.workload.liveness-probe-type: command
       kev.workload.replicas: "1"
 volumes:
   db_data:
