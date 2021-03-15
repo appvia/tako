@@ -1138,7 +1138,7 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("healthcheck", func() {
 
-		Context("when valid healthcheck and probe type are defined in deploy block", func() {
+		Context("when valid healthcheck and probe type are defined", func() {
 			timeout := composego.Duration(time.Duration(10) * time.Second)
 			interval := composego.Duration(time.Duration(10) * time.Second)
 			startPeriod := composego.Duration(time.Duration(10) * time.Second)
@@ -1175,7 +1175,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		Context("when valid healthcheck and no probe type is defined in deploy block", func() {
+		Context("when valid healthcheck and no probe type is defined", func() {
 			timeout := composego.Duration(time.Duration(10) * time.Second)
 			interval := composego.Duration(time.Duration(10) * time.Second)
 			startPeriod := composego.Duration(time.Duration(10) * time.Second)

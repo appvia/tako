@@ -89,20 +89,19 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-	})
+		When("excluded services are specified", func() {
 
-	When("excluded services are specified", func() {
+			BeforeEach(func() {
+				excluded = []string{projectService.Name}
+			})
 
-		BeforeEach(func() {
-			excluded = []string{projectService.Name}
+			It("doesn't include kubernetes objects for excluded project services", func() {
+				objs, err := k.Transform()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(objs)).To(Equal(0))
+			})
+
 		})
-
-		It("doesn't include kubernetes objects for excluded project services", func() {
-			objs, err := k.Transform()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(objs)).To(Equal(0))
-		})
-
 	})
 
 	Describe("initPodSpec", func() {
