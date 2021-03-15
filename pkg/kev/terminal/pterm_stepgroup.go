@@ -145,9 +145,9 @@ func spinner() pterm.SpinnerPrinter {
 
 	printer := pterm.SpinnerPrinter{
 		Sequence:     spinnerSequences,
-		Style:        pterm.NewStyle(pterm.FgBlack),
+		Style:        pterm.NewStyle(pterm.FgDefault),
 		Delay:        time.Millisecond * 100,
-		MessageStyle: &pterm.Style{pterm.FgBlack},
+		MessageStyle: &pterm.Style{pterm.FgDefault},
 		SuccessPrinter: &pterm.PrefixPrinter{
 			MessageStyle: &pterm.ThemeDefault.SuccessMessageStyle,
 			Prefix: pterm.Prefix{
