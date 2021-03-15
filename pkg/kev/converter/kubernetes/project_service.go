@@ -603,16 +603,14 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 }
 
 func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
-	none := ProbeTypeNone
-
 	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
 	if !ok {
-		return &none, errors.New("probe type not provided")
+		return nil, errors.New("probe type not provided")
 	}
 
 	pt, ok := ProbeTypeFromString(t)
 	if !ok {
-		return &none, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+		return nil, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
 	}
 
 	return &pt, nil
