@@ -57,17 +57,7 @@ var _ = Describe("Detect", func() {
 		Expect(testutil.GetLoggedLevel(hook)).To(Equal("warning"))
 	})
 
-	XWhen("secrets leaked as environment variables in sources", func() {
-		It("should create a detected leaks summary", func() {
-			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("MYSQL_ROOT_PASSWORD"))
-			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("MYSQL_USER"))
-			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("MYSQL_PASSWORD"))
-			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("WORDPRESS_DB_USER"))
-			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("WORDPRESS_DB_PASSWORD"))
-		})
-	})
-
-	XWhen("secrets leaked as environment variables in overridden environments", func() {
+	When("secrets leaked as environment variables in overridden environments", func() {
 		It("should create a detected leaks summary", func() {
 			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("AWS_ACCESS_KEY_ID"))
 			Expect(testutil.GetLoggedMsgs(hook)).Should(ContainSubstring("AWS_SECRET_ACCESS_KEY"))
