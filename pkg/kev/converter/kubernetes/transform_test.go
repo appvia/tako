@@ -70,58 +70,37 @@ var _ = Describe("Transform", func() {
 
 	Describe("Transform", func() {
 		When("service exclusion list is empty", func() {
-			Context("and has probe type", func() {
-				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
-					}
-
-					project.Services = []composego.ServiceConfig{
-						composego.ServiceConfig(projectService),
-					}
-
-					k = Kubernetes{
-						Opt:      ConvertOptions{},
-						Project:  &project,
-						Excluded: excluded,
-					}
-				})
-
-				It("includes kubernetes objects for project services", func() {
-					objs, err := k.Transform()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(len(objs)).To(Equal(1))
-
-					u, err := ToUnstructured(objs[0])
-					name := u["metadata"].(map[string]interface{})["name"]
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(name).To(Equal(projectService.Name))
-				})
-			})
-
-			Context("and no probe is defined", func() {
-				It("returns a missing probe type error", func() {
-					_, err := k.Transform()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("probe type not provided"))
-				})
-			})
-
-		})
-
-		When("excluded services are specified", func() {
-
 			BeforeEach(func() {
-				excluded = []string{projectService.Name}
+				projectService.Labels = composego.Labels{
+					config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
+				}
 			})
 
-			It("doesn't include kubernetes objects for excluded project services", func() {
+			It("includes kubernetes objects for project services", func() {
 				objs, err := k.Transform()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(objs)).To(Equal(0))
-			})
+				Expect(len(objs)).To(Equal(1))
 
+				u, err := ToUnstructured(objs[0])
+				name := u["metadata"].(map[string]interface{})["name"]
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(name).To(Equal(projectService.Name))
+			})
+		})
+
+	})
+
+	When("excluded services are specified", func() {
+
+		BeforeEach(func() {
+			excluded = []string{projectService.Name}
+		})
+
+		It("doesn't include kubernetes objects for excluded project services", func() {
+			objs, err := k.Transform()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(objs)).To(Equal(0))
 		})
 
 	})
