@@ -33,6 +33,7 @@ func (lp linePrinter) printMsg() {
 
 type pTermUI struct{}
 
+// PTermUI returns a PTerm.sh implementation of UI
 func PTermUI() UI {
 	return &pTermUI{}
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/terminal"
 )
 
+// Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
 	var cfg runConfig
 	for _, o := range opts {
@@ -31,6 +32,7 @@ func (p *Project) Init(opts ...Options) {
 	}
 }
 
+// Manifest returns the project's manifest
 func (p *Project) Manifest() *Manifest {
 	return p.manifest
 }
@@ -52,12 +54,6 @@ func WithSkaffold(c bool) Options {
 		cfg.skaffold = c
 	}
 }
-
-// func WithWorkingDir(wd string) Options {
-// 	return func(project *Project, cfg *runConfig) {
-// 		project.workingDir = wd
-// 	}
-// }
 
 func WithUI(ui terminal.UI) Options {
 	return func(project *Project, cfg *runConfig) {

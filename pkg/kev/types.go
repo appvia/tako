@@ -23,14 +23,18 @@ import (
 	composego "github.com/compose-spec/compose-go/types"
 )
 
+// runConfig stores configuration for a command
 type runConfig struct {
 	composeSources []string
 	envs           []string
 	skaffold       bool
 }
 
+// Options helps configure running project commands
 type Options func(project *Project, cfg *runConfig)
 
+// Project is the base struct for all runners.
+// Runners must initialise a project using Init().
 type Project struct {
 	workingDir string
 	manifest   *Manifest
@@ -38,6 +42,7 @@ type Project struct {
 	UI         terminal.UI
 }
 
+// InitRunner runs the required sequences to initialise a project.
 type InitRunner struct {
 	*Project
 }

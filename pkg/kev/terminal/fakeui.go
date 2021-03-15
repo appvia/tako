@@ -28,6 +28,7 @@ type fakeUI struct {
 	log *fakeUILog
 }
 
+// FakeUIAndLog returns a fake UI implementation and a log to help tracking of UI ops in tests.
 func FakeUIAndLog() (UI, UILog) {
 	log := newFakeUILog()
 	return &fakeUI{log: log}, log

@@ -26,12 +26,14 @@ import (
 	"github.com/appvia/kev/pkg/kev/terminal"
 )
 
+// NewInitRunner returns a runner can initialise a project using the provided options
 func NewInitRunner(workingDir string, opts ...Options) *InitRunner {
 	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
 	runner.Init(opts...)
 	return runner
 }
 
+// Run executes the runner returning results that can be written to disk
 func (r *InitRunner) Run() (WritableResults, error) {
 	var skManifest *SkaffoldManifest
 
@@ -64,6 +66,7 @@ func (r *InitRunner) Run() (WritableResults, error) {
 	return createInitWritableResults(r.workingDir, r.manifest, skManifest), nil
 }
 
+// EnsureFirstInit is a run command that ensures the project has been already initialised
 func (r *InitRunner) EnsureFirstInit() error {
 	r.UI.Header("Verifying project...")
 	sg := r.UI.StepGroup()
@@ -82,6 +85,7 @@ func (r *InitRunner) EnsureFirstInit() error {
 	return nil
 }
 
+// DetectSources detects the compose yaml sources required for initialisation
 func (r *InitRunner) DetectSources() (*Sources, error) {
 	r.UI.Header("Detecting compose sources...")
 
@@ -119,6 +123,9 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 	return &Sources{Files: defaults}, nil
 }
 
+// ValidateSources includes validation checks to ensure the compose sources are valid.
+// This function can be extended to include different forms of
+// validation (for now it detect any secrets found in the sources).
 func (r *InitRunner) ValidateSources(sources *Sources, matchers []map[string]string) error {
 	r.UI.Header("Validating compose sources...")
 
@@ -176,6 +183,7 @@ func (r *InitRunner) detectSecretsInSources(sources *Sources, matchers []map[str
 	return detected, nil
 }
 
+// CreateManifestAndDeployments creates a base manifest and the related deployment environments
 func (r *InitRunner) CreateManifestAndDeployments(sources *Sources) error {
 	r.manifest = NewNewManifest(sources)
 	r.manifest.UI = r.UI
@@ -192,6 +200,7 @@ func (r *InitRunner) CreateManifestAndDeployments(sources *Sources) error {
 	return nil
 }
 
+// CreateOrUpdateSkaffoldManifest creates or updates a skaffold manifest
 func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error) {
 	var err error
 	var skManifest *SkaffoldManifest

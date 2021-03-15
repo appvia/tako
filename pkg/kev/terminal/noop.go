@@ -25,6 +25,7 @@ import (
 
 type noOpUI struct{}
 
+// NoOpUI returns a no op implementation of UI
 func NoOpUI() UI {
 	return &noOpUI{}
 }
