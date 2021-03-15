@@ -576,7 +576,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 		if err != nil {
 			return nil, err
 		}
-		handler.HTTPGet = &hprobe
+		handler.HTTPGet = hprobe
 	default:
 		return nil, errors.Errorf("unsupported probe type: %s", probeType)
 	}
@@ -617,18 +617,18 @@ func (p *ProjectService) livenessProbeType() (ProbeType, error) {
 }
 
 // livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
-func (p *ProjectService) livenessHTTPProbe() (v1.HTTPGetAction, error) {
+func (p *ProjectService) livenessHTTPProbe() (*v1.HTTPGetAction, error) {
 	path, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPath]
 	if !ok {
-		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
 	}
 
 	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
 	if !ok {
-		return v1.HTTPGetAction{}, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
 	}
 
-	return v1.HTTPGetAction{
+	return &v1.HTTPGetAction{
 		Path: path,
 		Port: intstr.IntOrString{
 			Type:   intstr.String,

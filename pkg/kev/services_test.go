@@ -44,8 +44,10 @@ var _ = Describe("ServiceConfig", func() {
 
 				err = ServiceConfig{Labels: composego.Labels{}}.validate()
 				Expect(err).Should(HaveOccurred())
+			})
 
-				err = ServiceConfig{Labels: composego.Labels{
+			It("success if the necessary labels are present", func() {
+				err := ServiceConfig{Labels: composego.Labels{
 					config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeCommand.String(),
 					config.LabelWorkloadReplicas:          "1",
 				}}.validate()
