@@ -562,6 +562,13 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	switch *probeType {
 	case ProbeTypeNone:
 		return nil, nil
+	case ProbeTypeTCP:
+		hnd, err := p.livenessTCPProbe()
+		if err != nil {
+			return nil, err
+		}
+
+		handler.TCPSocket = hnd
 	case ProbeTypeCommand:
 		handler.Exec = &v1.ExecAction{
 			Command: p.livenessProbeCommand(),
@@ -576,6 +583,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		handler.HTTPGet = hprobe
 	default:
 		return nil, errors.Errorf("unsupported probe type: %s", probeType)
@@ -614,6 +622,22 @@ func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
 	}
 
 	return &pt, nil
+}
+
+// livenessTCPProbe returns a TCPSockerAction if all the necessary information is available.
+func (p *ProjectService) livenessTCPProbe() (*v1.TCPSocketAction, error) {
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbeTCPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeTCPPort)
+	}
+
+	if port == "" {
+		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadLivenessProbeTCPPort)
+	}
+
+	return &v1.TCPSocketAction{
+		Port: intstr.FromString(port),
+	}, nil
 }
 
 // livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
