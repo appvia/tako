@@ -48,11 +48,6 @@ var initCmd = &cobra.Command{
 	Short: "Tracks compose sources & creates deployment environments.",
 	Long:  initLongDesc,
 	RunE:  runInitCmd,
-	PostRunE: func(cmd *cobra.Command, args []string) error {
-		// os.Stdout.Write([]byte("\n"))
-		// return runDetectSecretsCmd(cmd, args)
-		return nil
-	},
 }
 
 func init() {

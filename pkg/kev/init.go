@@ -26,7 +26,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/terminal"
 )
 
-// NewInitRunner returns a runner can initialise a project using the provided options
+// NewInitRunner returns a runner that can initialise a project using the provided options
 func NewInitRunner(workingDir string, opts ...Options) *InitRunner {
 	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
 	runner.Init(opts...)
@@ -66,7 +66,7 @@ func (r *InitRunner) Run() (WritableResults, error) {
 	return createInitWritableResults(r.workingDir, r.manifest, skManifest), nil
 }
 
-// EnsureFirstInit is a run command that ensures the project has been already initialised
+// EnsureFirstInit ensures the project has not been already initialised
 func (r *InitRunner) EnsureFirstInit() error {
 	r.UI.Header("Verifying project...")
 	sg := r.UI.StepGroup()
@@ -185,7 +185,7 @@ func (r *InitRunner) detectSecretsInSources(sources *Sources, matchers []map[str
 
 // CreateManifestAndDeployments creates a base manifest and the related deployment environments
 func (r *InitRunner) CreateManifestAndDeployments(sources *Sources) error {
-	r.manifest = NewNewManifest(sources)
+	r.manifest = NewManifest(sources)
 	r.manifest.UI = r.UI
 
 	sg := r.UI.StepGroup()

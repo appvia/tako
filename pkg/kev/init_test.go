@@ -40,8 +40,8 @@ var _ = Describe("InitRunner", func() {
 		runner := kev.NewInitRunner(workingDir, kev.WithEnvs(envs))
 		if results, rErr = runner.Run(); rErr == nil {
 			manifest = runner.Manifest()
+			env, _ = manifest.GetEnvironment("dev")
 		}
-		env, _ = manifest.GetEnvironment("dev")
 	})
 
 	Context("Run results", func() {

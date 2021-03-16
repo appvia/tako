@@ -36,23 +36,11 @@ import (
 )
 
 // NewManifest returns a new Manifest struct.
-// func NewManifest(sources *Sources, workingDir string) (*Manifest, error) {
-func NewNewManifest(sources *Sources) *Manifest {
+func NewManifest(sources *Sources) *Manifest {
 	return &Manifest{
 		Id:      uuid.New().String(),
 		Sources: sources,
 	}
-}
-
-func NewManifest(files []string, workingDir string) (*Manifest, error) {
-	s, err := newSources(files, workingDir)
-	if err != nil {
-		return nil, err
-	}
-	return &Manifest{
-		Id:      uuid.New().String(),
-		Sources: s,
-	}, nil
 }
 
 // LoadManifest returns application manifests.

@@ -39,6 +39,8 @@ var (
 	SecretsReferenceUrl = "https://github.com/appvia/kev/blob/master/docs/reference/config-params.md#reference-k8s-secret-key-value"
 )
 
+// InitProjectWithOptions initialises a kev project in the specified working directory
+// using the provided options (if any).
 func InitProjectWithOptions(workingDir string, opts ...Options) error {
 	runner := NewInitRunner(workingDir, opts...)
 	ui := runner.UI
