@@ -457,6 +457,42 @@ var _ = Describe("Reconcile", func() {
 				Expect(mErr).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("when healthcheck is overridden by overlay", func() {
+			Context("liveness tcp", func() {
+				BeforeEach(func() {
+					workingDir = "testdata/reconcile-healthcheck-tcp"
+					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				})
+
+				It("should have a valid tcp", func() {
+					labels := env.GetServices()[0].GetLabels()
+
+					Expect(labels).To(
+						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeTCP.String()))
+					Expect(labels).To(HaveKeyWithValue(config.LabelWorkloadLivenessProbeTCPPort, "8080"))
+					Expect(labels).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
+				})
+			})
+			Context("liveness http", func() {
+				BeforeEach(func() {
+					workingDir = "testdata/reconcile-healthcheck-http"
+					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				})
+
+				It("should have a valid http", func() {
+					svcCfg, err := env.GetService("db")
+					Expect(err).To(Succeed())
+					Expect(svcCfg.GetLabels()).To(
+						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeHTTP.String()))
+					Expect(svcCfg.GetLabels()).To(
+						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPort, "8080"))
+					Expect(svcCfg.GetLabels()).To(
+						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPath, "/status"))
+					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
+				})
+			})
+		})
 	})
 })
 

@@ -82,6 +82,7 @@ var probeString map[ProbeType]string = map[ProbeType]string{
 	ProbeTypeNone:    "none",
 	ProbeTypeCommand: "command",
 	ProbeTypeHTTP:    "http",
+	ProbeTypeTCP:     "tcp",
 }
 
 const (
@@ -89,8 +90,10 @@ const (
 	ProbeTypeNone ProbeType = iota
 	// ProbeTypeCommand uses a shell command for probe checks.
 	ProbeTypeCommand
-	// ProbeTypeHTTP defines an http request which is used by probes checks.
+	// ProbeTypeHTTP defines an http request which is used by probe checks.
 	ProbeTypeHTTP
+	// ProbeTypeTCP defines a tcp port which is used by probe checks.
+	ProbeTypeTCP
 )
 
 // ProbeTypeFromString finds the ProbeType from it's string representation or returns Disabled as a default.
