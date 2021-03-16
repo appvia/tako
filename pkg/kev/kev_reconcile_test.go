@@ -471,7 +471,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(labels).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeTCP.String()))
 					Expect(labels).To(HaveKeyWithValue(config.LabelWorkloadLivenessProbeTCPPort, "8080"))
-					Expect(labels).To(HaveKey(config.DefaultLivenessProbeCommand))
+					Expect(labels).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				})
 			})
 			Context("liveness http", func() {
@@ -480,7 +480,7 @@ var _ = Describe("Reconcile", func() {
 					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				})
 
-				It("should have a valid tcp", func() {
+				It("should have a valid http", func() {
 					svcCfg, err := env.GetService("db")
 					Expect(err).To(Succeed())
 					Expect(svcCfg.GetLabels()).To(
@@ -489,7 +489,7 @@ var _ = Describe("Reconcile", func() {
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPort, "8080"))
 					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPath, "/status"))
-					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.DefaultLivenessProbeCommand))
+					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				})
 			})
 		})
