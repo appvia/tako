@@ -174,8 +174,6 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 		timeout      string
 	)
 
-	fmt.Printf("service: %+v\n", source.Labels)
-
 	if source.HealthCheck.Disable {
 		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeNone.String())
 	} else {
