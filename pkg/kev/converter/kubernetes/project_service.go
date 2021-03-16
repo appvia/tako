@@ -624,7 +624,7 @@ func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
 	return &pt, nil
 }
 
-// livenessTCPProbe returns a TCPSockerAction if all the necessary information is available.
+// livenessTCPProbe returns a TCPSocketAction if all the necessary information is available.
 func (p *ProjectService) livenessTCPProbe() (*v1.TCPSocketAction, error) {
 	port, ok := p.Labels[config.LabelWorkloadLivenessProbeTCPPort]
 	if !ok {
