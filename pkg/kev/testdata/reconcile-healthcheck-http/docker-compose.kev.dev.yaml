@@ -6,8 +6,8 @@ services:
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
       kev.workload.liveness-probe-type: http
-      kev.workload.liveness-probe.http-path: /status
-      kev.workload.liveness-probe.http-port: 8080
+      kev.workload.liveness-probe-http-path: /status
+      kev.workload.liveness-probe-http-port: 8080
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
       kev.workload.liveness-probe-retries: "3"

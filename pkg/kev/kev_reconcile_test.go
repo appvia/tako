@@ -468,10 +468,10 @@ var _ = Describe("Reconcile", func() {
 				It("should have a valid tcp", func() {
 					labels := env.GetServices()[0].GetLabels()
 
-					Expect(labels).Should(
+					Expect(labels).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeTCP.String()))
-					Expect(labels).Should(HaveKeyWithValue(config.LabelWorkloadLivenessProbeTCPPort, "8080"))
-					Expect(labels).ShouldNot(HaveKey(config.DefaultLivenessProbeCommand))
+					Expect(labels).To(HaveKeyWithValue(config.LabelWorkloadLivenessProbeTCPPort, "8080"))
+					Expect(labels).To(HaveKey(config.DefaultLivenessProbeCommand))
 				})
 			})
 			Context("liveness http", func() {
@@ -483,13 +483,13 @@ var _ = Describe("Reconcile", func() {
 				It("should have a valid tcp", func() {
 					svcCfg, err := env.GetService("db")
 					Expect(err).To(Succeed())
-					Expect(svcCfg.GetLabels()).Should(
+					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeHTTP.String()))
-					Expect(svcCfg.GetLabels()).Should(
+					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPort, "8080"))
-					Expect(svcCfg.GetLabels()).Should(
+					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPath, "/status"))
-					Expect(svcCfg.GetLabels()).ShouldNot(HaveKey(config.DefaultLivenessProbeCommand))
+					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.DefaultLivenessProbeCommand))
 				})
 			})
 		})
