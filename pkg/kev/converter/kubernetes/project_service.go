@@ -933,20 +933,3 @@ func (p *ProjectService) readinessProbeType() (*ProbeType, error) {
 
 	return &pt, nil
 }
-
-// // readinessProbeDisabled tells whether readiness probe should be activated
-// func (p *ProjectService) readinessProbeDisabled() bool {
-// 	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeDisabled]; ok {
-// 		if v, err := strconv.ParseBool(val); err == nil {
-// 			return v
-// 		}
-
-// 		log.WarnfWithFields(log.Fields{
-// 			"project-service": p.Name,
-// 			"enabled":         val,
-// 		}, "Unable to extract Bool value from %s label. Readiness probe will be disabled.",
-// 			config.LabelWorkloadReadinessProbeDisabled)
-// 	}
-
-// 	return true
-// }
