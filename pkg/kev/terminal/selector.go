@@ -27,8 +27,7 @@ import (
 // Returns a UI which will write to the current processes
 // stdout/stderr.
 func ConsoleUI() UI {
-	// We do both of these checks because some sneaky environments fool
-	// one or the other and we really only want the glint-based UI in
+	// We do both of these checks because we really only want the pterm UI in
 	// truly interactive environments.
 	pterm := isatty.IsTerminal(os.Stdout.Fd()) && sshterm.IsTerminal(int(os.Stdout.Fd()))
 	if pterm {
