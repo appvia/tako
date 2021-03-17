@@ -474,13 +474,13 @@ var _ = Describe("Reconcile", func() {
 					Expect(labels).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				})
 			})
-			Context("liveness http", func() {
+			Context("liveness and readiness http", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-healthcheck-http"
 					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
 				})
 
-				It("should have a valid http", func() {
+				It("should have a valid http liveness probe", func() {
 					svcCfg, err := env.GetService("db")
 					Expect(err).To(Succeed())
 					Expect(svcCfg.GetLabels()).To(
@@ -489,6 +489,18 @@ var _ = Describe("Reconcile", func() {
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPort, "8080"))
 					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPath, "/status"))
+					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
+				})
+
+				It("should have a valid http readiness probe", func() {
+					svcCfg, err := env.GetService("wordpress")
+					Expect(err).To(Succeed())
+					Expect(svcCfg.GetLabels()).To(
+						HaveKeyWithValue(config.LabelWorkloadReadinessProbeType, kubernetes.ProbeTypeHTTP.String()))
+					Expect(svcCfg.GetLabels()).To(
+						HaveKeyWithValue(config.LabelWorkloadReadinessProbeHTTPPort, "8080"))
+					Expect(svcCfg.GetLabels()).To(
+						HaveKeyWithValue(config.LabelWorkloadReadinessProbeHTTPPath, "/status"))
 					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				})
 			})
