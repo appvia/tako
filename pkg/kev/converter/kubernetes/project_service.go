@@ -756,36 +756,102 @@ func (p *ProjectService) livenessProbeRetries() int32 {
 
 // readinessProbe returns project service readiness probe
 func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
+	probeType, err := p.readinessProbeType()
+	if err != nil {
+		return nil, err
+	}
 
-	if !p.readinessProbeDisabled() {
-		command := p.readinessProbeCommand()
-		timeoutSeconds := p.readinessProbeTimeout()
-		periodSeconds := p.readinessProbeInterval()
-		initialDelaySeconds := p.readinessProbeInitialDelay()
-		failureThreshold := p.readinessProbeRetries()
+	var hnd v1.Handler
 
-		if len(command) == 0 || len(command[0]) == 0 || timeoutSeconds == 0 || periodSeconds == 0 ||
-			initialDelaySeconds == 0 || failureThreshold == 0 {
+	switch *probeType {
+	case ProbeTypeNone:
+		return nil, nil
+	case ProbeTypeCommand:
+		hnd.Exec = &v1.ExecAction{
+			Command: p.readinessProbeCommand(),
+		}
+
+		if len(hnd.Exec.Command) == 0 || len(hnd.Exec.Command[0]) == 0 {
 			log.Error("Readiness probe misconfigured")
 			return nil, errors.New("Readiness probe misconfigured")
 		}
 
-		probe := &v1.Probe{
-			Handler: v1.Handler{
-				Exec: &v1.ExecAction{
-					Command: command,
-				},
-			},
-			TimeoutSeconds:      timeoutSeconds,
-			PeriodSeconds:       periodSeconds,
-			InitialDelaySeconds: initialDelaySeconds,
-			FailureThreshold:    failureThreshold,
+	case ProbeTypeHTTP:
+		hp, err := p.readinessHTTPProbe()
+		if err != nil {
+			return nil, err
 		}
 
-		return probe, nil
+		hnd.HTTPGet = hp
+	case ProbeTypeTCP:
+		tcpP, err := p.readinessTCPProbe()
+		if err != nil {
+			return nil, err
+		}
+
+		hnd.TCPSocket = tcpP
 	}
 
-	return nil, nil
+	timeoutSeconds := p.readinessProbeTimeout()
+	periodSeconds := p.readinessProbeInterval()
+	initialDelaySeconds := p.readinessProbeInitialDelay()
+	failureThreshold := p.readinessProbeRetries()
+
+	if timeoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
+		log.Error("Readiness probe misconfigured")
+		return nil, errors.New("Readiness probe misconfigured")
+	}
+
+	probe := &v1.Probe{
+		Handler:             hnd,
+		TimeoutSeconds:      timeoutSeconds,
+		PeriodSeconds:       periodSeconds,
+		InitialDelaySeconds: initialDelaySeconds,
+		FailureThreshold:    failureThreshold,
+	}
+
+	return probe, nil
+}
+
+// readinessTCPProbe returns a TCPSocketAction if all the necessary information is available.
+func (p *ProjectService) readinessTCPProbe() (*v1.TCPSocketAction, error) {
+	port, ok := p.Labels[config.LabelWorkloadReadinessProbeTCPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeTCPPort)
+	}
+
+	if port == "" {
+		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadReadinessProbeTCPPort)
+	}
+
+	return &v1.TCPSocketAction{
+		Port: intstr.FromString(port),
+	}, nil
+}
+
+// readinessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
+func (p *ProjectService) readinessHTTPProbe() (*v1.HTTPGetAction, error) {
+	path, ok := p.Labels[config.LabelWorkloadReadinessProbeHTTPPath]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPath)
+	}
+
+	port, ok := p.Labels[config.LabelWorkloadReadinessProbeHTTPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPort)
+	}
+
+	if port == "" {
+		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadReadinessProbeHTTPPort)
+	}
+
+	return &v1.HTTPGetAction{
+		Path: path,
+		Port: intstr.IntOrString{
+			Type:   intstr.String,
+			StrVal: port,
+		},
+	}, nil
 }
 
 // readinessProbeCommand returns readiness probe command
@@ -852,19 +918,35 @@ func (p *ProjectService) readinessProbeRetries() int32 {
 	return int32(config.DefaultProbeRetries)
 }
 
-// readinessProbeDisabled tells whether readiness probe should be activated
-func (p *ProjectService) readinessProbeDisabled() bool {
-	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeDisabled]; ok {
-		if v, err := strconv.ParseBool(val); err == nil {
-			return v
-		}
+func (p *ProjectService) readinessProbeType() (*ProbeType, error) {
+	none := ProbeTypeNone
 
-		log.WarnfWithFields(log.Fields{
-			"project-service": p.Name,
-			"enabled":         val,
-		}, "Unable to extract Bool value from %s label. Readiness probe will be disabled.",
-			config.LabelWorkloadReadinessProbeDisabled)
+	t, ok := p.Labels[config.LabelWorkloadReadinessProbeType]
+	if !ok {
+		return &none, nil
 	}
 
-	return true
+	pt, ok := ProbeTypeFromString(t)
+	if !ok {
+		return nil, errors.Errorf("%s is not a supported readiness probe type", t)
+	}
+
+	return &pt, nil
 }
+
+// // readinessProbeDisabled tells whether readiness probe should be activated
+// func (p *ProjectService) readinessProbeDisabled() bool {
+// 	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeDisabled]; ok {
+// 		if v, err := strconv.ParseBool(val); err == nil {
+// 			return v
+// 		}
+
+// 		log.WarnfWithFields(log.Fields{
+// 			"project-service": p.Name,
+// 			"enabled":         val,
+// 		}, "Unable to extract Bool value from %s label. Readiness probe will be disabled.",
+// 			config.LabelWorkloadReadinessProbeDisabled)
+// 	}
+
+// 	return true
+// }
