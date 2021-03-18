@@ -115,8 +115,17 @@ const (
 	// LabelWorkloadReadinessProbeRetries defines number of times workload liveness probe will retry
 	LabelWorkloadReadinessProbeRetries = LabelPrefix + "workload.readiness-probe-retries"
 
-	// LabelWorkloadReadinessProbeDisabled disables workload liveness probe
-	LabelWorkloadReadinessProbeDisabled = LabelPrefix + "workload.readiness-probe-disabled"
+	// LabelWorkloadLivenessProbeType defines the command for workload liveness probe.
+	LabelWorkloadReadinessProbeType = LabelPrefix + "workload.readiness-probe-type"
+
+	// LabelWorkloadLivenessProbeHTTPPort defines the port for the http liveness probes.
+	LabelWorkloadReadinessProbeHTTPPort = LabelPrefix + "workload.readiness-probe-http-port"
+
+	// LabelWorkloadLivenessProbeHTTPPath defines the path for the http liveness probe.
+	LabelWorkloadReadinessProbeHTTPPath = LabelPrefix + "workload.readiness-probe-http-path"
+
+	// LabelWorkloadLivenessProbeTCPPort defines the path for the http liveness probe.
+	LabelWorkloadReadinessProbeTCPPort = LabelPrefix + "workload.readiness-probe-tcp-port"
 
 	// LabelServiceType defines the type of service to be created
 	LabelServiceType = LabelPrefix + "service.type"

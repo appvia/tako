@@ -1887,9 +1887,9 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeDisabled: "false",
-						config.LabelWorkloadReadinessProbeCommand:  "hello world",
-						config.LabelWorkloadLivenessProbeType:      ProbeTypeNone.String(),
+						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeCommand: "hello world",
+						config.LabelWorkloadLivenessProbeType:     ProbeTypeNone.String(),
 					}
 				})
 
@@ -1904,8 +1904,8 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is misconfigured", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeDisabled: "false",
-						config.LabelWorkloadReadinessProbeCommand:  "",
+						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeCommand: "",
 					}
 				})
 
