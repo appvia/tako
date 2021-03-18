@@ -19,8 +19,33 @@ package kev
 import (
 	"io"
 
+	"github.com/appvia/kev/pkg/kev/terminal"
 	composego "github.com/compose-spec/compose-go/types"
 )
+
+// runConfig stores configuration for a command
+type runConfig struct {
+	composeSources []string
+	envs           []string
+	skaffold       bool
+}
+
+// Options helps configure running project commands
+type Options func(project *Project, cfg *runConfig)
+
+// Project is the base struct for all runners.
+// Runners must initialise a project using Init().
+type Project struct {
+	workingDir string
+	manifest   *Manifest
+	config     runConfig
+	UI         terminal.UI
+}
+
+// InitRunner runs the required sequences to initialise a project.
+type InitRunner struct {
+	*Project
+}
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments
 type Manifest struct {
@@ -28,6 +53,7 @@ type Manifest struct {
 	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
 	Skaffold     string       `yaml:"skaffold,omitempty" json:"skaffold,omitempty"`
+	UI           terminal.UI  `yaml:"-" json:"-"`
 }
 
 // Sources tracks a project's docker-compose sources
@@ -138,6 +164,4 @@ type WritableResults []WritableResult
 type WritableResult struct {
 	WriterTo io.WriterTo
 	FilePath string
-	Skipped  bool
-	Updated  bool
 }

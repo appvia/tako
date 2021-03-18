@@ -27,6 +27,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/appvia/kev/pkg/kev/terminal"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -34,15 +35,11 @@ import (
 )
 
 // NewManifest returns a new Manifest struct.
-func NewManifest(files []string, workingDir string) (*Manifest, error) {
-	s, err := newSources(files, workingDir)
-	if err != nil {
-		return nil, err
-	}
+func NewManifest(sources *Sources) *Manifest {
 	return &Manifest{
 		Id:      uuid.New().String(),
-		Sources: s,
-	}, nil
+		Sources: sources,
+	}
 }
 
 // LoadManifest returns application manifests.
@@ -122,20 +119,32 @@ func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Mani
 // MintEnvironments create new environments based on candidate environments and manifest base labels.
 // This includes an implicit sandbox environment that will always be created.
 func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
+	m.UI.Header("Creating deployment environments...")
+	sg := m.UI.StepGroup()
+	defer sg.Done()
+
 	fileNameTemplate := m.GetEnvironmentFileNameTemplate()
 
 	m.Environments = Environments{}
 	if !contains(candidates, SandboxEnv) {
-		candidates = append(candidates, SandboxEnv)
+		candidates = append([]string{SandboxEnv}, candidates...)
 	}
 
 	override := m.getSourcesOverride().toBaseLabels()
 	for _, env := range candidates {
+		envFilename := path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
+		var step terminal.Step
+		if env == SandboxEnv {
+			step = sg.Add(fmt.Sprintf("Creating the %s sandbox env file: %s", SandboxEnv, envFilename))
+		} else {
+			step = sg.Add(fmt.Sprintf("Creating the %s env file: %s", env, envFilename))
+		}
 		m.Environments = append(m.Environments, &Environment{
 			Name:     env,
 			override: override,
-			File:     path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env)),
+			File:     envFilename,
 		})
+		step.Success()
 	}
 	return m
 }
@@ -225,24 +234,37 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 // DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.
 func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
 	sourcesFiles := m.GetSourcesFiles()
-	p, err := NewComposeProject(sourcesFiles)
-	if err != nil {
-		return err
+
+	sg := m.UI.StepGroup()
+
+	for _, source := range sourcesFiles {
+		m.UI.Output(fmt.Sprintf("Detecting secrets in: %s", source))
+		p, err := NewComposeProject([]string{source})
+		if err != nil {
+			return err
+		}
+
+		for _, s := range p.Services {
+			step := sg.Add(fmt.Sprintf("Analysing service: %s", s.Name))
+			serviceConfig := ServiceConfig{Name: s.Name, Environment: s.Environment}
+
+			hits := serviceConfig.detectSecretsInEnvVars(matchers)
+			if len(hits) == 0 {
+				step.Success("Non detected in service: ", s.Name)
+				continue
+			}
+
+			step.Warning("Detected in service: ", s.Name)
+			for _, hit := range hits {
+				m.UI.Output(
+					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
+					terminal.WithStyle(terminal.LogStyle),
+					terminal.WithIndentChar(terminal.LogIndentChar),
+					terminal.WithIndent(3),
+				)
+			}
+		}
 	}
-
-	candidates := Services{}
-	for _, s := range p.Services {
-		candidates = append(candidates, ServiceConfig{Name: s.Name, Environment: s.Environment})
-	}
-
-	detected := candidates.detectSecrets(matchers, func() {
-		log.Warnf("Detected potential secrets in sources %s", sourcesFiles)
-	})
-
-	if !detected {
-		log.Debug("No secrets detected in project sources")
-	}
-
 	return nil
 }
 
@@ -294,7 +316,8 @@ func ManifestExistsForPath(manifestPath string) bool {
 func EnsureFirstInit(wd string) error {
 	manifestPath := path.Join(wd, ManifestFilename)
 	if ManifestExistsForPath(manifestPath) {
-		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, manifestPath)
+		absWd, _ := filepath.Abs(wd)
+		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, absWd)
 		return err
 	}
 	return nil

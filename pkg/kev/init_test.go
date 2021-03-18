@@ -18,6 +18,7 @@ package kev_test
 
 import (
 	"bytes"
+	"path"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
@@ -25,23 +26,45 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("InitBase", func() {
+var _ = Describe("InitRunner", func() {
 	var (
 		workingDir string
+		results    kev.WritableResults
 		manifest   *kev.Manifest
-		mErr       error
+		rErr       error
 		envs       []string
 		env        *kev.Environment
 	)
 
 	JustBeforeEach(func() {
-		manifest, mErr = kev.InitBase(workingDir, []string{}, envs)
-		if mErr == nil {
+		runner := kev.NewInitRunner(workingDir, kev.WithEnvs(envs))
+		if results, rErr = runner.Run(); rErr == nil {
+			manifest = runner.Manifest()
 			env, _ = manifest.GetEnvironment("dev")
 		}
 	})
 
-	Context("manifest", func() {
+	Context("Run results", func() {
+		BeforeEach(func() {
+			workingDir = "./testdata/init-default/compose-yml"
+		})
+
+		It("should contain all required files", func() {
+			Expect(results).To(HaveLen(2))
+		})
+
+		It("should contain a manifest file", func() {
+			filename := path.Join(workingDir, kev.ManifestFilename)
+			Expect(results).To(ContainElement(kev.WritableResult{WriterTo: manifest, FilePath: filename}))
+		})
+
+		It("should contain an override environment", func() {
+			filename := path.Join(workingDir, "compose.kev.dev.yml")
+			Expect(results).To(ContainElement(kev.WritableResult{WriterTo: env, FilePath: filename}))
+		})
+	})
+
+	Context("Created manifest", func() {
 		BeforeEach(func() {
 			workingDir = "./testdata/init-default/compose-yml"
 		})
@@ -50,29 +73,28 @@ var _ = Describe("InitBase", func() {
 			Expect(manifest.Id).ToNot(BeEmpty())
 		})
 
-		Context("marshalling", func() {
-			It("should write out a yaml file with manifest data", func() {
-				var actual bytes.Buffer
-				_, err := manifest.WriteTo(&actual)
+		It("should write out a yaml file with manifest data", func() {
+			var buffer bytes.Buffer
+			_, err := manifest.WriteTo(&buffer)
 
-				Expect(err).ToNot(HaveOccurred())
-				Expect(actual.String()).To(MatchRegexp(`id: [a-z0-9]+`))
-				Expect(actual.String()).To(ContainSubstring("compose:"))
-				Expect(actual.String()).To(MatchRegexp(`.*- .*compose.yml`))
-				Expect(actual.String()).To(ContainSubstring("environments:"))
-				Expect(actual.String()).To(MatchRegexp(`dev: .*compose.kev.dev.yml`))
-			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(buffer.String()).To(MatchRegexp(`id: [a-z0-9]+`))
+			Expect(buffer.String()).To(ContainSubstring("compose:"))
+			Expect(buffer.String()).To(MatchRegexp(`.*- .*compose.yml`))
+			Expect(buffer.String()).To(ContainSubstring("environments:"))
+			Expect(buffer.String()).To(MatchRegexp(`dev: .*compose.kev.dev.yml`))
 		})
 	})
 
-	Context("with no alternate compose files supplied", func() {
+	When("No alternate compose files supplied", func() {
 		Context("and without any docker-compose file in the directory", func() {
 			BeforeEach(func() {
 				workingDir = "./testdata"
 			})
 
 			It("should error", func() {
-				Expect(mErr).To(HaveOccurred())
+
+				Expect(rErr).To(HaveOccurred())
 			})
 		})
 
@@ -86,7 +108,7 @@ var _ = Describe("InitBase", func() {
 			})
 
 			It("should not error", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 			})
 		})
 
@@ -100,7 +122,7 @@ var _ = Describe("InitBase", func() {
 			})
 
 			It("should not error", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 			})
 		})
 
@@ -114,7 +136,7 @@ var _ = Describe("InitBase", func() {
 			})
 
 			It("should not error", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 			})
 		})
 
@@ -128,7 +150,7 @@ var _ = Describe("InitBase", func() {
 			})
 
 			It("should not error", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 			})
 		})
 
@@ -146,7 +168,7 @@ var _ = Describe("InitBase", func() {
 			})
 
 			It("should not error", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 			})
 		})
 	})
@@ -158,7 +180,7 @@ var _ = Describe("InitBase", func() {
 				envs = []string{"stage"}
 			})
 			It("is created implicitly", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 				Expect(manifest.GetEnvironmentsNames()).Should(ConsistOf("dev", "stage"))
 			})
 		})
@@ -169,15 +191,38 @@ var _ = Describe("InitBase", func() {
 				envs = []string{"stage", "dev"}
 			})
 			It("is only created once", func() {
-				Expect(mErr).NotTo(HaveOccurred())
+				Expect(rErr).NotTo(HaveOccurred())
 				Expect(manifest.GetEnvironmentsNames()).Should(ConsistOf("dev", "stage"))
 			})
 		})
 	})
 
-	Context("created environment overrides", func() {
+	Context("Created environment overrides", func() {
 		BeforeEach(func() {
 			workingDir = "./testdata/init-default/compose-yaml"
+		})
+
+		Context("marshalling", func() {
+			It("should write out a yaml file with manifest data", func() {
+				var buffer bytes.Buffer
+
+				_, err := env.WriteTo(&buffer)
+				Expect(err).ToNot(HaveOccurred())
+
+				expected := `version: "3.9"
+services:
+  db:
+    labels:
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
+      kev.workload.liveness-probe-type: command
+      kev.workload.replicas: "1"
+volumes:
+  db_data:
+    labels:
+      kev.volume.size: 100Mi
+`
+				Expect(buffer.String()).To(Equal(expected))
+			})
 		})
 
 		Context("with services", func() {

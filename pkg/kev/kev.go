@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
@@ -36,60 +35,29 @@ const (
 
 var (
 	// ManifestFilename is a name of main application manifest file
-	ManifestFilename = "kev.yaml"
+	ManifestFilename    = "kev.yaml"
+	SecretsReferenceUrl = "https://github.com/appvia/kev/blob/master/docs/reference/config-params.md#reference-k8s-secret-key-value"
 )
 
-// InitProjectWithOptions initialises a kev project using provided options
-func InitProjectWithOptions(workingDir string, opts InitOptions) (WritableResults, error) {
-	var out []WritableResult
+// InitProjectWithOptions initialises a kev project in the specified working directory
+// using the provided options (if any).
+func InitProjectWithOptions(workingDir string, opts ...Options) error {
+	runner := NewInitRunner(workingDir, opts...)
+	ui := runner.UI
 
-	m, err := InitBase(workingDir, opts.ComposeSources, opts.Envs)
+	results, err := runner.Run()
 	if err != nil {
-		return nil, err
+		printInitProjectWithOptionsError(ui)
+		return err
 	}
 
-	out = append(out, WritableResult{
-		WriterTo: m,
-		FilePath: path.Join(workingDir, ManifestFilename),
-	})
-	out = append(out, m.Environments.toWritableResults()...)
-
-	if !opts.Skaffold {
-		return out, nil
+	if err := results.Write(); err != nil {
+		printInitProjectWithOptionsError(ui)
+		return err
 	}
 
-	m.Skaffold = SkaffoldFileName
-	project, err := m.SourcesToComposeProject()
-	if err != nil {
-		return nil, err
-	}
-
-	results, err := CreateOrUpdateSkaffoldManifest(path.Join(workingDir, SkaffoldFileName), m.GetEnvironmentsNames(), project)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(out, results...), nil
-}
-
-// InitBase initialises a kev manifest including source compose files and environments.
-// If no composeSources are provided, the working directory is introspected for valid compose files to act as sources.
-// Also, an implicit sandbox environment will always be created.
-func InitBase(workingDir string, composeSources, envs []string) (*Manifest, error) {
-	if err := EnsureFirstInit(workingDir); err != nil {
-		return nil, err
-	}
-
-	m, err := NewManifest(composeSources, workingDir)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
-		return nil, err
-	}
-
-	return m.MintEnvironments(envs), nil
+	printInitProjectWithOptionsSuccess(ui, runner.manifest.Environments)
+	return nil
 }
 
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
@@ -113,9 +81,12 @@ func DetectSecrets(workingDir string) error {
 		return err
 	}
 
-	if err := m.DetectSecretsInSources(config.SecretMatchers); err != nil {
+	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
+	runner.Init()
+	if _, err := runner.detectSecretsInSources(m.Sources, config.SecretMatchers); err != nil {
 		return err
 	}
+
 	if err := m.DetectSecretsInEnvs(config.SecretMatchers); err != nil {
 		return err
 	}

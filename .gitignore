@@ -5,6 +5,7 @@
 **/docker-compose.kev.*.yaml
 k8s/*
 docker-compose.yaml
+docker-compose.override.yaml
 !/pkg/kev/testdata/**/*.yaml
 !/examples/**/*.yaml
 skaffold.yaml
