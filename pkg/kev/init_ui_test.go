@@ -101,7 +101,7 @@ var _ = Describe("InitRunner UI", func() {
 			Expect(err).NotTo(HaveOccurred())
 			log.Reset()
 
-			err = runner.CreateManifestAndDeployments(sources)
+			err = runner.CreateManifestAndEnvironmentOverrides(sources)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(log.NextHeader()).To(HaveKeyWithValue("Creating deployment environments...", []string{}))

@@ -49,7 +49,7 @@ func (r *InitRunner) Run() (WritableResults, error) {
 		return nil, err
 	}
 
-	if err := r.CreateManifestAndDeployments(sources); err != nil {
+	if err := r.CreateManifestAndEnvironmentOverrides(sources); err != nil {
 		return nil, err
 	}
 
@@ -182,8 +182,8 @@ func (r *InitRunner) detectSecretsInSources(sources *Sources, matchers []map[str
 	return detected, nil
 }
 
-// CreateManifestAndDeployments creates a base manifest and the related deployment environments
-func (r *InitRunner) CreateManifestAndDeployments(sources *Sources) error {
+// CreateManifestAndEnvironmentOverrides creates a base manifest and the related compose environment overrides
+func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) error {
 	r.manifest = NewManifest(sources)
 	r.manifest.UI = r.UI
 
