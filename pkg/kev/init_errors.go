@@ -83,12 +83,10 @@ func initStepError(ui terminal.UI, s terminal.Step, step initStepType, err error
 		ui.Output(strings.TrimSpace(v), terminal.WithErrorStyle(), terminal.WithIndentChar(terminal.ErrorIndentChar))
 		ui.Output("")
 	}
-	ui.Output(humanize(err), terminal.WithErrorStyle(), terminal.WithIndentChar(terminal.ErrorIndentChar))
-}
 
-func humanize(err error) string {
-	if err == nil {
-		return ""
-	}
-	return wordwrap.WrapString(err.Error(), 80)
+	ui.Output(
+		wordwrap.WrapString(err.Error(), terminal.RecommendedWordWrapLimit),
+		terminal.WithErrorStyle(),
+		terminal.WithIndentChar(terminal.ErrorIndentChar),
+	)
 }

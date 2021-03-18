@@ -43,19 +43,20 @@ type config struct {
 }
 
 const (
-	HeaderStyle       = "header"
-	ErrorStyle        = "error"
-	ErrorBoldStyle    = "error-bold"
-	WarningStyle      = "warning"
-	LogStyle          = "log"
-	WarningBoldStyle  = "warning-bold"
-	SuccessStyle      = "success"
-	SuccessBoldStyle  = "success-bold"
-	ErrorIndentChar   = "✕"
-	WarningIndentChar = "!"
-	SuccessIndentChar = "✓"
-	HeaderIndentChar  = "»"
-	LogIndentChar     = "|"
+	HeaderStyle              = "header"
+	ErrorStyle               = "error"
+	ErrorBoldStyle           = "error-bold"
+	WarningStyle             = "warning"
+	LogStyle                 = "log"
+	WarningBoldStyle         = "warning-bold"
+	SuccessStyle             = "success"
+	SuccessBoldStyle         = "success-bold"
+	ErrorIndentChar          = "✕"
+	WarningIndentChar        = "!"
+	SuccessIndentChar        = "✓"
+	HeaderIndentChar         = "»"
+	LogIndentChar            = "|"
+	RecommendedWordWrapLimit = 80
 )
 
 // Option controls output styling.
