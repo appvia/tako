@@ -19,6 +19,13 @@ services:
       kev.workload.rolling-update-max-surge: "1"
       kev.workload.service-account-name: default
       kev.workload.type: StatefulSet
+  wordpress:
+    labels:
+      kev.workload.liveness-probe-type: none
+      kev.workload.readiness-probe-type: http
+      kev.workload.readiness-probe-http-path: /status
+      kev.workload.readiness-probe-http-port: 8080
+      kev.workload.replicas: "1"
 volumes:
   db_data:
     labels:
