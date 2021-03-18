@@ -79,12 +79,8 @@ func newPTermStep(msg string, sg *pTermStepGroup) *pTermStep {
 	return &pTermStep{sg: sg, printer: printer, index: index}
 }
 
-func (s *pTermStep) Error(delay time.Duration, a ...interface{}) {
-	if delay.Seconds() > 0 || delay > s.printer.Delay {
-		time.Sleep(delay)
-	} else {
-		time.Sleep(s.minimumLag())
-	}
+func (s *pTermStep) Error(a ...interface{}) {
+	time.Sleep(s.minimumLag())
 
 	if s.printer.FailPrinter == nil {
 		s.printer.FailPrinter = &pterm.Error
@@ -103,12 +99,8 @@ func clearLine() {
 	pterm.Printo(strings.Repeat(" ", pterm.GetTerminalWidth()))
 }
 
-func (s *pTermStep) Success(delay time.Duration, a ...interface{}) {
-	if delay.Seconds() > 0 || delay > s.printer.Delay {
-		time.Sleep(delay)
-	} else {
-		time.Sleep(s.minimumLag())
-	}
+func (s *pTermStep) Success(a ...interface{}) {
+	time.Sleep(s.minimumLag())
 
 	if s.printer.SuccessPrinter == nil {
 		s.printer.SuccessPrinter = &pterm.Success
@@ -125,12 +117,8 @@ func (s *pTermStep) Success(delay time.Duration, a ...interface{}) {
 	s.sg.next(s.index)
 }
 
-func (s *pTermStep) Warning(delay time.Duration, a ...interface{}) {
-	if delay.Seconds() > 0 || delay > s.printer.Delay {
-		time.Sleep(delay)
-	} else {
-		time.Sleep(s.minimumLag())
-	}
+func (s *pTermStep) Warning(a ...interface{}) {
+	time.Sleep(s.minimumLag())
 
 	if s.printer.WarningPrinter == nil {
 		s.printer.WarningPrinter = &pterm.Warning

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 )
 
 type noOpUI struct{}
@@ -77,8 +76,8 @@ func (sg *noOpStepGroup) Done() {}
 
 type noOpStep struct{}
 
-func (s *noOpStep) Success(delay time.Duration, a ...interface{}) {}
+func (s *noOpStep) Success(a ...interface{}) {}
 
-func (s *noOpStep) Warning(delay time.Duration, a ...interface{}) {}
+func (s *noOpStep) Warning(a ...interface{}) {}
 
-func (s *noOpStep) Error(delay time.Duration, a ...interface{}) {}
+func (s *noOpStep) Error(a ...interface{}) {}

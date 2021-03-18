@@ -21,7 +21,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"time"
 )
 
 type fakeUI struct {
@@ -76,15 +75,15 @@ func (sg *fakeStepGroup) Add(msg string) Step {
 
 func (sg *fakeStepGroup) Done() {}
 
-func (s *fakeStep) Success(delay time.Duration, a ...interface{}) {
+func (s *fakeStep) Success(a ...interface{}) {
 	s.log.logStepStop(LogStepSuccess, a)
 }
 
-func (s *fakeStep) Warning(delay time.Duration, a ...interface{}) {
+func (s *fakeStep) Warning(a ...interface{}) {
 	s.log.logStepStop(LogStepWarning, a)
 }
 
-func (s *fakeStep) Error(delay time.Duration, a ...interface{}) {
+func (s *fakeStep) Error(a ...interface{}) {
 	s.log.logStepStop(LogStepError, a)
 }
 

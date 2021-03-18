@@ -18,7 +18,6 @@ package terminal
 
 import (
 	"io"
-	"time"
 
 	"github.com/pterm/pterm"
 )
@@ -147,11 +146,11 @@ type StepGroup interface {
 
 type Step interface {
 	// Completes a step marking it as successful, and starts the next step if there are any more steps.
-	Success(delay time.Duration, a ...interface{})
+	Success(a ...interface{})
 
 	// Completes a step marking it as a warning, and starts the next step if there are any more steps.
-	Warning(delay time.Duration, a ...interface{})
+	Warning(a ...interface{})
 
 	// Completes a step marking it as an error, stops execution of an next steps.
-	Error(delay time.Duration, a ...interface{})
+	Error(a ...interface{})
 }

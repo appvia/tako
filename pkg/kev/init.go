@@ -80,7 +80,7 @@ func (r *InitRunner) EnsureFirstInit() error {
 		return err
 	}
 
-	s.Success(0)
+	s.Success()
 	return nil
 }
 
@@ -100,7 +100,7 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 				return nil, err
 			}
 
-			s.Success(0, "Using: ", source)
+			s.Success("Using: ", source)
 		}
 
 		return &Sources{Files: r.config.composeSources}, nil
@@ -112,11 +112,11 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 		initStepError(r.UI, s, initStepComposeSource, err)
 		return nil, err
 	}
-	s.Success(0)
+	s.Success()
 
 	for _, source := range defaults {
 		s := sg.Add(fmt.Sprintf("Using: %s", source))
-		s.Success(0)
+		s.Success()
 	}
 
 	return &Sources{Files: defaults}, nil
@@ -162,12 +162,12 @@ func (r *InitRunner) detectSecretsInSources(sources *Sources, matchers []map[str
 
 			hits := serviceConfig.detectSecretsInEnvVars(matchers)
 			if len(hits) == 0 {
-				step.Success(0, "Non detected in service: ", s.Name)
+				step.Success("Non detected in service: ", s.Name)
 				continue
 			}
 
 			detected = true
-			step.Warning(0, "Detected in service: ", s.Name)
+			step.Warning("Detected in service: ", s.Name)
 
 			for _, hit := range hits {
 				r.UI.Output(
@@ -225,14 +225,14 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 			initStepError(r.UI, updateStep, initStepUpdateSkaffold, err)
 			return nil, err
 		}
-		updateStep.Success(0)
+		updateStep.Success()
 	case false:
 		createStep := sg.Add(fmt.Sprintf("Creating Skaffold config with deployment environment profiles at: %s", skPath))
 		if skManifest, err = NewSkaffoldManifest(envs, composeProject); err != nil {
 			initStepError(r.UI, createStep, initStepCreateSkaffold, err)
 			return nil, err
 		}
-		createStep.Success(0)
+		createStep.Success()
 	}
 
 	r.manifest.Skaffold = SkaffoldFileName

@@ -24,7 +24,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
@@ -145,7 +144,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 			override: override,
 			File:     envFilename,
 		})
-		step.Success(time.Second * 2)
+		step.Success()
 	}
 	return m
 }
@@ -251,11 +250,11 @@ func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
 
 			hits := serviceConfig.detectSecretsInEnvVars(matchers)
 			if len(hits) == 0 {
-				step.Success(time.Second*5, "Non detected in service: ", s.Name)
+				step.Success("Non detected in service: ", s.Name)
 				continue
 			}
 
-			step.Warning(time.Second*5, "Detected in service: ", s.Name)
+			step.Warning("Detected in service: ", s.Name)
 			for _, hit := range hits {
 				m.UI.Output(
 					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
