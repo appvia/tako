@@ -80,8 +80,10 @@ func newPTermStep(msg string, sg *pTermStepGroup) *pTermStep {
 }
 
 func (s *pTermStep) Error(delay time.Duration, a ...interface{}) {
-	if delay.Seconds() > 0 {
+	if delay.Seconds() > 0 || delay > s.printer.Delay {
 		time.Sleep(delay)
+	} else {
+		time.Sleep(s.minimumLag())
 	}
 
 	if s.printer.FailPrinter == nil {
@@ -102,8 +104,10 @@ func clearLine() {
 }
 
 func (s *pTermStep) Success(delay time.Duration, a ...interface{}) {
-	if delay.Seconds() > 0 {
+	if delay.Seconds() > 0 || delay > s.printer.Delay {
 		time.Sleep(delay)
+	} else {
+		time.Sleep(s.minimumLag())
 	}
 
 	if s.printer.SuccessPrinter == nil {
@@ -120,9 +124,12 @@ func (s *pTermStep) Success(delay time.Duration, a ...interface{}) {
 
 	s.sg.next(s.index)
 }
+
 func (s *pTermStep) Warning(delay time.Duration, a ...interface{}) {
-	if delay.Seconds() > 0 {
+	if delay.Seconds() > 0 || delay > s.printer.Delay {
 		time.Sleep(delay)
+	} else {
+		time.Sleep(s.minimumLag())
 	}
 
 	if s.printer.WarningPrinter == nil {
@@ -139,7 +146,6 @@ func (s *pTermStep) Warning(delay time.Duration, a ...interface{}) {
 
 	s.sg.next(s.index)
 }
-
 func spinner() pterm.SpinnerPrinter {
 	var spinnerSequences = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -171,4 +177,8 @@ func spinner() pterm.SpinnerPrinter {
 		},
 	}
 	return printer
+}
+
+func (s *pTermStep) minimumLag() time.Duration {
+	return s.printer.Delay + time.Millisecond*150
 }

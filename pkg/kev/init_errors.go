@@ -18,7 +18,6 @@ package kev
 
 import (
 	"strings"
-	"time"
 
 	"github.com/appvia/kev/pkg/kev/terminal"
 	"github.com/mitchellh/go-wordwrap"
@@ -78,7 +77,7 @@ to double check your compose source(s) are valid.
 
 func initStepError(ui terminal.UI, s terminal.Step, step initStepType, err error) {
 	stepStrings := initStepStrings[step]
-	s.Error(time.Second*1, stepStrings.Error)
+	s.Error(0, stepStrings.Error)
 	ui.Output("")
 	if v := stepStrings.ErrorDetails; v != "" {
 		ui.Output(strings.TrimSpace(v), terminal.WithErrorStyle(), terminal.WithIndentChar(terminal.ErrorIndentChar))
