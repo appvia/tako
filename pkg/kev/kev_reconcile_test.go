@@ -499,9 +499,6 @@ var _ = Describe("Reconcile", func() {
 						HaveKeyWithValue(config.LabelWorkloadReadinessProbeType, kubernetes.ProbeTypeHTTP.String()))
 					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadReadinessProbeHTTPPort, "8080"))
-					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadReadinessProbeHTTPPath, "/status"))
-					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				})
 			})
 		})

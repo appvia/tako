@@ -1602,7 +1602,7 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("readinessProbeHTTP", func() {
-		Context("and supplied as string port and parth", func() {
+		Context("and supplied as string port and path", func() {
 			port := "8080"
 			path := "/status"
 
@@ -1614,7 +1614,7 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			It("returns label value", func() {
+			It("returns readiness probe with HTTPGet", func() {
 				p, err := projectService.readinessProbe()
 				Expect(err).To(Succeed())
 				Expect(p.HTTPGet.Port.String()).To(Equal(port))
