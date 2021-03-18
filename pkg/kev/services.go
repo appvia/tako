@@ -134,9 +134,52 @@ func (sc ServiceConfig) validate() error {
 		return err
 	}
 
-	if !result.Valid() {
-		return errors.New(result.Errors()[0].Description())
+	if result.Valid() {
+		return nil
 	}
+
+	// Prioritise clear error messages.
+	if e := findError(result, withType("required")); e != nil {
+		return errors.New(e.Description())
+	}
+
+	// Exclude errors that are very cryptic and hurt usability.
+	if e := findError(result, excludeTypes("number_one_of", "number_any_of", "number_all_of")); e != nil {
+		return errors.New(e.Description())
+	}
+
+	// If we don't find anything useful just go with whatever is available.
+	return errors.New(result.Errors()[0].Description())
+}
+
+func excludeTypes(ts ...string) func(gojsonschema.ResultError) bool {
+	return func(re gojsonschema.ResultError) bool {
+		for _, t := range ts {
+			if t == re.Type() {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func withType(t string) func(gojsonschema.ResultError) bool {
+	return func(re gojsonschema.ResultError) bool {
+		return t == re.Type()
+	}
+}
+
+func findError(result *gojsonschema.Result, predicate func(re gojsonschema.ResultError) bool) gojsonschema.ResultError {
+	if result.Valid() {
+		return nil
+	}
+
+	for _, e := range result.Errors() {
+		if predicate(e) {
+			return e
+		}
+	}
+
 	return nil
 }
 

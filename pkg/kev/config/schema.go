@@ -67,6 +67,82 @@ var ServicesSchema = map[string]interface{}{
 		LabelWorkloadReplicas,
 		LabelWorkloadLivenessProbeType,
 	},
+	"allOf": []map[string]interface{}{
+		// Liveness probe
+		{
+			"oneOf": []map[string]interface{}{
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadLivenessProbeType: map[string]interface{}{
+							"const": "http",
+						},
+					},
+					"required": []string{LabelWorkloadLivenessProbeHTTPPath, LabelWorkloadLivenessProbeHTTPPort},
+				},
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadLivenessProbeType: map[string]interface{}{
+							"const": "tcp",
+						},
+					},
+					"required": []string{LabelWorkloadLivenessProbeTCPPort},
+				},
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadLivenessProbeType: map[string]interface{}{
+							"const": "command",
+						},
+					},
+					"required": []string{LabelWorkloadLivenessProbeCommand},
+				},
+				// This acts as a catch all so should come in the end.
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadLivenessProbeType: map[string]interface{}{
+							"const": "none",
+						},
+					},
+				},
+			},
+		},
+		// Readiness probe
+		{
+			"anyOf": []map[string]interface{}{
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadReadinessProbeType: map[string]interface{}{
+							"const": "http",
+						},
+					},
+					"required": []string{LabelWorkloadReadinessProbeHTTPPath, LabelWorkloadReadinessProbeHTTPPort},
+				},
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadReadinessProbeType: map[string]interface{}{
+							"const": "tcp",
+						},
+					},
+					"required": []string{LabelWorkloadReadinessProbeTCPPort},
+				},
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadReadinessProbeType: map[string]interface{}{
+							"const": "command",
+						},
+					},
+					"required": []string{LabelWorkloadReadinessProbeCommand},
+				},
+				// This acts as a catch all so should come in the end.
+				{
+					"properties": map[string]interface{}{
+						LabelWorkloadReadinessProbeType: map[string]interface{}{
+							"const": "none",
+						},
+					},
+				},
+			},
+		},
+	},
 	"additionalProperties": false,
 }
 
