@@ -1,0 +1,47 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Dot env
+.env
+
+# Build binary
+bin/*
+dist/*
+release/*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Ginkgo test coverage
+**/*.coverprofile
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# IDEs
+.idea/*
+
+### VisualStudioCode ###
+.vscode/*
+.history
+
+### Vim ###
+# swap
+.sw[a-p]
+.*.sw[a-p]
+# session
+Session.vim
+# temporary
+.netrwhist
+# auto-generated tag files
+tags
+
+# Excluded directories
+tmp/*

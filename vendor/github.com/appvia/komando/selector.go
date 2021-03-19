@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package terminal
+package komando
 
 import (
 	"os"
