@@ -170,7 +170,7 @@ github.com/PuerkitoBio/purell
 github.com/PuerkitoBio/urlesc
 # github.com/apex/log v1.9.0
 github.com/apex/log
-# github.com/appvia/komando v0.0.0-20210319152601-29f1bd305ab2
+# github.com/appvia/komando v0.0.0-20210319163812-586cdcf9948f
 ## explicit
 github.com/appvia/komando
 # github.com/beorn7/perks v1.0.1
@@ -231,7 +231,6 @@ github.com/compose-spec/compose-go/schema
 github.com/compose-spec/compose-go/template
 github.com/compose-spec/compose-go/types
 # github.com/containerd/console v1.0.1
-## explicit
 github.com/containerd/console
 # github.com/containerd/containerd v1.4.1
 github.com/containerd/containerd/errdefs
@@ -437,7 +436,6 @@ github.com/mailru/easyjson/jwriter
 # github.com/mattn/go-colorable v0.1.8
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
-## explicit
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.10
 github.com/mattn/go-runewidth
@@ -550,7 +548,6 @@ github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/pterm/pterm v0.12.12
-## explicit
 github.com/pterm/pterm
 github.com/pterm/pterm/internal
 # github.com/rakyll/statik v0.1.7
@@ -657,7 +654,6 @@ go.opentelemetry.io/otel/sdk/metric/controller/time
 go.opentelemetry.io/otel/sdk/metric/processor/basic
 go.opentelemetry.io/otel/sdk/resource
 # golang.org/x/crypto v0.0.0-20210317152858-513c2a44f670
-## explicit
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20

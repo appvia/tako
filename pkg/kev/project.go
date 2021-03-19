@@ -16,7 +16,7 @@
 
 package kev
 
-import "github.com/appvia/komando"
+import kmd "github.com/appvia/komando"
 
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
@@ -26,7 +26,7 @@ func (p *Project) Init(opts ...Options) {
 	}
 	p.config = cfg
 	if p.UI == nil {
-		p.UI = komando.ConsoleUI()
+		p.UI = kmd.ConsoleUI()
 	}
 }
 
@@ -53,7 +53,7 @@ func WithSkaffold(c bool) Options {
 	}
 }
 
-func WithUI(ui komando.UI) Options {
+func WithUI(ui kmd.UI) Options {
 	return func(project *Project, cfg *runConfig) {
 		project.UI = ui
 	}
