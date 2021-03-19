@@ -27,7 +27,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
-	"github.com/appvia/kev/pkg/kev/terminal"
+	"github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -133,7 +133,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	override := m.getSourcesOverride().toBaseLabels()
 	for _, env := range candidates {
 		envFilename := path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
-		var step terminal.Step
+		var step komando.Step
 		if env == SandboxEnv {
 			step = sg.Add(fmt.Sprintf("Creating the %s sandbox env file: %s", SandboxEnv, envFilename))
 		} else {
@@ -258,9 +258,9 @@ func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
 			for _, hit := range hits {
 				m.UI.Output(
 					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
-					terminal.WithStyle(terminal.LogStyle),
-					terminal.WithIndentChar(terminal.LogIndentChar),
-					terminal.WithIndent(3),
+					komando.WithStyle(komando.LogStyle),
+					komando.WithIndentChar(komando.LogIndentChar),
+					komando.WithIndent(3),
 				)
 			}
 		}

@@ -19,7 +19,7 @@ package kev_test
 import (
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/appvia/kev/pkg/kev/terminal"
+	"github.com/appvia/komando"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,14 +28,14 @@ var _ = Describe("InitRunner UI", func() {
 	var (
 		workingDir string
 		runner     *kev.InitRunner
-		ui         terminal.UI
-		log        terminal.UILog
+		ui         komando.UI
+		log        komando.UILog
 		envs       []string
 	)
 
 	JustBeforeEach(func() {
 		workingDir = "./testdata/init-default/compose-yml"
-		ui, log = terminal.FakeUIAndLog()
+		ui, log = komando.FakeUIAndLog()
 		runner = kev.NewInitRunner(workingDir, kev.WithEnvs(envs), kev.WithUI(ui))
 	})
 
@@ -50,7 +50,7 @@ var _ = Describe("InitRunner UI", func() {
 
 			Expect(log.NextHeader()).To(HaveKeyWithValue("Verifying project...", []string{}))
 			Expect(log.NextStep()).To(HaveKeyWithValue("Ensuring this project has not already been initialised", []string{}))
-			Expect(log.NextStep()).To(HaveKeyWithValue(terminal.LogStepSuccess, []string{}))
+			Expect(log.NextStep()).To(HaveKeyWithValue(komando.LogStepSuccess, []string{}))
 		})
 	})
 
@@ -62,10 +62,10 @@ var _ = Describe("InitRunner UI", func() {
 			Expect(log.NextHeader()).To(HaveKeyWithValue("Detecting compose sources...", []string{}))
 
 			Expect(log.NextStep()).To(HaveKeyWithValue("Scanning for compose configuration", []string{}))
-			Expect(log.NextStep()).To(HaveKeyWithValue(terminal.LogStepSuccess, []string{}))
+			Expect(log.NextStep()).To(HaveKeyWithValue(komando.LogStepSuccess, []string{}))
 
 			Expect(log.NextStep()).To(HaveKeyWithValue("Using: testdata/init-default/compose-yml/compose.yml", []string{}))
-			Expect(log.NextStep()).To(HaveKeyWithValue(terminal.LogStepSuccess, []string{}))
+			Expect(log.NextStep()).To(HaveKeyWithValue(komando.LogStepSuccess, []string{}))
 		})
 	})
 

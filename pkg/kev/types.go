@@ -19,7 +19,7 @@ package kev
 import (
 	"io"
 
-	"github.com/appvia/kev/pkg/kev/terminal"
+	"github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -39,7 +39,7 @@ type Project struct {
 	workingDir string
 	manifest   *Manifest
 	config     runConfig
-	UI         terminal.UI
+	UI         komando.UI
 }
 
 // InitRunner runs the required sequences to initialise a project.
@@ -53,7 +53,7 @@ type Manifest struct {
 	Sources      *Sources     `yaml:"compose,omitempty" json:"compose,omitempty"`
 	Environments Environments `yaml:"environments,omitempty" json:"environments,omitempty"`
 	Skaffold     string       `yaml:"skaffold,omitempty" json:"skaffold,omitempty"`
-	UI           terminal.UI  `yaml:"-" json:"-"`
+	UI           komando.UI   `yaml:"-" json:"-"`
 }
 
 // Sources tracks a project's docker-compose sources

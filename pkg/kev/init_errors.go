@@ -19,7 +19,7 @@ package kev
 import (
 	"strings"
 
-	"github.com/appvia/kev/pkg/kev/terminal"
+	"github.com/appvia/komando"
 	"github.com/mitchellh/go-wordwrap"
 )
 
@@ -75,18 +75,18 @@ to double check your compose source(s) are valid.
 	},
 }
 
-func initStepError(ui terminal.UI, s terminal.Step, step initStepType, err error) {
+func initStepError(ui komando.UI, s komando.Step, step initStepType, err error) {
 	stepStrings := initStepStrings[step]
 	s.Error(stepStrings.Error)
 	ui.Output("")
 	if v := stepStrings.ErrorDetails; v != "" {
-		ui.Output(strings.TrimSpace(v), terminal.WithErrorStyle(), terminal.WithIndentChar(terminal.ErrorIndentChar))
+		ui.Output(strings.TrimSpace(v), komando.WithErrorStyle(), komando.WithIndentChar(komando.ErrorIndentChar))
 		ui.Output("")
 	}
 
 	ui.Output(
-		wordwrap.WrapString(err.Error(), terminal.RecommendedWordWrapLimit),
-		terminal.WithErrorStyle(),
-		terminal.WithIndentChar(terminal.ErrorIndentChar),
+		wordwrap.WrapString(err.Error(), komando.RecommendedWordWrapLimit),
+		komando.WithErrorStyle(),
+		komando.WithIndentChar(komando.ErrorIndentChar),
 	)
 }
