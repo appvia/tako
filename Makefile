@@ -23,8 +23,7 @@ endif
 
 LFLAGS ?= -X github.com/appvia/kev/pkg/${NAME}.Tag=${GIT_LAST_TAG} -X github.com/appvia/kev/pkg/${NAME}.GitSHA=${GIT_SHA} -X github.com/appvia/kev/pkg/${NAME}.Compiled=${BUILD_TIME} -X github.com/appvia/kev/pkg/${NAME}.Release=${VERSION} -X github.com/appvia/kev/pkg/${NAME}.GitBranch=${GIT_BRANCH}
 CLI_PLATFORMS=darwin linux windows
-CLI_ARCHITECTURES=amd64
-export GOFLAGS = -mod=vendor
+CLI_ARCHITECTURES=amd64 arm64
 
 .PHONY: test e2e authors changelog build release check vet golangci-lint setup-kind
 
@@ -99,8 +98,8 @@ coverage:
 
 spelling:
 	@echo "--> Checking the spelling"
-	@find . -name "*.go" -type f -not -path "./vendor/*" -not -path "./ui/node_modules/*" | xargs go run github.com/client9/misspell/cmd/misspell -error -source=go *.go
-	@find . -name "*.md" -type f -not -path "./vendor/*" -not -path "./ui/node_modules/*" | xargs go run github.com/client9/misspell/cmd/misspell -error -source=text *.md
+	@find . -name "*.go" -type f -not -path "./ui/node_modules/*" | xargs go run github.com/client9/misspell/cmd/misspell -error -source=go *.go
+	@find . -name "*.md" -type f -not -path "./ui/node_modules/*" | xargs go run github.com/client9/misspell/cmd/misspell -error -source=text *.md
 
 golangci-lint:
 	@echo "--> Checking against the golangci-lint"

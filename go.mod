@@ -1,6 +1,6 @@
 module github.com/appvia/kev
 
-go 1.14
+go 1.16
 
 require (
 	github.com/GoogleContainerTools/skaffold v1.18.0
