@@ -134,10 +134,22 @@ func (sc ServiceConfig) validate() error {
 		return err
 	}
 
-	if !result.Valid() {
-		return errors.New(result.Errors()[0].Description())
+	if result.Valid() {
+		return nil
 	}
-	return nil
+
+	// Prioritise clear error messages.
+	if e := findError(result, withType("required")); e != nil {
+		return errors.New(e.Description())
+	}
+
+	// Exclude errors that are very cryptic and hurt usability.
+	if e := findError(result, excludeTypes("number_one_of", "number_any_of", "number_all_of")); e != nil {
+		return errors.New(e.Description())
+	}
+
+	// If we don't find anything useful just go with whatever is available.
+	return errors.New(result.Errors()[0].Description())
 }
 
 // GetLabels gets a service's labels
