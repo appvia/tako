@@ -10,6 +10,9 @@ docker-compose.override.yaml
 !/examples/**/*.yaml
 skaffold.yaml
 
+### Go mod vendor ###
+vendor
+
 ### IDEs ###
 .idea/*
 
