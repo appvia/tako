@@ -38,7 +38,8 @@ var _ = Describe("ServiceConfig", func() {
 				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadLivenessProbeType)))
 
 				err = ServiceConfig{Labels: composego.Labels{
-					config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeCommand.String(),
+					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
+					config.LabelWorkloadLivenessProbeCommand: "echo i'm a useless probe",
 				}}.validate()
 				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadReplicas)))
 
@@ -48,8 +49,9 @@ var _ = Describe("ServiceConfig", func() {
 
 			It("success if the necessary labels are present", func() {
 				err := ServiceConfig{Labels: composego.Labels{
-					config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeCommand.String(),
-					config.LabelWorkloadReplicas:          "1",
+					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
+					config.LabelWorkloadLivenessProbeCommand: "echo i'm a useless probe",
+					config.LabelWorkloadReplicas:             "1",
 				}}.validate()
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -141,6 +143,189 @@ var _ = Describe("ServiceConfig", func() {
 				serviceConfig.Labels[config.LabelWorkloadType] = "wrong-value"
 				Expect(serviceConfig.validate()).Should(HaveOccurred())
 			})
+
+			Context("http probe validation", func() {
+				Context("readiness", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeHTTP.String()
+					})
+
+					It("fails when http probe has missing path", func() {
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeHTTPPort] = "8080"
+
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadReadinessProbeHTTPPath))
+					})
+
+					It("fails when http probe has missing port", func() {
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeHTTPPath] = "/status"
+
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadReadinessProbeHTTPPort))
+					})
+
+					It("succeeds when all values are provided", func() {
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeHTTPPath] = "/status"
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeHTTPPort] = "8080"
+
+						err := serviceConfig.validate()
+						Expect(err).To(Succeed())
+					})
+				})
+
+				Context("liveness", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeHTTP.String()
+					})
+
+					It("fails when http probe has missing path", func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeHTTPPort] = "8080"
+
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadLivenessProbeHTTPPath))
+					})
+
+					It("fails when http probe has missing port", func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeHTTPPath] = "/status"
+
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadLivenessProbeHTTPPort))
+					})
+
+					It("succeeds when all values are provided", func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeHTTPPort] = "/status"
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeHTTPPath] = "8080"
+
+						err := serviceConfig.validate()
+						Expect(err).To(Succeed())
+					})
+				})
+			})
+
+			Context("tcp probe validation", func() {
+				Context("readiness", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeTCP.String()
+					})
+
+					It("fails when tcp probe has missing port", func() {
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadReadinessProbeTCPPort))
+					})
+
+					It("succeeds when port is provided", func() {
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeTCPPort] = "8080"
+
+						err := serviceConfig.validate()
+						Expect(err).To(Succeed())
+					})
+				})
+				Context("liveness", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeTCP.String()
+					})
+
+					It("fails when tcp probe has missing port", func() {
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadLivenessProbeTCPPort))
+					})
+
+					It("succeeds when port is provided", func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeTCPPort] = "8080"
+
+						err := serviceConfig.validate()
+						Expect(err).To(Succeed())
+					})
+				})
+			})
+
+			Context("command probe validation", func() {
+				Context("rediness probes", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeCommand.String()
+					})
+
+					It("fails when command probe has missing properties", func() {
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadReadinessProbeCommand))
+					})
+				})
+
+				Context("liveness probe", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeCommand.String()
+					})
+
+					It("fails when command probe has missing properties", func() {
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("required"))
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadLivenessProbeCommand))
+					})
+				})
+			})
+
+			Context("probe type enum validation", func() {
+				Context("readiness", func() {
+					BeforeEach(func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+					})
+
+					It("fails when type is misspelled", func() {
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = "wrong-value"
+
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadReadinessProbeType))
+						Expect(err.Error()).To(ContainSubstring("none"))
+					})
+
+					It("succeeds if set to none", func() {
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeCommand] = "i'm just a leftover"
+
+						err := serviceConfig.validate()
+						Expect(err).To(Succeed())
+					})
+				})
+
+				Context("liveness", func() {
+					It("fails when type is misspelled", func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = "wrong-value"
+
+						err := serviceConfig.validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring(config.LabelWorkloadLivenessProbeType))
+						Expect(err.Error()).To(ContainSubstring("none"))
+					})
+
+					It("succeeds if set to none", func() {
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeCommand] = "i'm just a leftover"
+
+						err := serviceConfig.validate()
+						Expect(err).To(Succeed())
+					})
+				})
+			})
+
 		})
 	})
 })
