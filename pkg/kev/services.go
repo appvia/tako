@@ -156,10 +156,10 @@ func excludeTypes(ts ...string) func(gojsonschema.ResultError) bool {
 	return func(re gojsonschema.ResultError) bool {
 		for _, t := range ts {
 			if t == re.Type() {
-				return true
+				return false
 			}
 		}
-		return false
+		return true
 	}
 }
 
