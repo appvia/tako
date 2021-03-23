@@ -7,7 +7,7 @@ require (
 	github.com/appvia/komando v0.0.0-20210319163812-586cdcf9948f
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/google/go-cmp v0.5.4
+	github.com/google/go-cmp v0.5.5
 	github.com/google/uuid v1.2.0
 	github.com/imdario/mergo v0.3.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
