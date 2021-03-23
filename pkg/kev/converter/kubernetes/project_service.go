@@ -631,12 +631,13 @@ func (p *ProjectService) livenessTCPProbe() (*v1.TCPSocketAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeTCPPort)
 	}
 
-	if port == "" {
-		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadLivenessProbeTCPPort)
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)
 	}
 
 	return &v1.TCPSocketAction{
-		Port: intstr.FromString(port),
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -652,12 +653,14 @@ func (p *ProjectService) livenessHTTPProbe() (*v1.HTTPGetAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
 	}
 
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadLivenessProbeHTTPPort)
+	}
+
 	return &v1.HTTPGetAction{
 		Path: path,
-		Port: intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: port,
-		},
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -820,12 +823,13 @@ func (p *ProjectService) readinessTCPProbe() (*v1.TCPSocketAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeTCPPort)
 	}
 
-	if port == "" {
-		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadReadinessProbeTCPPort)
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort)
 	}
 
 	return &v1.TCPSocketAction{
-		Port: intstr.FromString(port),
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -841,16 +845,14 @@ func (p *ProjectService) readinessHTTPProbe() (*v1.HTTPGetAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPort)
 	}
 
-	if port == "" {
-		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadReadinessProbeHTTPPort)
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort)
 	}
 
 	return &v1.HTTPGetAction{
 		Path: path,
-		Port: intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: port,
-		},
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
