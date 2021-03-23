@@ -210,22 +210,12 @@ func (e *Environment) loadOverride() (*Environment, error) {
 	return e, nil
 }
 
-func (e *Environment) reconcile(override *composeOverride) error {
+func (e *Environment) reconcile(override *composeOverride) {
 	log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
 	labelsMatching := override.toLabelsMatching(e.override)
-	cset := labelsMatching.diff(e.override)
-	if cset.HasNoPatches() {
-		log.Debug("nothing to update")
-		return nil
-	}
-
-	e.patch(cset)
-	return nil
-}
-
-func (e *Environment) patch(cset changeset) {
-	e.override.patch(cset)
+	labelsMatching.diffAndPatch(e.override)
+	return
 }
 
 func (e *Environment) prepareForMergeUsing(override *composeOverride) {

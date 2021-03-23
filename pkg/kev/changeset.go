@@ -29,47 +29,17 @@ const (
 	DELETE = "delete"
 )
 
-// newChangeset detects all changes between a destination override and source override.
-// A change is either a create, update or delete event.
-// A change targets an override's version, services or volumes and it's properties will depend on the actual target.
-// Example: here's a Change that creates a new service:
-// {
-//    Type: "create",   //string
-//    Value: srcSvc,    //interface{} in this case: ServiceConfig
-// }
-// Example: here's a Change that updates a service's label:
-// {
-// 		Type:   "update",                 //string
-// 		Index:  index,                    // interface{} in this case: int
-// 		Parent: "labels",                 // string
-// 		Target: config.LabelServiceType,  // string
-// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
-// }
-//
-// ENV VARS NOTE:
-// The changeset deals with the docker-compose `environment` attribute as a special case:
-// - Env vars in overrides override a project's docker-compose env vars.
-// - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
-// - A changeset will NOT update or create env vars in deployment environments.
-// - To create useful diffs a project's docker-compose env vars will be taken into account.
-func newChangeset(dst *composeOverride, src *composeOverride) changeset {
+func detectAndPatchVersionUpdate(dst *composeOverride, src *composeOverride) {
 	cset := changeset{}
-	detectVersionUpdate(dst, src, &cset)
-	detectServicesCreate(dst, src, &cset)
-	detectServicesDelete(dst, src, &cset)
-	detectServicesEnvironmentDelete(dst, src, &cset)
-	detectVolumesCreate(dst, src, &cset)
-	detectVolumesDelete(dst, src, &cset)
-	return cset
-}
-
-func detectVersionUpdate(dst *composeOverride, src *composeOverride, cset *changeset) {
 	if dst.Version != src.Version {
 		cset.version = change{Value: src.Version, Type: UPDATE, Target: "version"}
 	}
+	cset.applyVersionPatchesIfAny(dst)
+	return
 }
 
-func detectServicesCreate(dst *composeOverride, src *composeOverride, cset *changeset) {
+func detectAndPatchServicesCreate(dst *composeOverride, src *composeOverride) {
+	cset := changeset{}
 	dstSvcSet := dst.Services.Set()
 	for _, srcSvc := range src.Services {
 		if !dstSvcSet[srcSvc.Name] {
@@ -79,9 +49,11 @@ func detectServicesCreate(dst *composeOverride, src *composeOverride, cset *chan
 			})
 		}
 	}
+	cset.applyServicesPatchesIfAny(dst)
 }
 
-func detectServicesDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
+func detectAndPatchServicesDelete(dst *composeOverride, src *composeOverride) {
+	cset := changeset{}
 	srcSvcSet := src.Services.Set()
 	for index, dstSvc := range dst.Services {
 		if !srcSvcSet[dstSvc.Name] {
@@ -91,9 +63,11 @@ func detectServicesDelete(dst *composeOverride, src *composeOverride, cset *chan
 			})
 		}
 	}
+	cset.applyServicesPatchesIfAny(dst)
 }
 
-func detectServicesEnvironmentDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
+func detectAndPatchServicesEnvironmentDelete(dst *composeOverride, src *composeOverride) {
+	cset := changeset{}
 	srcSvcMapping := src.Services.Map()
 	for index, dstSvc := range dst.Services {
 		srcSvc, ok := srcSvcMapping[dstSvc.Name]
@@ -111,9 +85,11 @@ func detectServicesEnvironmentDelete(dst *composeOverride, src *composeOverride,
 			}
 		}
 	}
+	cset.applyServicesPatchesIfAny(dst)
 }
 
-func detectVolumesCreate(dst *composeOverride, src *composeOverride, cset *changeset) {
+func detectAndPatchVolumesCreate(dst *composeOverride, src *composeOverride) {
+	cset := changeset{}
 	for srcVolKey, srcVolConfig := range src.Volumes {
 		if _, ok := dst.Volumes[srcVolKey]; !ok {
 			cset.volumes = append(cset.volumes, change{
@@ -123,9 +99,11 @@ func detectVolumesCreate(dst *composeOverride, src *composeOverride, cset *chang
 			})
 		}
 	}
+	cset.applyVolumesPatchesIfAny(dst)
 }
 
-func detectVolumesDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
+func detectAndPatchVolumesDelete(dst *composeOverride, src *composeOverride) {
+	cset := changeset{}
 	for dstVolKey := range dst.Volumes {
 		if _, ok := src.Volumes[dstVolKey]; !ok {
 			cset.volumes = append(cset.volumes, change{
@@ -134,6 +112,7 @@ func detectVolumesDelete(dst *composeOverride, src *composeOverride, cset *chang
 			})
 		}
 	}
+	cset.applyVolumesPatchesIfAny(dst)
 }
 
 // changes returns a flat list of all available changes

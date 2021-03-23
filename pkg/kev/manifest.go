@@ -163,11 +163,10 @@ func (m *Manifest) ReconcileConfig() (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		return nil, err
 	}
+
 	sourcesOverride := m.getSourcesOverride()
 	for _, e := range m.Environments {
-		if err := e.reconcile(sourcesOverride); err != nil {
-			return nil, err
-		}
+		e.reconcile(sourcesOverride)
 	}
 
 	return m, nil

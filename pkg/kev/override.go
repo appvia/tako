@@ -136,9 +136,36 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 	return out
 }
 
-// diff detects changes between an override against another override.
-func (o *composeOverride) diff(other *composeOverride) changeset {
-	return newChangeset(other, o)
+// diffAndPatch detects and patches all changes between a destination override and the current override.
+// A change is either a create, update or delete event.
+// A change targets an override's version, services or volumes and it's properties will depend on the actual target.
+// Example: here's a Change that creates a new service:
+// {
+//    Type: "create",   //string
+//    Value: srcSvc,    //interface{} in this case: ServiceConfig
+// }
+// Example: here's a Change that updates a service's label:
+// {
+// 		Type:   "update",                 //string
+// 		Index:  index,                    // interface{} in this case: int
+// 		Parent: "labels",                 // string
+// 		Target: config.LabelServiceType,  // string
+// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
+// }
+//
+// ENV VARS NOTE:
+// The changeset deals with the docker-compose `environment` attribute as a special case:
+// - Env vars in overrides override a project's docker-compose env vars.
+// - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
+// - A changeset will NOT update or create env vars in deployment environments.
+// - To create useful diffs a project's docker-compose env vars will be taken into account.
+func (o *composeOverride) diffAndPatch(dst *composeOverride) {
+	detectAndPatchVersionUpdate(dst, o)
+	detectAndPatchServicesCreate(dst, o)
+	detectAndPatchServicesDelete(dst, o)
+	detectAndPatchServicesEnvironmentDelete(dst, o)
+	detectAndPatchVolumesCreate(dst, o)
+	detectAndPatchVolumesDelete(dst, o)
 }
 
 // patch patches an override based on the supplied changeset patches.

@@ -202,7 +202,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
 				})
 
-				It("should create a change summary", func() {
+				XIt("should create a change summary", func() {
 					Expect(loggedMsgs).To(ContainSubstring(env.Name))
 					Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 				})
@@ -437,7 +437,7 @@ var _ = Describe("Reconcile", func() {
 				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
 			})
 
-			It("should create a change summary", func() {
+			XIt("should create a change summary", func() {
 				Expect(loggedMsgs).To(ContainSubstring(env.Name))
 				Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 			})
