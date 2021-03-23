@@ -6,14 +6,16 @@ services:
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.liveness-probe-disabled: "false"
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
       kev.workload.liveness-probe-retries: "3"
       kev.workload.liveness-probe-timeout: 10s
+      kev.workload.liveness-probe-type: command
       kev.workload.max-cpu: "0.5"
       kev.workload.max-memory: 500Mi
       kev.workload.memory: 10Mi
+      kev.workload.readiness-probe-tcp-port: "3306"
+      kev.workload.readiness-probe-type: tcp
       kev.workload.replicas: "1"
       kev.workload.rolling-update-max-surge: "1"
       kev.workload.service-account-name: default
@@ -23,12 +25,12 @@ services:
       kev.service.type: LoadBalancer
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
-      kev.workload.liveness-probe-disabled: "false"
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
       kev.workload.liveness-probe-retries: "3"
+      kev.workload.liveness-probe-tcp-port: "8000"
       kev.workload.liveness-probe-timeout: 10s
+      kev.workload.liveness-probe-type: tcp
       kev.workload.max-cpu: "0.5"
       kev.workload.max-memory: 500Mi
       kev.workload.memory: 10Mi
