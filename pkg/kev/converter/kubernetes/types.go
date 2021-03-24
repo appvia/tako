@@ -79,17 +79,17 @@ func (p ProbeType) String() string {
 }
 
 var probeString map[ProbeType]string = map[ProbeType]string{
-	ProbeTypeNone:    "none",
-	ProbeTypeCommand: "command",
-	ProbeTypeHTTP:    "http",
-	ProbeTypeTCP:     "tcp",
+	ProbeTypeNone: "none",
+	ProbeTypeExec: "exec",
+	ProbeTypeHTTP: "http",
+	ProbeTypeTCP:  "tcp",
 }
 
 const (
 	// ProbeTypeNone disables probe checks.
 	ProbeTypeNone ProbeType = iota
-	// ProbeTypeCommand uses a shell command for probe checks.
-	ProbeTypeCommand
+	// ProbeTypeExec uses a shell command for probe checks.
+	ProbeTypeExec
 	// ProbeTypeHTTP defines an http request which is used by probe checks.
 	ProbeTypeHTTP
 	// ProbeTypeTCP defines a tcp port which is used by probe checks.
