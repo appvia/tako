@@ -16,7 +16,11 @@
 
 package kev
 
-import kmd "github.com/appvia/komando"
+import (
+	"fmt"
+
+	kmd "github.com/appvia/komando"
+)
 
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
@@ -28,6 +32,67 @@ func (p *Project) Init(opts ...Options) {
 	if p.UI == nil {
 		p.UI = kmd.ConsoleUI()
 	}
+}
+
+// ValidateSources includes validation checks to ensure the compose sources are valid.
+// This function can be extended to include different forms of
+// validation (for now it detect any secrets found in the sources).
+func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string) error {
+	p.UI.Header("Validating compose sources...")
+
+	secretsDetected, err := p.detectSecretsInSources(sources, matchers)
+	if err != nil {
+		return err
+	}
+
+	p.UI.Output("")
+	p.UI.Output("Validation successful!")
+
+	if secretsDetected {
+		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
+%s`, SecretsReferenceUrl))
+	}
+
+	return nil
+}
+
+func (p *Project) detectSecretsInSources(sources *Sources, matchers []map[string]string) (bool, error) {
+	var detected bool
+
+	sg := p.UI.StepGroup()
+	defer sg.Done()
+	for _, composeFile := range sources.Files {
+		p.UI.Output(fmt.Sprintf("Detecting secrets in: %s", composeFile))
+		composeProject, err := NewComposeProject([]string{composeFile})
+		if err != nil {
+			initStepError(p.UI, sg.Add(""), initStepParsingComposeConfig, err)
+			return false, err
+		}
+
+		for _, s := range composeProject.Services {
+			step := sg.Add(fmt.Sprintf("Analysing service: %s", s.Name))
+			serviceConfig := ServiceConfig{Name: s.Name, Environment: s.Environment}
+
+			hits := serviceConfig.detectSecretsInEnvVars(matchers)
+			if len(hits) == 0 {
+				step.Success("Non detected in service: ", s.Name)
+				continue
+			}
+
+			detected = true
+			step.Warning("Detected in service: ", s.Name)
+
+			for _, hit := range hits {
+				p.UI.Output(
+					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
+					kmd.WithStyle(kmd.LogStyle),
+					kmd.WithIndentChar(kmd.LogIndentChar),
+					kmd.WithIndent(3),
+				)
+			}
+		}
+	}
+	return detected, nil
 }
 
 // Manifest returns the project's manifest

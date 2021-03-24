@@ -19,6 +19,7 @@ package kev
 import (
 	"fmt"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 )
 
@@ -30,7 +31,47 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 
 // Run executes the runner returning results that can be written to disk
 func (r *RenderRunner) Run() (WritableResults, error) {
+	m, err := LoadManifest(r.workingDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.ValidateSources(m.Sources, config.SecretMatchers); err != nil {
+		return nil, err
+	}
+
+	if err := r.ValidateEnvSources(m.Environments, config.SecretMatchers); err != nil {
+		return nil, err
+	}
+	// Validating compose sources
+	// Validating deployment environments
+	// Detecting project updates...(reconcile)
+	// Rendering manifests, format: %s
 	return nil, nil
+}
+
+func (p *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[string]string) error {
+	p.UI.Header("Validating deployment environments...")
+	var detectHit bool
+
+	for _, env := range envs {
+		secretsDetected, err := p.detectSecretsInSources(env.ToSources(), matchers)
+		if err != nil {
+			return err
+		}
+		if secretsDetected {
+			detectHit = true
+		}
+	}
+
+	p.UI.Output("")
+	p.UI.Output("Validation successful!")
+	if detectHit {
+		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
+%s`, SecretsReferenceUrl))
+	}
+
+	return nil
 }
 
 func printRenderProjectWithOptionsError(ui kmd.UI) {

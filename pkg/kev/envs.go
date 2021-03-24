@@ -164,6 +164,14 @@ func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
 	return e.override.getVolume(name)
 }
 
+// GetVolume retrieves a specific volume by name from the environment's override volumes.
+func (e *Environment) ToSources() *Sources {
+	return &Sources{
+		Files:    []string{e.File},
+		override: e.override,
+	}
+}
+
 // WriteTo writes out an environment to a writer.
 // The Environment struct implements the io.WriterTo interface.
 func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
