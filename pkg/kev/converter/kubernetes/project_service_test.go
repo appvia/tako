@@ -1145,7 +1145,7 @@ var _ = Describe("ProjectService", func() {
 			retries := uint64(3)
 
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeExec.String())
 				healthcheck = composego.HealthCheckConfig{
 					Test: composego.HealthCheckTest{
 						"CMD-SHELL",
@@ -1204,7 +1204,7 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeExec.String())
 			})
 
 			Context("when Test command is not defined", func() {
@@ -1232,7 +1232,7 @@ var _ = Describe("ProjectService", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
 						config.LabelWorkloadLivenessProbeTimeout: "0",
-						config.LabelWorkloadLivenessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadLivenessProbeType:    ProbeTypeExec.String(),
 					}
 				})
 
@@ -1605,7 +1605,7 @@ var _ = Describe("ProjectService", func() {
 			When("any of time based paramaters is set to 0", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeTimeout: "0",
 					}
 				})
@@ -1780,7 +1780,7 @@ var _ = Describe("ProjectService", func() {
 
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeCommand: cmd,
 					}
 				})
@@ -1796,7 +1796,7 @@ var _ = Describe("ProjectService", func() {
 
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeCommand: cmd,
 					}
 				})
@@ -1825,7 +1825,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:     ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeInterval: interval,
 				}
 			})
@@ -1849,7 +1849,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeTimeout: timeout,
 				}
 			})
@@ -1873,7 +1873,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:         ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:         ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeInitialDelay: delay,
 				}
 			})
@@ -1897,7 +1897,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeRetries: retries,
 				}
 			})

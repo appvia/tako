@@ -713,7 +713,7 @@ services:
 
 ## kev.workload.readiness-probe-timeout
 
-Defines how many the timeout for the readiness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+Defines the timeout for the readiness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 ### Default: `10s`
 
