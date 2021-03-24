@@ -20,7 +20,6 @@ import (
 	"os"
 
 	"github.com/appvia/kev/pkg/kev"
-	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/spf13/cobra"
 )
 
@@ -40,8 +39,8 @@ var renderCmd = &cobra.Command{
 	Long:  renderLongDesc,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		fns := []func(cmd *cobra.Command, args []string) error{
-			runReconcileCmd,
-			runDetectSecretsCmd,
+			// runReconcileCmd,
+			// runDetectSecretsCmd,
 		}
 		for _, fn := range fns {
 			if err := fn(cmd, args); err != nil {
@@ -90,7 +89,7 @@ func init() {
 }
 
 func runRenderCmd(cmd *cobra.Command, _ []string) error {
-	cmdName := "Render"
+	// cmdName := "Render"
 
 	format, err := cmd.Flags().GetString("format")
 	singleFile, err := cmd.Flags().GetBool("single")
@@ -103,19 +102,28 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	setReporting(verbose)
-	displayCmdStarted(cmdName)
+	// displayCmdStarted(cmdName)
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return displayError(err)
-	}
+	// workingDir, err := os.Getwd()
+	// if err != nil {
+	// 	return displayError(err)
+	// }
 
-	log.DebugTitlef("Output format: %s", format)
-	if err := kev.Render(workingDir, format, singleFile, dir, envs, nil); err != nil {
-		return displayError(err)
-	}
+	// log.DebugTitlef("Output format: %s", format)
+	// if err := kev.Render(workingDir, format, singleFile, dir, envs, nil); err != nil {
+	// 	return displayError(err)
+	// }
+	//
+	// os.Stdout.Write([]byte("\n"))
 
-	os.Stdout.Write([]byte("\n"))
+	// The working directory is always the current directory.
+	// This ensures created manifest yaml entries are portable between users and require no path fixing.
+	wd := "."
 
-	return nil
+	return kev.RenderProjectWithOptions(wd,
+		kev.WithManifestFormat(format),
+		kev.WithManifestsAsSingleFile(singleFile),
+		kev.WithOutputDir(dir),
+		kev.WithEnvs(envs),
+	)
 }

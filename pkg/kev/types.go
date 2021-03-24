@@ -25,9 +25,12 @@ import (
 
 // runConfig stores configuration for a command
 type runConfig struct {
-	composeSources []string
-	envs           []string
-	skaffold       bool
+	composeSources        []string
+	envs                  []string
+	skaffold              bool
+	manifestFormat        string
+	manifestsAsSingleFile bool
+	outputDir             string
 }
 
 // Options helps configure running project commands
@@ -44,6 +47,11 @@ type Project struct {
 
 // InitRunner runs the required sequences to initialise a project.
 type InitRunner struct {
+	*Project
+}
+
+// RenderRunner runs the required sequences to render a project.
+type RenderRunner struct {
 	*Project
 }
 

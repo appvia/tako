@@ -53,6 +53,24 @@ func WithSkaffold(c bool) Options {
 	}
 }
 
+func WithManifestFormat(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.manifestFormat = c
+	}
+}
+
+func WithManifestsAsSingleFile(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.manifestsAsSingleFile = c
+	}
+}
+
+func WithOutputDir(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.outputDir = c
+	}
+}
+
 func WithUI(ui kmd.UI) Options {
 	return func(project *Project, cfg *runConfig) {
 		project.UI = ui

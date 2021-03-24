@@ -60,6 +60,19 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
+func RenderProjectWithOptions(workingDir string, opts ...Options) error {
+	runner := NewRenderRunner(workingDir, opts...)
+	ui := runner.UI
+
+	_, err := runner.Run()
+	if err != nil {
+		printRenderProjectWithOptionsError(ui)
+		return err
+	}
+
+	return nil
+}
+
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
 func Reconcile(workingDir string) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)
