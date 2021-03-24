@@ -24,6 +24,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
+	kmd "github.com/appvia/komando"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
@@ -64,8 +65,13 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	runner := NewRenderRunner(workingDir, opts...)
 	ui := runner.UI
 
-	_, err := runner.Run()
+	results, err := runner.Run()
 	if err != nil {
+		printRenderProjectWithOptionsError(ui)
+		return err
+	}
+
+	if err := results.Write(); err != nil {
 		printRenderProjectWithOptionsError(ui)
 		return err
 	}
@@ -79,6 +85,10 @@ func Reconcile(workingDir string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO(es) Remove this after render runner is completed
+	m.UI = kmd.NoOpUI()
+
 	if _, err := m.ReconcileConfig(); err != nil {
 		return nil, errors.Wrap(err, "Could not reconcile project latest")
 	}

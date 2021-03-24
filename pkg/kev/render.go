@@ -21,6 +21,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
+	"github.com/pkg/errors"
 )
 
 func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
@@ -31,10 +32,14 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 
 // Run executes the runner returning results that can be written to disk
 func (r *RenderRunner) Run() (WritableResults, error) {
+	var out []WritableResult
+
 	m, err := LoadManifest(r.workingDir)
 	if err != nil {
 		return nil, err
 	}
+	r.manifest = m
+	r.manifest.UI = r.UI
 
 	if err := r.ValidateSources(m.Sources, config.SecretMatchers); err != nil {
 		return nil, err
@@ -43,19 +48,24 @@ func (r *RenderRunner) Run() (WritableResults, error) {
 	if err := r.ValidateEnvSources(m.Environments, config.SecretMatchers); err != nil {
 		return nil, err
 	}
-	// Validating compose sources
-	// Validating deployment environments
-	// Detecting project updates...(reconcile)
+
+	results, err := r.ReconcileUpdates()
+	if err != nil {
+		return nil, err
+	}
+
+	out = append(out, results...)
+
 	// Rendering manifests, format: %s
-	return nil, nil
+	return out, nil
 }
 
-func (p *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[string]string) error {
-	p.UI.Header("Validating deployment environments...")
+func (r *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[string]string) error {
+	r.UI.Header("Validating deployment environments...")
 	var detectHit bool
 
 	for _, env := range envs {
-		secretsDetected, err := p.detectSecretsInSources(env.ToSources(), matchers)
+		secretsDetected, err := r.detectSecretsInSources(env.ToSources(), matchers)
 		if err != nil {
 			return err
 		}
@@ -64,14 +74,24 @@ func (p *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[stri
 		}
 	}
 
-	p.UI.Output("")
-	p.UI.Output("Validation successful!")
+	r.UI.Output("")
+	r.UI.Output("Validation successful!")
 	if detectHit {
-		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
+		r.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
 %s`, SecretsReferenceUrl))
 	}
 
 	return nil
+}
+
+func (r *RenderRunner) ReconcileUpdates() (WritableResults, error) {
+	r.UI.Header("Detecting project updates...")
+
+	if _, err := r.manifest.ReconcileConfig(); err != nil {
+		return nil, errors.Wrap(err, "Could not reconcile project latest")
+	}
+
+	return r.manifest.Environments.toWritableResults(), nil
 }
 
 func printRenderProjectWithOptionsError(ui kmd.UI) {

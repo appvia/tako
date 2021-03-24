@@ -166,7 +166,17 @@ func (m *Manifest) ReconcileConfig() (*Manifest, error) {
 
 	sourcesOverride := m.getSourcesOverride()
 	for _, e := range m.Environments {
-		e.reconcile(sourcesOverride)
+		log.DebugTitlef("Reconciling environment [%s]", e.Name)
+
+		if e.Name == SandboxEnv {
+			m.UI.Output(fmt.Sprintf("Scanning %s: %s", e.Name, e.File))
+		} else {
+			m.UI.Output(fmt.Sprintf("Scanning %s: %s", e.Name, e.File))
+		}
+
+		sourcesOverride.
+			toLabelsMatching(e.override).
+			diffAndPatch(e.override)
 	}
 
 	return m, nil
@@ -299,7 +309,9 @@ func (m *Manifest) getWorkingDir() string {
 
 // getSourcesOverride gets the sources calculated override.
 func (m *Manifest) getSourcesOverride() *composeOverride {
-	return m.Sources.override
+	override := m.Sources.override
+	override.UI = m.UI
+	return override
 }
 
 // SourcesToComposeProject returns the manifests compose sources as a ComposeProject.

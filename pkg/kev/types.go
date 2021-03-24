@@ -86,6 +86,7 @@ type composeOverride struct {
 	Version  string   `yaml:"version,omitempty" json:"version,omitempty" diff:"version"`
 	Services Services `json:"services" diff:"services"`
 	Volumes  Volumes  `yaml:",omitempty" json:"volumes,omitempty" diff:"volumes"`
+	UI       kmd.UI   `yaml:"-" json:"-"`
 }
 
 // ComposeProject wrapper around a compose-go Project. It also provides the original

@@ -21,7 +21,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -218,13 +217,12 @@ func (e *Environment) loadOverride() (*Environment, error) {
 	return e, nil
 }
 
-func (e *Environment) reconcile(override *composeOverride) {
-	log.DebugTitlef("Reconciling environment [%s]", e.Name)
-
-	labelsMatching := override.toLabelsMatching(e.override)
-	labelsMatching.diffAndPatch(e.override)
-	return
-}
+// func (e *Environment) reconcile(override *composeOverride) {
+// 	log.DebugTitlef("Reconciling environment [%s]", e.Name)
+//
+// 	labelsMatching := override.toLabelsMatching(e.override)
+// 	labelsMatching.diffAndPatch(e.override)
+// }
 
 func (e *Environment) prepareForMergeUsing(override *composeOverride) {
 	e.override = e.override.expandLabelsFrom(override)
