@@ -10,7 +10,7 @@ services:
       kev.workload.liveness-probe-interval: 1m0s
       kev.workload.liveness-probe-retries: "3"
       kev.workload.liveness-probe-timeout: 10s
-      kev.workload.liveness-probe-type: command
+      kev.workload.liveness-probe-type: exec
       kev.workload.max-cpu: "0.5"
       kev.workload.max-memory: 500Mi
       kev.workload.memory: 10Mi

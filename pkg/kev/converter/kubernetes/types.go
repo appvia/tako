@@ -80,7 +80,7 @@ func (p ProbeType) String() string {
 
 var probeString map[ProbeType]string = map[ProbeType]string{
 	ProbeTypeNone:    "none",
-	ProbeTypeCommand: "command",
+	ProbeTypeCommand: "exec",
 	ProbeTypeHTTP:    "http",
 	ProbeTypeTCP:     "tcp",
 }

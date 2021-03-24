@@ -5,7 +5,7 @@ services:
       kev.service.type: ClusterIP
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.liveness-probe-type: command
+      kev.workload.liveness-probe-type: exec
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
@@ -23,7 +23,7 @@ services:
       kev.service.type: LoadBalancer
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.liveness-probe-type: command
+      kev.workload.liveness-probe-type: exec
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
