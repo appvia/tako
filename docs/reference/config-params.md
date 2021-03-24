@@ -548,7 +548,7 @@ services:
 
 ## kev.workload.liveness-probe-timeout
 
-Defines how many the timeout for the liveness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
+Defines the timeout for the liveness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
