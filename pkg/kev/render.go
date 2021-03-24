@@ -86,11 +86,9 @@ func (r *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[stri
 
 func (r *RenderRunner) ReconcileUpdates() (WritableResults, error) {
 	r.UI.Header("Detecting project updates...")
-
 	if _, err := r.manifest.ReconcileConfig(); err != nil {
 		return nil, errors.Wrap(err, "Could not reconcile project latest")
 	}
-
 	return r.manifest.Environments.toWritableResults(), nil
 }
 

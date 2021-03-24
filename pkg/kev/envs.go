@@ -217,13 +217,6 @@ func (e *Environment) loadOverride() (*Environment, error) {
 	return e, nil
 }
 
-// func (e *Environment) reconcile(override *composeOverride) {
-// 	log.DebugTitlef("Reconciling environment [%s]", e.Name)
-//
-// 	labelsMatching := override.toLabelsMatching(e.override)
-// 	labelsMatching.diffAndPatch(e.override)
-// }
-
 func (e *Environment) prepareForMergeUsing(override *composeOverride) {
 	e.override = e.override.expandLabelsFrom(override)
 }
