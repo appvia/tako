@@ -89,8 +89,6 @@ func init() {
 }
 
 func runRenderCmd(cmd *cobra.Command, _ []string) error {
-	// cmdName := "Render"
-
 	format, err := cmd.Flags().GetString("format")
 	singleFile, err := cmd.Flags().GetBool("single")
 	dir, err := cmd.Flags().GetString("dir")
@@ -102,19 +100,6 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	setReporting(verbose)
-	// displayCmdStarted(cmdName)
-
-	// workingDir, err := os.Getwd()
-	// if err != nil {
-	// 	return displayError(err)
-	// }
-
-	// log.DebugTitlef("Output format: %s", format)
-	// if err := kev.Render(workingDir, format, singleFile, dir, envs, nil); err != nil {
-	// 	return displayError(err)
-	// }
-	//
-	// os.Stdout.Write([]byte("\n"))
 
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.

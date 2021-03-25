@@ -41,7 +41,7 @@ func (r *RenderRunner) Run() error {
 		return err
 	}
 
-	if err := r.ValidateEnvSources(r.manifest.Environments, config.SecretMatchers); err != nil {
+	if err := r.ValidateEnvSources(config.SecretMatchers); err != nil {
 		return err
 	}
 
@@ -66,11 +66,16 @@ func (r *RenderRunner) LoadProject() error {
 	return nil
 }
 
-func (r *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[string]string) error {
+func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	r.UI.Header("Validating deployment environments...")
 	var detectHit bool
 
-	for _, env := range envs {
+	filteredEnvs, err := r.manifest.GetEnvironments(r.config.envs)
+	if err != nil {
+		return err
+	}
+
+	for _, env := range filteredEnvs {
 		secretsDetected, err := r.detectSecretsInSources(env.ToSources(), matchers)
 		if err != nil {
 			return err
@@ -92,10 +97,11 @@ func (r *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[stri
 
 func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	r.UI.Header("Detecting project updates...")
-	_, err := r.manifest.ReconcileConfig()
-	if err != nil {
+
+	if _, err := r.manifest.ReconcileConfig(r.config.envs...); err != nil {
 		return errors.Wrap(err, "Could not reconcile project latest")
 	}
+
 	return r.manifest.Environments.Write()
 }
 

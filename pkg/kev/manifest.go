@@ -159,13 +159,18 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 }
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
-func (m *Manifest) ReconcileConfig() (*Manifest, error) {
+func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		return nil, err
 	}
 
 	sourcesOverride := m.getSourcesOverride()
-	for _, e := range m.Environments {
+	filteredEnvs, err := m.GetEnvironments(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, e := range filteredEnvs {
 		log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
 		m.UI.Output(fmt.Sprintf("Environment %s: %s", e.Name, e.File))
