@@ -17,10 +17,12 @@
 package kubernetes
 
 import (
+	"fmt"
 	"os"
 	"path"
 
 	"github.com/appvia/kev/pkg/kev/log"
+	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -34,11 +36,17 @@ const (
 )
 
 // K8s is a native kubernetes manifests converter
-type K8s struct{}
+type K8s struct {
+	UI kmd.UI
+}
 
 // New return a native Kubernetes converter
 func New() *K8s {
 	return &K8s{}
+}
+
+func NewWithUI(ui kmd.UI) *K8s {
+	return &K8s{UI: ui}
 }
 
 // Render generates outcome
@@ -53,6 +61,8 @@ func (c *K8s) Render(singleFile bool,
 
 	for env, project := range projects {
 		log.Debugf("Rendering environment [%s]", env)
+
+		c.UI.Output(fmt.Sprintf("Environment %s: %s", env, getEnvFile(env, files)))
 
 		// @step override output directory if specified
 		outDirPath := ""
@@ -112,4 +122,12 @@ func (c *K8s) Render(singleFile bool,
 	}
 
 	return renderOutputPaths, nil
+}
+
+func getEnvFile(env string, files map[string][]string) string {
+	sources, ok := files[env]
+	if !ok {
+		return ""
+	}
+	return sources[len(sources)-1]
 }

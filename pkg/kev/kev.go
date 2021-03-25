@@ -119,7 +119,7 @@ func Render(workingDir string, format string, singleFile bool, dir string, envs 
 		return errors.Wrap(err, "Unable to load app manifest")
 	}
 
-	_, err = manifest.RenderWithConvertor(converter.Factory(format), dir, singleFile, envs, excluded)
+	_, err = manifest.RenderWithConvertor(converter.Factory(format, nil), dir, singleFile, envs, excluded)
 	return err
 }
 

@@ -104,7 +104,7 @@ func (r *RenderRunner) RenderManifests() error {
 	r.UI.Header(fmt.Sprintf("Rendering manifests, format: %s...", manifestFormat))
 
 	_, err := r.manifest.RenderWithConvertor(
-		converter.Factory(manifestFormat),
+		converter.Factory(manifestFormat, r.UI),
 		r.config.outputDir,
 		r.config.manifestsAsSingleFile,
 		r.config.envs,
