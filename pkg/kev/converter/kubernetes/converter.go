@@ -106,7 +106,7 @@ func (c *K8s) Render(singleFile bool,
 		}
 
 		// @step Get Kubernetes transformer that maps compose project to Kubernetes primitives
-		k := &Kubernetes{Opt: convertOpts, Project: project, Excluded: exc}
+		k := &Kubernetes{Opt: convertOpts, Project: project, Excluded: exc, UI: c.UI}
 
 		// @step Do the transformation
 		objects, err := k.Transform()

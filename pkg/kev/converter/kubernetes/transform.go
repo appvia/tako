@@ -34,6 +34,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
+	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 
 	"github.com/spf13/cast"
@@ -54,6 +55,7 @@ type Kubernetes struct {
 	Opt      ConvertOptions     // user provided options from the command line
 	Project  *composego.Project // docker compose project
 	Excluded []string           // docker compose service names that should be excluded
+	UI       kmd.UI
 }
 
 // Transform converts compose project to set of k8s objects
@@ -62,9 +64,14 @@ type Kubernetes struct {
 func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 	// holds all the converted objects
 	var allobjects []runtime.Object
+	var renderedNetworkPolicy runtime.Object
+
+	sg := k.UI.StepGroup()
+	defer sg.Done()
 
 	// @step iterate over defined secrets and build Secret objects accordingly
-	if k.Project.Secrets != nil {
+	if k.Project.Secrets != nil && len(k.Project.Secrets) > 0 {
+		stepSecrets := sg.Add("Converting project secrets")
 		secrets, err := k.createSecrets()
 		if err != nil {
 			log.Error("Unable to create Secret resource")
@@ -73,6 +80,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		for _, item := range secrets {
 			allobjects = append(allobjects, item)
 		}
+		stepSecrets.Success("Converted project secrets")
 	}
 
 	// @step sort project services by name for consistency
@@ -85,6 +93,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			continue
 		}
 
+		stepSvc := sg.Add(fmt.Sprintf("Converting service: %s", pSvc.Name))
 		var objects []runtime.Object
 
 		projectService := ProjectService(pSvc)
@@ -152,6 +161,16 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			return nil, err
 		}
 
+		stepSvc.Success(fmt.Sprintf("Converted service: %s", pSvc.Name))
+		for _, object := range objects {
+			k.UI.Output(
+				fmt.Sprintf("rendered %s", object.GetObjectKind().GroupVersionKind().Kind),
+				kmd.WithStyle(kmd.LogStyle),
+				kmd.WithIndent(3),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+			)
+		}
+
 		// @step create network policies if networks defined
 		if len(projectService.Networks) > 0 {
 			for name := range projectService.Networks {
@@ -166,10 +185,22 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 					return nil, err
 				}
 				objects = append(objects, np)
+				renderedNetworkPolicy = np
 			}
 		}
 
 		allobjects = append(allobjects, objects...)
+	}
+
+	if renderedNetworkPolicy != nil {
+		stepNetworkPolicies := sg.Add("Creating networking policies")
+		stepNetworkPolicies.Success("Created networking policies")
+		k.UI.Output(
+			fmt.Sprintf("rendered %s", renderedNetworkPolicy.GetObjectKind().GroupVersionKind().Kind),
+			kmd.WithStyle(kmd.LogStyle),
+			kmd.WithIndent(3),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+		)
 	}
 
 	// @step sort all object so Services are first and remove duplicates

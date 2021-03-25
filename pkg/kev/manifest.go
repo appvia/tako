@@ -168,11 +168,7 @@ func (m *Manifest) ReconcileConfig() (*Manifest, error) {
 	for _, e := range m.Environments {
 		log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
-		if e.Name == SandboxEnv {
-			m.UI.Output(fmt.Sprintf("Scanning %s: %s", e.Name, e.File))
-		} else {
-			m.UI.Output(fmt.Sprintf("Scanning %s: %s", e.Name, e.File))
-		}
+		m.UI.Output(fmt.Sprintf("Environment %s: %s", e.Name, e.File))
 
 		sourcesOverride.
 			toLabelsMatching(e.override).
