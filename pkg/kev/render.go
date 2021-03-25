@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/converter"
 	kmd "github.com/appvia/komando"
 	"github.com/pkg/errors"
 )
@@ -31,33 +32,38 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 }
 
 // Run executes the runner returning results that can be written to disk
-func (r *RenderRunner) Run() (WritableResults, error) {
-	var out []WritableResult
-
-	m, err := LoadManifest(r.workingDir)
-	if err != nil {
-		return nil, err
+func (r *RenderRunner) Run() error {
+	if err := r.LoadProject(); err != nil {
+		return err
 	}
-	r.manifest = m
+
+	if err := r.ValidateSources(r.manifest.Sources, config.SecretMatchers); err != nil {
+		return err
+	}
+
+	if err := r.ValidateEnvSources(r.manifest.Environments, config.SecretMatchers); err != nil {
+		return err
+	}
+
+	if err := r.ReconcileEnvsAndWriteUpdates(); err != nil {
+		return err
+	}
+
+	if err := r.RenderManifests(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RenderRunner) LoadProject() error {
+	manifest, err := LoadManifest(r.workingDir)
+	if err != nil {
+		return err
+	}
+	r.manifest = manifest
 	r.manifest.UI = r.UI
-
-	if err := r.ValidateSources(m.Sources, config.SecretMatchers); err != nil {
-		return nil, err
-	}
-
-	if err := r.ValidateEnvSources(m.Environments, config.SecretMatchers); err != nil {
-		return nil, err
-	}
-
-	results, err := r.ReconcileUpdates()
-	if err != nil {
-		return nil, err
-	}
-
-	out = append(out, results...)
-
-	// Rendering manifests, format: %s
-	return out, nil
+	return nil
 }
 
 func (r *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[string]string) error {
@@ -84,12 +90,27 @@ func (r *RenderRunner) ValidateEnvSources(envs Environments, matchers []map[stri
 	return nil
 }
 
-func (r *RenderRunner) ReconcileUpdates() (WritableResults, error) {
+func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	r.UI.Header("Detecting project updates...")
-	if _, err := r.manifest.ReconcileConfig(); err != nil {
-		return nil, errors.Wrap(err, "Could not reconcile project latest")
+	_, err := r.manifest.ReconcileConfig()
+	if err != nil {
+		return errors.Wrap(err, "Could not reconcile project latest")
 	}
-	return r.manifest.Environments.toWritableResults(), nil
+	return r.manifest.Environments.Write()
+}
+
+func (r *RenderRunner) RenderManifests() error {
+	manifestFormat := r.config.manifestFormat
+	r.UI.Header(fmt.Sprintf("Rendering manifests, format: %s...", manifestFormat))
+
+	_, err := r.manifest.RenderWithConvertor(
+		converter.Factory(manifestFormat),
+		r.config.outputDir,
+		r.config.manifestsAsSingleFile,
+		r.config.envs,
+		nil)
+
+	return err
 }
 
 func printRenderProjectWithOptionsError(ui kmd.UI) {

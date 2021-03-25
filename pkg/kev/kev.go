@@ -65,13 +65,8 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	runner := NewRenderRunner(workingDir, opts...)
 	ui := runner.UI
 
-	results, err := runner.Run()
+	err := runner.Run()
 	if err != nil {
-		printRenderProjectWithOptionsError(ui)
-		return err
-	}
-
-	if err := results.Write(); err != nil {
 		printRenderProjectWithOptionsError(ui)
 		return err
 	}
