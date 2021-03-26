@@ -199,10 +199,7 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 }
 
 // RenderWithConvertor renders K8s manifests with specific converter
-func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (
-	*Manifest,
-	error,
-) {
+func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (map[string]string, error) {
 	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
 		return nil, err
 	}
@@ -212,7 +209,6 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		return nil, err
 	}
 
-	var namedValues []kmd.NamedValue
 	rendered := map[string][]byte{}
 	projects := map[string]*composego.Project{}
 	files := map[string][]string{}
@@ -240,15 +236,7 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		}
 	}
 
-	for _, env := range filteredEnvs {
-		namedValues = append(namedValues, kmd.NamedValue{Name: env.Name, Value: outputPaths[env.Name]})
-	}
-
-	m.UI.Output("")
-	m.UI.Output("Manifests rendered!")
-	m.UI.NamedValues(namedValues)
-
-	return m, nil
+	return outputPaths, nil
 }
 
 // DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.

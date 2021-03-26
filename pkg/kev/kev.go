@@ -65,11 +65,18 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	runner := NewRenderRunner(workingDir, opts...)
 	ui := runner.UI
 
-	err := runner.Run()
+	results, err := runner.Run()
 	if err != nil {
 		printRenderProjectWithOptionsError(ui)
 		return err
 	}
+
+	envs, err := runner.Manifest().GetEnvironments(runner.config.envs)
+	if err != nil {
+		return err
+	}
+
+	printRenderProjectWithOptionsSuccess(ui, results, envs, runner.config.manifestFormat)
 
 	return nil
 }

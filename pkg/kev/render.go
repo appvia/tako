@@ -32,28 +32,24 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 }
 
 // Run executes the runner returning results that can be written to disk
-func (r *RenderRunner) Run() error {
+func (r *RenderRunner) Run() (map[string]string, error) {
 	if err := r.LoadProject(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := r.ValidateSources(r.manifest.Sources, config.SecretMatchers); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := r.ValidateEnvSources(config.SecretMatchers); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := r.ReconcileEnvsAndWriteUpdates(); err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := r.RenderManifests(); err != nil {
-		return err
-	}
-
-	return nil
+	return r.RenderManifests()
 }
 
 func (r *RenderRunner) LoadProject() error {
@@ -105,18 +101,16 @@ func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	return r.manifest.Environments.Write()
 }
 
-func (r *RenderRunner) RenderManifests() error {
+func (r *RenderRunner) RenderManifests() (map[string]string, error) {
 	manifestFormat := r.config.manifestFormat
 	r.UI.Header(fmt.Sprintf("Rendering manifests, format: %s...", manifestFormat))
 
-	_, err := r.manifest.RenderWithConvertor(
+	return r.manifest.RenderWithConvertor(
 		converter.Factory(manifestFormat, r.UI),
 		r.config.outputDir,
 		r.config.manifestsAsSingleFile,
 		r.config.envs,
 		nil)
-
-	return err
 }
 
 func printRenderProjectWithOptionsError(ui kmd.UI) {
@@ -128,4 +122,28 @@ func printRenderProjectWithOptionsError(ui kmd.UI) {
 		kmd.WithErrorBoldStyle(),
 		kmd.WithIndentChar(kmd.ErrorIndentChar),
 	)
+}
+
+func printRenderProjectWithOptionsSuccess(ui kmd.UI, results map[string]string, envs Environments, manifestFormat string) {
+	var namedValues []kmd.NamedValue
+	for _, env := range envs {
+		namedValues = append(namedValues, kmd.NamedValue{Name: env.Name, Value: results[env.Name]})
+	}
+
+	ui.Output("")
+	ui.Output("Project manifests rendered!", kmd.WithStyle(kmd.SuccessBoldStyle))
+	ui.Output(
+		fmt.Sprintf("A set of '%s' manifests have been generated:", manifestFormat),
+		kmd.WithStyle(kmd.SuccessStyle),
+	)
+	ui.NamedValues(namedValues, kmd.WithStyle(kmd.SuccessStyle))
+	ui.Output("")
+	ui.Output("The project can now be deployed to a Kubernetes cluster.", kmd.WithStyle(kmd.SuccessStyle))
+	ui.Output("")
+	ui.Output("To test locally:")
+	ui.Output("Ensure you have a local cluster up and running with a configured context.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
+	ui.Output("Create a namespace: `kubectl create ns ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
+	ui.Output("Apply the manifests to the cluster: `kubectl apply -f <manifests-dir>/<env> -n ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
+	ui.Output("Discover the main service: `kubectl get svc -n ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
+	ui.Output("Port forward to the main service: `kubectl port-forward service/<service_name> <service_port>:<destination_port> -n ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
 }
