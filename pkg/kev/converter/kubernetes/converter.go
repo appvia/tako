@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
@@ -58,11 +59,14 @@ func (c *K8s) Render(singleFile bool,
 	excluded map[string][]string) (map[string]string, error) {
 
 	renderOutputPaths := map[string]string{}
+	envs := getSortedEnvs(projects)
+	// for env, project := range projects {
+	for _, env := range envs {
+		project := projects[env]
 
-	for env, project := range projects {
 		log.Debugf("Rendering environment [%s]", env)
 
-		c.UI.Output(fmt.Sprintf("Environment %s: %s", env, getEnvFile(env, files)))
+		c.UI.Output(fmt.Sprintf("%s: %s", env, getEnvFile(env, files)))
 
 		// @step override output directory if specified
 		outDirPath := ""
@@ -122,6 +126,15 @@ func (c *K8s) Render(singleFile bool,
 	}
 
 	return renderOutputPaths, nil
+}
+
+func getSortedEnvs(projects map[string]*composego.Project) []string {
+	var out []string
+	for env, _ := range projects {
+		out = append(out, env)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func getEnvFile(env string, files map[string][]string) string {

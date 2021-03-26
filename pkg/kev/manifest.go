@@ -173,7 +173,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	for _, e := range filteredEnvs {
 		log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
-		m.UI.Output(fmt.Sprintf("Environment %s: %s", e.Name, e.File))
+		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
 
 		sourcesOverride.
 			toLabelsMatching(e.override).
@@ -212,6 +212,7 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		return nil, err
 	}
 
+	var namedValues []kmd.NamedValue
 	rendered := map[string][]byte{}
 	projects := map[string]*composego.Project{}
 	files := map[string][]string{}
@@ -238,6 +239,15 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 			return nil, err
 		}
 	}
+
+	for _, env := range filteredEnvs {
+		namedValues = append(namedValues, kmd.NamedValue{Name: env.Name, Value: outputPaths[env.Name]})
+	}
+
+	m.UI.Output("")
+	m.UI.Output("Manifests rendered!")
+	m.UI.NamedValues(namedValues)
+
 	return m, nil
 }
 
