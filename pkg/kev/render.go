@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewRenderRunner creates a render runner instance
 func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 	runner := &RenderRunner{Project: &Project{workingDir: workingDir}}
 	runner.Init(opts...)
@@ -42,7 +43,7 @@ func (r *RenderRunner) Run() (map[string]string, error) {
 		return nil, err
 	}
 
-	if err := r.ValidateSkaffoldIfRequired(); err != nil {
+	if err := r.VerifySkaffoldIfAvailable(); err != nil {
 		return nil, err
 	}
 
@@ -54,9 +55,10 @@ func (r *RenderRunner) Run() (map[string]string, error) {
 		return nil, err
 	}
 
-	return r.RenderManifests()
+	return r.RenderFromComposeToK8sManifests()
 }
 
+// LoadProject loads the project into memory including the kev manifest and related deployment environments.
 func (r *RenderRunner) LoadProject() error {
 	r.UI.Header("Loading...")
 
@@ -79,7 +81,9 @@ func (r *RenderRunner) LoadProject() error {
 	return nil
 }
 
-func (r *RenderRunner) ValidateSkaffoldIfRequired() error {
+// VerifySkaffoldIfAvailable ensures if a project was initialised with Skaffold support,
+// that the configured Skaffold manifest does exist.
+func (r *RenderRunner) VerifySkaffoldIfAvailable() error {
 	if len(r.manifest.Skaffold) == 0 {
 		return nil
 	}
@@ -98,6 +102,9 @@ func (r *RenderRunner) ValidateSkaffoldIfRequired() error {
 	return nil
 }
 
+// ValidateEnvSources includes validation checks to ensure the deployment environments' compose sources are valid.
+// This function can be extended to include different forms of
+// validation (for now it detect any secrets found in the sources).
 func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	r.UI.Header("Validating deployment environments...")
 	var detectHit bool
@@ -127,6 +134,7 @@ func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	return nil
 }
 
+// ReconcileEnvsAndWriteUpdates reconciles changes with docker-compose sources against deployment environments.
 func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	r.UI.Header("Detecting project updates...")
 
@@ -137,7 +145,10 @@ func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	return r.manifest.Environments.Write()
 }
 
-func (r *RenderRunner) RenderManifests() (map[string]string, error) {
+// RenderFromComposeToK8sManifests renders K8s manifests using the project's
+// compose sources and deployment environments as the source. K8s manifests can rendered
+// in different formats.
+func (r *RenderRunner) RenderFromComposeToK8sManifests() (map[string]string, error) {
 	manifestFormat := r.config.manifestFormat
 	r.UI.Header(fmt.Sprintf("Rendering manifests, format: %s...", manifestFormat))
 
