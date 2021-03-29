@@ -34,10 +34,17 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 // Run executes the runner returning results that can be written to disk
 func (r *RenderRunner) Run() (map[string]string, error) {
 	if err := r.LoadProject(); err != nil {
+		sg := r.UI.StepGroup()
+		defer sg.Done()
+		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
 		return nil, err
 	}
 
 	if err := r.ValidateSources(r.manifest.Sources, config.SecretMatchers); err != nil {
+		return nil, err
+	}
+
+	if err := r.ValidateSkaffoldIfRequired(); err != nil {
 		return nil, err
 	}
 
@@ -59,6 +66,25 @@ func (r *RenderRunner) LoadProject() error {
 	}
 	r.manifest = manifest
 	r.manifest.UI = r.UI
+	return nil
+}
+
+func (r *RenderRunner) ValidateSkaffoldIfRequired() error {
+	if len(r.manifest.Skaffold) == 0 {
+		return nil
+	}
+
+	r.UI.Header("Verifying Skaffold...")
+	sg := r.UI.StepGroup()
+	defer sg.Done()
+
+	step := sg.Add("Ensuring Skaffold manifest available")
+	if !ManifestExistsForPath(r.manifest.Skaffold) {
+		err := errors.Errorf("Missing Skaffold manifest %s", r.manifest.Skaffold)
+		renderStepError(r.UI, step, renderStepLoadSkaffold, err)
+		return err
+	}
+	step.Success("Skaffold manifest is available")
 	return nil
 }
 
