@@ -129,7 +129,7 @@ func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	r.UI.Header("Detecting project updates...")
 
 	if _, err := r.manifest.ReconcileConfig(r.config.envs...); err != nil {
-		return errors.Wrap(err, "Could not reconcile project latest")
+		return err
 	}
 
 	return r.manifest.Environments.Write()

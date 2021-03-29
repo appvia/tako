@@ -29,6 +29,7 @@ type renderStepType uint
 const (
 	renderStepLoad renderStepType = iota
 	renderStepLoadSkaffold
+	renderStepReconcile
 )
 
 var renderStepStrings = map[renderStepType]struct {
@@ -47,6 +48,9 @@ A valid %s is required as the project was initialised
 with Skaffold support. Please ensure one exists or you may need to 
 run the 'init' command with the '--skaffold' flag.
 		`, SkaffoldFileName),
+	},
+	renderStepReconcile: {
+		Error: "Cannot detect project updates!",
 	},
 }
 
