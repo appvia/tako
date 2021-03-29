@@ -507,7 +507,7 @@ var _ = Describe("Reconcile", func() {
 
 func newDefaultServiceLabels(name string) map[string]string {
 	return map[string]string{
-		config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
+		config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeExec.String(),
 		config.LabelWorkloadLivenessProbeCommand: "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
 		config.LabelWorkloadReplicas:             "1",
 	}

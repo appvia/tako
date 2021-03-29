@@ -569,7 +569,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 		}
 
 		handler.TCPSocket = hnd
-	case ProbeTypeCommand:
+	case ProbeTypeExec:
 		handler.Exec = &v1.ExecAction{
 			Command: p.livenessProbeCommand(),
 		}
@@ -769,7 +769,7 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 	switch *probeType {
 	case ProbeTypeNone:
 		return nil, nil
-	case ProbeTypeCommand:
+	case ProbeTypeExec:
 		hnd.Exec = &v1.ExecAction{
 			Command: p.readinessProbeCommand(),
 		}

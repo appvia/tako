@@ -387,11 +387,11 @@ Defines the workload's liveness probe type. See official K8s [documentation](htt
 Kev uses the following heuristics to derieve that information for each service:
 
 If compose file(s) specifies the `healthcheck.disable` attribute key in a service config it will set the probe type to `none`.
-Otherwise it'll default to `command` (liveness probe active!)
+Otherwise it'll default to `exec` (liveness probe active!)
 
-### Default: `command`
+### Default: `exec`
 
-### Possible options: none, command, http, tcp.
+### Possible options: none, exec, http, tcp.
 
 > kev.workload.liveness-probe-type:
 ```yaml
@@ -548,7 +548,7 @@ services:
 
 ## kev.workload.liveness-probe-timeout
 
-Defines how many the timeout for the liveness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
+Defines the timeout for the liveness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
@@ -575,7 +575,7 @@ Defines the workload's probe type. See official K8s [documentation](https://kube
 
 ### Default: `none`
 
-### Possible options: none, command, http, tcp.
+### Possible options: none, exec, http, tcp.
 
 > kev.workload.readiness-probe-type:
 ```yaml
@@ -713,7 +713,7 @@ services:
 
 ## kev.workload.readiness-probe-timeout
 
-Defines how many the timeout for the readiness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+Defines the timeout for the readiness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 ### Default: `10s`
 

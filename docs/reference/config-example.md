@@ -26,9 +26,9 @@ services:                                                # compose services sect
       kev.workload.memory: 10Mi                          # Default: 10Mi. Memory request per workload.
       kev.workload.max-memory: 500Mi                     # Default: 500Mi. Memory limit per workload.
       ## Liveness probe
-      kev.workload.liveness-probe-type: command          # Default: command. Possible options: none | command | http | tcp.
-      ### Command
-      kev.workload.liveness-probe-command: "echo 'n/a'"  # Liveness probe command to run. Only used when using command probe type.
+      kev.workload.liveness-probe-type: exec          # Default: exec. Possible options: none | exec | http | tcp.
+      ### Exec
+      kev.workload.liveness-probe-command: "echo 'n/a'"  # Liveness probe command to run. Only used when using exec probe type.
       ### HTTP
       kev.workload.liveness-probe-http-port: 8080        # HTTP Liveness probe port. Only used when using an http probe type.
       kev.workload.liveness-probe-http-path: /status     # HTTP Liveness probe path. Only used when using an http probe type.
@@ -38,12 +38,12 @@ services:                                                # compose services sect
       kev.workload.liveness-probe-initial-delay: 1m0s    # Default: 1m. How long to wait before initial probe run. Shared by all liveness probe types.
       kev.workload.liveness-probe-interval: 1m0s         # Default: 1m. Interval for the probe. Shared by all liveness probe types.
       kev.workload.liveness-probe-retries: "3"           # Default: 3. Number of probe retires. Shared by all liveness probe types.
-      kev.workload.liveness-probe-timeout: 10s           # Default: 10s. Probe command timeout. Shared by all liveness probe types.
+      kev.workload.liveness-probe-timeout: 10s           # Default: 10s. Probe timeout. Shared by all liveness probe types.
 
       ## Readiness probe
-      kev.workload.liveness-probe-type: command          # Default: none. Possible options: none | command | http | tcp.
-      ### Command
-      kev.workload.readiness-probe-command: "echo 'n/a'"  # readiness probe command to run. Only used when using command probe type.
+      kev.workload.liveness-probe-type: exec          # Default: none. Possible options: none | exec | http | tcp.
+      ### Exec
+      kev.workload.readiness-probe-command: "echo 'n/a'"  # readiness probe command to run. Only used when using exec probe type.
       ### HTTP
       kev.workload.readiness-probe-http-port: 8080        # HTTP Readiness probe port. Only used when using an http probe type.
       kev.workload.readiness-probe-http-path: /status     # HTTP Readiness probe path. Only used when using an http probe type.
@@ -53,7 +53,7 @@ services:                                                # compose services sect
       kev.workload.readiness-probe-initial-delay: 1m0s    # Default: 1m. How long to wait before initial probe run. Shared by all readiness probe types.
       kev.workload.readiness-probe-interval: 1m0s         # Default: 1m. Interval for the probe. Shared by all readiness probe types.
       kev.workload.readiness-probe-retries: "3"           # Default: 3. Number of probe retires. Shared by all readiness probe types.
-      kev.workload.readiness-probe-timeout: 10s           # Default: 10s. Probe command timeout. Shared by all readiness probe types.
+      kev.workload.readiness-probe-timeout: 10s           # Default: 10s. Probe timeout. Shared by all readiness probe types.
     environment:                                         # App component environment variable overrides
       ENV_VAR_A: secret.{secret-name}.{secret-key}       # Refer to the a value stored in a secret key
       ENV_VAR_B: config.{config-name}.{config-key}       # Refer to the a value stored in a configmap key

@@ -38,7 +38,7 @@ var _ = Describe("ServiceConfig", func() {
 				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadLivenessProbeType)))
 
 				err = ServiceConfig{Labels: composego.Labels{
-					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
+					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeExec.String(),
 					config.LabelWorkloadLivenessProbeCommand: "echo i'm a useless probe",
 				}}.validate()
 				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadReplicas)))
@@ -49,7 +49,7 @@ var _ = Describe("ServiceConfig", func() {
 
 			It("success if the necessary labels are present", func() {
 				err := ServiceConfig{Labels: composego.Labels{
-					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeCommand.String(),
+					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeExec.String(),
 					config.LabelWorkloadLivenessProbeCommand: "echo i'm a useless probe",
 					config.LabelWorkloadReplicas:             "1",
 				}}.validate()
@@ -257,7 +257,7 @@ var _ = Describe("ServiceConfig", func() {
 				Context("rediness probes", func() {
 					BeforeEach(func() {
 						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
-						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeCommand.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeExec.String()
 					})
 
 					It("fails when command probe has missing properties", func() {
@@ -270,7 +270,7 @@ var _ = Describe("ServiceConfig", func() {
 
 				Context("liveness probe", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeCommand.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeExec.String()
 					})
 
 					It("fails when command probe has missing properties", func() {
