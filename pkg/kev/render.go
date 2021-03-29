@@ -58,6 +58,8 @@ func (r *RenderRunner) Run() (map[string]string, error) {
 }
 
 func (r *RenderRunner) LoadProject() error {
+	r.UI.Header("Loading...")
+
 	sg := r.UI.StepGroup()
 	defer sg.Done()
 
