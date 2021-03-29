@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	kmd "github.com/appvia/komando"
+	"github.com/pkg/errors"
 )
 
 // Init initialises the base project to be used in a runner
@@ -65,8 +66,9 @@ func (p *Project) detectSecretsInSources(sources *Sources, matchers []map[string
 		p.UI.Output(fmt.Sprintf("Detecting secrets in: %s", composeFile))
 		composeProject, err := NewComposeProject([]string{composeFile})
 		if err != nil {
-			initStepError(p.UI, sg.Add(""), initStepParsingComposeConfig, err)
-			return false, err
+			decoratedErr := errors.Errorf("%s\nsee compose file: %s", err.Error(), composeFile)
+			initStepError(p.UI, sg.Add(""), initStepParsingComposeConfig, decoratedErr)
+			return false, decoratedErr
 		}
 
 		for _, s := range composeProject.Services {

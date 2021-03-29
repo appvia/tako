@@ -185,7 +185,7 @@ func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
 func (e *Environment) loadOverride() (*Environment, error) {
 	p, err := NewComposeProject([]string{e.File})
 	if err != nil {
-		return nil, err
+		return nil, errors.Errorf("%s\nsee compose file: %s", err.Error(), e.File)
 	}
 
 	var services Services

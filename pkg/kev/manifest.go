@@ -322,13 +322,3 @@ func ManifestExistsForPath(manifestPath string) bool {
 	_, err := os.Stat(manifestPath)
 	return err == nil
 }
-
-func EnsureFirstInit(wd string) error {
-	manifestPath := path.Join(wd, ManifestFilename)
-	if ManifestExistsForPath(manifestPath) {
-		absWd, _ := filepath.Abs(wd)
-		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, absWd)
-		return err
-	}
-	return nil
-}

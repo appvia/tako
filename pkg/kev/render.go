@@ -18,6 +18,7 @@ package kev
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
@@ -34,9 +35,6 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 // Run executes the runner returning results that can be written to disk
 func (r *RenderRunner) Run() (map[string]string, error) {
 	if err := r.LoadProject(); err != nil {
-		sg := r.UI.StepGroup()
-		defer sg.Done()
-		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
 		return nil, err
 	}
 
@@ -60,8 +58,18 @@ func (r *RenderRunner) Run() (map[string]string, error) {
 }
 
 func (r *RenderRunner) LoadProject() error {
+	sg := r.UI.StepGroup()
+	defer sg.Done()
+
+	if !ManifestExistsForPath(path.Join(r.workingDir, ManifestFilename)) {
+		err := errors.Errorf("Missing project manifest: %s", ManifestFilename)
+		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
+		return err
+	}
+
 	manifest, err := LoadManifest(r.workingDir)
 	if err != nil {
+		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
 		return err
 	}
 	r.manifest = manifest

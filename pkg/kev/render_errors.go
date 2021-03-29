@@ -38,11 +38,8 @@ var renderStepStrings = map[renderStepType]struct {
 }{
 	renderStepLoad: {
 		Error: "Cannot load the project!",
-		ErrorDetails: fmt.Sprintf(`
-A valid %s is required to load and render a project.
-Please ensure one exists or you may need to run the 'init' command.
-		`, ManifestFilename),
 	},
+
 	renderStepLoadSkaffold: {
 		Error: "Cannot find configured Skaffold manifest!",
 		ErrorDetails: fmt.Sprintf(`
