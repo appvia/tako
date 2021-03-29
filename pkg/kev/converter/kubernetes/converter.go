@@ -66,7 +66,8 @@ func (c *K8s) Render(singleFile bool,
 
 		log.Debugf("Rendering environment [%s]", env)
 
-		c.UI.Output(fmt.Sprintf("%s: %s", env, getEnvFile(env, files)))
+		envFile := files[env][len(files[env])-1]
+		c.UI.Output(fmt.Sprintf("%s: %s", env, envFile))
 
 		// @step override output directory if specified
 		outDirPath := ""
@@ -135,12 +136,4 @@ func getSortedEnvs(projects map[string]*composego.Project) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func getEnvFile(env string, files map[string][]string) string {
-	sources, ok := files[env]
-	if !ok {
-		return ""
-	}
-	return sources[len(sources)-1]
 }
