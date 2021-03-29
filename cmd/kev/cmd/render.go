@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/spf13/cobra"
 )
@@ -37,20 +35,7 @@ var renderCmd = &cobra.Command{
 	Use:   "render",
 	Short: "Generates application's deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		fns := []func(cmd *cobra.Command, args []string) error{
-			// runReconcileCmd,
-			// runDetectSecretsCmd,
-		}
-		for _, fn := range fns {
-			if err := fn(cmd, args); err != nil {
-				return err
-			}
-			os.Stdout.Write([]byte("\n"))
-		}
-		return nil
-	},
-	RunE: runRenderCmd,
+	RunE:  runRenderCmd,
 }
 
 func init() {
