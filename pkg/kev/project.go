@@ -102,42 +102,50 @@ func (p *Project) Manifest() *Manifest {
 	return p.manifest
 }
 
+// WithComposeSources configures a project's run config with a list of compose files as sources.
 func WithComposeSources(c []string) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.composeSources = c
 	}
 }
 
+// WithEnvs configures a project's run config with a list of environment names.
 func WithEnvs(c []string) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.envs = c
 	}
 }
 
+// WithSkaffold configures a project's run config with Skaffold support.
 func WithSkaffold(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.skaffold = c
 	}
 }
 
+// WithManifestFormat configures a project's run config with a K8s manifest format for rendering.
 func WithManifestFormat(c string) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.manifestFormat = c
 	}
 }
 
+// WithManifestsAsSingleFile configures a project's run config with whether rendered K8s manifests
+// should be bundled into a single file or not.
 func WithManifestsAsSingleFile(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.manifestsAsSingleFile = c
 	}
 }
 
+// WithOutputDir configures a project's run config with a location to render a project's K8s manifests.
 func WithOutputDir(c string) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.outputDir = c
 	}
 }
 
+// WithUI configures a project with a terminal UI implementation
 func WithUI(ui kmd.UI) Options {
 	return func(project *Project, cfg *runConfig) {
 		project.UI = ui
