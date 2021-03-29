@@ -163,7 +163,7 @@ func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
 	return e.override.getVolume(name)
 }
 
-// GetVolume retrieves a specific volume by name from the environment's override volumes.
+// ToSources converts an environment to a sources object.
 func (e *Environment) ToSources() *Sources {
 	return &Sources{
 		Files:    []string{e.File},

@@ -56,7 +56,7 @@ deployment environments. Without them a project cannot be initialised.
 	initStepParsingComposeConfig: {
 		Error: "Invalid compose source(s)!",
 		ErrorDetails: fmt.Sprintf(`
-The provided compose source or sources are invalid. '%s' requires valid 
+The provided compose source(s) are invalid. '%s' requires valid 
 compose source files - without them a project cannot be initialised or loaded. 
 Use the command 'docker-compose -f <compose-source-file> config'
 to double check your compose source(s) are valid.

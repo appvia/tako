@@ -139,7 +139,7 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 
 // diffAndPatch detects and patches all changes between a destination override and the current override.
 // A change is either a create, update or delete event.
-// A change targets an override's version, services or volumes and it's properties will depend on the actual target.
+// A change targets an override's version, services or volumes and its properties will depend on the actual target.
 // Example: here's a Change that creates a new service:
 // {
 //    Type: "create",   //string
@@ -156,10 +156,10 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 //
 // ENV VARS NOTE:
 // The changeset deals with the docker-compose `environment` attribute as a special case:
-// - Env vars in overrides override a project's docker-compose env vars.
+// - Env vars specified in docker compose overrides modify a project's docker-compose env vars.
 // - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
-// - A changeset will NOT update or create env vars in deployment environments.
-// - To create useful diffs a project's docker-compose env vars will be taken into account.
+// - A changeset will NOT update or create env vars in an environment specific docker compose override file.
+// - To create useful diffs the project's base docker-compose env vars will be taken into account.
 func (o *composeOverride) diffAndPatch(dst *composeOverride) {
 	o.detectAndPatchVersionUpdate(dst)
 	o.detectAndPatchServicesCreate(dst)
