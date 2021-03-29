@@ -30,6 +30,8 @@ const (
 	renderStepLoad renderStepType = iota
 	renderStepLoadSkaffold
 	renderStepReconcile
+	renderStepRenderGeneral
+	renderStepRenderOverlay
 )
 
 var renderStepStrings = map[renderStepType]struct {
@@ -49,8 +51,22 @@ with Skaffold support. Please ensure one exists or you may need to
 run the 'init' command with the '--skaffold' flag.
 		`, SkaffoldFileName),
 	},
+
 	renderStepReconcile: {
 		Error: "Cannot detect project updates!",
+	},
+
+	renderStepRenderGeneral: {
+		Error: "Cannot render project!",
+	},
+
+	renderStepRenderOverlay: {
+		Error: "Cannot overlay environment settings during render!",
+		ErrorDetails: fmt.Sprintf(`
+'%s' cannot super impose environment settings over the compose source values.
+This is important as it ensures that project rendered manifests will have 
+environment specific settings.
+		`, GetManifestName()),
 	},
 }
 
