@@ -25,6 +25,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -60,7 +61,6 @@ func (c *K8s) Render(singleFile bool,
 
 	renderOutputPaths := map[string]string{}
 	envs := getSortedEnvs(projects)
-	// for env, project := range projects {
 	for _, env := range envs {
 		project := projects[env]
 
@@ -121,7 +121,7 @@ func (c *K8s) Render(singleFile bool,
 		// @step Produce objects
 		err = PrintList(objects, convertOpts, rendered)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "Could not render %s manifests to disk, details:\n", Name)
 		}
 	}
 

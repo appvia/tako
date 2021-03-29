@@ -206,12 +206,17 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 
 // RenderWithConvertor renders K8s manifests with specific converter
 func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (map[string]string, error) {
+	errSg := m.UI.StepGroup()
+	defer errSg.Done()
+
 	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
+		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
 
 	filteredEnvs, err := m.GetEnvironments(envs)
 	if err != nil {
+		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
 
@@ -223,7 +228,9 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 	for _, env := range filteredEnvs {
 		p, err := m.MergeEnvIntoSources(env)
 		if err != nil {
-			return nil, errors.Wrap(err, "Couldn't calculate compose project representation")
+			wrappedErr := errors.Wrapf(err, "environment %s, details:\n", env.Name)
+			renderStepError(m.UI, errSg.Add(""), renderStepRenderOverlay, wrappedErr)
+			return nil, wrappedErr
 		}
 		projects[env.Name] = p.Project
 		files[env.Name] = append(sourcesFiles, env.File)
@@ -232,12 +239,15 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered, excluded)
 	if err != nil {
 		log.Errorf("Couldn't render manifests")
+		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
 
 	if len(m.Skaffold) > 0 {
 		if err := UpdateSkaffoldProfiles(m.Skaffold, outputPaths); err != nil {
 			log.Errorf("Couldn't update skaffold.yaml profiles")
+			decoratedErr := errors.Errorf("Couldn't update skaffold.yaml profiles, details:\n%s", err)
+			renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, decoratedErr)
 			return nil, err
 		}
 	}
