@@ -19,7 +19,6 @@ package kev_test
 import (
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 	"github.com/appvia/kev/pkg/kev/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -274,7 +273,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("should configure the added service labels from healthcheck config", func() {
 					expected := newDefaultServiceLabels("wordpress")
-					expected[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+					expected[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
 					expected[config.LabelWorkloadLivenessProbeCommand] = "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
 					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
 				})
@@ -469,7 +468,7 @@ var _ = Describe("Reconcile", func() {
 					labels := env.GetServices()[0].GetLabels()
 
 					Expect(labels).To(
-						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeTCP.String()))
+						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, config.ProbeTypeTCP.String()))
 					Expect(labels).To(HaveKeyWithValue(config.LabelWorkloadLivenessProbeTCPPort, "8080"))
 					Expect(labels).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
 				})
@@ -484,7 +483,7 @@ var _ = Describe("Reconcile", func() {
 					svcCfg, err := env.GetService("db")
 					Expect(err).To(Succeed())
 					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeHTTP.String()))
+						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, config.ProbeTypeHTTP.String()))
 					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPort, "8080"))
 					Expect(svcCfg.GetLabels()).To(
@@ -496,7 +495,7 @@ var _ = Describe("Reconcile", func() {
 					svcCfg, err := env.GetService("wordpress")
 					Expect(err).To(Succeed())
 					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadReadinessProbeType, kubernetes.ProbeTypeHTTP.String()))
+						HaveKeyWithValue(config.LabelWorkloadReadinessProbeType, config.ProbeTypeHTTP.String()))
 					Expect(svcCfg.GetLabels()).To(
 						HaveKeyWithValue(config.LabelWorkloadReadinessProbeHTTPPort, "8080"))
 				})
@@ -507,7 +506,7 @@ var _ = Describe("Reconcile", func() {
 
 func newDefaultServiceLabels(name string) map[string]string {
 	return map[string]string{
-		config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeExec.String(),
+		config.LabelWorkloadLivenessProbeType:    config.ProbeTypeExec.String(),
 		config.LabelWorkloadLivenessProbeCommand: "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
 		config.LabelWorkloadReplicas:             "1",
 	}
