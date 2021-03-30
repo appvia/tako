@@ -27,10 +27,15 @@ import (
 type runConfig struct {
 	composeSources        []string
 	envs                  []string
-	skaffold              bool
 	manifestFormat        string
 	manifestsAsSingleFile bool
 	outputDir             string
+	k8sNamespace          string
+	kubecontext           string
+	skaffold              bool
+	skaffoldTail          bool
+	skaffoldManualTrigger bool
+	skaffoldVerbose       bool
 }
 
 // Options helps configure running project commands
@@ -53,6 +58,12 @@ type InitRunner struct {
 // RenderRunner runs the required sequences to render a project.
 type RenderRunner struct {
 	*Project
+}
+
+// DevRunner runs the required sequences to use dev with a project.
+type DevRunner struct {
+	*Project
+	chgHandler ChangeHandler
 }
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments
@@ -147,13 +158,6 @@ type ChangeHandler func(string) error
 
 // RunFunc is a callback function expected to run before/after the current command
 type RunFunc func() error
-
-// InitOptions contains parameters required to initialise a kev project
-type InitOptions struct {
-	ComposeSources []string
-	Envs           []string
-	Skaffold       bool
-}
 
 // DevOptions contains parameters required for Dev loop
 type DevOptions struct {

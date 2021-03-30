@@ -475,12 +475,13 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, opts *DevOptions) error {
+// func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, opts *DevOptions) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, runCfg runConfig) error {
 	var mutedPhases []string
 	var trigger string
 	var pollInterval int
 
-	if opts.ManualTrigger {
+	if runCfg.skaffoldManualTrigger {
 		trigger = "manual"
 		pollInterval = 0
 	} else {
@@ -488,7 +489,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		pollInterval = 100 // 100ms by default
 	}
 
-	if opts.Verbose {
+	if runCfg.skaffoldVerbose {
 		mutedPhases = []string{}
 	} else {
 		mutedPhases = []string{"build"} // possible options "build", "deploy", "status-check"
@@ -505,14 +506,14 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		AutoSync:              true,
 		AutoDeploy:            true,
 		Profiles:              profiles,
-		Namespace:             opts.Namespace,
-		KubeContext:           opts.Kubecontext,
+		Namespace:             runCfg.k8sNamespace,
+		KubeContext:           runCfg.kubecontext,
 		Cleanup:               true,
 		NoPrune:               false,
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
 		StatusCheck:           true,
-		Tail:                  opts.Tail,
+		Tail:                  runCfg.skaffoldTail,
 		PortForward: config.PortForwardOptions{
 			Enabled:     true,
 			ForwardPods: true,
@@ -527,8 +528,8 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		},
 		CustomLabels: []string{
 			"io.kev.dev/profile=" + profiles[0],
-			"io.kev.dev/kubecontext=" + opts.Kubecontext,
-			"io.kev.dev/namespace=" + opts.Namespace,
+			"io.kev.dev/kubecontext=" + runCfg.kubecontext,
+			"io.kev.dev/namespace=" + runCfg.k8sNamespace,
 			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
 		},
 	}

@@ -151,3 +151,33 @@ func WithUI(ui kmd.UI) Options {
 		project.UI = ui
 	}
 }
+
+func WithK8sNamespace(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.k8sNamespace = c
+	}
+}
+
+func WithKubecontext(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.kubecontext = c
+	}
+}
+
+func WithSkaffoldTailEnabled(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.skaffoldTail = c
+	}
+}
+
+func WithSkaffoldManualTriggerEnabled(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.skaffoldManualTrigger = c
+	}
+}
+
+func WithSkaffoldVerboseEnabled(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.skaffoldVerbose = c
+	}
+}

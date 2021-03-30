@@ -17,7 +17,6 @@
 package kev
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -80,6 +79,18 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
+func DevWithOptions(workingDir string, handler ChangeHandler, opts ...Options) error {
+	runner := NewDevRunner(workingDir, handler, opts...)
+	err := runner.Run()
+
+	if err != nil {
+		printDevProjectWithOptionsError(runner.UI)
+		return err
+	}
+
+	return nil
+}
+
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
 func Reconcile(workingDir string) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)
@@ -118,7 +129,8 @@ func DetectSecrets(workingDir string) error {
 }
 
 // Watch continuously watches source compose files & environment overrides and notifies changes to a channel
-func Watch(workDir string, change chan<- string) error {
+// func Watch(workDir string, change chan<- string) error {
+func Watch(workDir string, envs []string, change chan<- string) error {
 	manifest, err := LoadManifest(workDir)
 	if err != nil {
 		log.Errorf("Unable to load app manifest - %s", err)
@@ -156,7 +168,7 @@ func Watch(workDir string, change chan<- string) error {
 	}()
 
 	files := manifest.GetSourcesFiles()
-	filteredEnvs, err := manifest.GetEnvironments([]string{})
+	filteredEnvs, err := manifest.GetEnvironments(envs)
 	for _, e := range filteredEnvs {
 		files = append(files, e.File)
 	}
@@ -193,26 +205,26 @@ func Dev(opts *DevOptions, workDir string, preRunCommands []RunFunc, errHandler 
 		return errHandler(err)
 	}
 
-	if opts.Skaffold {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+	// if opts.Skaffold {
+	// 	ctx, cancel := context.WithCancel(context.Background())
+	// 	defer cancel()
+	//
+	// 	catchCtrlC(cancel)
+	//
+	// 	skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(workDir)
+	// 	if err != nil {
+	// 		return errHandler(err)
+	// 	}
+	//
+	// 	if err := WriteTo(skaffoldConfigPath, skaffoldConfig); err != nil {
+	// 		return errHandler(errors.Wrap(err, "Couldn't write Skaffold config"))
+	// 	}
+	//
+	// 	profileName := opts.Kevenv + EnvProfileNameSuffix
+	// 	go RunSkaffoldDev(ctx, os.Stdout, skaffoldConfigPath, []string{profileName}, opts)
+	// }
 
-		catchCtrlC(cancel)
-
-		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(workDir)
-		if err != nil {
-			return errHandler(err)
-		}
-
-		if err := WriteTo(skaffoldConfigPath, skaffoldConfig); err != nil {
-			return errHandler(errors.Wrap(err, "Couldn't write Skaffold config"))
-		}
-
-		profileName := opts.Kevenv + EnvProfileNameSuffix
-		go RunSkaffoldDev(ctx, os.Stdout, skaffoldConfigPath, []string{profileName}, opts)
-	}
-
-	go Watch(workDir, change)
+	// go Watch(workDir, change)
 
 	for {
 		ch := <-change

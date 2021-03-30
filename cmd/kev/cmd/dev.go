@@ -141,23 +141,17 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	displayDevModeStarted()
+	// displayDevModeStarted()
 
-	preRunCmds := []kev.RunFunc{
-		func() error {
-			return runReconcileCmd(cmd, args)
-		},
-		func() error {
-			return runDetectSecretsCmd(cmd, args)
-		},
-		func() error {
-			return runRenderCmd(cmd, args)
-		},
-	}
+	// preRunCmds := []kev.RunFunc{
+	// 	func() error {
+	// 		return runRenderCmd(cmd, args)
+	// 	},
+	// }
 
-	errHandler := func(err error) error {
-		return displayError(err)
-	}
+	// errHandler := func(err error) error {
+	// 	return displayError(err)
+	// }
 
 	changeHandler := func(ch string) error {
 		return nil
@@ -165,20 +159,37 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 
 	workDir, err := os.Getwd()
 	if err != nil {
-		return errHandler(err)
+		// return errHandler(err)
+		return err
 	}
 
-	opts := &kev.DevOptions{
-		Skaffold:      skaffold,
-		Namespace:     namespace,
-		Kubecontext:   kubecontext,
-		Kevenv:        kevenv,
-		Tail:          tail,
-		ManualTrigger: manualTrigger,
-		Verbose:       verbose,
+	// opts := &kev.DevOptions{
+	// 	Skaffold:      skaffold,
+	// 	Namespace:     namespace,
+	// 	Kubecontext:   kubecontext,
+	// 	Kevenv:        kevenv,
+	// 	Tail:          tail,
+	// 	ManualTrigger: manualTrigger,
+	// 	Verbose:       verbose,
+	// }
+
+	// kev.DisplaySkaffoldInfo(opts)
+
+	// return kev.Dev(opts, workDir, preRunCmds, errHandler, changeHandler)
+
+	var envs []string
+	if len(kevenv) > 0 {
+		envs = append(envs, kevenv)
 	}
 
-	kev.DisplaySkaffoldInfo(opts)
-
-	return kev.Dev(opts, workDir, preRunCmds, errHandler, changeHandler)
+	return kev.DevWithOptions(workDir,
+		changeHandler,
+		kev.WithSkaffold(skaffold),
+		kev.WithK8sNamespace(namespace),
+		kev.WithKubecontext(kubecontext),
+		kev.WithSkaffoldTailEnabled(tail),
+		kev.WithSkaffoldManualTriggerEnabled(manualTrigger),
+		kev.WithSkaffoldVerboseEnabled(verbose),
+		kev.WithEnvs(envs),
+	)
 }
