@@ -38,7 +38,7 @@ Then, add a bare bones `docker-compose` file with a basic description of our `wo
 $ cat <<EOT >> docker-compose.yaml
 version: '3.7'
 services:
-  wordpress:
+  webapp:
     image: wordpress:latest
     ports:
       - "8000:80"
