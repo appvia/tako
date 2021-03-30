@@ -25,9 +25,12 @@ import (
 
 // runConfig stores configuration for a command
 type runConfig struct {
-	composeSources []string
-	envs           []string
-	skaffold       bool
+	composeSources        []string
+	envs                  []string
+	skaffold              bool
+	manifestFormat        string
+	manifestsAsSingleFile bool
+	outputDir             string
 }
 
 // Options helps configure running project commands
@@ -44,6 +47,11 @@ type Project struct {
 
 // InitRunner runs the required sequences to initialise a project.
 type InitRunner struct {
+	*Project
+}
+
+// RenderRunner runs the required sequences to render a project.
+type RenderRunner struct {
 	*Project
 }
 
@@ -78,6 +86,7 @@ type composeOverride struct {
 	Version  string   `yaml:"version,omitempty" json:"version,omitempty" diff:"version"`
 	Services Services `json:"services" diff:"services"`
 	Volumes  Volumes  `yaml:",omitempty" json:"volumes,omitempty" diff:"volumes"`
+	UI       kmd.UI   `yaml:"-" json:"-"`
 }
 
 // ComposeProject wrapper around a compose-go Project. It also provides the original

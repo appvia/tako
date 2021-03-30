@@ -17,11 +17,15 @@
 package kubernetes
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/appvia/kev/pkg/kev/log"
+	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -34,11 +38,17 @@ const (
 )
 
 // K8s is a native kubernetes manifests converter
-type K8s struct{}
+type K8s struct {
+	UI kmd.UI
+}
 
 // New return a native Kubernetes converter
 func New() *K8s {
 	return &K8s{}
+}
+
+func NewWithUI(ui kmd.UI) *K8s {
+	return &K8s{UI: ui}
 }
 
 // Render generates outcome
@@ -50,9 +60,14 @@ func (c *K8s) Render(singleFile bool,
 	excluded map[string][]string) (map[string]string, error) {
 
 	renderOutputPaths := map[string]string{}
+	envs := getSortedEnvs(projects)
+	for _, env := range envs {
+		project := projects[env]
 
-	for env, project := range projects {
 		log.Debugf("Rendering environment [%s]", env)
+
+		envFile := files[env][len(files[env])-1]
+		c.UI.Output(fmt.Sprintf("%s: %s", env, envFile))
 
 		// @step override output directory if specified
 		outDirPath := ""
@@ -96,7 +111,7 @@ func (c *K8s) Render(singleFile bool,
 		}
 
 		// @step Get Kubernetes transformer that maps compose project to Kubernetes primitives
-		k := &Kubernetes{Opt: convertOpts, Project: project, Excluded: exc}
+		k := &Kubernetes{Opt: convertOpts, Project: project, Excluded: exc, UI: c.UI}
 
 		// @step Do the transformation
 		objects, err := k.Transform()
@@ -107,9 +122,18 @@ func (c *K8s) Render(singleFile bool,
 		// @step Produce objects
 		err = PrintList(objects, convertOpts, rendered)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "Could not render %s manifests to disk, details:\n", Name)
 		}
 	}
 
 	return renderOutputPaths, nil
+}
+
+func getSortedEnvs(projects map[string]*composego.Project) []string {
+	var out []string
+	for env, _ := range projects {
+		out = append(out, env)
+	}
+	sort.Strings(out)
+	return out
 }
