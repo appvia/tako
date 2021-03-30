@@ -34,7 +34,6 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	}
 
 	s.override = extractLabels(ready)
-
 	for _, opt := range opts {
 		if err := opt(s, ready); err != nil {
 			return nil

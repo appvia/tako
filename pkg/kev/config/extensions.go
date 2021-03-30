@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/imdario/mergo"
@@ -75,85 +74,6 @@ type Workload struct {
 	Replicas       int            `yaml:"replicas" validate:"required"`
 	LivenessProbe  LivenessProbe  `yaml:"livenessProbe"`
 	ReadinessProbe ReadinessProbe `yaml:"readinessProbe"`
-}
-
-// LivenessProbe holds all the settings for the same k8s probe.
-type LivenessProbe struct {
-	// TODO: find a decent way of using ProbeType here that validates the content of the string
-	Type        string `yaml:"type" validate:"required"`
-	ProbeConfig `yaml:",inline"`
-}
-
-// DefaultLivenessProbe creates a default liveness probe. Defaults to exec.
-func DefaultLivenessProbe() LivenessProbe {
-	id, _ := time.ParseDuration(DefaultProbeInitialDelay)
-	p, _ := time.ParseDuration(DefaultProbeInterval)
-	t, _ := time.ParseDuration(DefaultProbeTimeout)
-
-	return LivenessProbe{
-		Type: ProbeTypeExec.String(),
-		ProbeConfig: ProbeConfig{
-			Exec: ExecProbe{
-				Command: DefaultLivenessProbeCommand,
-			},
-			InitialDelay:      id,
-			Period:            p,
-			FailureThreashold: DefaultProbeRetries,
-			Timeout:           t,
-		},
-	}
-}
-
-// DefaultReadinessProbe defines the default readiness probe. Defaults to none.
-func DefaultReadinessProbe() ReadinessProbe {
-	id, _ := time.ParseDuration(DefaultProbeInitialDelay)
-	p, _ := time.ParseDuration(DefaultProbeInterval)
-	t, _ := time.ParseDuration(DefaultProbeTimeout)
-
-	return ReadinessProbe{
-		Type: ProbeTypeNone.String(),
-		ProbeConfig: ProbeConfig{
-			InitialDelay:      id,
-			Period:            p,
-			FailureThreashold: DefaultProbeRetries,
-			Timeout:           t,
-		},
-	}
-}
-
-// ReadinessProbe holds all the settings for the same k8s probe.
-type ReadinessProbe struct {
-	// TODO: find a decent way of using ProbeType here that validates the content of the string
-	Type        string `yaml:"type"`
-	ProbeConfig `yaml:",inline"`
-}
-
-// ProbeConfig holds all the shared properties between liveness and readiness probe.
-type ProbeConfig struct {
-	HTTP HTTPProbe `yaml:"http"`
-	TCP  TCPProbe  `yaml:"tcp"`
-	Exec ExecProbe `yaml:"exec"`
-
-	InitialDelay      time.Duration `yaml:"initialDelay"`
-	Period            time.Duration `yaml:"period"`
-	FailureThreashold int           `yaml:"failureThreashold"`
-	Timeout           time.Duration `yaml:"timeout"`
-}
-
-// HTTPProbe holds the necessary properties to define the http check on the k8s probe.
-type HTTPProbe struct {
-	Port int    `yaml:"port"`
-	Path string `yaml:"path"`
-}
-
-// TCPProbe holds the necessary properties to define the tcp check on the k8s probe.
-type TCPProbe struct {
-	Port int `yaml:"port"`
-}
-
-// ExecProbe holds the necessary properties to define the exec check on the k8s probe.
-type ExecProbe struct {
-	Command string `yaml:"command"`
 }
 
 // Service will hold the service specific extensions in the future.

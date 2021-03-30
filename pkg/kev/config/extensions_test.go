@@ -28,10 +28,10 @@ var _ = Describe("Extentions", func() {
 			err := yaml.NewEncoder(&buf).Encode(map[string]interface{}{
 				"x-k8s": k8s,
 			})
-			Expect(err).To(Succeed())
+			Expect(err).ToNot(HaveOccurred())
 
 			err = yaml.NewDecoder(&buf).Decode(&extensions)
-			Expect(err).To(Succeed())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("works with defaults", func() {
@@ -42,7 +42,7 @@ var _ = Describe("Extentions", func() {
 
 			It("creates the config using defaults when the mandatory properties are present", func() {
 				parsedCfg, err = config.K8SServiceCfgFromMap(extensions)
-				Expect(err).To(Succeed())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(parsedCfg).NotTo(BeNil())
 
 				Expect(parsedCfg.Workload.Replicas).To(Equal(10))
@@ -89,11 +89,11 @@ var _ = Describe("Extentions", func() {
 
 			var buf bytes.Buffer
 			err := yaml.NewEncoder(&buf).Encode(expected)
-			Expect(err).To(Succeed())
+			Expect(err).ToNot(HaveOccurred())
 
 			var actual config.LivenessProbe
 			err = yaml.NewDecoder(&buf).Decode(&actual)
-			Expect(err).To(Succeed())
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(expected).To(BeEquivalentTo(actual))
 		})
@@ -104,11 +104,11 @@ var _ = Describe("Extentions", func() {
 
 			var buf bytes.Buffer
 			err := yaml.NewEncoder(&buf).Encode(expected)
-			Expect(err).To(Succeed())
+			Expect(err).ToNot(HaveOccurred())
 
 			var actual config.LivenessProbe
 			err = yaml.NewDecoder(&buf).Decode(&actual)
-			Expect(err).To(Succeed())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(expected).To(BeEquivalentTo(actual))
 			Expect(actual.Type).To(BeEmpty())
 		})
