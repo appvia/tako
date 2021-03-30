@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/spf13/cobra"
@@ -141,48 +140,18 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// displayDevModeStarted()
-
-	// preRunCmds := []kev.RunFunc{
-	// 	func() error {
-	// 		return runRenderCmd(cmd, args)
-	// 	},
-	// }
-
-	// errHandler := func(err error) error {
-	// 	return displayError(err)
-	// }
-
-	changeHandler := func(ch string) error {
-		return nil
-	}
-
-	workDir, err := os.Getwd()
-	if err != nil {
-		// return errHandler(err)
-		return err
-	}
-
-	// opts := &kev.DevOptions{
-	// 	Skaffold:      skaffold,
-	// 	Namespace:     namespace,
-	// 	Kubecontext:   kubecontext,
-	// 	Kevenv:        kevenv,
-	// 	Tail:          tail,
-	// 	ManualTrigger: manualTrigger,
-	// 	Verbose:       verbose,
-	// }
-
-	// kev.DisplaySkaffoldInfo(opts)
-
-	// return kev.Dev(opts, workDir, preRunCmds, errHandler, changeHandler)
+	changeHandler := func(ch string) error { return nil }
 
 	var envs []string
 	if len(kevenv) > 0 {
 		envs = append(envs, kevenv)
 	}
 
-	return kev.DevWithOptions(workDir,
+	// The working directory is always the current directory.
+	// This ensures created manifest yaml entries are portable between users and require no path fixing.
+	wd := "."
+
+	return kev.DevWithOptions(wd,
 		changeHandler,
 		kev.WithSkaffold(skaffold),
 		kev.WithK8sNamespace(namespace),

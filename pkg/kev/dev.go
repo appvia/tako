@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
@@ -31,12 +33,17 @@ import (
 func NewDevRunner(workingDir string, handler ChangeHandler, opts ...Options) *DevRunner {
 	runner := &DevRunner{chgHandler: handler, Project: &Project{workingDir: workingDir}}
 	runner.Init(opts...)
+	if runner.config.skaffold && len(runner.config.k8sNamespace) == 0 {
+		runner.config.k8sNamespace = DefaultSkaffoldNamespace
+	}
 	return runner
 }
 
+// Run runs the dev command business logic
 func (r *DevRunner) Run() error {
 	var renderRunner *RenderRunner
 	r.UI.Output("[development mode] ... watching for changes - press Ctrl+C to stop", kmd.WithStyle(kmd.LogStyle))
+	r.DisplaySkaffoldOptionsIfAvailable()
 
 	runPreCommands := func() error {
 		sg := r.UI.StepGroup()
@@ -66,7 +73,7 @@ func (r *DevRunner) Run() error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		catchCtrlC(cancel)
+		catchCtrlC(cancel, r.UI)
 
 		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(r.workingDir)
 		if err != nil {
@@ -172,6 +179,128 @@ func (r *DevRunner) Watch(change chan<- string) error {
 	<-done
 
 	return nil
+}
+
+// DisplaySkaffoldOptionsIfAvailable displays Skaffold related flags and
+// displays a summary of parameters used if Skaffold is enabled
+func (r *DevRunner) DisplaySkaffoldOptionsIfAvailable() {
+	config := r.config
+	indent := 1
+	if config.skaffold {
+		r.UI.Output(
+			"Dev mode activated with Skaffold dev loop enabled",
+			kmd.WithIndent(indent),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+			kmd.WithStyle(kmd.LogStyle),
+		)
+
+		r.UI.Output(
+			fmt.Sprintf("Will deploy to '%s' namespace. You may override it with '--namespace' flag.", config.k8sNamespace),
+			kmd.WithIndent(indent),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+			kmd.WithStyle(kmd.LogStyle),
+		)
+
+		if len(config.kubecontext) == 0 {
+			r.UI.Output(
+				"Will use current kubectl context. You may override it with '--kubecontext' flag.",
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		} else {
+			r.UI.Output(
+				fmt.Sprintf("Will use '%s' kube context. You may override it with '--kubecontext' flag.", config.kubecontext),
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		}
+
+		if config.envs[0] == SandboxEnv {
+			r.UI.Output(
+				fmt.Sprintf("Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.", config.envs[0]),
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		} else {
+			r.UI.Output(
+				fmt.Sprintf("Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.", config.envs[0]),
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		}
+
+		if config.skaffoldTail {
+			r.UI.Output(
+				"Will tail logs of deployed application.",
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		} else {
+			r.UI.Output(
+				"Won't tail logs of deployed application. To enable log tailing use '--tail' flag.",
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		}
+
+		if config.skaffoldManualTrigger {
+			r.UI.Output(
+				"Will stack up all the code changes and only perform build/push/deploy when triggered manually by hitting ENTER.",
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		} else {
+			r.UI.Output(
+				"Will automatically trigger build/push/deploy on each application code change. To trigger changes manually use '--manual-trigger' flag.",
+				kmd.WithIndent(indent),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		}
+	}
+}
+
+// catchCtrlC catches ctrl+c in dev loop when running Skaffold
+func catchCtrlC(cancel context.CancelFunc, ui kmd.UI) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals,
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGPIPE,
+	)
+
+	go func() {
+		<-signals
+		signal.Stop(signals)
+		cancel()
+		ui.Output("")
+		ui.Output(
+			"Stopping Skaffold dev loop!",
+			kmd.WithIndent(1),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+			kmd.WithStyle(kmd.LogStyle),
+		)
+		ui.Output(
+			fmt.Sprintf("'%s' will continue to reconcile and re-render K8s manifests for your project.", GetManifestName()),
+			kmd.WithIndent(1),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+			kmd.WithStyle(kmd.LogStyle),
+		)
+		ui.Output(
+			"Press Ctrl+C to stop.",
+			kmd.WithIndent(1),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+			kmd.WithStyle(kmd.LogStyle),
+		)
+	}()
 }
 
 func printDevProjectWithOptionsError(ui kmd.UI) {
