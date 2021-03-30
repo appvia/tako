@@ -74,7 +74,7 @@ var _ = Describe("Transform", func() {
 		When("service exclusion list is empty", func() {
 			BeforeEach(func() {
 				projectService.Labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
+					config.LabelWorkloadLivenessProbeType: config.ProbeTypeNone.String(),
 				}
 			})
 
@@ -1889,9 +1889,9 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeCommand: "hello world",
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeNone.String(),
+						config.LabelWorkloadLivenessProbeType:     config.ProbeTypeNone.String(),
 					}
 				})
 
@@ -1906,7 +1906,7 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is misconfigured", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeCommand: "",
 					}
 				})
@@ -1926,7 +1926,7 @@ var _ = Describe("Transform", func() {
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
+						config.LabelWorkloadLivenessProbeType: config.ProbeTypeNone.String(),
 					}
 				})
 

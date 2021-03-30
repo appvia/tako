@@ -32,12 +32,14 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	if err != nil {
 		return errors.Errorf("%s\nsee compose files: %v", err.Error(), s.Files)
 	}
+
 	s.override = extractLabels(ready)
 	for _, opt := range opts {
 		if err := opt(s, ready); err != nil {
 			return nil
 		}
 	}
+
 	return nil
 }
 
