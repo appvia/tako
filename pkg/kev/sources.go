@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,7 +29,7 @@ type BaseOverrideOpts func(s *Sources, c *ComposeProject) error
 func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
-		return errors.Errorf("%s\nsee compose files: %v", err.Error(), s.Files)
+		return err
 	}
 	s.override = extractLabels(ready)
 	for _, opt := range opts {

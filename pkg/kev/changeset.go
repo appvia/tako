@@ -17,7 +17,6 @@
 package kev
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -29,6 +28,113 @@ const (
 	UPDATE = "update"
 	DELETE = "delete"
 )
+
+// newChangeset detects all changes between a destination override and source override.
+// A change is either a create, update or delete event.
+// A change targets an override's version, services or volumes and it's properties will depend on the actual target.
+// Example: here's a Change that creates a new service:
+// {
+//    Type: "create",   //string
+//    Value: srcSvc,    //interface{} in this case: ServiceConfig
+// }
+// Example: here's a Change that updates a service's label:
+// {
+// 		Type:   "update",                 //string
+// 		Index:  index,                    // interface{} in this case: int
+// 		Parent: "labels",                 // string
+// 		Target: config.LabelServiceType,  // string
+// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
+// }
+//
+// ENV VARS NOTE:
+// The changeset deals with the docker-compose `environment` attribute as a special case:
+// - Env vars in overrides override a project's docker-compose env vars.
+// - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
+// - A changeset will NOT update or create env vars in deployment environments.
+// - To create useful diffs a project's docker-compose env vars will be taken into account.
+func newChangeset(dst *composeOverride, src *composeOverride) changeset {
+	cset := changeset{}
+	detectVersionUpdate(dst, src, &cset)
+	detectServicesCreate(dst, src, &cset)
+	detectServicesDelete(dst, src, &cset)
+	detectServicesEnvironmentDelete(dst, src, &cset)
+	detectVolumesCreate(dst, src, &cset)
+	detectVolumesDelete(dst, src, &cset)
+	return cset
+}
+
+func detectVersionUpdate(dst *composeOverride, src *composeOverride, cset *changeset) {
+	if dst.Version != src.Version {
+		cset.version = change{Value: src.Version, Type: UPDATE, Target: "version"}
+	}
+}
+
+func detectServicesCreate(dst *composeOverride, src *composeOverride, cset *changeset) {
+	dstSvcSet := dst.Services.Set()
+	for _, srcSvc := range src.Services {
+		if !dstSvcSet[srcSvc.Name] {
+			cset.services = append(cset.services, change{
+				Type:  CREATE,
+				Value: srcSvc.minusEnvVars(),
+			})
+		}
+	}
+}
+
+func detectServicesDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
+	srcSvcSet := src.Services.Set()
+	for index, dstSvc := range dst.Services {
+		if !srcSvcSet[dstSvc.Name] {
+			cset.services = append(cset.services, change{
+				Type:  DELETE,
+				Index: index,
+			})
+		}
+	}
+}
+
+func detectServicesEnvironmentDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
+	srcSvcMapping := src.Services.Map()
+	for index, dstSvc := range dst.Services {
+		srcSvc, ok := srcSvcMapping[dstSvc.Name]
+		if !ok {
+			continue
+		}
+		for envVarKey := range dstSvc.Environment {
+			if _, ok := srcSvc.Environment[envVarKey]; !ok {
+				cset.services = append(cset.services, change{
+					Type:   DELETE,
+					Index:  index,
+					Parent: "environment",
+					Target: envVarKey,
+				})
+			}
+		}
+	}
+}
+
+func detectVolumesCreate(dst *composeOverride, src *composeOverride, cset *changeset) {
+	for srcVolKey, srcVolConfig := range src.Volumes {
+		if _, ok := dst.Volumes[srcVolKey]; !ok {
+			cset.volumes = append(cset.volumes, change{
+				Type:  CREATE,
+				Index: srcVolKey,
+				Value: srcVolConfig,
+			})
+		}
+	}
+}
+
+func detectVolumesDelete(dst *composeOverride, src *composeOverride, cset *changeset) {
+	for dstVolKey := range dst.Volumes {
+		if _, ok := src.Volumes[dstVolKey]; !ok {
+			cset.volumes = append(cset.volumes, change{
+				Type:  DELETE,
+				Index: dstVolKey,
+			})
+		}
+	}
+}
 
 // changes returns a flat list of all available changes
 func (cset changeset) changes() []change {
@@ -46,64 +152,51 @@ func (cset changeset) HasNoPatches() bool {
 	return len(cset.changes()) <= 0
 }
 
-func (cset changeset) applyVersionPatchesIfAny(o *composeOverride) string {
+func (cset changeset) applyVersionPatchesIfAny(o *composeOverride) {
 	chg := cset.version
 	if reflect.DeepEqual(chg, change{}) {
-		return ""
+		return
 	}
-	return chg.patchVersion(o)
+	chg.patchVersion(o)
 }
 
-func (cset changeset) applyServicesPatchesIfAny(o *composeOverride) []string {
-	var out []string
+func (cset changeset) applyServicesPatchesIfAny(o *composeOverride) {
 	for _, change := range cset.services {
-		out = append(out, change.patchService(o))
+		change.patchService(o)
 	}
-	return out
 }
 
-func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride) []string {
-	var out []string
+func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride) {
 	for _, change := range cset.volumes {
-		out = append(out, change.patchVolume(o))
+		change.patchVolume(o)
 	}
-	return out
 }
 
-func (chg change) patchVersion(override *composeOverride) string {
+func (chg change) patchVersion(override *composeOverride) {
 	if chg.Type != UPDATE {
-		return ""
+		return
 	}
 	pre := override.Version
 	newValue := chg.Value.(string)
 	override.Version = newValue
-
-	msg := fmt.Sprintf("version %s updated to %s", pre, newValue)
-	log.Debugf(msg)
-	return msg
+	log.Debugf("version updated, from:[%s] to:[%s]", pre, newValue)
 }
 
-func (chg change) patchService(override *composeOverride) string {
+func (chg change) patchService(override *composeOverride) {
 	switch chg.Type {
 	case CREATE:
 		newValue := chg.Value.(ServiceConfig).condenseLabels(config.BaseServiceLabels)
 		override.Services = append(override.Services, newValue)
-		msg := fmt.Sprintf("added service: %s", newValue.Name)
-		log.Debugf(msg)
-		return msg
+		log.Debugf("service [%s] added", newValue.Name)
 	case DELETE:
 		switch {
 		case chg.Parent == "environment":
 			delete(override.Services[chg.Index.(int)].Environment, chg.Target)
-			msg := fmt.Sprintf("removed env var: %s from service %s", chg.Target, override.Services[chg.Index.(int)].Name)
-			log.Debugf(msg)
-			return msg
+			log.Debugf("service [%s], env var [%s] deleted", override.Services[chg.Index.(int)].Name, chg.Target)
 		default:
 			deletedSvcName := override.Services[chg.Index.(int)].Name
 			override.Services = append(override.Services[:chg.Index.(int)], override.Services[chg.Index.(int)+1:]...)
-			msg := fmt.Sprintf("removed service: %s", deletedSvcName)
-			log.Debugf(msg)
-			return msg
+			log.Debugf("service [%s] deleted", deletedSvcName)
 		}
 	case UPDATE:
 		if chg.Parent == "labels" {
@@ -115,22 +208,16 @@ func (chg change) patchService(override *composeOverride) string {
 			}
 		}
 	}
-	return ""
 }
 
-func (chg change) patchVolume(override *composeOverride) string {
+func (chg change) patchVolume(override *composeOverride) {
 	switch chg.Type {
 	case CREATE:
 		newValue := chg.Value.(VolumeConfig).condenseLabels(config.BaseVolumeLabels)
 		override.Volumes[chg.Index.(string)] = newValue
-		msg := fmt.Sprintf("added volume: %s", chg.Index.(string))
-		log.Debugf(msg)
-		return msg
+		log.Debugf("volume [%s] added", chg.Index.(string))
 	case DELETE:
 		delete(override.Volumes, chg.Index.(string))
-		msg := fmt.Sprintf("removed volume: %s", chg.Index.(string))
-		log.Debugf(msg)
-		return msg
+		log.Debugf("volume [%s] deleted", chg.Index.(string))
 	}
-	return ""
 }

@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
-	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -66,7 +65,6 @@ var _ = Describe("Transform", func() {
 			Opt:      ConvertOptions{},
 			Project:  &project,
 			Excluded: excluded,
-			UI:       kmd.NoOpUI(),
 		}
 	})
 

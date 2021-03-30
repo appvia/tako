@@ -17,7 +17,10 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +38,20 @@ var renderCmd = &cobra.Command{
 	Use:   "render",
 	Short: "Generates application's deployment artefacts according to the specified output format for a given environment (ALL environments by default).",
 	Long:  renderLongDesc,
-	RunE:  runRenderCmd,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		fns := []func(cmd *cobra.Command, args []string) error{
+			runReconcileCmd,
+			runDetectSecretsCmd,
+		}
+		for _, fn := range fns {
+			if err := fn(cmd, args); err != nil {
+				return err
+			}
+			os.Stdout.Write([]byte("\n"))
+		}
+		return nil
+	},
+	RunE: runRenderCmd,
 }
 
 func init() {
@@ -74,6 +90,8 @@ func init() {
 }
 
 func runRenderCmd(cmd *cobra.Command, _ []string) error {
+	cmdName := "Render"
+
 	format, err := cmd.Flags().GetString("format")
 	singleFile, err := cmd.Flags().GetBool("single")
 	dir, err := cmd.Flags().GetString("dir")
@@ -85,15 +103,19 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	setReporting(verbose)
+	displayCmdStarted(cmdName)
 
-	// The working directory is always the current directory.
-	// This ensures created manifest yaml entries are portable between users and require no path fixing.
-	wd := "."
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return displayError(err)
+	}
 
-	return kev.RenderProjectWithOptions(wd,
-		kev.WithManifestFormat(format),
-		kev.WithManifestsAsSingleFile(singleFile),
-		kev.WithOutputDir(dir),
-		kev.WithEnvs(envs),
-	)
+	log.DebugTitlef("Output format: %s", format)
+	if err := kev.Render(workingDir, format, singleFile, dir, envs, nil); err != nil {
+		return displayError(err)
+	}
+
+	os.Stdout.Write([]byte("\n"))
+
+	return nil
 }

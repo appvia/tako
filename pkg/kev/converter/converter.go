@@ -19,7 +19,6 @@ package converter
 import (
 	"github.com/appvia/kev/pkg/kev/converter/dummy"
 	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
-	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -35,16 +34,13 @@ type Converter interface {
 }
 
 // Factory returns a converter
-func Factory(name string, ui kmd.UI) Converter {
+func Factory(name string) Converter {
 	switch name {
 	case "dummy":
 		// Dummy converter example
 		return dummy.New()
 	default:
 		// Kubernetes manifests converter by default
-		if ui == nil {
-			return kubernetes.New()
-		}
-		return kubernetes.NewWithUI(ui)
+		return kubernetes.New()
 	}
 }

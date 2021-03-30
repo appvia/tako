@@ -34,9 +34,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
-	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
-	"github.com/pkg/errors"
 
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
@@ -56,7 +54,6 @@ type Kubernetes struct {
 	Opt      ConvertOptions     // user provided options from the command line
 	Project  *composego.Project // docker compose project
 	Excluded []string           // docker compose service names that should be excluded
-	UI       kmd.UI
 }
 
 // Transform converts compose project to set of k8s objects
@@ -65,25 +62,17 @@ type Kubernetes struct {
 func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 	// holds all the converted objects
 	var allobjects []runtime.Object
-	var renderedNetworkPolicy runtime.Object
-
-	sg := k.UI.StepGroup()
-	defer sg.Done()
 
 	// @step iterate over defined secrets and build Secret objects accordingly
-	if k.Project.Secrets != nil && len(k.Project.Secrets) > 0 {
-		stepSecrets := sg.Add("Converting project secrets")
+	if k.Project.Secrets != nil {
 		secrets, err := k.createSecrets()
 		if err != nil {
-			msg := "Unable to create Secret resource"
-			log.Error(msg)
-			stepSecrets.Error()
-			return nil, errors.Wrapf(err, "%s, details:\n", msg)
+			log.Error("Unable to create Secret resource")
+			return nil, err
 		}
 		for _, item := range secrets {
 			allobjects = append(allobjects, item)
 		}
-		stepSecrets.Success("Converted project secrets")
 	}
 
 	// @step sort project services by name for consistency
@@ -96,7 +85,6 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			continue
 		}
 
-		stepSvc := sg.Add(fmt.Sprintf("Converting service: %s", pSvc.Name))
 		var objects []runtime.Object
 
 		projectService := ProjectService(pSvc)
@@ -123,7 +111,6 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			projectService.Image = projectService.Name
 		}
 		if projectService.Image == "" {
-			stepSvc.Error()
 			return nil, fmt.Errorf("image key required within build parameters in order to build and push service '%s'", projectService.Name)
 		}
 
@@ -134,10 +121,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		// @step create service / ingress
 		serviceType, err := projectService.serviceType()
 		if err != nil {
-			msg := "Could not establish service type. Service hasn't been created!"
-			log.Error(msg)
-			stepSvc.Error()
-			return nil, errors.Wrapf(err, "%s, details:\n", msg)
+			log.Error("Could not establish service type. Service hasn't been created!")
+			return nil, err
 		}
 
 		if k.portsExist(projectService) && serviceType != config.NoService {
@@ -149,10 +134,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			// For exposed service also create an ingress (Note only the first port is used for ingress!)
 			expose, err := projectService.exposeService()
 			if err != nil {
-				msg := "Could not expose the service. Ingress hasn't been created!"
-				log.Error(msg)
-				stepSvc.Error()
-				return nil, errors.Wrapf(err, "%s, details:\n", msg)
+				log.Error("Could not expose the service. Ingress hasn't been created!")
+				return nil, err
 			}
 			if expose != "" {
 				objects = append(objects, k.initIngress(projectService, svc.Spec.Ports[0].Port))
@@ -165,20 +148,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 		// @step updating all objects related to a current compose service
 		if err = k.updateKubernetesObjects(projectService, &objects); err != nil {
-			msg := "Error occurred while transforming Kubernetes objects"
-			log.Error(msg)
-			stepSvc.Error()
-			return nil, errors.Wrapf(err, "%s, details:\n", msg)
-		}
-
-		stepSvc.Success(fmt.Sprintf("Converted service: %s", pSvc.Name))
-		for _, object := range objects {
-			k.UI.Output(
-				fmt.Sprintf("rendered %s", object.GetObjectKind().GroupVersionKind().Kind),
-				kmd.WithStyle(kmd.LogStyle),
-				kmd.WithIndent(3),
-				kmd.WithIndentChar(kmd.LogIndentChar),
-			)
+			log.Error("Error occured while transforming Kubernetes objects")
+			return nil, err
 		}
 
 		// @step create network policies if networks defined
@@ -191,28 +162,14 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 
 				np, err := k.createNetworkPolicy(projectService.Name, name)
 				if err != nil {
-					msg := fmt.Sprintf("Unable to create Network Policy for network %v for service %v", name, projectService.Name)
-					log.Error(msg)
-					stepSvc.Error()
+					log.Errorf("Unable to create Network Policy for network %v for service %v", name, projectService.Name)
 					return nil, err
 				}
 				objects = append(objects, np)
-				renderedNetworkPolicy = np
 			}
 		}
 
 		allobjects = append(allobjects, objects...)
-	}
-
-	if renderedNetworkPolicy != nil {
-		stepNetworkPolicies := sg.Add("Creating networking policies")
-		stepNetworkPolicies.Success("Created networking policies")
-		k.UI.Output(
-			fmt.Sprintf("rendered %s", renderedNetworkPolicy.GetObjectKind().GroupVersionKind().Kind),
-			kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndent(3),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-		)
 	}
 
 	// @step sort all object so Services are first and remove duplicates

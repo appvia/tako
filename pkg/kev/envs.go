@@ -21,6 +21,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -163,14 +164,6 @@ func (e *Environment) GetVolume(name string) (VolumeConfig, error) {
 	return e.override.getVolume(name)
 }
 
-// ToSources converts an environment to a sources object.
-func (e *Environment) ToSources() *Sources {
-	return &Sources{
-		Files:    []string{e.File},
-		override: e.override,
-	}
-}
-
 // WriteTo writes out an environment to a writer.
 // The Environment struct implements the io.WriterTo interface.
 func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
@@ -185,7 +178,7 @@ func (e *Environment) WriteTo(w io.Writer) (n int64, err error) {
 func (e *Environment) loadOverride() (*Environment, error) {
 	p, err := NewComposeProject([]string{e.File})
 	if err != nil {
-		return nil, errors.Errorf("%s\nsee compose file: %s", err.Error(), e.File)
+		return nil, err
 	}
 
 	var services Services
@@ -215,6 +208,24 @@ func (e *Environment) loadOverride() (*Environment, error) {
 		Volumes:  volumes,
 	}
 	return e, nil
+}
+
+func (e *Environment) reconcile(override *composeOverride) error {
+	log.DebugTitlef("Reconciling environment [%s]", e.Name)
+
+	labelsMatching := override.toLabelsMatching(e.override)
+	cset := labelsMatching.diff(e.override)
+	if cset.HasNoPatches() {
+		log.Debug("nothing to update")
+		return nil
+	}
+
+	e.patch(cset)
+	return nil
+}
+
+func (e *Environment) patch(cset changeset) {
+	e.override.patch(cset)
 }
 
 func (e *Environment) prepareForMergeUsing(override *composeOverride) {

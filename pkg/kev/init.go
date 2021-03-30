@@ -122,6 +122,66 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 	return &Sources{Files: defaults}, nil
 }
 
+// ValidateSources includes validation checks to ensure the compose sources are valid.
+// This function can be extended to include different forms of
+// validation (for now it detect any secrets found in the sources).
+func (r *InitRunner) ValidateSources(sources *Sources, matchers []map[string]string) error {
+	r.UI.Header("Validating compose sources...")
+
+	secretsDetected, err := r.detectSecretsInSources(sources, matchers)
+	if err != nil {
+		return err
+	}
+
+	if secretsDetected {
+		r.UI.Output("")
+		r.UI.Output("Validation successful!")
+		r.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
+%s`, SecretsReferenceUrl))
+	}
+
+	return nil
+}
+
+func (r *InitRunner) detectSecretsInSources(sources *Sources, matchers []map[string]string) (bool, error) {
+	var detected bool
+
+	sg := r.UI.StepGroup()
+	defer sg.Done()
+	for _, composeFile := range sources.Files {
+		r.UI.Output(fmt.Sprintf("Detecting secrets in: %s", composeFile))
+		composeProject, err := NewComposeProject([]string{composeFile})
+		if err != nil {
+			initStepError(r.UI, sg.Add(""), initStepParsingComposeConfig, err)
+			return false, err
+		}
+
+		for _, s := range composeProject.Services {
+			step := sg.Add(fmt.Sprintf("Analysing service: %s", s.Name))
+			serviceConfig := ServiceConfig{Name: s.Name, Environment: s.Environment}
+
+			hits := serviceConfig.detectSecretsInEnvVars(matchers)
+			if len(hits) == 0 {
+				step.Success("Non detected in service: ", s.Name)
+				continue
+			}
+
+			detected = true
+			step.Warning("Detected in service: ", s.Name)
+
+			for _, hit := range hits {
+				r.UI.Output(
+					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
+					kmd.WithStyle(kmd.LogStyle),
+					kmd.WithIndentChar(kmd.LogIndentChar),
+					kmd.WithIndent(3),
+				)
+			}
+		}
+	}
+	return detected, nil
+}
+
 // CreateManifestAndEnvironmentOverrides creates a base manifest and the related compose environment overrides
 func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) error {
 	r.manifest = NewManifest(sources)

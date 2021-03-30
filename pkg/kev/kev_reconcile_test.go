@@ -173,7 +173,7 @@ var _ = Describe("Reconcile", func() {
 			It("should create a change summary", func() {
 				Expect(loggedMsgs).To(ContainSubstring(env.Name))
 				Expect(loggedMsgs).To(ContainSubstring("wordpress"))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
 			})
 
 			It("should not error", func() {
@@ -200,6 +200,11 @@ var _ = Describe("Reconcile", func() {
 
 				It("should log the change summary using the debug level", func() {
 					Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+				})
+
+				It("should create a change summary", func() {
+					Expect(loggedMsgs).To(ContainSubstring(env.Name))
+					Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 				})
 
 				It("should not error", func() {
@@ -329,7 +334,7 @@ var _ = Describe("Reconcile", func() {
 
 			It("should create a change summary", func() {
 				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
 				Expect(loggedMsgs).To(ContainSubstring("db_data"))
 			})
 
@@ -360,7 +365,7 @@ var _ = Describe("Reconcile", func() {
 
 			It("should create a change summary", func() {
 				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
 				Expect(loggedMsgs).To(ContainSubstring("db_data"))
 				Expect(loggedMsgs).To(ContainSubstring("added"))
 				Expect(loggedMsgs).To(ContainSubstring("mysql_data"))
@@ -400,7 +405,7 @@ var _ = Describe("Reconcile", func() {
 
 			It("should create a change summary", func() {
 				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
+				Expect(loggedMsgs).To(ContainSubstring("deleted"))
 				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_USER"))
 				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
 			})
@@ -430,6 +435,11 @@ var _ = Describe("Reconcile", func() {
 
 			It("should log the change summary using the debug level", func() {
 				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
+			It("should create a change summary", func() {
+				Expect(loggedMsgs).To(ContainSubstring(env.Name))
+				Expect(loggedMsgs).To(ContainSubstring("nothing to update"))
 			})
 
 			It("should not error", func() {

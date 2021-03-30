@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/appvia/kev/pkg/kev/config"
-	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
@@ -65,7 +64,7 @@ func (o *composeOverride) toBaseLabels() *composeOverride {
 func (o *composeOverride) toLabelsMatching(other *composeOverride) *composeOverride {
 	services := o.servicesWithLabelsMatching(other)
 	volumes := o.volumesWithLabelsMatching(other)
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes, UI: o.UI}
+	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes}
 }
 
 func (o *composeOverride) servicesWithLabelsMatching(other *composeOverride) Services {
@@ -137,213 +136,16 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 	return out
 }
 
-// diffAndPatch detects and patches all changes between a destination override and the current override.
-// A change is either a create, update or delete event.
-// A change targets an override's version, services or volumes and its properties will depend on the actual target.
-// Example: here's a Change that creates a new service:
-// {
-//    Type: "create",   //string
-//    Value: srcSvc,    //interface{} in this case: ServiceConfig
-// }
-// Example: here's a Change that updates a service's label:
-// {
-// 		Type:   "update",                 //string
-// 		Index:  index,                    // interface{} in this case: int
-// 		Parent: "labels",                 // string
-// 		Target: config.LabelServiceType,  // string
-// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
-// }
-//
-// ENV VARS NOTE:
-// The changeset deals with the docker-compose `environment` attribute as a special case:
-// - Env vars specified in docker compose overrides modify a project's docker-compose env vars.
-// - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
-// - A changeset will NOT update or create env vars in an environment specific docker compose override file.
-// - To create useful diffs the project's base docker-compose env vars will be taken into account.
-func (o *composeOverride) diffAndPatch(dst *composeOverride) {
-	o.detectAndPatchVersionUpdate(dst)
-	o.detectAndPatchServicesCreate(dst)
-	o.detectAndPatchServicesDelete(dst)
-	o.detectAndPatchServicesEnvironmentDelete(dst)
-	o.detectAndPatchVolumesCreate(dst)
-	o.detectAndPatchVolumesDelete(dst)
+// diff detects changes between an override against another override.
+func (o *composeOverride) diff(other *composeOverride) changeset {
+	return newChangeset(other, o)
 }
 
-func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting version update")
-
-	cset := changeset{}
-	if dst.Version != o.Version {
-		cset.version = change{Value: o.Version, Type: UPDATE, Target: "version"}
-	}
-
-	if cset.HasNoPatches() {
-		step.Success("No version update detected")
-		return
-	}
-	msg := cset.applyVersionPatchesIfAny(dst)
-	step.Success("Applied version update")
-	o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-		kmd.WithIndentChar(kmd.LogIndentChar),
-		kmd.WithIndent(3))
-}
-
-func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting service additions")
-
-	cset := changeset{}
-	dstSvcSet := dst.Services.Set()
-	for _, srcSvc := range o.Services {
-		if !dstSvcSet[srcSvc.Name] {
-			cset.services = append(cset.services, change{
-				Type:  CREATE,
-				Value: srcSvc.minusEnvVars(),
-			})
-		}
-	}
-	if cset.HasNoPatches() {
-		step.Success("No service additions detected")
-		return
-	}
-
-	msgs := cset.applyServicesPatchesIfAny(dst)
-	step.Success("Applied service additions")
-	for _, msg := range msgs {
-		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-			kmd.WithIndent(3))
-	}
-}
-
-func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting service removals")
-
-	cset := changeset{}
-	srcSvcSet := o.Services.Set()
-	for index, dstSvc := range dst.Services {
-		if !srcSvcSet[dstSvc.Name] {
-			cset.services = append(cset.services, change{
-				Type:  DELETE,
-				Index: index,
-			})
-		}
-	}
-
-	if cset.HasNoPatches() {
-		step.Success("No service removals detected")
-		return
-	}
-
-	msgs := cset.applyServicesPatchesIfAny(dst)
-	step.Success("Applied service removals")
-	for _, msg := range msgs {
-		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-			kmd.WithIndent(3))
-	}
-}
-
-func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting env var removals")
-
-	cset := changeset{}
-	srcSvcMapping := o.Services.Map()
-	for index, dstSvc := range dst.Services {
-		srcSvc, ok := srcSvcMapping[dstSvc.Name]
-		if !ok {
-			continue
-		}
-		for envVarKey := range dstSvc.Environment {
-			if _, ok := srcSvc.Environment[envVarKey]; !ok {
-				cset.services = append(cset.services, change{
-					Type:   DELETE,
-					Index:  index,
-					Parent: "environment",
-					Target: envVarKey,
-				})
-			}
-		}
-	}
-
-	if cset.HasNoPatches() {
-		step.Success("No env var removals detected")
-		return
-	}
-
-	msgs := cset.applyServicesPatchesIfAny(dst)
-	step.Success("Applied env var removals")
-	for _, msg := range msgs {
-		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-			kmd.WithIndent(3))
-	}
-}
-
-func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting volume additions")
-
-	cset := changeset{}
-	for srcVolKey, srcVolConfig := range o.Volumes {
-		if _, ok := dst.Volumes[srcVolKey]; !ok {
-			cset.volumes = append(cset.volumes, change{
-				Type:  CREATE,
-				Index: srcVolKey,
-				Value: srcVolConfig,
-			})
-		}
-	}
-
-	if cset.HasNoPatches() {
-		step.Success("No volume additions detected")
-		return
-	}
-
-	msgs := cset.applyVolumesPatchesIfAny(dst)
-	step.Success("Applied volume additions")
-	for _, msg := range msgs {
-		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-			kmd.WithIndent(3))
-	}
-}
-
-func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting volume removals")
-
-	cset := changeset{}
-	for dstVolKey := range dst.Volumes {
-		if _, ok := o.Volumes[dstVolKey]; !ok {
-			cset.volumes = append(cset.volumes, change{
-				Type:  DELETE,
-				Index: dstVolKey,
-			})
-		}
-	}
-
-	if cset.HasNoPatches() {
-		step.Success("No volume removals detected")
-		return
-	}
-
-	msgs := cset.applyVolumesPatchesIfAny(dst)
-	step.Success("Applied volume removals")
-	for _, msg := range msgs {
-		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-			kmd.WithIndent(3))
-	}
+// patch patches an override based on the supplied changeset patches.
+func (o *composeOverride) patch(cset changeset) {
+	cset.applyVersionPatchesIfAny(o)
+	cset.applyServicesPatchesIfAny(o)
+	cset.applyVolumesPatchesIfAny(o)
 }
 
 // mergeInto merges an override onto a compose project.
