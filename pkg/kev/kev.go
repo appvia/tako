@@ -22,8 +22,8 @@ import (
 	"os"
 
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
+	kmd "github.com/appvia/komando"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
@@ -60,12 +60,36 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
+func RenderProjectWithOptions(workingDir string, opts ...Options) error {
+	runner := NewRenderRunner(workingDir, opts...)
+	ui := runner.UI
+
+	results, err := runner.Run()
+	if err != nil {
+		printRenderProjectWithOptionsError(ui)
+		return err
+	}
+
+	envs, err := runner.Manifest().GetEnvironments(runner.config.envs)
+	if err != nil {
+		return err
+	}
+
+	printRenderProjectWithOptionsSuccess(ui, results, envs, runner.config.manifestFormat)
+
+	return nil
+}
+
 // Reconcile reconciles changes with docker-compose sources against deployment environments.
 func Reconcile(workingDir string) (*Manifest, error) {
 	m, err := LoadManifest(workingDir)
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO(es) Remove this after dev cmd is moved to use new render runner
+	m.UI = kmd.NoOpUI()
+
 	if _, err := m.ReconcileConfig(); err != nil {
 		return nil, errors.Wrap(err, "Could not reconcile project latest")
 	}
@@ -91,18 +115,6 @@ func DetectSecrets(workingDir string) error {
 		return err
 	}
 	return nil
-}
-
-// Render renders k8s manifests for a kev app. It returns an app definition with rendered manifest info
-// It takes optional exclusion list as map of environment name to a slice of excluded docker compose service names.
-func Render(workingDir string, format string, singleFile bool, dir string, envs []string, excluded map[string][]string) error {
-	manifest, err := LoadManifest(workingDir)
-	if err != nil {
-		return errors.Wrap(err, "Unable to load app manifest")
-	}
-
-	_, err = manifest.RenderWithConvertor(converter.Factory(format), dir, singleFile, envs, excluded)
-	return err
 }
 
 // Watch continuously watches source compose files & environment overrides and notifies changes to a channel
