@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
+	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 )
 
@@ -79,7 +81,7 @@ func (r *DevRunner) Run() error {
 		go RunSkaffoldDev(ctx, os.Stdout, skaffoldConfigPath, []string{profileName}, r.config)
 	}
 
-	go Watch(r.workingDir, r.config.envs, change)
+	go r.Watch(change)
 
 	for {
 		ch := <-change
@@ -107,6 +109,67 @@ func (r *DevRunner) Run() error {
 			}
 		}
 	}
+
+	return nil
+}
+
+// Watch continuously watches source compose files & configured environment overrides
+// notifying changes to a channel
+func (r *DevRunner) Watch(change chan<- string) error {
+	sg := r.UI.StepGroup()
+	defer sg.Done()
+
+	manifest, err := LoadManifest(r.workingDir)
+	if err != nil {
+		log.Errorf("Unable to load app manifest - %s", err)
+		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
+		os.Exit(1)
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					change <- event.Name
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+
+				log.Error(err)
+			}
+		}
+	}()
+
+	files := manifest.GetSourcesFiles()
+	filteredEnvs, err := manifest.GetEnvironments(r.config.envs)
+	for _, e := range filteredEnvs {
+		files = append(files, e.File)
+	}
+
+	for _, f := range files {
+		err = watcher.Add(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	<-done
 
 	return nil
 }
