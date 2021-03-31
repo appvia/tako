@@ -18,8 +18,6 @@ package kev
 
 import (
 	"github.com/appvia/kev/pkg/kev/config"
-	kmd "github.com/appvia/komando"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -88,22 +86,6 @@ func DevWithOptions(workingDir string, handler ChangeHandler, opts ...Options) e
 	}
 
 	return nil
-}
-
-// Reconcile reconciles changes with docker-compose sources against deployment environments.
-func Reconcile(workingDir string) (*Manifest, error) {
-	m, err := LoadManifest(workingDir)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(es) Remove this after dev cmd is moved to use new render runner
-	m.UI = kmd.NoOpUI()
-
-	if _, err := m.ReconcileConfig(); err != nil {
-		return nil, errors.Wrap(err, "Could not reconcile project latest")
-	}
-	return m, err
 }
 
 // DetectSecrets detects any potential secrets defined in environment variables
