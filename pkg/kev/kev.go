@@ -16,10 +16,6 @@
 
 package kev
 
-import (
-	"github.com/appvia/kev/pkg/kev/config"
-)
-
 const (
 	// SandboxEnv is a default environment name
 	SandboxEnv = "dev"
@@ -76,7 +72,7 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 
 // DevWithOptions runs a continuous development cycle detecting project updates and
 // re-rendering compose files to Kubernetes manifests.
-func DevWithOptions(workingDir string, handler ChangeHandler, opts ...Options) error {
+func DevWithOptions(workingDir string, handler ChangeEventHandler, opts ...Options) error {
 	runner := NewDevRunner(workingDir, handler, opts...)
 	err := runner.Run()
 
@@ -85,26 +81,5 @@ func DevWithOptions(workingDir string, handler ChangeHandler, opts ...Options) e
 		return err
 	}
 
-	return nil
-}
-
-// DetectSecrets detects any potential secrets defined in environment variables
-// found either in sources or override environments.
-// Any detected secrets are logged using a warning log level.
-func DetectSecrets(workingDir string) error {
-	m, err := LoadManifest(workingDir)
-	if err != nil {
-		return err
-	}
-
-	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
-	runner.Init()
-	if _, err := runner.detectSecretsInSources(m.Sources, config.SecretMatchers); err != nil {
-		return err
-	}
-
-	if err := m.DetectSecretsInEnvs(config.SecretMatchers); err != nil {
-		return err
-	}
 	return nil
 }

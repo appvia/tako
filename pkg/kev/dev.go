@@ -32,8 +32,8 @@ import (
 )
 
 // NewDevRunner creates a render runner instance
-func NewDevRunner(workingDir string, handler ChangeHandler, opts ...Options) *DevRunner {
-	runner := &DevRunner{chgHandler: handler, Project: &Project{workingDir: workingDir}}
+func NewDevRunner(workingDir string, handler ChangeEventHandler, opts ...Options) *DevRunner {
+	runner := &DevRunner{chgEventHandler: handler, Project: &Project{workingDir: workingDir}}
 	runner.Init(opts...)
 	if runner.config.skaffold && len(runner.config.k8sNamespace) == 0 {
 		runner.config.k8sNamespace = DefaultSkaffoldNamespace
@@ -107,8 +107,8 @@ func (r *DevRunner) Run() error {
 				kmd.WithStyle(kmd.LogStyle),
 			)
 
-			if r.chgHandler != nil {
-				r.chgHandler(ch)
+			if r.chgEventHandler != nil {
+				r.chgEventHandler(ch)
 			}
 
 			_ = runPreCommands()
