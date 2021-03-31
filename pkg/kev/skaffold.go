@@ -531,7 +531,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		},
 	}
 
-	runCtx, cfg, err := runContext(skaffoldOpts, profiles)
+	runCtx, cfg, err := runContext(skaffoldOpts, profiles, out)
 
 	r, err := runner.NewForConfig(runCtx)
 
@@ -594,7 +594,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 }
 
 // runContext returns runner context and config for Skaffold dev mode
-func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
+func runContext(opts config.SkaffoldOptions, profiles []string, out io.Writer) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
 	parsed, err := schema.ParseConfigAndUpgrade(opts.ConfigurationFile, latest.Version)
 	if err != nil {
 		if os.IsNotExist(errors.Unwrap(err)) {
@@ -619,7 +619,8 @@ func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.Run
 	if err != nil {
 		return nil, nil, fmt.Errorf("applying profiles: %w", err)
 	}
-	fmt.Println("Applied profiles:", appliedProfiles)
+	// fmt.Println("Applied profiles:", appliedProfiles)
+	_, _ = fmt.Fprintln(out, "Applied profiles:", appliedProfiles)
 
 	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext, config.Deploy.KubeContext)
 

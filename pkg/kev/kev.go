@@ -54,6 +54,8 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
+// RenderProjectWithOptions renders a kev project's compose files into Kubernetes manifests
+// using the provided options (if any).
 func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	runner := NewRenderRunner(workingDir, opts...)
 	ui := runner.UI
@@ -74,6 +76,8 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
+// DevWithOptions runs a continuous development cycle detecting project updates and
+// re-rendering compose files to Kubernetes manifests.
 func DevWithOptions(workingDir string, handler ChangeHandler, opts ...Options) error {
 	runner := NewDevRunner(workingDir, handler, opts...)
 	err := runner.Run()
