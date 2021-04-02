@@ -79,7 +79,7 @@ var _ = Describe("RenderRunner UI", func() {
 			err = runner.ValidateEnvSources(config.SecretMatchers)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(log.NextHeader()).To(HaveKeyWithValue("Validating deployment environments...", []string{}))
+			Expect(log.NextHeader()).To(HaveKeyWithValue("Validating compose environment overrides...", []string{}))
 
 			Expect(log.NextOutput()).To(HaveKeyWithValue("Detecting secrets in: testdata/detect-secrets/docker-compose.kev.dev.yaml", []string{}))
 			Expect(log.NextStep()).To(HaveKeyWithValue(`Analysing service: db`, []string{}))
