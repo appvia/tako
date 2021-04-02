@@ -619,7 +619,6 @@ func runContext(opts config.SkaffoldOptions, profiles []string, out io.Writer) (
 	if err != nil {
 		return nil, nil, fmt.Errorf("applying profiles: %w", err)
 	}
-	// fmt.Println("Applied profiles:", appliedProfiles)
 	_, _ = fmt.Fprintln(out, "Applied profiles:", appliedProfiles)
 
 	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext, config.Deploy.KubeContext)
