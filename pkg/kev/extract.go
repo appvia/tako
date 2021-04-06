@@ -28,24 +28,10 @@ import (
 )
 
 // extractLabels extracts a set of labels from a compose project object.
-func extractLabels(c *ComposeProject) *composeOverride {
-	out := &composeOverride{
-		Version: c.version,
-	}
-	extractVolumesLabels(c, out)
-
-	for _, s := range c.Services {
-		target := ServiceConfig{
-			Name:   s.Name,
-			Labels: map[string]string{},
-		}
-		setDefaultLabels(&target)
-		extractServiceTypeLabels(s, &target)
-		extractDeploymentLabels(s, &target)
-		extractHealthcheckLabels(s, &target)
-		out.Services = append(out.Services, target)
-	}
-	return out
+func extractLabels(s composego.ServiceConfig, target *ServiceConfig) {
+	extractServiceTypeLabels(s, target)
+	extractDeploymentLabels(s, target)
+	extractHealthcheckLabels(s, target)
 }
 
 // setDefaultLabels sets sensible workload defaults as labels.
