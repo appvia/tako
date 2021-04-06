@@ -106,7 +106,7 @@ func (r *RenderRunner) VerifySkaffoldIfAvailable() error {
 // This function can be extended to include different forms of
 // validation (for now it detect any secrets found in the sources).
 func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
-	r.UI.Header("Validating deployment environments...")
+	r.UI.Header("Validating compose environment overrides...")
 	var detectHit bool
 
 	filteredEnvs, err := r.manifest.GetEnvironments(r.config.envs)

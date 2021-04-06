@@ -255,63 +255,6 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 	return outputPaths, nil
 }
 
-// DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.
-func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
-	sourcesFiles := m.GetSourcesFiles()
-
-	sg := m.UI.StepGroup()
-
-	for _, source := range sourcesFiles {
-		m.UI.Output(fmt.Sprintf("Detecting secrets in: %s", source))
-		p, err := NewComposeProject([]string{source})
-		if err != nil {
-			return err
-		}
-
-		for _, s := range p.Services {
-			step := sg.Add(fmt.Sprintf("Analysing service: %s", s.Name))
-			serviceConfig := ServiceConfig{Name: s.Name, Environment: s.Environment}
-
-			hits := serviceConfig.detectSecretsInEnvVars(matchers)
-			if len(hits) == 0 {
-				step.Success("Non detected in service: ", s.Name)
-				continue
-			}
-
-			step.Warning("Detected in service: ", s.Name)
-			for _, hit := range hits {
-				m.UI.Output(
-					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
-					kmd.WithStyle(kmd.LogStyle),
-					kmd.WithIndentChar(kmd.LogIndentChar),
-					kmd.WithIndent(3),
-				)
-			}
-		}
-	}
-	return nil
-}
-
-// DetectSecretsInEnvs detects any potential secrets setup as environment variables
-// in a manifests deployment environments config.
-func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string) error {
-	var filter []string
-	envs, err := m.GetEnvironments(filter)
-	if err != nil {
-		return err
-	}
-
-	for _, env := range envs {
-		detected := env.GetServices().detectSecrets(matchers, func() {
-			log.Warnf("Detected potential secrets in env [%s]", env.Name)
-		})
-		if !detected {
-			log.Debugf("No secrets detected in env [%s]", env.Name)
-		}
-	}
-	return nil
-}
-
 // GetSourcesFiles gets the sources tracked docker-compose files.
 func (m *Manifest) GetSourcesFiles() []string {
 	return m.Sources.Files

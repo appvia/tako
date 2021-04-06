@@ -16,18 +16,6 @@
 
 package kev
 
-import (
-	"context"
-	"fmt"
-	"os"
-
-	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/appvia/kev/pkg/kev/log"
-	kmd "github.com/appvia/komando"
-	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/errors"
-)
-
 const (
 	// SandboxEnv is a default environment name
 	SandboxEnv = "dev"
@@ -60,6 +48,8 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
+// RenderProjectWithOptions renders a kev project's compose files into Kubernetes manifests
+// using the provided options (if any).
 func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	runner := NewRenderRunner(workingDir, opts...)
 	ui := runner.UI
@@ -80,161 +70,16 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 	return nil
 }
 
-// Reconcile reconciles changes with docker-compose sources against deployment environments.
-func Reconcile(workingDir string) (*Manifest, error) {
-	m, err := LoadManifest(workingDir)
+// DevWithOptions runs a continuous development cycle detecting project updates and
+// re-rendering compose files to Kubernetes manifests.
+func DevWithOptions(workingDir string, handler ChangeEventHandler, opts ...Options) error {
+	runner := NewDevRunner(workingDir, handler, opts...)
+	err := runner.Run()
+
 	if err != nil {
-		return nil, err
-	}
-
-	// TODO(es) Remove this after dev cmd is moved to use new render runner
-	m.UI = kmd.NoOpUI()
-
-	if _, err := m.ReconcileConfig(); err != nil {
-		return nil, errors.Wrap(err, "Could not reconcile project latest")
-	}
-	return m, err
-}
-
-// DetectSecrets detects any potential secrets defined in environment variables
-// found either in sources or override environments.
-// Any detected secrets are logged using a warning log level.
-func DetectSecrets(workingDir string) error {
-	m, err := LoadManifest(workingDir)
-	if err != nil {
+		printDevProjectWithOptionsError(runner.UI)
 		return err
 	}
-
-	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
-	runner.Init()
-	if _, err := runner.detectSecretsInSources(m.Sources, config.SecretMatchers); err != nil {
-		return err
-	}
-
-	if err := m.DetectSecretsInEnvs(config.SecretMatchers); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Watch continuously watches source compose files & environment overrides and notifies changes to a channel
-func Watch(workDir string, change chan<- string) error {
-	manifest, err := LoadManifest(workDir)
-	if err != nil {
-		log.Errorf("Unable to load app manifest - %s", err)
-		os.Exit(1)
-	}
-
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-	defer watcher.Close()
-
-	done := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					change <- event.Name
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-
-				log.Error(err)
-			}
-		}
-	}()
-
-	files := manifest.GetSourcesFiles()
-	filteredEnvs, err := manifest.GetEnvironments([]string{})
-	for _, e := range filteredEnvs {
-		files = append(files, e.File)
-	}
-
-	for _, f := range files {
-		err = watcher.Add(f)
-		if err != nil {
-			return err
-		}
-	}
-
-	<-done
 
 	return nil
-}
-
-// Dev contains dev command business logic
-func Dev(opts *DevOptions, workDir string, preRunCommands []RunFunc, errHandler ErrorHandler, changeHandler ChangeHandler) error {
-
-	runPreCommands := func() error {
-		for _, preRunCmd := range preRunCommands {
-			if err := preRunCmd(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	change := make(chan string, 50)
-	defer close(change)
-
-	// initial manifests generation for specified environments only
-	if err := runPreCommands(); err != nil {
-		return errHandler(err)
-	}
-
-	if opts.Skaffold {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		catchCtrlC(cancel)
-
-		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(workDir)
-		if err != nil {
-			return errHandler(err)
-		}
-
-		if err := WriteTo(skaffoldConfigPath, skaffoldConfig); err != nil {
-			return errHandler(errors.Wrap(err, "Couldn't write Skaffold config"))
-		}
-
-		profileName := opts.Kevenv + EnvProfileNameSuffix
-		go RunSkaffoldDev(ctx, os.Stdout, skaffoldConfigPath, []string{profileName}, opts)
-	}
-
-	go Watch(workDir, change)
-
-	for {
-		ch := <-change
-		if len(ch) > 0 {
-			fmt.Printf("\n♻️  %s changed! Re-rendering manifests...\n\n", ch)
-
-			if changeHandler != nil {
-				changeHandler(ch)
-			}
-
-			if err := runPreCommands(); err != nil {
-				errHandler(err)
-			}
-
-			// empty the buffer as we only ever do one re-render cycle per a batch of changes
-			if len(change) > 0 {
-				for range change {
-					if len(change) == 0 {
-						break
-					}
-				}
-			}
-		}
-	}
 }
