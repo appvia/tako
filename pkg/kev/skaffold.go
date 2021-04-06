@@ -24,14 +24,12 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
@@ -475,12 +473,12 @@ func (s *SkaffoldManifest) sortProfiles() {
 }
 
 // RunSkaffoldDev starts Skaffold pipeline in dev mode for given profiles, kubernetes context and namespace
-func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, opts *DevOptions) error {
+func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, profiles []string, runCfg runConfig) error {
 	var mutedPhases []string
 	var trigger string
 	var pollInterval int
 
-	if opts.ManualTrigger {
+	if runCfg.skaffoldManualTrigger {
 		trigger = "manual"
 		pollInterval = 0
 	} else {
@@ -488,7 +486,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		pollInterval = 100 // 100ms by default
 	}
 
-	if opts.Verbose {
+	if runCfg.skaffoldVerbose {
 		mutedPhases = []string{}
 	} else {
 		mutedPhases = []string{"build"} // possible options "build", "deploy", "status-check"
@@ -505,14 +503,14 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		AutoSync:              true,
 		AutoDeploy:            true,
 		Profiles:              profiles,
-		Namespace:             opts.Namespace,
-		KubeContext:           opts.Kubecontext,
+		Namespace:             runCfg.k8sNamespace,
+		KubeContext:           runCfg.kubecontext,
 		Cleanup:               true,
 		NoPrune:               false,
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
 		StatusCheck:           true,
-		Tail:                  opts.Tail,
+		Tail:                  runCfg.skaffoldTail,
 		PortForward: config.PortForwardOptions{
 			Enabled:     true,
 			ForwardPods: true,
@@ -527,13 +525,13 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		},
 		CustomLabels: []string{
 			"io.kev.dev/profile=" + profiles[0],
-			"io.kev.dev/kubecontext=" + opts.Kubecontext,
-			"io.kev.dev/namespace=" + opts.Namespace,
+			"io.kev.dev/kubecontext=" + runCfg.kubecontext,
+			"io.kev.dev/namespace=" + runCfg.k8sNamespace,
 			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
 		},
 	}
 
-	runCtx, cfg, err := runContext(skaffoldOpts, profiles)
+	runCtx, cfg, err := runContext(skaffoldOpts, profiles, out)
 
 	r, err := runner.NewForConfig(runCtx)
 
@@ -596,7 +594,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 }
 
 // runContext returns runner context and config for Skaffold dev mode
-func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
+func runContext(opts config.SkaffoldOptions, profiles []string, out io.Writer) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
 	parsed, err := schema.ParseConfigAndUpgrade(opts.ConfigurationFile, latest.Version)
 	if err != nil {
 		if os.IsNotExist(errors.Unwrap(err)) {
@@ -621,7 +619,7 @@ func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.Run
 	if err != nil {
 		return nil, nil, fmt.Errorf("applying profiles: %w", err)
 	}
-	fmt.Println("Applied profiles:", appliedProfiles)
+	_, _ = fmt.Fprintln(out, "Applied profiles:", appliedProfiles)
 
 	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext, config.Deploy.KubeContext)
 
@@ -639,68 +637,6 @@ func runContext(opts config.SkaffoldOptions, profiles []string) (*runcontext.Run
 	}
 
 	return runCtx, config, nil
-}
-
-// DisplaySkaffoldInfo looks at Skaffold related flags and displays a summary of parameters used
-func DisplaySkaffoldInfo(opts *DevOptions) {
-	if opts.Skaffold {
-		fmt.Println("==================================================")
-		fmt.Println("Dev mode activated with Skaffold dev loop enabled ")
-		fmt.Println("--------------------------------------------------")
-
-		if len(opts.Namespace) == 0 {
-			fmt.Printf("⏣  Will deploy to `%s` namespace. You may override it with '--namespace' flag.\n", DefaultSkaffoldNamespace)
-			opts.Namespace = DefaultSkaffoldNamespace
-		} else {
-			fmt.Printf("⏣  Will deploy to '%s' namespace. You may override it with '--namespace' flag.\n", opts.Namespace)
-		}
-
-		if len(opts.Kubecontext) == 0 {
-			fmt.Println("⏣  Will use current kubectl context. You may override it with '--kubecontext' flag.")
-		} else {
-			fmt.Printf("⏣  Will use '%s' kube context. You may override it with '--kubecontext' flag.\n", opts.Kubecontext)
-		}
-
-		if len(opts.Kevenv) == 0 {
-			fmt.Printf("⏣  Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.\n", SandboxEnv)
-		} else {
-			fmt.Printf("⏣  Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.\n", opts.Kevenv)
-		}
-
-		if opts.Tail {
-			fmt.Println("⏣  Will tail logs of deployed application.")
-		} else {
-			fmt.Println("⏣  Won't tail logs of deployed application. To enable log tailing use '--tail' flag.")
-		}
-
-		if opts.ManualTrigger {
-			fmt.Println("⏣  Will stack up all the code changes and only perform build/push/deploy when triggered manually by hitting ENTER.")
-		} else {
-			fmt.Println("⏣  Will automatically trigger build/push/deploy on each application code change. To trigger changes manually use '--manual-trigger' flag.")
-		}
-		fmt.Println("==================================================")
-	}
-}
-
-// catchCtrlC catches ctrl+c in skaffold dev
-func catchCtrlC(cancel context.CancelFunc) {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals,
-		os.Interrupt,
-		syscall.SIGTERM,
-		syscall.SIGINT,
-		syscall.SIGPIPE,
-	)
-
-	go func() {
-		<-signals
-		signal.Stop(signals)
-		cancel()
-		fmt.Println("-----------------------------------------")
-		fmt.Println("⏣  Stopping Skaffold dev loop! Kev will continue to reconcile and")
-		fmt.Println("   re-render K8s manifests for your application. Press Ctrl+C to stop.")
-		fmt.Println("-----------------------------------------")
-	}()
 }
 
 // ActivateSkaffoldDevLoop checks whether skaffold dev loop can be activated, and returns an error if not.
