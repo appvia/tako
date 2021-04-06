@@ -103,7 +103,7 @@ func (r *DevRunner) Run() error {
 			r.UI.Output(
 				fmt.Sprintf("Change detected in: %s", ch),
 				kmd.WithIndent(1),
-				kmd.WithIndentChar("♺"),
+				kmd.WithIndentChar("♺ "),
 				kmd.WithStyle(kmd.LogStyle),
 			)
 
