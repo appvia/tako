@@ -20,6 +20,7 @@ import (
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/testutil"
+	kmd "github.com/appvia/komando"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -46,7 +47,10 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 		hook = testutil.NewLogger(logrus.DebugLevel)
-		manifest, mErr = kev.Reconcile(workingDir)
+
+		r := kev.NewRenderRunner(workingDir, kev.WithUI(kmd.NoOpUI()))
+		r.LoadProject()
+		manifest, mErr = r.Manifest().ReconcileConfig()
 		Expect(mErr).NotTo(HaveOccurred())
 
 		env, err = manifest.GetEnvironment("dev")

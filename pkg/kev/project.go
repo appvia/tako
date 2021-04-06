@@ -151,3 +151,43 @@ func WithUI(ui kmd.UI) Options {
 		project.UI = ui
 	}
 }
+
+// WithK8sNamespace configures a project's run config with a K8s namespace
+// (used mostly during dev when Skaffold is enabled).
+func WithK8sNamespace(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.k8sNamespace = c
+	}
+}
+
+// WithKubecontext configures a project's run config with a K8s kubecontext
+// (used mostly during dev when Skaffold is enabled).
+func WithKubecontext(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.kubecontext = c
+	}
+}
+
+// WithSkaffoldTailEnabled configures a project's run config with log tailing for Skaffold
+// (used mostly during dev when Skaffold is enabled).
+func WithSkaffoldTailEnabled(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.skaffoldTail = c
+	}
+}
+
+// WithSkaffoldManualTriggerEnabled configures a project's run config with manual trigger
+// for Skaffold (used mostly during dev when Skaffold is enabled).
+func WithSkaffoldManualTriggerEnabled(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.skaffoldManualTrigger = c
+	}
+}
+
+// WithSkaffoldVerboseEnabled configures a project's run config with verbose mode
+// for Skaffold (used mostly during dev when Skaffold is enabled).
+func WithSkaffoldVerboseEnabled(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.skaffoldVerbose = c
+	}
+}
