@@ -18,6 +18,7 @@ package kev_test
 
 import (
 	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -92,8 +93,8 @@ var _ = Describe("Manifest", func() {
 				envSvc, err := env.GetService("db")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(srcSvc.Extensions).To(HaveLen(1))
-				Expect(mergedSvc.Extensions).To(HaveLen(2))
+				Expect(srcSvc.Extensions).To(HaveLen(2))
+				Expect(mergedSvc.Extensions).To(HaveLen(3))
 				Expect(mergedSvc.Extensions["x-other-extension"]).To(Equal(envSvc.Extensions["x-other-extension"]))
 
 				mergedSvcAnExt := mergedSvc.Extensions["x-an-extension"].(map[string]interface{})
@@ -101,6 +102,11 @@ var _ = Describe("Manifest", func() {
 
 				Expect(mergedSvcAnExt["key"]).To(Equal("value"))
 				Expect(mergedSvcAnExt["override-key"]).To(Equal(envSvcAnExt["override-key"]))
+
+				k8sconf, err := config.K8SCfgFromMap(mergedSvc.Extensions)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeExec.String()))
+				Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(Equal("echo I'm a useless check"))
 			})
 
 			It("merged the environment env var overrides into sources", func() {
