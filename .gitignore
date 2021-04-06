@@ -10,6 +10,11 @@ docker-compose.override.yaml
 !/examples/**/*.yaml
 skaffold.yaml
 
+### Node app example
+examples/node-app/docker-compose.kev*
+examples/node-app/kev.yaml
+examples/node-app/k8s
+
 ### Go mod vendor ###
 vendor
 
