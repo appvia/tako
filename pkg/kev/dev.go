@@ -28,6 +28,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
 	"github.com/fsnotify/fsnotify"
+	"github.com/mitchellh/go-wordwrap"
 	"github.com/pkg/errors"
 )
 
@@ -79,11 +80,24 @@ func (r *DevRunner) Run() error {
 
 		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(r.workingDir)
 		if err != nil {
+			r.UI.Output("")
+			r.UI.Output(
+				wordwrap.WrapString(err.Error(), kmd.RecommendedWordWrapLimit),
+				kmd.WithErrorStyle(),
+				kmd.WithIndentChar(kmd.ErrorIndentChar),
+			)
 			return err
 		}
 
 		if err := WriteTo(skaffoldConfigPath, skaffoldConfig); err != nil {
-			return errors.Wrap(err, "Couldn't write Skaffold config")
+			e := errors.Wrap(err, "Couldn't write Skaffold config")
+			r.UI.Output("")
+			r.UI.Output(
+				wordwrap.WrapString(e.Error(), kmd.RecommendedWordWrapLimit),
+				kmd.WithErrorStyle(),
+				kmd.WithIndentChar(kmd.ErrorIndentChar),
+			)
+			return e
 		}
 
 		pr, pw := io.Pipe()
@@ -123,8 +137,6 @@ func (r *DevRunner) Run() error {
 			}
 		}
 	}
-
-	return nil
 }
 
 // Watch continuously watches source compose files & configured environment overrides
