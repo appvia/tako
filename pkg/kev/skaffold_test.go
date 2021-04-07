@@ -480,7 +480,7 @@ var _ = Describe("Skaffold", func() {
 			})
 		})
 
-		Context("with ot without images detected by Skaffold analysis", func() {
+		Context("with or without images detected by Skaffold analysis", func() {
 			BeforeEach(func() {
 				skaffoldManifest = &kev.SkaffoldManifest{}
 			})
