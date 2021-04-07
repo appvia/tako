@@ -122,6 +122,62 @@ func InjectProfiles(path string, envs []string, includeAdditional bool) (*Skaffo
 	return skaffold, nil
 }
 
+// UpdateSkaffoldBuildArtifacts updates skaffold build artefacts with freshly discovered list of images and contexts.
+// Note, it'll persist updated build artefacts in the skaffold.yaml file only when change in build artefacts was detected.
+// Important: The last discovered images and contexts will be persisted (if changed)!
+func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
+	if !fileExists(path) {
+		return fmt.Errorf("skaffold config file (%s) doesn't exist", path)
+	}
+
+	skaffold, err := LoadSkaffoldManifest(path)
+	if err != nil {
+		return err
+	}
+
+	analysis, err := analyzeProject()
+	if err != nil {
+		return err
+	}
+
+	changed, err := skaffold.UpdateBuildArtifacts(analysis, project)
+	if err != nil {
+		return err
+	}
+
+	// only persist when the list of artifacts changed
+	if changed {
+		file, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		if _, err := skaffold.WriteTo(file); err != nil {
+			return err
+		}
+		return file.Close()
+	}
+
+	return nil
+}
+
+// UpdateBuildArtifacts sets build artefacts in Skaffold manifest and returns change status
+// true - when list of artefacts was updated, false - otherwise
+func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) (bool, error) {
+	changed := false
+
+	prevArts := s.Build.Artifacts
+
+	if err := s.SetBuildArtifacts(analysis, project); err != nil {
+		return false, err
+	}
+
+	if !reflect.DeepEqual(s.Build.Artifacts, prevArts) {
+		return true, nil
+	}
+
+	return changed, nil
+}
+
 // UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.
 // Note, it'll persist updated profiles in the skaffold.yaml file.
 // Important: This will always persist the last rendered directory as Deploy manifests source!

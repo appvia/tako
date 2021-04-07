@@ -270,6 +270,89 @@ var _ = Describe("Skaffold", func() {
 		})
 	})
 
+	Describe("UpdateBuildArtifacts", func() {
+		var (
+			skaffoldManifest *kev.SkaffoldManifest
+			project          *kev.ComposeProject
+			analysis         *kev.Analysis
+			changed          bool
+			err              error
+		)
+
+		BeforeEach(func() {
+			analysis = &kev.Analysis{
+				Dockerfiles: []string{"src/svc1/Dockerfile"},
+				Images:      []string{"quay.io/myorg/svc1"},
+			}
+
+			project = &kev.ComposeProject{
+				Project: &composego.Project{
+					Services: composego.Services(
+						[]composego.ServiceConfig{
+							{
+								Name:  "svc2",
+								Image: "quay.io/myorg/svc2",
+								Build: &composego.BuildConfig{
+									Context: "src/svc2",
+								},
+							},
+						},
+					),
+				},
+			}
+
+			skaffoldManifest = &kev.SkaffoldManifest{}
+			skaffoldManifest.Build.Artifacts = []*latest.Artifact{
+				{
+					ImageName: "quay.io/myorg/svc1",
+					Workspace: "src/svc1",
+				},
+				{
+					ImageName: "quay.io/myorg/svc2",
+					Workspace: "src/svc2",
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			changed, err = skaffoldManifest.UpdateBuildArtifacts(analysis, project)
+		})
+
+		When("list of detected build artefacts had not changed", func() {
+			It("doesn't update build artefacts in skaffold manifest", func() {
+				Expect(changed).To(BeFalse())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
+
+				images := []string{}
+				for _, a := range skaffoldManifest.Build.Artifacts {
+					images = append(images, a.ImageName)
+				}
+				Expect(images).To(ContainElements("quay.io/myorg/svc1", "quay.io/myorg/svc2"))
+				Expect(images).ToNot(ContainElement("quay.io/myorg/svc99"))
+			})
+		})
+
+		When("list of detected build artefacts has changed", func() {
+			BeforeEach(func() {
+				project.Project.Services[0].Image = "quay.io/myorg/svc99"
+			})
+
+			It("updates build artefacts in skaffold manifest", func() {
+				Expect(changed).To(BeTrue())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
+
+				images := []string{}
+				for _, a := range skaffoldManifest.Build.Artifacts {
+					images = append(images, a.ImageName)
+				}
+				Expect(images).To(ContainElements("quay.io/myorg/svc1", "quay.io/myorg/svc99"))
+				Expect(images).ToNot(ContainElement("quay.io/myorg/svc2"))
+			})
+		})
+	})
+
 	Describe("InjectProfiles", func() {
 		var (
 			skaffoldManifest          *kev.SkaffoldManifest
