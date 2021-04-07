@@ -27,7 +27,7 @@ import (
 
 type BaseOverrideOpts func(s *Sources, c *ComposeProject) error
 
-// CalculateBaseOverride calculates the base set of labels deduced from a group of compose sources.
+// CalculateBaseOverride calculates the extensions and the base set of labels deduced from a group of compose sources.
 func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
@@ -53,11 +53,16 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 		if err != nil {
 			return err
 		}
-		target.K8SConfig = k8sConf
+
+		m, err := k8sConf.ToMap()
+		if err != nil {
+			return err
+		}
+
 		if target.Extensions == nil {
 			target.Extensions = make(map[string]interface{})
 		}
-		target.Extensions["x-k8s"] = k8sConf
+		target.Extensions[config.K8SExtensionKey] = m
 
 		s.override.Services = append(s.override.Services, target)
 	}
@@ -86,6 +91,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 			Name:        svc.Name,
 			Labels:      svc.Labels,
 			Environment: originSvc.Environment,
+			Extensions:  svc.Extensions,
 		})
 	}
 	s.override.Services = services

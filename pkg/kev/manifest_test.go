@@ -106,7 +106,7 @@ var _ = Describe("Manifest", func() {
 				k8sconf, err := config.K8SCfgFromMap(mergedSvc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeExec.String()))
-				Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(Equal("echo I'm a useless check"))
+				Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(Equal([]string{"echo", "I'm a useless check"}))
 			})
 
 			It("merged the environment env var overrides into sources", func() {

@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
 	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
@@ -177,6 +178,13 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	}
 
 	for _, e := range filteredEnvs {
+		if err := validateExtensions(e.override.Services); err != nil {
+			sg := m.UI.StepGroup()
+			defer sg.Done()
+			renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+			return nil, err
+		}
+
 		log.DebugTitlef("Reconciling environment [%s]", e.Name)
 
 		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
@@ -187,6 +195,17 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	}
 
 	return m, nil
+}
+
+func validateExtensions(services Services) error {
+	for _, s := range services {
+		_, err := config.K8SCfgFromMap(s.Extensions, config.RequireExtensions())
+		if err != nil {
+			return errors.Wrapf(err, "%s extensions not valid for service %s", config.K8SExtensionKey, s.Name)
+		}
+	}
+
+	return nil
 }
 
 // MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
