@@ -169,9 +169,9 @@ var _ = Describe("Skaffold", func() {
 		Context("ci-local-build-no-push", func() {
 			enabled := false
 
-			It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
+			It("adds additional profiles to the skaffold manifest", func() {
 				Expect(manifest.Profiles).To(ContainElement(latest.Profile{
-					Name: "kev-ci-local-build-no-push",
+					Name: "ci-local-build-no-push",
 					Pipeline: latest.Pipeline{
 						Build: latest.BuildConfig{
 							BuildType: latest.BuildType{
@@ -188,9 +188,9 @@ var _ = Describe("Skaffold", func() {
 		Context("ci-local-build-and-push", func() {
 			enabled := true
 
-			It("adds additional profiles to the skaffold manifest with name containing kev defined prefix", func() {
+			It("adds additional profiles to the skaffold manifest", func() {
 				Expect(manifest.Profiles).To(ContainElement(latest.Profile{
-					Name: "kev-ci-local-build-and-push",
+					Name: "ci-local-build-and-push",
 					Pipeline: latest.Pipeline{
 						Build: latest.BuildConfig{
 							BuildType: latest.BuildType{

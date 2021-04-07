@@ -64,9 +64,6 @@ const (
 	// SkaffoldFileName is a file name of skaffold manifest
 	SkaffoldFileName = "skaffold.yaml"
 
-	// ProfileNamePrefix is a prefix to the added skaffold aprofile
-	ProfileNamePrefix = "kev-"
-
 	// EnvProfileNameSuffix is a suffix added to environment specific profile name
 	EnvProfileNameSuffix = "-env"
 
@@ -256,10 +253,10 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 // AdditionalProfiles adds additional Skaffold profiles
 func (s *SkaffoldManifest) AdditionalProfiles() {
 
-	if !s.profileNameExist(ProfileNamePrefix + "ci-local-build-no-push") {
+	if !s.profileNameExist("ci-local-build-no-push") {
 		// Helper profile for use in CI pipeline
 		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "ci-local-build-no-push",
+			Name: "ci-local-build-no-push",
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
@@ -274,10 +271,10 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 		})
 	}
 
-	if !s.profileNameExist(ProfileNamePrefix + "ci-local-build-and-push") {
+	if !s.profileNameExist("ci-local-build-and-push") {
 		// Helper profile for use in CI pipeline
 		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "ci-local-build-and-push",
+			Name: "ci-local-build-and-push",
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
