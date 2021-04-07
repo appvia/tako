@@ -195,7 +195,7 @@ func BaseSkaffoldManifest() *SkaffoldManifest {
 		APIVersion: latest.Version,
 		Kind:       "Config",
 		Metadata: latest.Metadata{
-			Name: "KevApp",
+			Name: "App",
 		},
 		// @todo figure out top level pipeline elements
 		// Pipeline: latest.Pipeline{}
@@ -221,9 +221,11 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
-						LocalBuild: &latest.LocalBuild{
-							Push: &enabled,
-						},
+						// Local build is a default build strategy!
+						// When "local" kubecontext is in use the built images won't be pushed to a registry.
+						// If "Push" option isn't specified (which is our default), then images are pushed only if
+						// the current Kubernetes context connects to a remote cluster.
+						LocalBuild: &latest.LocalBuild{},
 					},
 					TagPolicy: latest.TagPolicy{
 						GitTagger: &latest.GitTagger{
@@ -254,44 +256,10 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 // AdditionalProfiles adds additional Skaffold profiles
 func (s *SkaffoldManifest) AdditionalProfiles() {
 
-	if !s.profileNameExist(ProfileNamePrefix + "minikube") {
-		// Helper profile for developing in local minikube
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "minikube",
-			Activation: []latest.Activation{
-				{
-					KubeContext: "minikube",
-				},
-			},
-			Pipeline: latest.Pipeline{
-				Deploy: latest.DeployConfig{
-					KubeContext: "minikube",
-				},
-			},
-		})
-	}
-
-	if !s.profileNameExist(ProfileNamePrefix + "docker-desktop") {
-		// Helper profile for developing in local docker-desktop
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "docker-desktop",
-			Activation: []latest.Activation{
-				{
-					KubeContext: "docker-desktop",
-				},
-			},
-			Pipeline: latest.Pipeline{
-				Deploy: latest.DeployConfig{
-					KubeContext: "docker-desktop",
-				},
-			},
-		})
-	}
-
-	if !s.profileNameExist(ProfileNamePrefix + "ci-build-no-push") {
+	if !s.profileNameExist(ProfileNamePrefix + "ci-local-build-no-push") {
 		// Helper profile for use in CI pipeline
 		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "ci-build-no-push",
+			Name: ProfileNamePrefix + "ci-local-build-no-push",
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
@@ -306,10 +274,10 @@ func (s *SkaffoldManifest) AdditionalProfiles() {
 		})
 	}
 
-	if !s.profileNameExist(ProfileNamePrefix + "ci-build-and-push") {
+	if !s.profileNameExist(ProfileNamePrefix + "ci-local-build-and-push") {
 		// Helper profile for use in CI pipeline
 		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "ci-build-and-push",
+			Name: ProfileNamePrefix + "ci-local-build-and-push",
 			Pipeline: latest.Pipeline{
 				Build: latest.BuildConfig{
 					BuildType: latest.BuildType{
@@ -356,7 +324,7 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 	if len(analysis.Images) == 0 {
 		// no images detected - usually the case when there are no kubernetes manifests
 		// Extract referenced images and map them to their respective build contexts (if present) from Compose project
-		// Note: It'll miss images without "build" context specified!
+		// Note: It'll skip services without "build" context specified!
 
 		if project.Project != nil && project.Project.Services != nil {
 			for _, s := range project.Project.Services {
