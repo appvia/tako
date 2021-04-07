@@ -161,7 +161,7 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 		// Skaffold manifest already present - add additional profiles to it!
 		// Note: kev will skip profiles with names matching those of existing
 		// profile names defined in Skaffold to avoid profile "hijack".
-		if skManifest, err = AddProfiles(skPath, envs, true); err != nil {
+		if skManifest, err = InjectProfiles(skPath, envs, true); err != nil {
 			initStepError(r.UI, updateStep, initStepUpdateSkaffold, err)
 			return nil, err
 		}

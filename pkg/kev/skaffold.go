@@ -106,9 +106,9 @@ func LoadSkaffoldManifest(path string) (*SkaffoldManifest, error) {
 	return s, yaml.Unmarshal(data, &s)
 }
 
-// AddProfiles injects kev profiles to existing Skaffold manifest
+// InjectProfiles injects kev profiles to existing Skaffold manifest
 // Note, if profile name already exists in the skaffold manifest then profile won't be added
-func AddProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldManifest, error) {
+func InjectProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldManifest, error) {
 	skaffold, err := LoadSkaffoldManifest(path)
 	if err != nil {
 		return nil, err
@@ -638,7 +638,7 @@ Once you have skaffold.yaml in your project, make sure that Kev references it by
 	}
 
 	// Reconcile skaffold config and add potentially missing profiles before starting dev loop
-	reconciledSkaffoldConfig, err := AddProfiles(configPath, manifest.GetEnvironmentsNames(), true)
+	reconciledSkaffoldConfig, err := InjectProfiles(configPath, manifest.GetEnvironmentsNames(), true)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "Couldn't reconcile Skaffold config - required profiles haven't been added.")
 	}

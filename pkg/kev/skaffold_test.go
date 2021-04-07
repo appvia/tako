@@ -270,7 +270,7 @@ var _ = Describe("Skaffold", func() {
 		})
 	})
 
-	Describe("AddProfiles", func() {
+	Describe("InjectProfiles", func() {
 		var (
 			skaffoldManifest          *kev.SkaffoldManifest
 			existingSkaffoldPath      string
@@ -287,7 +287,7 @@ var _ = Describe("Skaffold", func() {
 			// Note, example skaffold already contains dev environment profile
 			BeforeEach(func() {
 				envs := []string{"prod"}
-				skaffoldManifest, err = kev.AddProfiles(existingSkaffoldPath, envs, includeAdditionalProfiles)
+				skaffoldManifest, err = kev.InjectProfiles(existingSkaffoldPath, envs, includeAdditionalProfiles)
 			})
 
 			It("adds that profile to skaffold manifest", func() {
@@ -302,7 +302,7 @@ var _ = Describe("Skaffold", func() {
 			// Note, example skaffold already contains dev environment profile
 			BeforeEach(func() {
 				envs := []string{"dev"}
-				skaffoldManifest, err = kev.AddProfiles(existingSkaffoldPath, envs, includeAdditionalProfiles)
+				skaffoldManifest, err = kev.InjectProfiles(existingSkaffoldPath, envs, includeAdditionalProfiles)
 			})
 
 			It("doesn't add it to the skaffold manifest", func() {
