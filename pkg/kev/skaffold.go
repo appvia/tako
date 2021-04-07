@@ -318,46 +318,55 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[string]string {
 	buildArtifacts := map[string]string{}
 
-	if len(analysis.Images) == 0 {
-		// no images detected - usually the case when there are no kubernetes manifests
-		// Extract referenced images and map them to their respective build contexts (if present) from Compose project
-		// Note: It'll skip services without "build" context specified!
-
-		if project.Project != nil && project.Project.Services != nil {
-			for _, s := range project.Project.Services {
-				if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
-					buildArtifacts[s.Build.Context] = s.Image
-				}
-			}
-		}
-	}
-
 	for _, d := range analysis.Dockerfiles {
 
-		context := strings.ReplaceAll(d, "/Dockerfile", "")
-		contextParts := strings.Split(context, "/")
-		svcNameFromContext := contextParts[len(contextParts)-1]
+		var context, svcImageNameFromContext string
 
 		if d == "Dockerfile" {
 			// Dockerfile detected in the root directory, use local dir as context
-			// and current working directory name as service name
+			// and current working directory name as service image name
 			context = "."
 			wd, _ := os.Getwd()
-			svcNameFromContext = filepath.Base(wd)
+			svcImageNameFromContext = filepath.Base(wd)
+		} else {
+			// Dockerfile detected in subdirectory, use subdirectory as context
+			// and immediate parent directory name in which Dockerfile reside as service image name
+			context = strings.ReplaceAll(d, "/Dockerfile", "")
+			contextParts := strings.Split(context, "/")
+			svcImageNameFromContext = contextParts[len(contextParts)-1]
 		}
 
-		// Check whether images contain service name derived from context
-		// as that's the best we can do in order to match a service to corresponding
-		// docker registry image. If no docker registry image was detected
-		// then we use service name as docker image name.
-		re := regexp.MustCompile(fmt.Sprintf(`.*\/%s`, svcNameFromContext))
+		if len(analysis.Images) > 0 {
+			// Check whether images detected by Analysis contain service image name derived from the
+			// context as that's the best we can do in order to match a service to a corresponding
+			// docker registry image.
+			// If no docker registry image was detected then we use service name as docker image name.
+			re := regexp.MustCompile(fmt.Sprintf(`.*\/%s`, svcImageNameFromContext))
 
-		for _, image := range analysis.Images {
-			if found := re.FindAllStringSubmatchIndex(image, -1); found != nil {
-				buildArtifacts[context] = image
-				break
-			} else {
-				buildArtifacts[context] = svcNameFromContext
+			for _, image := range analysis.Images {
+				if found := re.FindAllStringSubmatchIndex(image, -1); found != nil {
+					buildArtifacts[context] = image
+					break
+				} else {
+					buildArtifacts[context] = svcImageNameFromContext
+				}
+			}
+		} else {
+			// No Images detected by analysis - usually due to the absence of K8s manifests
+			// which Analysis uses to determine which images are in use.
+			// Add build artifact with details derived from analysis detected Dockerfiles
+			// Note: This may not be always accurate!
+			buildArtifacts[context] = svcImageNameFromContext
+		}
+
+	}
+
+	// Extract images referenced by a Docker Compose project and map them to their respective build contexts (if present)
+	// Note: Images that don't specify build "context" will be ignored!
+	if project.Project != nil && project.Project.Services != nil {
+		for _, s := range project.Project.Services {
+			if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
+				buildArtifacts[s.Build.Context] = s.Image
 			}
 		}
 	}

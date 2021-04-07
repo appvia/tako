@@ -332,8 +332,8 @@ var _ = Describe("Skaffold", func() {
 				skaffoldManifest.SetBuildArtifacts(analysis, project)
 			})
 
-			// Note, service name is derived from the Dockerfile location path
-			// example: src/myservice/Dockerfile will result in `myservice` service name
+			// Note, service image name is derived from the Dockerfile location path
+			// example: src/myservice/Dockerfile will result in `myservice` service image name
 
 			Context("and detected remote registry image names matching service name", func() {
 				BeforeEach(func() {
@@ -365,9 +365,39 @@ var _ = Describe("Skaffold", func() {
 					Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
 				})
 			})
+
+			When("Docker Compose defines image name with identical context", func() {
+				BeforeEach(func() {
+					analysis = &kev.Analysis{
+						Dockerfiles: []string{"src/myservice/Dockerfile"},
+						Images:      []string{},
+					}
+					project = &kev.ComposeProject{
+						Project: &composego.Project{
+							Services: composego.Services(
+								[]composego.ServiceConfig{
+									{
+										Name:  "svc1",
+										Image: "quay.io/myorg/svc1",
+										Build: &composego.BuildConfig{
+											Context: "src/myservice",
+										},
+									},
+								},
+							),
+						},
+					}
+				})
+
+				It("overrides Skaffold detected build artifact image name with Docker Compose extracted one", func() {
+					Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
+					Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal("quay.io/myorg/svc1"))
+					Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
+				})
+			})
 		})
 
-		When("skaffold analysis Images haven't been detected (due to missing k8s manifests)", func() {
+		Context("with ot without images detected by Skaffold analysis", func() {
 			BeforeEach(func() {
 				skaffoldManifest = &kev.SkaffoldManifest{}
 			})
@@ -435,7 +465,7 @@ var _ = Describe("Skaffold", func() {
 					})
 				})
 
-				When("Docker Compose project doens't have services", func() {
+				When("Docker Compose project doesn't have any services", func() {
 					BeforeEach(func() {
 						project = &kev.ComposeProject{
 							Project: &composego.Project{
