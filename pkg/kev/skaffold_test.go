@@ -157,10 +157,10 @@ var _ = Describe("Skaffold", func() {
 
 	})
 
-	Describe("AdditionalProfiles", func() {
+	Describe("SetAdditionalProfiles", func() {
 
 		manifest := kev.BaseSkaffoldManifest()
-		manifest.AdditionalProfiles()
+		manifest.SetAdditionalProfiles()
 
 		It("adds all additional profiles", func() {
 			Expect(manifest.Profiles).To(HaveLen(2))
@@ -207,8 +207,8 @@ var _ = Describe("Skaffold", func() {
 		When("profile of the same name already exists in skaffold profiles", func() {
 
 			BeforeEach(func() {
-				// explicitly triggering another AdditionalProfiles
-				manifest.AdditionalProfiles()
+				// explicitly triggering another SetAdditionalProfiles
+				manifest.SetAdditionalProfiles()
 			})
 
 			It("doesn't add existing additional profiles again", func() {

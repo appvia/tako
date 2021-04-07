@@ -91,7 +91,7 @@ func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManif
 	manifest := BaseSkaffoldManifest()
 	manifest.SetBuildArtifacts(analysis, project)
 	manifest.SetProfiles(envs)
-	manifest.AdditionalProfiles()
+	manifest.SetAdditionalProfiles()
 
 	return manifest, nil
 }
@@ -116,7 +116,7 @@ func AddProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldM
 
 	skaffold.SetProfiles(envs)
 	if includeAdditional {
-		skaffold.AdditionalProfiles()
+		skaffold.SetAdditionalProfiles()
 	}
 
 	return skaffold, nil
@@ -250,8 +250,8 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 	}
 }
 
-// AdditionalProfiles adds additional Skaffold profiles
-func (s *SkaffoldManifest) AdditionalProfiles() {
+// SetAdditionalProfiles adds additional Skaffold profiles
+func (s *SkaffoldManifest) SetAdditionalProfiles() {
 
 	if !s.profileNameExist("ci-local-build-no-push") {
 		// Helper profile for use in CI pipeline
