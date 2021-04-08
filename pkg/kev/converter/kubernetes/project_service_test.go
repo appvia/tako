@@ -1145,7 +1145,7 @@ var _ = Describe("ProjectService", func() {
 			retries := uint64(3)
 
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+				labels.Add(config.LabelWorkloadLivenessProbeType, config.ProbeTypeExec.String())
 				healthcheck = composego.HealthCheckConfig{
 					Test: composego.HealthCheckTest{
 						"CMD-SHELL",
@@ -1204,7 +1204,7 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeCommand.String())
+				labels.Add(config.LabelWorkloadLivenessProbeType, config.ProbeTypeExec.String())
 			})
 
 			Context("when Test command is not defined", func() {
@@ -1232,7 +1232,7 @@ var _ = Describe("ProjectService", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
 						config.LabelWorkloadLivenessProbeTimeout: "0",
-						config.LabelWorkloadLivenessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadLivenessProbeType:    config.ProbeTypeExec.String(),
 					}
 				})
 
@@ -1255,7 +1255,7 @@ var _ = Describe("ProjectService", func() {
 			Context("with all the parameters", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeType:     config.ProbeTypeHTTP.String(),
 						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
 						config.LabelWorkloadLivenessProbeHTTPPort: "8080",
 					}
@@ -1264,7 +1264,7 @@ var _ = Describe("ProjectService", func() {
 				It("returns a handler", func() {
 					result, err := projectService.livenessHTTPProbe()
 					Expect(err).To(BeNil())
-					Expect(result.Port.StrVal).To(Equal("8080"))
+					Expect(result.Port.IntValue()).To(Equal(8080))
 					Expect(result.Path).To(Equal("/status"))
 				})
 			})
@@ -1272,7 +1272,7 @@ var _ = Describe("ProjectService", func() {
 			Context("with missing port", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeType:     config.ProbeTypeHTTP.String(),
 						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
 					}
 				})
@@ -1284,10 +1284,26 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 
+			Context("with NaN port", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:     config.ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
+						config.LabelWorkloadLivenessProbeHTTPPort: "asd",
+					}
+				})
+
+				It("returns an error", func() {
+					_, err := projectService.livenessHTTPProbe()
+					Expect(err).NotTo(BeNil())
+					Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadLivenessProbeHTTPPort))
+				})
+			})
+
 			Context("with missing path", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
+						config.LabelWorkloadLivenessProbeType:     config.ProbeTypeHTTP.String(),
 						config.LabelWorkloadLivenessProbeHTTPPort: "8080",
 					}
 				})
@@ -1299,6 +1315,75 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 		})
+	})
+
+	Describe("livenessProbeTCP", func() {
+		When("defined via labels", func() {
+
+			Context("and supplied as string port", func() {
+				port := "8080"
+
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:    config.ProbeTypeTCP.String(),
+						config.LabelWorkloadLivenessProbeTCPPort: port,
+					}
+				})
+
+				It("returns label value", func() {
+					p, err := projectService.livenessTCPProbe()
+					Expect(err).To(Succeed())
+					Expect(p.Port.String()).To(Equal(port))
+				})
+			})
+
+			Context("and empty port", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:    config.ProbeTypeTCP.String(),
+						config.LabelWorkloadLivenessProbeTCPPort: "",
+					}
+				})
+
+				It("returns an error", func() {
+					p, err := projectService.livenessTCPProbe()
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)))
+					Expect(p).To(BeNil())
+				})
+			})
+
+			Context("with NaN port", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeType:    config.ProbeTypeTCP.String(),
+						config.LabelWorkloadLivenessProbeTCPPort: "asds",
+					}
+				})
+
+				It("returns an error", func() {
+					_, err := projectService.livenessTCPProbe()
+					Expect(err).NotTo(BeNil())
+					Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort))
+				})
+			})
+
+			Context("and no port label", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadLivenessProbeTCPPort: config.ProbeTypeTCP.String(),
+					}
+				})
+
+				It("returns an error", func() {
+					p, err := projectService.livenessTCPProbe()
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)))
+					Expect(p).To(BeNil())
+				})
+			})
+		})
+
 	})
 
 	Describe("livenessProbeCommand", func() {
@@ -1520,7 +1605,7 @@ var _ = Describe("ProjectService", func() {
 			When("any of time based paramaters is set to 0", func() {
 				JustBeforeEach(func() {
 					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeTimeout: "0",
 					}
 				})
@@ -1547,7 +1632,7 @@ var _ = Describe("ProjectService", func() {
 
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeTCP.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeTCP.String(),
 						config.LabelWorkloadReadinessProbeTCPPort: port,
 					}
 				})
@@ -1562,7 +1647,7 @@ var _ = Describe("ProjectService", func() {
 			Context("and empty port", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeTCP.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeTCP.String(),
 						config.LabelWorkloadReadinessProbeTCPPort: "",
 					}
 				})
@@ -1570,15 +1655,30 @@ var _ = Describe("ProjectService", func() {
 				It("returns an error", func() {
 					p, err := projectService.readinessProbe()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("%s cannot be empty", config.LabelWorkloadReadinessProbeTCPPort)))
+					Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort)))
 					Expect(p).To(BeNil())
+				})
+			})
+
+			Context("with NaN port", func() {
+				BeforeEach(func() {
+					labels = composego.Labels{
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeTCP.String(),
+						config.LabelWorkloadReadinessProbeTCPPort: "asds",
+					}
+				})
+
+				It("returns an error", func() {
+					_, err := projectService.readinessProbe()
+					Expect(err).NotTo(Succeed())
+					Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort))
 				})
 			})
 
 			Context("and no port label", func() {
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType: ProbeTypeTCP.String(),
+						config.LabelWorkloadReadinessProbeType: config.ProbeTypeTCP.String(),
 					}
 				})
 
@@ -1595,7 +1695,7 @@ var _ = Describe("ProjectService", func() {
 			It("returns default value as empty string slice", func() {
 				pt, err := projectService.readinessProbeType()
 				Expect(err).To(Succeed())
-				Expect(*pt).To(Equal(ProbeTypeNone))
+				Expect(*pt).To(Equal(config.ProbeTypeNone))
 				Expect(projectService.readinessProbeCommand()).To(Equal([]string{}))
 			})
 		})
@@ -1608,7 +1708,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
+					config.LabelWorkloadReadinessProbeType:     config.ProbeTypeHTTP.String(),
 					config.LabelWorkloadReadinessProbeHTTPPort: port,
 					config.LabelWorkloadReadinessProbeHTTPPath: path,
 				}
@@ -1625,7 +1725,7 @@ var _ = Describe("ProjectService", func() {
 		Context("and empty port", func() {
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
+					config.LabelWorkloadReadinessProbeType:     config.ProbeTypeHTTP.String(),
 					config.LabelWorkloadReadinessProbeHTTPPort: "",
 					config.LabelWorkloadReadinessProbeHTTPPath: "/status",
 				}
@@ -1634,15 +1734,31 @@ var _ = Describe("ProjectService", func() {
 			It("returns an error", func() {
 				p, err := projectService.readinessProbe()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(fmt.Sprintf("%s cannot be empty", config.LabelWorkloadReadinessProbeHTTPPort)))
+				Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort)))
 				Expect(p).To(BeNil())
+			})
+		})
+
+		Context("with NaN port", func() {
+			BeforeEach(func() {
+				labels = composego.Labels{
+					config.LabelWorkloadReadinessProbeType:     config.ProbeTypeHTTP.String(),
+					config.LabelWorkloadReadinessProbeHTTPPort: "asd",
+					config.LabelWorkloadReadinessProbeHTTPPath: "/status",
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := projectService.readinessProbe()
+				Expect(err).NotTo(BeNil())
+				Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort))
 			})
 		})
 
 		Context("and no port label", func() {
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
+					config.LabelWorkloadReadinessProbeType:     config.ProbeTypeHTTP.String(),
 					config.LabelWorkloadReadinessProbeHTTPPath: "/status",
 				}
 			})
@@ -1664,7 +1780,7 @@ var _ = Describe("ProjectService", func() {
 
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeCommand: cmd,
 					}
 				})
@@ -1680,7 +1796,7 @@ var _ = Describe("ProjectService", func() {
 
 				BeforeEach(func() {
 					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 						config.LabelWorkloadReadinessProbeCommand: cmd,
 					}
 				})
@@ -1697,7 +1813,7 @@ var _ = Describe("ProjectService", func() {
 			It("returns default value as empty string slice", func() {
 				pt, err := projectService.readinessProbeType()
 				Expect(err).To(Succeed())
-				Expect(*pt).To(Equal(ProbeTypeNone))
+				Expect(*pt).To(Equal(config.ProbeTypeNone))
 				Expect(projectService.readinessProbeCommand()).To(Equal([]string{}))
 			})
 		})
@@ -1709,7 +1825,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:     config.ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeInterval: interval,
 				}
 			})
@@ -1733,7 +1849,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeTimeout: timeout,
 				}
 			})
@@ -1757,7 +1873,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:         ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:         config.ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeInitialDelay: delay,
 				}
 			})
@@ -1781,7 +1897,7 @@ var _ = Describe("ProjectService", func() {
 
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:    ProbeTypeCommand.String(),
+					config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
 					config.LabelWorkloadReadinessProbeRetries: retries,
 				}
 			})
@@ -1803,14 +1919,14 @@ var _ = Describe("ProjectService", func() {
 		When("defined via labels with valid (truth) value", func() {
 			BeforeEach(func() {
 				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType: ProbeTypeNone.String(),
+					config.LabelWorkloadReadinessProbeType: config.ProbeTypeNone.String(),
 				}
 			})
 
 			It("returns label value", func() {
 				pt, err := projectService.readinessProbeType()
 				Expect(err).To(Succeed())
-				Expect(*pt).To(Equal(ProbeTypeNone))
+				Expect(*pt).To(Equal(config.ProbeTypeNone))
 			})
 
 			It("returns a nil probe", func() {

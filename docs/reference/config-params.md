@@ -380,26 +380,26 @@ services:
 ...
 ```
 
-## kev.workload.liveness-probe-disabled
+## kev.workload.liveness-probe-type
 
-Defines whether workload should have a liveness probe enabled. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer from the information specified in the compose file.
+Defines the workload's liveness probe type. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
-If compose file(s) specifies the `healthcheck.disable` attribute key in a service config it will use its value.
-Otherwise it'll default to `false` (liveness probe active!)
+If compose file(s) specifies the `healthcheck.disable` attribute key in a service config it will set the probe type to `none`.
+Otherwise it'll default to `exec` (liveness probe active!)
 
-### Default: `false`
+### Default: `exec`
 
-### Possible options: Bool
+### Possible options: none, exec, http, tcp.
 
-> kev.workload.liveness-probe-disabled:
+> kev.workload.liveness-probe-type:
 ```yaml
 version: 3.7
 services:
   my-service:
     labels:
-      kev.workload.liveness-probe-disabled: true
+      kev.workload.liveness-probe-type: none
 ...
 ```
 
@@ -423,6 +423,57 @@ services:
   my-service:
     labels:
       kev.workload.liveness-probe-command: ["/is-my-service-alive.sh"]
+...
+```
+
+## kev.workload.liveness-probe-http-port
+
+Defines the liveness probe port to be used for the workload when the type is `http`. 
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
+
+### Possible options: Integer
+
+> kev.workload.liveness-probe-http-port:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-http-port: 8080
+...
+```
+
+## kev.workload.liveness-probe-http-path
+
+Defines the liveness probe path to be used for the workload when the type is `http`. 
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
+
+### Possible options: String
+
+> kev.workload.liveness-probe-http-path:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-http-path: /status
+...
+```
+
+## kev.workload.liveness-probe-tcp-port
+
+Defines the liveness probe path to be used for the workload when the type is `tcp`. 
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
+
+### Possible options: Integer
+
+> kev.workload.liveness-probe-tcp-port:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.liveness-probe-tcp-port: 8080
 ...
 ```
 
@@ -497,7 +548,7 @@ services:
 
 ## kev.workload.liveness-probe-timeout
 
-Defines how many the timeout for the liveness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
+Defines the timeout for the liveness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
 
 Kev uses the following heuristics to derieve that information for each service:
 
@@ -518,21 +569,21 @@ services:
 ...
 ```
 
-## kev.workload.readiness-probe-disabled
+## kev.workload.readiness-probe-type
 
-Defines whether workload should have a readiness probe enabled. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+Defines the workload's probe type. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
-### Default: `true`
+### Default: `none`
 
-### Possible options: Bool
+### Possible options: none, exec, http, tcp.
 
-> kev.workload.readiness-probe-disabled:
+> kev.workload.readiness-probe-type:
 ```yaml
 version: 3.7
 services:
   my-service:
     labels:
-      kev.workload.readiness-probe-disabled: true
+      kev.workload.readiness-probe-type: none
 ...
 ```
 
@@ -553,6 +604,58 @@ services:
       kev.workload.readiness-probe-command: ["/is-my-service-ready.sh"]
 ...
 ```
+
+## kev.workload.readiness-probe-http-port
+
+Defines the readiness probe port to be used for the workload when the type is `http`. 
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
+
+### Possible options: Integer
+
+> kev.workload.readiness-probe-http-port:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-http-port: 8080
+...
+```
+
+## kev.workload.readiness-probe-http-path
+
+Defines the readiness probe path to be used for the workload when the type is `http`. 
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
+
+### Possible options: String
+
+> kev.workload.readiness-probe-http-path:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-http-path: /status
+...
+```
+
+## kev.workload.readiness-probe-tcp-port
+
+Defines the readiness probe path to be used for the workload when the type is `tcp`. 
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
+
+### Possible options: Integer
+
+> kev.workload.readiness-probe-tcp-port:
+```yaml
+version: 3.7
+services:
+  my-service:
+    labels:
+      kev.workload.readiness-probe-tcp-port: 8080
+...
+```
+
 
 ## kev.workload.readiness-probe-interval
 
@@ -610,7 +713,7 @@ services:
 
 ## kev.workload.readiness-probe-timeout
 
-Defines how many the timeout for the readiness probe command for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+Defines the timeout for the readiness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 ### Default: `10s`
 

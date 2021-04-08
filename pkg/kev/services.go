@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -67,23 +66,6 @@ func (s Services) Set() map[string]bool {
 		out[service.Name] = true
 	}
 	return out
-}
-
-func (s Services) detectSecrets(matchers []map[string]string, detectedFn func()) bool {
-	var matches []secretHit
-	for _, svc := range s {
-		matches = append(matches, svc.detectSecretsInEnvVars(matchers)...)
-	}
-
-	if len(matches) == 0 {
-		return false
-	}
-
-	detectedFn()
-	for _, m := range matches {
-		log.Warnf("Service [%s], env var [%s] looks like a secret", m.svcName, m.envVar)
-	}
-	return true
 }
 
 func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []secretHit {
@@ -163,6 +145,8 @@ func (sc ServiceConfig) minusEnvVars() ServiceConfig {
 		Name:        sc.Name,
 		Labels:      sc.Labels,
 		Environment: map[string]*string{},
+		Extensions:  sc.Extensions,
+		K8SConfig:   sc.K8SConfig,
 	}
 }
 
@@ -178,5 +162,7 @@ func (sc ServiceConfig) condenseLabels(labels []string) ServiceConfig {
 		Name:        sc.Name,
 		Labels:      sc.Labels,
 		Environment: sc.Environment,
+		Extensions:  sc.Extensions,
+		K8SConfig:   sc.K8SConfig,
 	}
 }

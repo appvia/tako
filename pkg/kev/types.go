@@ -19,15 +19,24 @@ package kev
 import (
 	"io"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
 // runConfig stores configuration for a command
 type runConfig struct {
-	composeSources []string
-	envs           []string
-	skaffold       bool
+	composeSources        []string
+	envs                  []string
+	manifestFormat        string
+	manifestsAsSingleFile bool
+	outputDir             string
+	k8sNamespace          string
+	kubecontext           string
+	skaffold              bool
+	skaffoldTail          bool
+	skaffoldManualTrigger bool
+	skaffoldVerbose       bool
 }
 
 // Options helps configure running project commands
@@ -45,6 +54,20 @@ type Project struct {
 // InitRunner runs the required sequences to initialise a project.
 type InitRunner struct {
 	*Project
+}
+
+// RenderRunner runs the required sequences to render a project.
+type RenderRunner struct {
+	*Project
+}
+
+// ChangeEventHandler is a callback function that handles change and returns error, e.g. change event when in dev mode
+type ChangeEventHandler func(string) error
+
+// DevRunner runs the required sequences to use dev with a project.
+type DevRunner struct {
+	*Project
+	chgEventHandler ChangeEventHandler
 }
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments
@@ -78,6 +101,7 @@ type composeOverride struct {
 	Version  string   `yaml:"version,omitempty" json:"version,omitempty" diff:"version"`
 	Services Services `json:"services" diff:"services"`
 	Volumes  Volumes  `yaml:",omitempty" json:"volumes,omitempty" diff:"volumes"`
+	UI       kmd.UI   `yaml:"-" json:"-"`
 }
 
 // ComposeProject wrapper around a compose-go Project. It also provides the original
@@ -92,7 +116,9 @@ type ServiceConfig struct {
 	Name        string                      `yaml:"-" json:"-" diff:"name"`
 	Labels      composego.Labels            `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
-	Extensions  map[string]interface{}      `yaml:",inline" json:"-"`
+
+	Extensions map[string]interface{}  `yaml:",inline" json:"-"`
+	K8SConfig  config.K8SConfiguration `yaml:"-"`
 }
 
 type secretHit struct {
@@ -128,33 +154,6 @@ type change struct {
 	Parent string
 	Target string
 	Index  interface{}
-}
-
-// ErrorHandler is a callback function that handles error and returns error
-type ErrorHandler func(error) error
-
-// ChangeHandler is a callback function that handles change and returns error, e.g. change event when in dev mode
-type ChangeHandler func(string) error
-
-// RunFunc is a callback function expected to run before/after the current command
-type RunFunc func() error
-
-// InitOptions contains parameters required to initialise a kev project
-type InitOptions struct {
-	ComposeSources []string
-	Envs           []string
-	Skaffold       bool
-}
-
-// DevOptions contains parameters required for Dev loop
-type DevOptions struct {
-	Skaffold      bool
-	Namespace     string
-	Kubecontext   string
-	Kevenv        string
-	Tail          bool
-	ManualTrigger bool
-	Verbose       bool
 }
 
 // WritableResults is a collection of WritableResult

@@ -5,7 +5,7 @@ services:
       kev.service.type: None
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.liveness-probe-type: command
+      kev.workload.liveness-probe-type: exec
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
       kev.workload.liveness-probe-initial-delay: 1m0s
       kev.workload.liveness-probe-interval: 1m0s
@@ -22,6 +22,13 @@ services:
       override-key: "value-overridden"
     x-other-extension:
       key: "value-other"
+    x-k8s:
+      workload: 
+        replicas: 1
+        livenessProbe:
+          type: exec
+          exec: 
+            command: "echo I'm a useless check"
     environment:
       - OVERRIDE_ME_EMPTY=empty-overridden
       - OVERRIDE_ME_WITH_VAL=val-overridden

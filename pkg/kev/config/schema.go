@@ -27,7 +27,7 @@ var ServicesSchema = map[string]interface{}{
 		LabelWorkloadImagePullPolicy:                     map[string]interface{}{"type": "string", "pattern": `^(?i)(IfNotPresent|Always)$`},
 		LabelWorkloadImagePullSecret:                     map[string]interface{}{"type": "string"},
 		LabelWorkloadRestartPolicy:                       map[string]interface{}{"type": "string", "pattern": `^(?i)(Always|OnFailure|Never)$`},
-		LabelWorkloadLivenessProbeType:                   map[string]interface{}{"type": "string", "enum": []string{"none", "command", "http", "tcp"}},
+		LabelWorkloadLivenessProbeType:                   map[string]interface{}{"type": "string", "enum": []string{"none", "exec", "http", "tcp"}},
 		LabelWorkloadLivenessProbeCommand:                map[string]interface{}{"type": "string"},
 		LabelWorkloadLivenessProbeHTTPPort:               map[string]interface{}{"type": "string"},
 		LabelWorkloadLivenessProbeTCPPort:                map[string]interface{}{"type": "string"},
@@ -36,7 +36,7 @@ var ServicesSchema = map[string]interface{}{
 		LabelWorkloadLivenessProbeInterval:               map[string]interface{}{"type": "string", "format": "duration"},
 		LabelWorkloadLivenessProbeRetries:                map[string]interface{}{"type": "string", "pattern": `^\d+$`},
 		LabelWorkloadLivenessProbeTimeout:                map[string]interface{}{"type": "string", "format": "duration"},
-		LabelWorkloadReadinessProbeType:                  map[string]interface{}{"type": "string", "enum": []string{"none", "command", "http", "tcp"}},
+		LabelWorkloadReadinessProbeType:                  map[string]interface{}{"type": "string", "enum": []string{"none", "exec", "http", "tcp"}},
 		LabelWorkloadReadinessProbeCommand:               map[string]interface{}{"type": "string"},
 		LabelWorkloadReadinessProbeHTTPPort:              map[string]interface{}{"type": "string"},
 		LabelWorkloadReadinessProbeTCPPort:               map[string]interface{}{"type": "string"},
@@ -90,7 +90,7 @@ var ServicesSchema = map[string]interface{}{
 				{
 					"properties": map[string]interface{}{
 						LabelWorkloadLivenessProbeType: map[string]interface{}{
-							"const": "command",
+							"const": "exec",
 						},
 					},
 					"required": []string{LabelWorkloadLivenessProbeCommand},
@@ -127,7 +127,7 @@ var ServicesSchema = map[string]interface{}{
 				{
 					"properties": map[string]interface{}{
 						LabelWorkloadReadinessProbeType: map[string]interface{}{
-							"const": "command",
+							"const": "exec",
 						},
 					},
 					"required": []string{LabelWorkloadReadinessProbeCommand},

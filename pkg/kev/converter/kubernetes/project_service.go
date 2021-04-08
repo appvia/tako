@@ -560,16 +560,16 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	var handler v1.Handler
 
 	switch *probeType {
-	case ProbeTypeNone:
+	case config.ProbeTypeNone:
 		return nil, nil
-	case ProbeTypeTCP:
+	case config.ProbeTypeTCP:
 		hnd, err := p.livenessTCPProbe()
 		if err != nil {
 			return nil, err
 		}
 
 		handler.TCPSocket = hnd
-	case ProbeTypeCommand:
+	case config.ProbeTypeExec:
 		handler.Exec = &v1.ExecAction{
 			Command: p.livenessProbeCommand(),
 		}
@@ -578,7 +578,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 			log.Error("Health check misconfigured")
 			return nil, errors.New("Health check misconfigured")
 		}
-	case ProbeTypeHTTP:
+	case config.ProbeTypeHTTP:
 		hprobe, err := p.livenessHTTPProbe()
 		if err != nil {
 			return nil, err
@@ -610,15 +610,15 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	return probe, nil
 }
 
-func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
+func (p *ProjectService) livenessProbeType() (*config.ProbeType, error) {
 	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
 	if !ok {
 		return nil, errors.New("probe type not provided")
 	}
 
-	pt, ok := ProbeTypeFromString(t)
+	pt, ok := config.ProbeTypeFromString(t)
 	if !ok {
-		return nil, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+		return nil, errors.Wrapf(config.ErrUnsupportedProbeType, "type: %s", t)
 	}
 
 	return &pt, nil
@@ -631,12 +631,13 @@ func (p *ProjectService) livenessTCPProbe() (*v1.TCPSocketAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeTCPPort)
 	}
 
-	if port == "" {
-		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadLivenessProbeTCPPort)
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)
 	}
 
 	return &v1.TCPSocketAction{
-		Port: intstr.FromString(port),
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -652,12 +653,14 @@ func (p *ProjectService) livenessHTTPProbe() (*v1.HTTPGetAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
 	}
 
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadLivenessProbeHTTPPort)
+	}
+
 	return &v1.HTTPGetAction{
 		Path: path,
-		Port: intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: port,
-		},
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -764,9 +767,9 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 	var hnd v1.Handler
 
 	switch *probeType {
-	case ProbeTypeNone:
+	case config.ProbeTypeNone:
 		return nil, nil
-	case ProbeTypeCommand:
+	case config.ProbeTypeExec:
 		hnd.Exec = &v1.ExecAction{
 			Command: p.readinessProbeCommand(),
 		}
@@ -776,14 +779,14 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 			return nil, errors.New("Readiness probe misconfigured")
 		}
 
-	case ProbeTypeHTTP:
+	case config.ProbeTypeHTTP:
 		hp, err := p.readinessHTTPProbe()
 		if err != nil {
 			return nil, err
 		}
 
 		hnd.HTTPGet = hp
-	case ProbeTypeTCP:
+	case config.ProbeTypeTCP:
 		tcpP, err := p.readinessTCPProbe()
 		if err != nil {
 			return nil, err
@@ -820,12 +823,13 @@ func (p *ProjectService) readinessTCPProbe() (*v1.TCPSocketAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeTCPPort)
 	}
 
-	if port == "" {
-		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadReadinessProbeTCPPort)
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort)
 	}
 
 	return &v1.TCPSocketAction{
-		Port: intstr.FromString(port),
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -841,16 +845,14 @@ func (p *ProjectService) readinessHTTPProbe() (*v1.HTTPGetAction, error) {
 		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPort)
 	}
 
-	if port == "" {
-		return nil, errors.Errorf("%s cannot be empty", config.LabelWorkloadReadinessProbeHTTPPort)
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort)
 	}
 
 	return &v1.HTTPGetAction{
 		Path: path,
-		Port: intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: port,
-		},
+		Port: intstr.FromInt(int(intPort)),
 	}, nil
 }
 
@@ -918,15 +920,15 @@ func (p *ProjectService) readinessProbeRetries() int32 {
 	return int32(config.DefaultProbeRetries)
 }
 
-func (p *ProjectService) readinessProbeType() (*ProbeType, error) {
-	none := ProbeTypeNone
+func (p *ProjectService) readinessProbeType() (*config.ProbeType, error) {
+	none := config.ProbeTypeNone
 
 	t, ok := p.Labels[config.LabelWorkloadReadinessProbeType]
 	if !ok {
 		return &none, nil
 	}
 
-	pt, ok := ProbeTypeFromString(t)
+	pt, ok := config.ProbeTypeFromString(t)
 	if !ok {
 		return nil, errors.Errorf("%s is not a supported readiness probe type", t)
 	}

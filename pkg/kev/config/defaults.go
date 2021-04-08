@@ -17,6 +17,9 @@
 package config
 
 const (
+	// DefaultServiceEnabled default value for x-k8s.enabled
+	DefaultServiceEnabled = true
+
 	// DefaultVolumeSize default value PV class
 	DefaultVolumeSize = "100Mi"
 
@@ -125,7 +128,7 @@ const (
 	DefaultLivenessProbeCommand = "Define healthcheck command for service %s"
 
 	// DefaultLivenessProbeType default probe type.
-	DefaultLivenessProbeType = "command"
+	DefaultLivenessProbeType = "exec"
 
 	// DefaultProbeTimeout default 10s
 	DefaultProbeTimeout = "10s"

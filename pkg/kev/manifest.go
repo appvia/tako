@@ -159,15 +159,31 @@ func (m *Manifest) GetEnvironmentFileNameTemplate() string {
 }
 
 // ReconcileConfig reconciles config changes with docker-compose sources against deployment environments.
-func (m *Manifest) ReconcileConfig() (*Manifest, error) {
+func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
+		sg := m.UI.StepGroup()
+		defer sg.Done()
+		renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
 		return nil, err
 	}
+
 	sourcesOverride := m.getSourcesOverride()
-	for _, e := range m.Environments {
-		if err := e.reconcile(sourcesOverride); err != nil {
-			return nil, err
-		}
+	filteredEnvs, err := m.GetEnvironments(envs)
+	if err != nil {
+		sg := m.UI.StepGroup()
+		defer sg.Done()
+		renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+		return nil, err
+	}
+
+	for _, e := range filteredEnvs {
+		log.DebugTitlef("Reconciling environment [%s]", e.Name)
+
+		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
+
+		sourcesOverride.
+			toLabelsMatching(e.override).
+			diffAndPatch(e.override)
 	}
 
 	return m, nil
@@ -189,16 +205,18 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 }
 
 // RenderWithConvertor renders K8s manifests with specific converter
-func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (
-	*Manifest,
-	error,
-) {
+func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (map[string]string, error) {
+	errSg := m.UI.StepGroup()
+	defer errSg.Done()
+
 	if _, err := m.CalculateSourcesBaseOverride(); err != nil {
+		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
 
 	filteredEnvs, err := m.GetEnvironments(envs)
 	if err != nil {
+		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
 
@@ -210,7 +228,9 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 	for _, env := range filteredEnvs {
 		p, err := m.MergeEnvIntoSources(env)
 		if err != nil {
-			return nil, errors.Wrap(err, "Couldn't calculate compose project representation")
+			wrappedErr := errors.Wrapf(err, "environment %s, details:\n", env.Name)
+			renderStepError(m.UI, errSg.Add(""), renderStepRenderOverlay, wrappedErr)
+			return nil, wrappedErr
 		}
 		projects[env.Name] = p.Project
 		files[env.Name] = append(sourcesFiles, env.File)
@@ -219,73 +239,20 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered, excluded)
 	if err != nil {
 		log.Errorf("Couldn't render manifests")
+		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
 
 	if len(m.Skaffold) > 0 {
 		if err := UpdateSkaffoldProfiles(m.Skaffold, outputPaths); err != nil {
 			log.Errorf("Couldn't update skaffold.yaml profiles")
+			decoratedErr := errors.Errorf("Couldn't update skaffold.yaml profiles, details:\n%s", err)
+			renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, decoratedErr)
 			return nil, err
 		}
 	}
-	return m, nil
-}
 
-// DetectSecretsInSources detects any potential secrets setup as environment variables in a manifests sources.
-func (m *Manifest) DetectSecretsInSources(matchers []map[string]string) error {
-	sourcesFiles := m.GetSourcesFiles()
-
-	sg := m.UI.StepGroup()
-
-	for _, source := range sourcesFiles {
-		m.UI.Output(fmt.Sprintf("Detecting secrets in: %s", source))
-		p, err := NewComposeProject([]string{source})
-		if err != nil {
-			return err
-		}
-
-		for _, s := range p.Services {
-			step := sg.Add(fmt.Sprintf("Analysing service: %s", s.Name))
-			serviceConfig := ServiceConfig{Name: s.Name, Environment: s.Environment}
-
-			hits := serviceConfig.detectSecretsInEnvVars(matchers)
-			if len(hits) == 0 {
-				step.Success("Non detected in service: ", s.Name)
-				continue
-			}
-
-			step.Warning("Detected in service: ", s.Name)
-			for _, hit := range hits {
-				m.UI.Output(
-					fmt.Sprintf("env var [%s] - %s", hit.envVar, hit.description),
-					kmd.WithStyle(kmd.LogStyle),
-					kmd.WithIndentChar(kmd.LogIndentChar),
-					kmd.WithIndent(3),
-				)
-			}
-		}
-	}
-	return nil
-}
-
-// DetectSecretsInEnvs detects any potential secrets setup as environment variables
-// in a manifests deployment environments config.
-func (m *Manifest) DetectSecretsInEnvs(matchers []map[string]string) error {
-	var filter []string
-	envs, err := m.GetEnvironments(filter)
-	if err != nil {
-		return err
-	}
-
-	for _, env := range envs {
-		detected := env.GetServices().detectSecrets(matchers, func() {
-			log.Warnf("Detected potential secrets in env [%s]", env.Name)
-		})
-		if !detected {
-			log.Debugf("No secrets detected in env [%s]", env.Name)
-		}
-	}
-	return nil
+	return outputPaths, nil
 }
 
 // GetSourcesFiles gets the sources tracked docker-compose files.
@@ -300,7 +267,9 @@ func (m *Manifest) getWorkingDir() string {
 
 // getSourcesOverride gets the sources calculated override.
 func (m *Manifest) getSourcesOverride() *composeOverride {
-	return m.Sources.override
+	override := m.Sources.override
+	override.UI = m.UI
+	return override
 }
 
 // SourcesToComposeProject returns the manifests compose sources as a ComposeProject.
@@ -311,14 +280,4 @@ func (m *Manifest) SourcesToComposeProject() (*ComposeProject, error) {
 func ManifestExistsForPath(manifestPath string) bool {
 	_, err := os.Stat(manifestPath)
 	return err == nil
-}
-
-func EnsureFirstInit(wd string) error {
-	manifestPath := path.Join(wd, ManifestFilename)
-	if ManifestExistsForPath(manifestPath) {
-		absWd, _ := filepath.Abs(wd)
-		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, absWd)
-		return err
-	}
-	return nil
 }
