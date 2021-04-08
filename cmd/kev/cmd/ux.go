@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/appvia/kev/pkg/kev/log"
@@ -35,14 +34,7 @@ func displayCmdStarted(cmdName string) {
 	_, _ = os.Stdout.Write([]byte("> " + cmdName + "...\n"))
 }
 
-func displayDevModeStarted() {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[2m[development mode] ... watching for changes\n")
-	resetFormatting()
-}
-
 func displayError(err error) error {
 	log.ErrorDetail(err)
 	return err
 }
-
-func resetFormatting() { fmt.Print(" \033[0m\n") }
