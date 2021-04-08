@@ -16,6 +16,11 @@ services:
     x-an-extension:
       key: "value"
       override-key: "value"
+    x-k8s:
+      workload: 
+        replicas: 1
+        livenessProbe:
+          type: none
 volumes:
   db_data:
 

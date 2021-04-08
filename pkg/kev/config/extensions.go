@@ -12,19 +12,19 @@ import (
 
 // ExtensionRoot represents the root of the docker-compose extensions
 type ExtensionRoot struct {
-	K8S K8SServiceConfig `yaml:"x-k8s"`
+	K8S K8SConfiguration `yaml:"x-k8s"`
 }
 
-// K8SServiceConfig represents the root of the k8s specific fields supported by kev.
-type K8SServiceConfig struct {
-	Enabled  bool     `yaml:"enabled"`
-	Workload Workload `yaml:"workload" validate:"required"`
-	Service  Service  `yaml:"service"`
+// K8SConfiguration represents the root of the k8s specific fields supported by kev.
+type K8SConfiguration struct {
+	Enabled  bool     `yaml:"enabled,omitempty"`
+	Workload Workload `yaml:"workload,omitempty" validate:"required"`
+	Service  Service  `yaml:"service,omitempty"`
 }
 
-// DefaultK8SServiceConfig returns a K8SServiceConfig with all the defaults set into it.
-func DefaultK8SServiceConfig() K8SServiceConfig {
-	return K8SServiceConfig{
+// DefaultK8SConfig returns a K8SServiceConfig with all the defaults set into it.
+func DefaultK8SConfig() K8SConfiguration {
+	return K8SConfiguration{
 		Enabled: DefaultServiceEnabled,
 		Workload: Workload{
 			Type:           DefaultWorkload,
@@ -34,17 +34,23 @@ func DefaultK8SServiceConfig() K8SServiceConfig {
 	}
 }
 
-// K8SServiceCfgFromMap handles the extraction of the k8s-specific extension values from the top level map.
-func K8SServiceCfgFromMap(m map[string]interface{}) (K8SServiceConfig, error) {
+// K8SCfgFromMap handles the extraction of the k8s-specific extension values from the top level map.
+func K8SCfgFromMap(m map[string]interface{}) (K8SConfiguration, error) {
+	if _, ok := m["x-k8s"]; !ok {
+		c := DefaultK8SConfig()
+		c.Workload.Replicas = DefaultReplicaNumber
+		return c, nil
+	}
+
 	var extensions ExtensionRoot
 
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf).Encode(m); err != nil {
-		return K8SServiceConfig{}, err
+		return K8SConfiguration{}, err
 	}
 
 	if err := yaml.NewDecoder(&buf).Decode(&extensions); err != nil {
-		return K8SServiceConfig{}, err
+		return K8SConfiguration{}, err
 	}
 
 	err := validator.New().Struct(extensions.K8S.Workload)
@@ -52,17 +58,17 @@ func K8SServiceCfgFromMap(m map[string]interface{}) (K8SServiceConfig, error) {
 		validationErrors := err.(validator.ValidationErrors)
 		for _, e := range validationErrors {
 			if e.Tag() == "required" {
-				return K8SServiceConfig{}, fmt.Errorf("%s is required", e.StructNamespace())
+				return K8SConfiguration{}, fmt.Errorf("%s is required", e.StructNamespace())
 			}
 		}
 
-		return K8SServiceConfig{}, errors.New(validationErrors[0].Error())
+		return K8SConfiguration{}, errors.New(validationErrors[0].Error())
 	}
 
-	k8s := DefaultK8SServiceConfig()
+	k8s := DefaultK8SConfig()
 
 	if err := mergo.Merge(&extensions.K8S, k8s); err != nil {
-		return K8SServiceConfig{}, err
+		return K8SConfiguration{}, err
 	}
 
 	return extensions.K8S, nil
@@ -70,10 +76,10 @@ func K8SServiceCfgFromMap(m map[string]interface{}) (K8SServiceConfig, error) {
 
 // Workload holds all the workload-related k8s configurations.
 type Workload struct {
-	Type           string         `yaml:"type"`
-	Replicas       int            `yaml:"replicas" validate:"required"`
-	LivenessProbe  LivenessProbe  `yaml:"livenessProbe"`
-	ReadinessProbe ReadinessProbe `yaml:"readinessProbe"`
+	Type           string         `yaml:"type,omitempty"`
+	Replicas       int            `yaml:"replicas,omitempty" validate:"required"`
+	LivenessProbe  LivenessProbe  `yaml:"livenessProbe,omitempty"`
+	ReadinessProbe ReadinessProbe `yaml:"readinessProbe,omitempty"`
 }
 
 // Service will hold the service specific extensions in the future.
