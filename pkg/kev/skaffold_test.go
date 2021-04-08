@@ -58,13 +58,25 @@ var _ = Describe("Skaffold", func() {
 	})
 
 	Describe("BaseSkaffoldManifest", func() {
-		It("returns base skaffold", func() {
+		It("returns base skaffold with global pipeline build configuration", func() {
 			Expect(kev.BaseSkaffoldManifest()).To(Equal(
 				&kev.SkaffoldManifest{
 					APIVersion: latest.Version,
 					Kind:       "Config",
 					Metadata: latest.Metadata{
 						Name: "App",
+					},
+					Pipeline: latest.Pipeline{
+						Build: latest.BuildConfig{
+							BuildType: latest.BuildType{
+								LocalBuild: &latest.LocalBuild{},
+							},
+							TagPolicy: latest.TagPolicy{
+								GitTagger: &latest.GitTagger{
+									Variant: "Tags",
+								},
+							},
+						},
 					},
 				},
 			))
@@ -100,16 +112,7 @@ var _ = Describe("Skaffold", func() {
 
 			It("generates correct pipeline Build section for each environment", func() {
 				for _, p := range manifest.Profiles {
-					Expect(p.Build).To(Equal(latest.BuildConfig{
-						BuildType: latest.BuildType{
-							LocalBuild: &latest.LocalBuild{},
-						},
-						TagPolicy: latest.TagPolicy{
-							GitTagger: &latest.GitTagger{
-								Variant: "Tags",
-							},
-						},
-					}))
+					Expect(p.Build).To(Equal(latest.BuildConfig{}))
 				}
 			})
 

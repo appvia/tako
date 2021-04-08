@@ -250,8 +250,22 @@ func BaseSkaffoldManifest() *SkaffoldManifest {
 		Metadata: latest.Metadata{
 			Name: "App",
 		},
-		// @todo figure out top level pipeline elements
-		// Pipeline: latest.Pipeline{}
+		Pipeline: latest.Pipeline{
+			Build: latest.BuildConfig{
+				BuildType: latest.BuildType{
+					// Local build is a default build strategy!
+					// When "local" kubecontext is in use the built images won't be pushed to a registry.
+					// If "Push" option isn't specified (which is our default), then images are pushed only if
+					// the current Kubernetes context connects to a remote cluster.
+					LocalBuild: &latest.LocalBuild{},
+				},
+				TagPolicy: latest.TagPolicy{
+					GitTagger: &latest.GitTagger{
+						Variant: "Tags",
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -272,26 +286,10 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 		s.Profiles = append(s.Profiles, latest.Profile{
 			Name: e + EnvProfileNameSuffix,
 			Pipeline: latest.Pipeline{
-				Build: latest.BuildConfig{
-					BuildType: latest.BuildType{
-						// Local build is a default build strategy!
-						// When "local" kubecontext is in use the built images won't be pushed to a registry.
-						// If "Push" option isn't specified (which is our default), then images are pushed only if
-						// the current Kubernetes context connects to a remote cluster.
-						LocalBuild: &latest.LocalBuild{},
-					},
-					TagPolicy: latest.TagPolicy{
-						GitTagger: &latest.GitTagger{
-							Variant: "Tags",
-						},
-					},
-					// @todo set artifacts appropriately or leave it for user to fill in
-					// Artifacts: []*latest.Artifact{},
-				},
 				Deploy: latest.DeployConfig{
 					DeployType: latest.DeployType{
-						// @todo strategy will depend on the output format so this might
-						// need to mutate when iterating with Kev
+						// @todo(mc) strategy will depend on the output format so deploy
+						// type might mutate as well when iterating with Kev
 						KubectlDeploy: &latest.KubectlDeploy{
 							Manifests: []string{
 								filepath.Join(kubernetes.MultiFileSubDir, e, "*"),
@@ -363,9 +361,7 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 		})
 	}
 
-	s.Build = latest.BuildConfig{
-		Artifacts: artifacts,
-	}
+	s.Build.Artifacts = artifacts
 
 	return nil
 }
