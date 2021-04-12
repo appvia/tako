@@ -307,40 +307,41 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 // SetAdditionalProfiles adds additional Skaffold profiles
 func (s *SkaffoldManifest) SetAdditionalProfiles() {
 
-	if !s.profileNameExist("ci-local-build-no-push") {
-		// Helper profile for use in CI pipeline
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: "ci-local-build-no-push",
-			Pipeline: latest.Pipeline{
-				Build: latest.BuildConfig{
-					BuildType: latest.BuildType{
-						LocalBuild: &latest.LocalBuild{
-							Push: &disabled,
-						},
+	s.AddProfileIfNotPresent(latest.Profile{
+		Name: "ci-local-build-no-push",
+		Pipeline: latest.Pipeline{
+			Build: latest.BuildConfig{
+				BuildType: latest.BuildType{
+					LocalBuild: &latest.LocalBuild{
+						Push: &disabled,
 					},
 				},
-				// deploy is a no-op intentionally
-				Deploy: latest.DeployConfig{},
 			},
-		})
-	}
+			// deploy is a no-op intentionally
+			Deploy: latest.DeployConfig{},
+		},
+	})
 
-	if !s.profileNameExist("ci-local-build-and-push") {
-		// Helper profile for use in CI pipeline
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: "ci-local-build-and-push",
-			Pipeline: latest.Pipeline{
-				Build: latest.BuildConfig{
-					BuildType: latest.BuildType{
-						LocalBuild: &latest.LocalBuild{
-							Push: &enabled,
-						},
+	s.AddProfileIfNotPresent(latest.Profile{
+		Name: "ci-local-build-and-push",
+		Pipeline: latest.Pipeline{
+			Build: latest.BuildConfig{
+				BuildType: latest.BuildType{
+					LocalBuild: &latest.LocalBuild{
+						Push: &enabled,
 					},
 				},
-				// deploy is a no-op intentionally
-				Deploy: latest.DeployConfig{},
 			},
-		})
+			// deploy is a no-op intentionally
+			Deploy: latest.DeployConfig{},
+		},
+	})
+}
+
+// AddProfileIfNotPresent adds Skaffold profile unless profile with that name already exists
+func (s *SkaffoldManifest) AddProfileIfNotPresent(p latest.Profile) {
+	if !s.profileNameExist(p.Name) {
+		s.Profiles = append(s.Profiles, p)
 	}
 }
 
