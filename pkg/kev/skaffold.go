@@ -27,7 +27,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -394,10 +393,8 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 			// context as that's the best we can do in order to match a service to a corresponding
 			// docker registry image.
 			// If no docker registry image was detected then we use service name as docker image name.
-			re := regexp.MustCompile(fmt.Sprintf(`.*\/%s`, svcImageNameFromContext))
-
 			for _, image := range analysis.Images {
-				if found := re.FindAllStringSubmatchIndex(image, -1); found != nil {
+				if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
 					buildArtifacts[context] = image
 					break
 				} else {
