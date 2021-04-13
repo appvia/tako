@@ -388,27 +388,21 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 			svcImageNameFromContext = contextParts[len(contextParts)-1]
 		}
 
-		if len(analysis.Images) > 0 {
-			// Check whether images detected by Analysis contain service image name derived from the
-			// context as that's the best we can do in order to match a service to a corresponding
-			// docker registry image.
-			// If no docker registry image was detected then we use service name as docker image name.
-			for _, image := range analysis.Images {
-				if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
-					buildArtifacts[context] = image
-					break
-				} else {
-					buildArtifacts[context] = svcImageNameFromContext
-				}
-			}
-		} else {
-			// No Images detected by analysis - usually due to the absence of K8s manifests
-			// which Analysis uses to determine which images are in use.
-			// Add build artifact with details derived from analysis detected Dockerfiles
-			// Note: This may not be always accurate!
-			buildArtifacts[context] = svcImageNameFromContext
-		}
+		// NOTE: This may not be always accurate!
+		buildArtifacts[context] = svcImageNameFromContext
 
+		// Check whether images detected by Analysis contain service image name derived from the
+		// context as that's the best we can do in order to match a service to a corresponding
+		// docker registry image.
+		//
+		// NOTE: When *NO* Images are detected by analysis this is usually due to the absence of K8s
+		// manifests which Analysis uses to determine which images are in use.
+		for _, image := range analysis.Images {
+			if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
+				buildArtifacts[context] = image
+				break
+			}
+		}
 	}
 
 	// Extract images referenced by a Docker Compose project and map them to their respective build contexts (if present)
