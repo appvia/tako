@@ -54,19 +54,66 @@ var _ = Describe("Extentions", func() {
 			})
 		})
 
-		Context("works if no k8s is present", func() {
-			It("does not fail validations", func() {
-				parsedCfg, err = config.K8SCfgFromMap(map[string]interface{}{})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(parsedCfg).NotTo(BeNil())
+		When("there is no k8s extension present", func() {
+			Context("Without RequirePresent configuration", func() {
+				It("does not fail validations", func() {
+					parsedCfg, err = config.K8SCfgFromMap(map[string]interface{}{})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(parsedCfg).NotTo(BeNil())
 
-				Expect(parsedCfg.Workload.Replicas).To(Equal(config.DefaultReplicaNumber))
-				Expect(parsedCfg.Workload.LivenessProbe).To(BeEquivalentTo(config.DefaultLivenessProbe()))
-				Expect(parsedCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
+					Expect(parsedCfg.Workload.Replicas).To(Equal(config.DefaultReplicaNumber))
+					Expect(parsedCfg.Workload.LivenessProbe).To(BeEquivalentTo(config.DefaultLivenessProbe()))
+					Expect(parsedCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
+				})
+			})
+			Context("with RequireExtensions option", func() {
+				When("RequireExtensions option is specified", func() {
+					It("fails if map is empty", func() {
+						parsedCfg, err = config.K8SCfgFromMap(map[string]interface{}{}, config.RequireExtensions())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("Workload.Replicas is required"))
+					})
+				})
 			})
 		})
 
-		Describe("fails on mandatory fields", func() {
+		Describe("validations", func() {
+			Context("with missing workload", func() {
+				BeforeEach(func() {
+					extensions = map[string]interface{}{
+						"x-k8s": map[string]interface{}{
+							"bananas": 1,
+						},
+					}
+				})
+
+				It("returns an error", func() {
+					parsedCfg, err = config.K8SCfgFromMap(extensions)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Workload.Replicas is required"))
+				})
+			})
+
+			Context("invalid/empty workload", func() {
+				BeforeEach(func() {
+					extensions = map[string]interface{}{
+						"x-k8s": map[string]interface{}{
+							"workload": map[string]interface{}{
+								"bananas": 1,
+							},
+						},
+					}
+				})
+
+				When("workload is invalid", func() {
+					It("returns an error", func() {
+						parsedCfg, err = config.K8SCfgFromMap(extensions)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("Workload.Replicas is required"))
+					})
+				})
+			})
+
 			Context("missing liveness probe type", func() {
 				BeforeEach(func() {
 					k8s.Workload.Replicas = 10
@@ -121,6 +168,58 @@ var _ = Describe("Extentions", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(expected).To(BeEquivalentTo(actual))
 			Expect(actual.Type).To(BeEmpty())
+		})
+	})
+
+	Describe("Merge", func() {
+		It("merges target into base", func() {
+			k8sBase := config.DefaultK8SConfig()
+			var k8sTarget config.K8SConfiguration
+			k8sTarget.Workload.Replicas = 10
+			k8sTarget.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+
+			expected := k8sBase
+			expected.Workload.Replicas = 10
+			expected.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+
+			result, err := k8sBase.Merge(k8sTarget)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeEquivalentTo(expected))
+		})
+
+		Context("Fallback", func() {
+			var extensions map[string]interface{}
+			var parsedConf config.K8SConfiguration
+			var err error
+
+			JustBeforeEach(func() {
+				parsedConf, err = config.K8SCfgFromMap(extensions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("configs are empty", func() {
+				BeforeEach(func() {
+					extensions = make(map[string]interface{})
+				})
+
+				It("returns default when map is empty", func() {
+					result, err := config.DefaultK8SConfig().Merge(parsedConf)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeEquivalentTo(config.DefaultK8SConfig()))
+				})
+			})
+
+			Context("configs are invalid", func() {
+				BeforeEach(func() {
+					extensions = nil
+				})
+
+				It("returns default when map is nil", func() {
+					result, err := config.DefaultK8SConfig().Merge(parsedConf)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeEquivalentTo(config.DefaultK8SConfig()))
+				})
+			})
 		})
 	})
 
