@@ -51,7 +51,7 @@ var _ = Describe("Reconcile", func() {
 		r := kev.NewRenderRunner(workingDir, kev.WithUI(kmd.NoOpUI()))
 		r.LoadProject()
 		manifest, mErr = r.Manifest().ReconcileConfig()
-		Expect(mErr).NotTo(HaveOccurred())
+		Expect(mErr).NotTo(HaveOccurred(), workingDir)
 
 		env, err = manifest.GetEnvironment("dev")
 		Expect(err).NotTo(HaveOccurred())
@@ -129,8 +129,10 @@ var _ = Describe("Reconcile", func() {
 
 		Context("when the compose version has been updated", func() {
 			BeforeEach(func() {
+				var err error
 				workingDir = "testdata/reconcile-version"
-				source, _ = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				source, err = kev.NewComposeProject([]string{workingDir + "/docker-compose.yaml"})
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should update all environments with the new version", func() {

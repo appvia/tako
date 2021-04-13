@@ -55,7 +55,7 @@ func ProbeTypeFromString(s string) (ProbeType, bool) {
 // LivenessProbe holds all the settings for the same k8s probe.
 type LivenessProbe struct {
 	// TODO: find a decent way of using ProbeType here that validates the content of the string
-	Type        string `yaml:"type" validate:"required"`
+	Type        string `yaml:"type" validate:"required,oneof=none exec tcp http"`
 	ProbeConfig `yaml:",inline"`
 }
 
@@ -128,5 +128,5 @@ type TCPProbe struct {
 
 // ExecProbe holds the necessary properties to define the exec check on the k8s probe.
 type ExecProbe struct {
-	Command string `yaml:"command"`
+	Command []string `yaml:"command"`
 }
