@@ -27,7 +27,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -64,9 +63,6 @@ const (
 	// SkaffoldFileName is a file name of skaffold manifest
 	SkaffoldFileName = "skaffold.yaml"
 
-	// ProfileNamePrefix is a prefix to the added skaffold aprofile
-	ProfileNamePrefix = "kev-"
-
 	// EnvProfileNameSuffix is a suffix added to environment specific profile name
 	EnvProfileNameSuffix = "-env"
 
@@ -94,7 +90,7 @@ func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManif
 	manifest := BaseSkaffoldManifest()
 	manifest.SetBuildArtifacts(analysis, project)
 	manifest.SetProfiles(envs)
-	manifest.AdditionalProfiles()
+	manifest.SetAdditionalProfiles()
 
 	return manifest, nil
 }
@@ -109,9 +105,9 @@ func LoadSkaffoldManifest(path string) (*SkaffoldManifest, error) {
 	return s, yaml.Unmarshal(data, &s)
 }
 
-// AddProfiles injects kev profiles to existing Skaffold manifest
+// InjectProfiles injects kev profiles to existing Skaffold manifest
 // Note, if profile name already exists in the skaffold manifest then profile won't be added
-func AddProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldManifest, error) {
+func InjectProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldManifest, error) {
 	skaffold, err := LoadSkaffoldManifest(path)
 	if err != nil {
 		return nil, err
@@ -119,10 +115,66 @@ func AddProfiles(path string, envs []string, includeAdditional bool) (*SkaffoldM
 
 	skaffold.SetProfiles(envs)
 	if includeAdditional {
-		skaffold.AdditionalProfiles()
+		skaffold.SetAdditionalProfiles()
 	}
 
 	return skaffold, nil
+}
+
+// UpdateSkaffoldBuildArtifacts updates skaffold build artefacts with freshly discovered list of images and contexts.
+// Note, it'll persist updated build artefacts in the skaffold.yaml file only when change in build artefacts was detected.
+// Important: The last discovered images and contexts will be persisted (if changed)!
+func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
+	if !fileExists(path) {
+		return fmt.Errorf("skaffold config file (%s) doesn't exist", path)
+	}
+
+	skaffold, err := LoadSkaffoldManifest(path)
+	if err != nil {
+		return err
+	}
+
+	analysis, err := analyzeProject()
+	if err != nil {
+		return err
+	}
+
+	changed, err := skaffold.UpdateBuildArtifacts(analysis, project)
+	if err != nil {
+		return err
+	}
+
+	// only persist when the list of artifacts changed
+	if changed {
+		file, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		if _, err := skaffold.WriteTo(file); err != nil {
+			return err
+		}
+		return file.Close()
+	}
+
+	return nil
+}
+
+// UpdateBuildArtifacts sets build artefacts in Skaffold manifest and returns change status
+// true - when list of artefacts was updated, false - otherwise
+func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) (bool, error) {
+	changed := false
+
+	prevArts := s.Build.Artifacts
+
+	if err := s.SetBuildArtifacts(analysis, project); err != nil {
+		return false, err
+	}
+
+	if !reflect.DeepEqual(s.Build.Artifacts, prevArts) {
+		return true, nil
+	}
+
+	return changed, nil
 }
 
 // UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.
@@ -195,10 +247,24 @@ func BaseSkaffoldManifest() *SkaffoldManifest {
 		APIVersion: latest.Version,
 		Kind:       "Config",
 		Metadata: latest.Metadata{
-			Name: "KevApp",
+			Name: "App",
 		},
-		// @todo figure out top level pipeline elements
-		// Pipeline: latest.Pipeline{}
+		Pipeline: latest.Pipeline{
+			Build: latest.BuildConfig{
+				BuildType: latest.BuildType{
+					// Local build is a default build strategy!
+					// When "local" kubecontext is in use the built images won't be pushed to a registry.
+					// If "Push" option isn't specified (which is our default), then images are pushed only if
+					// the current Kubernetes context connects to a remote cluster.
+					LocalBuild: &latest.LocalBuild{},
+				},
+				TagPolicy: latest.TagPolicy{
+					GitTagger: &latest.GitTagger{
+						Variant: "Tags",
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -219,24 +285,10 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 		s.Profiles = append(s.Profiles, latest.Profile{
 			Name: e + EnvProfileNameSuffix,
 			Pipeline: latest.Pipeline{
-				Build: latest.BuildConfig{
-					BuildType: latest.BuildType{
-						LocalBuild: &latest.LocalBuild{
-							Push: &enabled,
-						},
-					},
-					TagPolicy: latest.TagPolicy{
-						GitTagger: &latest.GitTagger{
-							Variant: "Tags",
-						},
-					},
-					// @todo set artifacts appropriately or leave it for user to fill in
-					// Artifacts: []*latest.Artifact{},
-				},
 				Deploy: latest.DeployConfig{
 					DeployType: latest.DeployType{
-						// @todo strategy will depend on the output format so this might
-						// need to mutate when iterating with Kev
+						// @todo(mc) strategy will depend on the output format so deploy
+						// type might mutate as well when iterating with Kev
 						KubectlDeploy: &latest.KubectlDeploy{
 							Manifests: []string{
 								filepath.Join(kubernetes.MultiFileSubDir, e, "*"),
@@ -251,77 +303,44 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 	}
 }
 
-// AdditionalProfiles adds additional Skaffold profiles
-func (s *SkaffoldManifest) AdditionalProfiles() {
+// SetAdditionalProfiles adds additional Skaffold profiles
+func (s *SkaffoldManifest) SetAdditionalProfiles() {
 
-	if !s.profileNameExist(ProfileNamePrefix + "minikube") {
-		// Helper profile for developing in local minikube
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "minikube",
-			Activation: []latest.Activation{
-				{
-					KubeContext: "minikube",
-				},
-			},
-			Pipeline: latest.Pipeline{
-				Deploy: latest.DeployConfig{
-					KubeContext: "minikube",
-				},
-			},
-		})
-	}
-
-	if !s.profileNameExist(ProfileNamePrefix + "docker-desktop") {
-		// Helper profile for developing in local docker-desktop
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "docker-desktop",
-			Activation: []latest.Activation{
-				{
-					KubeContext: "docker-desktop",
-				},
-			},
-			Pipeline: latest.Pipeline{
-				Deploy: latest.DeployConfig{
-					KubeContext: "docker-desktop",
-				},
-			},
-		})
-	}
-
-	if !s.profileNameExist(ProfileNamePrefix + "ci-build-no-push") {
-		// Helper profile for use in CI pipeline
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "ci-build-no-push",
-			Pipeline: latest.Pipeline{
-				Build: latest.BuildConfig{
-					BuildType: latest.BuildType{
-						LocalBuild: &latest.LocalBuild{
-							Push: &disabled,
-						},
+	s.AddProfileIfNotPresent(latest.Profile{
+		Name: "ci-local-build-no-push",
+		Pipeline: latest.Pipeline{
+			Build: latest.BuildConfig{
+				BuildType: latest.BuildType{
+					LocalBuild: &latest.LocalBuild{
+						Push: &disabled,
 					},
 				},
-				// deploy is a no-op intentionally
-				Deploy: latest.DeployConfig{},
 			},
-		})
-	}
+			// deploy is a no-op intentionally
+			Deploy: latest.DeployConfig{},
+		},
+	})
 
-	if !s.profileNameExist(ProfileNamePrefix + "ci-build-and-push") {
-		// Helper profile for use in CI pipeline
-		s.Profiles = append(s.Profiles, latest.Profile{
-			Name: ProfileNamePrefix + "ci-build-and-push",
-			Pipeline: latest.Pipeline{
-				Build: latest.BuildConfig{
-					BuildType: latest.BuildType{
-						LocalBuild: &latest.LocalBuild{
-							Push: &enabled,
-						},
+	s.AddProfileIfNotPresent(latest.Profile{
+		Name: "ci-local-build-and-push",
+		Pipeline: latest.Pipeline{
+			Build: latest.BuildConfig{
+				BuildType: latest.BuildType{
+					LocalBuild: &latest.LocalBuild{
+						Push: &enabled,
 					},
 				},
-				// deploy is a no-op intentionally
-				Deploy: latest.DeployConfig{},
 			},
-		})
+			// deploy is a no-op intentionally
+			Deploy: latest.DeployConfig{},
+		},
+	})
+}
+
+// AddProfileIfNotPresent adds Skaffold profile unless profile with that name already exists
+func (s *SkaffoldManifest) AddProfileIfNotPresent(p latest.Profile) {
+	if !s.profileNameExist(p.Name) {
+		s.Profiles = append(s.Profiles, p)
 	}
 }
 
@@ -342,9 +361,7 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 		})
 	}
 
-	s.Build = latest.BuildConfig{
-		Artifacts: artifacts,
-	}
+	s.Build.Artifacts = artifacts
 
 	return nil
 }
@@ -353,46 +370,47 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[string]string {
 	buildArtifacts := map[string]string{}
 
-	if len(analysis.Images) == 0 {
-		// no images detected - usually the case when there are no kubernetes manifests
-		// Extract referenced images and map them to their respective build contexts (if present) from Compose project
-		// Note: It'll miss images without "build" context specified!
+	for _, d := range analysis.Dockerfiles {
 
-		if project.Project != nil && project.Project.Services != nil {
-			for _, s := range project.Project.Services {
-				if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
-					buildArtifacts[s.Build.Context] = s.Image
-				}
+		var context, svcImageNameFromContext string
+
+		if d == "Dockerfile" {
+			// Dockerfile detected in the root directory, use local dir as context
+			// and current working directory name as service image name
+			context = "."
+			wd, _ := os.Getwd()
+			svcImageNameFromContext = filepath.Base(wd)
+		} else {
+			// Dockerfile detected in subdirectory, use subdirectory as context
+			// and immediate parent directory name in which Dockerfile reside as service image name
+			context = strings.ReplaceAll(d, "/Dockerfile", "")
+			contextParts := strings.Split(context, "/")
+			svcImageNameFromContext = contextParts[len(contextParts)-1]
+		}
+
+		// NOTE: This may not be always accurate!
+		buildArtifacts[context] = svcImageNameFromContext
+
+		// Check whether images detected by Analysis contain service image name derived from the
+		// context as that's the best we can do in order to match a service to a corresponding
+		// docker registry image.
+		//
+		// NOTE: When *NO* Images are detected by analysis this is usually due to the absence of K8s
+		// manifests which Analysis uses to determine which images are in use.
+		for _, image := range analysis.Images {
+			if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
+				buildArtifacts[context] = image
+				break
 			}
 		}
 	}
 
-	for _, d := range analysis.Dockerfiles {
-
-		context := strings.ReplaceAll(d, "/Dockerfile", "")
-		contextParts := strings.Split(context, "/")
-		svcNameFromContext := contextParts[len(contextParts)-1]
-
-		if d == "Dockerfile" {
-			// Dockerfile detected in the root directory, use local dir as context
-			// and current working directory name as service name
-			context = "."
-			wd, _ := os.Getwd()
-			svcNameFromContext = filepath.Base(wd)
-		}
-
-		// Check whether images contain service name derived from context
-		// as that's the best we can do in order to match a service to corresponding
-		// docker registry image. If no docker registry image was detected
-		// then we use service name as docker image name.
-		re := regexp.MustCompile(fmt.Sprintf(`.*\/%s`, svcNameFromContext))
-
-		for _, image := range analysis.Images {
-			if found := re.FindAllStringSubmatchIndex(image, -1); found != nil {
-				buildArtifacts[context] = image
-				break
-			} else {
-				buildArtifacts[context] = svcNameFromContext
+	// Extract images referenced by a Docker Compose project and map them to their respective build contexts (if present)
+	// Note: Images that don't specify build "context" will be ignored!
+	if project.Project != nil && project.Project.Services != nil {
+		for _, s := range project.Project.Services {
+			if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
+				buildArtifacts[s.Build.Context] = s.Image
 			}
 		}
 	}
@@ -664,7 +682,7 @@ Once you have skaffold.yaml in your project, make sure that Kev references it by
 	}
 
 	// Reconcile skaffold config and add potentially missing profiles before starting dev loop
-	reconciledSkaffoldConfig, err := AddProfiles(configPath, manifest.GetEnvironmentsNames(), true)
+	reconciledSkaffoldConfig, err := InjectProfiles(configPath, manifest.GetEnvironmentsNames(), true)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "Couldn't reconcile Skaffold config - required profiles haven't been added.")
 	}
