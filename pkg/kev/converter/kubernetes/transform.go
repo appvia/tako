@@ -1660,20 +1660,16 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	}
 
 	// @step add PVCs to objects
-	if pvcs != nil {
-		// Looping on the slice pvcs instead of `*objects = append(*objects, pvcs...)`
-		// because the type of objects and pvcs is different, but when doing append
-		// one element at a time it gets converted to runtime.Object for objects slice
-		for _, p := range pvcs {
-			*objects = append(*objects, p)
-		}
+	// Looping on the slice pvcs instead of `*objects = append(*objects, pvcs...)`
+	// because the type of objects and pvcs is different, but when doing append
+	// one element at a time it gets converted to runtime.Object for objects slice
+	for _, p := range pvcs {
+		*objects = append(*objects, p)
 	}
 
 	// @step add ConfigMaps to objects
-	if cms != nil {
-		for _, c := range cms {
-			*objects = append(*objects, c)
-		}
+	for _, c := range cms {
+		*objects = append(*objects, c)
 	}
 
 	// @step configure the container ports
@@ -1701,7 +1697,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		template.Spec.NodeSelector = projectService.placement()
 
 		// @step configure the HealthCheck
-		healthCheck, err := projectService.healthcheck()
+		healthCheck, err := projectService.LivenessProbe()
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"project-service": projectService.Name,
@@ -1715,7 +1711,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 
 		// @step configure readiness probe
 		// Note: This is not covered by the docker compose spec
-		readinessProbe, err := projectService.readinessProbe()
+		readinessProbe, err := projectService.ReadinessProbe()
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"project-service": projectService.Name,
