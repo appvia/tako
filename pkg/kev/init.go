@@ -23,11 +23,19 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
+	"github.com/pkg/errors"
 )
 
 // NewInitRunner returns a runner that can initialise a project using the provided options
 func NewInitRunner(workingDir string, opts ...Options) *InitRunner {
-	runner := &InitRunner{Project: &Project{workingDir: workingDir}}
+	runner := &InitRunner{
+		Project: &Project{
+			WorkingDir: workingDir,
+			eventHandler: func(e RunnerEvent, r Runner) error {
+				return nil
+			},
+		},
+	}
 	runner.Init(opts...)
 	return runner
 }
@@ -46,6 +54,9 @@ func (r *InitRunner) Run() (WritableResults, error) {
 	}
 
 	if err := r.ValidateSources(sources, config.SecretMatchers); err != nil {
+		sg := r.UI.StepGroup()
+		defer sg.Done()
+		initStepError(r.UI, sg.Add(""), initStepValidatingSources, err)
 		return nil, err
 	}
 
@@ -54,7 +65,7 @@ func (r *InitRunner) Run() (WritableResults, error) {
 	}
 
 	r.UI.Header("Detecting Skaffold settings...")
-	if r.config.skaffold {
+	if r.config.Skaffold {
 		if skManifest, err = r.CreateOrUpdateSkaffoldManifest(); err != nil {
 			return nil, err
 		}
@@ -62,36 +73,48 @@ func (r *InitRunner) Run() (WritableResults, error) {
 		r.UI.Output("Skipping - no Skaffold options detected")
 	}
 
-	return createInitWritableResults(r.workingDir, r.manifest, skManifest), nil
+	return createInitWritableResults(r.WorkingDir, r.manifest, skManifest), nil
 }
 
 // EnsureFirstInit ensures the project has not been already initialised
 func (r *InitRunner) EnsureFirstInit() error {
+	if err := r.eventHandler(PreEnsureFirstInit, r); err != nil {
+		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreEnsureFirstInit)
+	}
+
 	r.UI.Header("Verifying project...")
 	sg := r.UI.StepGroup()
 	defer sg.Done()
 	s := sg.Add("Ensuring this project has not already been initialised")
 
-	manifestPath := path.Join(r.workingDir, ManifestFilename)
+	manifestPath := path.Join(r.WorkingDir, ManifestFilename)
 	if ManifestExistsForPath(manifestPath) {
-		absWd, _ := filepath.Abs(r.workingDir)
+		absWd, _ := filepath.Abs(r.WorkingDir)
 		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, absWd)
 		initStepError(r.UI, s, initStepConfig, err)
 		return err
 	}
 
 	s.Success()
+
+	if err := r.eventHandler(PostEnsureFirstInit, r); err != nil {
+		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostEnsureFirstInit)
+	}
 	return nil
 }
 
 // DetectSources detects the compose yaml sources required for initialisation
 func (r *InitRunner) DetectSources() (*Sources, error) {
+	if err := r.eventHandler(PreDetectSources, r); err != nil {
+		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreDetectSources)
+	}
+
 	r.UI.Header("Detecting compose sources...")
 
 	sg := r.UI.StepGroup()
 	defer sg.Done()
-	if len(r.config.composeSources) > 0 {
-		for _, source := range r.config.composeSources {
+	if len(r.config.ComposeSources) > 0 {
+		for _, source := range r.config.ComposeSources {
 			s := sg.Add(fmt.Sprintf("Scanning for: %s", source))
 
 			if !fileExists(source) {
@@ -103,11 +126,14 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 			s.Success("Using: ", source)
 		}
 
-		return &Sources{Files: r.config.composeSources}, nil
+		if err := r.eventHandler(PostDetectSources, r); err != nil {
+			return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostDetectSources)
+		}
+		return &Sources{Files: r.config.ComposeSources}, nil
 	}
 
 	s := sg.Add(fmt.Sprintf("Scanning for compose configuration"))
-	defaults, err := findDefaultComposeFiles(r.workingDir)
+	defaults, err := findDefaultComposeFiles(r.WorkingDir)
 	if err != nil {
 		initStepError(r.UI, s, initStepComposeSource, err)
 		return nil, err
@@ -119,11 +145,18 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 		s.Success()
 	}
 
+	if err := r.eventHandler(PostDetectSources, r); err != nil {
+		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostDetectSources)
+	}
 	return &Sources{Files: defaults}, nil
 }
 
 // CreateManifestAndEnvironmentOverrides creates a base manifest and the related compose environment overrides
 func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) error {
+	if err := r.eventHandler(PreCreateManifest, r); err != nil {
+		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreCreateManifest)
+	}
+
 	r.manifest = NewManifest(sources)
 	r.manifest.UI = r.UI
 
@@ -135,12 +168,21 @@ func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) err
 		return err
 	}
 
-	r.manifest.MintEnvironments(r.config.envs)
+	r.manifest.MintEnvironments(r.config.Envs)
+
+	if err := r.eventHandler(PostCreateManifest, r); err != nil {
+		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostCreateManifest)
+	}
+
 	return nil
 }
 
 // CreateOrUpdateSkaffoldManifest creates or updates a skaffold manifest
 func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error) {
+	if err := r.eventHandler(PreCreateOrUpdateSkaffoldManifest, r); err != nil {
+		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreCreateOrUpdateSkaffoldManifest)
+	}
+
 	var err error
 	var skManifest *SkaffoldManifest
 
@@ -153,7 +195,7 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 		return nil, err
 	}
 
-	skPath := path.Join(r.workingDir, SkaffoldFileName)
+	skPath := path.Join(r.WorkingDir, SkaffoldFileName)
 	envs := r.manifest.GetEnvironmentsNames()
 	switch ManifestExistsForPath(skPath) {
 	case true:
@@ -176,6 +218,11 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 	}
 
 	r.manifest.Skaffold = SkaffoldFileName
+
+	if err := r.eventHandler(PostCreateOrUpdateSkaffoldManifest, r); err != nil {
+		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostCreateOrUpdateSkaffoldManifest)
+	}
+
 	return skManifest, nil
 }
 

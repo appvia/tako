@@ -48,8 +48,15 @@ func LoadManifest(workingDir string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var m *Manifest
-	return m, yaml.Unmarshal(data, &m)
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+
+	m.UI = kmd.NoOpUI()
+
+	return m, nil
 }
 
 // GetManifestName returns base manifest file name (without extension)
