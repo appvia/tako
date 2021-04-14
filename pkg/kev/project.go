@@ -25,11 +25,7 @@ import (
 
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
-	var cfg runConfig
-	for _, o := range opts {
-		o(p, &cfg)
-	}
-	p.config = cfg
+	p.SetConfig(opts...)
 	if p.UI == nil {
 		p.UI = kmd.ConsoleUI()
 	}
@@ -39,6 +35,10 @@ func (p *Project) Init(opts ...Options) {
 // This function can be extended to include different forms of
 // validation (for now it detect any secrets found in the sources).
 func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string) error {
+	if err := p.eventHandler(PreValidateSources, p); err != nil {
+		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreValidateSources)
+	}
+
 	p.UI.Header("Validating compose sources...")
 
 	secretsDetected, err := p.detectSecretsInSources(sources, matchers)
@@ -50,10 +50,15 @@ func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string
 	p.UI.Output("Validation successful!")
 
 	if secretsDetected {
-		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
-%s`, SecretsReferenceUrl))
+		if err := p.eventHandler(SecretsDetected, p); err != nil {
+			return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), SecretsDetected)
+		}
+		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page: %s`, SecretsReferenceUrl))
 	}
 
+	if err := p.eventHandler(PostValidateSources, p); err != nil {
+		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostValidateSources)
+	}
 	return nil
 }
 
@@ -102,47 +107,24 @@ func (p *Project) Manifest() *Manifest {
 	return p.manifest
 }
 
-// WithComposeSources configures a project's run config with a list of compose files as sources.
-func WithComposeSources(c []string) Options {
-	return func(project *Project, cfg *runConfig) {
-		cfg.composeSources = c
-	}
+// GetUI returns the project's UI
+func (p *Project) GetUI() kmd.UI {
+	return p.UI
 }
 
-// WithEnvs configures a project's run config with a list of environment names.
-func WithEnvs(c []string) Options {
-	return func(project *Project, cfg *runConfig) {
-		cfg.envs = c
-	}
+func (p *Project) GetConfig() runConfig {
+	return *p.config
 }
 
-// WithSkaffold configures a project's run config with Skaffold support.
-func WithSkaffold(c bool) Options {
-	return func(project *Project, cfg *runConfig) {
-		cfg.skaffold = c
+func (p *Project) SetConfig(opts ...Options) {
+	cfg := &runConfig{}
+	if p.config != nil {
+		cfg = p.config
 	}
-}
-
-// WithManifestFormat configures a project's run config with a K8s manifest format for rendering.
-func WithManifestFormat(c string) Options {
-	return func(project *Project, cfg *runConfig) {
-		cfg.manifestFormat = c
+	for _, o := range opts {
+		o(p, cfg)
 	}
-}
-
-// WithManifestsAsSingleFile configures a project's run config with whether rendered K8s manifests
-// should be bundled into a single file or not.
-func WithManifestsAsSingleFile(c bool) Options {
-	return func(project *Project, cfg *runConfig) {
-		cfg.manifestsAsSingleFile = c
-	}
-}
-
-// WithOutputDir configures a project's run config with a location to render a project's K8s manifests.
-func WithOutputDir(c string) Options {
-	return func(project *Project, cfg *runConfig) {
-		cfg.outputDir = c
-	}
+	p.config = cfg
 }
 
 // WithUI configures a project with a terminal UI implementation
@@ -152,11 +134,61 @@ func WithUI(ui kmd.UI) Options {
 	}
 }
 
+// WithEventHandler configures a project with an event handler
+func WithEventHandler(handler EventHandler) Options {
+	return func(project *Project, cfg *runConfig) {
+		project.eventHandler = handler
+	}
+}
+
+// WithComposeSources configures a project's run config with a list of compose files as sources.
+func WithComposeSources(c []string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.ComposeSources = c
+	}
+}
+
+// WithEnvs configures a project's run config with a list of environment names.
+func WithEnvs(c []string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.Envs = c
+	}
+}
+
+// WithSkaffold configures a project's run config with Skaffold support.
+func WithSkaffold(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.Skaffold = c
+	}
+}
+
+// WithManifestFormat configures a project's run config with a K8s manifest format for rendering.
+func WithManifestFormat(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.ManifestFormat = c
+	}
+}
+
+// WithManifestsAsSingleFile configures a project's run config with whether rendered K8s manifests
+// should be bundled into a single file or not.
+func WithManifestsAsSingleFile(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.ManifestsAsSingleFile = c
+	}
+}
+
+// WithOutputDir configures a project's run config with a location to render a project's K8s manifests.
+func WithOutputDir(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.OutputDir = c
+	}
+}
+
 // WithK8sNamespace configures a project's run config with a K8s namespace
 // (used mostly during dev when Skaffold is enabled).
 func WithK8sNamespace(c string) Options {
 	return func(project *Project, cfg *runConfig) {
-		cfg.k8sNamespace = c
+		cfg.K8sNamespace = c
 	}
 }
 
@@ -164,7 +196,7 @@ func WithK8sNamespace(c string) Options {
 // (used mostly during dev when Skaffold is enabled).
 func WithKubecontext(c string) Options {
 	return func(project *Project, cfg *runConfig) {
-		cfg.kubecontext = c
+		cfg.Kubecontext = c
 	}
 }
 
@@ -172,7 +204,7 @@ func WithKubecontext(c string) Options {
 // (used mostly during dev when Skaffold is enabled).
 func WithSkaffoldTailEnabled(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
-		cfg.skaffoldTail = c
+		cfg.SkaffoldTail = c
 	}
 }
 
@@ -180,7 +212,7 @@ func WithSkaffoldTailEnabled(c bool) Options {
 // for Skaffold (used mostly during dev when Skaffold is enabled).
 func WithSkaffoldManualTriggerEnabled(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
-		cfg.skaffoldManualTrigger = c
+		cfg.SkaffoldManualTrigger = c
 	}
 }
 
@@ -188,6 +220,14 @@ func WithSkaffoldManualTriggerEnabled(c bool) Options {
 // for Skaffold (used mostly during dev when Skaffold is enabled).
 func WithSkaffoldVerboseEnabled(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
-		cfg.skaffoldVerbose = c
+		cfg.SkaffoldVerbose = c
+	}
+}
+
+// WithExcludeServicesByEnv configures a project's run config with environments whose
+// services should be excluded from any processing.
+func WithExcludeServicesByEnv(c map[string][]string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.ExcludeServicesByEnv = c
 	}
 }

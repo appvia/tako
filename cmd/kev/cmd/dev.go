@@ -140,7 +140,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changeHandler := func(ch string) error { return nil }
+	eventHandler := func(e kev.RunnerEvent, r kev.Runner) error { return nil }
 
 	var envs []string
 	if len(kevenv) > 0 {
@@ -152,7 +152,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	wd := "."
 
 	return kev.DevWithOptions(wd,
-		changeHandler,
+		kev.WithEventHandler(eventHandler),
 		kev.WithSkaffold(skaffold),
 		kev.WithK8sNamespace(namespace),
 		kev.WithKubecontext(kubecontext),

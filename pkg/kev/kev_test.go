@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/appvia/kev/pkg/kev"
+	kmd "github.com/appvia/komando"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -27,6 +28,7 @@ import (
 func TestCanLoadAManifest(t *testing.T) {
 	expected := &kev.Manifest{
 		Id: "random-uuid",
+		UI: kmd.NoOpUI(),
 		Sources: &kev.Sources{
 			Files: []string{
 				"testdata/in-cluster-wordpress/docker-compose.yaml",

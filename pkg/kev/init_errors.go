@@ -31,6 +31,7 @@ const (
 	initStepComposeSource
 	initStepParsingComposeConfig
 	initStepGenerateManifest
+	initStepValidatingSources
 	initStepUpdateSkaffold
 	initStepCreateSkaffold
 )
@@ -65,6 +66,10 @@ to double check your compose source(s) are valid.
 
 	initStepGenerateManifest: {
 		Error: "Cannot create manifest using compose source files!",
+	},
+
+	initStepValidatingSources: {
+		Error: "Encountered an error while validating sources!",
 	},
 
 	initStepUpdateSkaffold: {
