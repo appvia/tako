@@ -47,6 +47,7 @@ var _ = Describe("Transform", func() {
 	var project composego.Project
 	var projectService ProjectService
 	var excluded []string
+	var extensions map[string]interface{}
 
 	BeforeEach(func() {
 		project = composego.Project{
@@ -54,8 +55,9 @@ var _ = Describe("Transform", func() {
 		}
 
 		projectService = ProjectService{
-			Name:  "web",
-			Image: "some-image",
+			Name:       "web",
+			Image:      "some-image",
+			Extensions: extensions,
 		}
 	})
 
@@ -1888,38 +1890,23 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeCommand: "hello world",
-						config.LabelWorkloadLivenessProbeType:     config.ProbeTypeNone.String(),
+					k8sconf := config.DefaultK8SConfig()
+					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					k8sconf.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
+					k8sconf.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
+
+					ext, err := k8sconf.ToMap()
+					Expect(err).NotTo(HaveOccurred())
+					projectService.Extensions = map[string]interface{}{
+						config.K8SExtensionKey: ext,
 					}
 				})
 
 				It("includes readiness probe definition in the pod spec", func() {
 					err := k.updateKubernetesObjects(projectService, &objs)
 					Expect(err).ToNot(HaveOccurred())
-
+					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe).NotTo(BeNil())
 					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command).To(Equal([]string{"hello world"}))
-				})
-			})
-
-			When("readiness probe is misconfigured", func() {
-				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeCommand: "",
-					}
-				})
-
-				It("logs and returns an error", func() {
-					err := k.updateKubernetesObjects(projectService, &objs)
-					Expect(err).To(HaveOccurred())
-
-					assertLog(logrus.ErrorLevel,
-						"Couldn't update k8s object",
-						map[string]string{})
-
-					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe).To(BeNil())
 				})
 			})
 
