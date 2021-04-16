@@ -16,8 +16,8 @@
 
 package kev
 
-type RunnerEvent uint
-
+// String returns string representation of a RunnerEvent.
+// Useful for use in error messages.
 func (e RunnerEvent) String() string {
 	switch e {
 	case PreLoadProject:
@@ -71,6 +71,7 @@ func (e RunnerEvent) String() string {
 	}
 }
 
+// RunnerEvents
 const (
 	PreLoadProject RunnerEvent = iota
 	PostLoadProject

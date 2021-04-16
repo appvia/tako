@@ -44,7 +44,15 @@ type runConfig struct {
 // Options helps configure running project commands
 type Options func(project *Project, cfg *runConfig)
 
-// EventHandler is a callback function that handles a runner event and returns error, e.g. change event when in dev mode
+// RunnerEvent a runner event.
+// This could be a pre/post runner step hook or a general significant event.
+// E.g.
+// - Pre step event: PreLoadProject
+// - post step event: PostLoadProject
+// - significant event: SecretsDetected
+type RunnerEvent uint
+
+// EventHandler is a callback function that handles a runner event
 type EventHandler func(RunnerEvent, Runner) error
 
 // Runner an interface used by the EventHandler
