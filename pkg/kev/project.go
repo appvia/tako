@@ -112,10 +112,12 @@ func (p *Project) GetUI() kmd.UI {
 	return p.UI
 }
 
+// GetConfig returns a projects config
 func (p *Project) GetConfig() runConfig {
 	return *p.config
 }
 
+// SetConfig sets or overwrites params in a project's config using opts.
 func (p *Project) SetConfig(opts ...Options) {
 	cfg := &runConfig{}
 	if p.config != nil {
