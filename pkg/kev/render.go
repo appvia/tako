@@ -71,7 +71,7 @@ func (r *RenderRunner) Run() (map[string]string, error) {
 // LoadProject loads the project into memory including the kev manifest and related deployment environments.
 func (r *RenderRunner) LoadProject() error {
 	if err := r.eventHandler(PreLoadProject, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreLoadProject)
+		return newEventError(err, PreLoadProject)
 	}
 	r.UI.Header("Loading...")
 
@@ -92,7 +92,7 @@ func (r *RenderRunner) LoadProject() error {
 	r.manifest = manifest
 	r.manifest.UI = r.UI
 	if err := r.eventHandler(PostLoadProject, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostLoadProject)
+		return newEventError(err, PostLoadProject)
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func (r *RenderRunner) VerifySkaffoldIfAvailable() error {
 	}
 
 	if err := r.eventHandler(PreVerifySkaffold, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreVerifySkaffold)
+		return newEventError(err, PreVerifySkaffold)
 	}
 
 	r.UI.Header("Verifying Skaffold...")
@@ -121,7 +121,7 @@ func (r *RenderRunner) VerifySkaffoldIfAvailable() error {
 	step.Success("Skaffold manifest is available")
 
 	if err := r.eventHandler(PostVerifySkaffold, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostVerifySkaffold)
+		return newEventError(err, PostVerifySkaffold)
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func (r *RenderRunner) VerifySkaffoldIfAvailable() error {
 // validation (for now it detect any secrets found in the sources).
 func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	if err := r.eventHandler(PreValidateEnvSources, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreValidateEnvSources)
+		return newEventError(err, PreValidateEnvSources)
 	}
 
 	r.UI.Header("Validating compose environment overrides...")
@@ -156,14 +156,14 @@ func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	r.UI.Output("Validation successful!")
 	if detectHit {
 		if err := r.eventHandler(SecretsDetected, r); err != nil {
-			return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), SecretsDetected)
+			return newEventError(err, SecretsDetected)
 		}
 		r.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
 %s`, SecretsReferenceUrl))
 	}
 
 	if err := r.eventHandler(PostValidateEnvSources, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostValidateEnvSources)
+		return newEventError(err, PostValidateEnvSources)
 	}
 	return nil
 }
@@ -171,7 +171,7 @@ func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 // ReconcileEnvsAndWriteUpdates reconciles changes with docker-compose sources against deployment environments.
 func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	if err := r.eventHandler(PreReconcileEnvs, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreReconcileEnvs)
+		return newEventError(err, PreReconcileEnvs)
 	}
 
 	r.UI.Header("Detecting project updates...")
@@ -188,7 +188,7 @@ func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 	}
 
 	if err := r.eventHandler(PostReconcileEnvs, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostReconcileEnvs)
+		return newEventError(err, PostReconcileEnvs)
 	}
 
 	return nil
@@ -199,7 +199,7 @@ func (r *RenderRunner) ReconcileEnvsAndWriteUpdates() error {
 // in different formats.
 func (r *RenderRunner) RenderFromComposeToK8sManifests() (map[string]string, error) {
 	if err := r.eventHandler(PreRenderFromComposeToK8sManifests, r); err != nil {
-		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreRenderFromComposeToK8sManifests)
+		return nil, newEventError(err, PreRenderFromComposeToK8sManifests)
 	}
 
 	manifestFormat := r.config.ManifestFormat
@@ -217,7 +217,7 @@ func (r *RenderRunner) RenderFromComposeToK8sManifests() (map[string]string, err
 	}
 
 	if err := r.eventHandler(PostRenderFromComposeToK8sManifests, r); err != nil {
-		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostRenderFromComposeToK8sManifests)
+		return nil, newEventError(err, PostRenderFromComposeToK8sManifests)
 	}
 	return results, err
 }

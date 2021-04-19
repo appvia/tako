@@ -16,6 +16,8 @@
 
 package kev
 
+import "github.com/pkg/errors"
+
 // String returns string representation of a RunnerEvent.
 // Useful for use in error messages.
 func (e RunnerEvent) String() string {
@@ -97,3 +99,8 @@ const (
 	DevLoopStarting
 	DevLoopIterated
 )
+
+// newEventError returns an event error wrapping the original error
+func newEventError(err error, event RunnerEvent) error {
+	return errors.Errorf("%s\nwhen handling %s event", err.Error(), event)
+}

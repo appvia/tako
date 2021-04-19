@@ -23,7 +23,6 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
-	"github.com/pkg/errors"
 )
 
 // NewInitRunner returns a runner that can initialise a project using the provided options
@@ -79,7 +78,7 @@ func (r *InitRunner) Run() (WritableResults, error) {
 // EnsureFirstInit ensures the project has not been already initialised
 func (r *InitRunner) EnsureFirstInit() error {
 	if err := r.eventHandler(PreEnsureFirstInit, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreEnsureFirstInit)
+		return newEventError(err, PreEnsureFirstInit)
 	}
 
 	r.UI.Header("Verifying project...")
@@ -98,7 +97,7 @@ func (r *InitRunner) EnsureFirstInit() error {
 	s.Success()
 
 	if err := r.eventHandler(PostEnsureFirstInit, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostEnsureFirstInit)
+		return newEventError(err, PostEnsureFirstInit)
 	}
 	return nil
 }
@@ -106,7 +105,7 @@ func (r *InitRunner) EnsureFirstInit() error {
 // DetectSources detects the compose yaml sources required for initialisation
 func (r *InitRunner) DetectSources() (*Sources, error) {
 	if err := r.eventHandler(PreDetectSources, r); err != nil {
-		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreDetectSources)
+		return nil, newEventError(err, PreDetectSources)
 	}
 
 	r.UI.Header("Detecting compose sources...")
@@ -127,7 +126,7 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 		}
 
 		if err := r.eventHandler(PostDetectSources, r); err != nil {
-			return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostDetectSources)
+			return nil, newEventError(err, PostDetectSources)
 		}
 		return &Sources{Files: r.config.ComposeSources}, nil
 	}
@@ -146,7 +145,7 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 	}
 
 	if err := r.eventHandler(PostDetectSources, r); err != nil {
-		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostDetectSources)
+		return nil, newEventError(err, PostDetectSources)
 	}
 	return &Sources{Files: defaults}, nil
 }
@@ -154,7 +153,7 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 // CreateManifestAndEnvironmentOverrides creates a base manifest and the related compose environment overrides
 func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) error {
 	if err := r.eventHandler(PreCreateManifest, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreCreateManifest)
+		return newEventError(err, PreCreateManifest)
 	}
 
 	r.manifest = NewManifest(sources)
@@ -171,7 +170,7 @@ func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) err
 	r.manifest.MintEnvironments(r.config.Envs)
 
 	if err := r.eventHandler(PostCreateManifest, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostCreateManifest)
+		return newEventError(err, PostCreateManifest)
 	}
 
 	return nil
@@ -180,7 +179,7 @@ func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) err
 // CreateOrUpdateSkaffoldManifest creates or updates a skaffold manifest
 func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error) {
 	if err := r.eventHandler(PreCreateOrUpdateSkaffoldManifest, r); err != nil {
-		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreCreateOrUpdateSkaffoldManifest)
+		return nil, newEventError(err, PreCreateOrUpdateSkaffoldManifest)
 	}
 
 	var err error
@@ -220,7 +219,7 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 	r.manifest.Skaffold = SkaffoldFileName
 
 	if err := r.eventHandler(PostCreateOrUpdateSkaffoldManifest, r); err != nil {
-		return nil, errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostCreateOrUpdateSkaffoldManifest)
+		return nil, newEventError(err, PostCreateOrUpdateSkaffoldManifest)
 	}
 
 	return skManifest, nil
