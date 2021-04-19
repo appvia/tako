@@ -146,6 +146,7 @@ func (sc ServiceConfig) minusEnvVars() ServiceConfig {
 		Labels:      sc.Labels,
 		Environment: map[string]*string{},
 		Extensions:  sc.Extensions,
+		K8SConfig:   sc.K8SConfig,
 	}
 }
 
@@ -162,5 +163,6 @@ func (sc ServiceConfig) condenseLabels(labels []string) ServiceConfig {
 		Labels:      sc.Labels,
 		Environment: sc.Environment,
 		Extensions:  sc.Extensions,
+		K8SConfig:   sc.K8SConfig,
 	}
 }

@@ -690,7 +690,9 @@ func (p *ProjectService) livenessProbeCommand() []string {
 		return p.HealthCheck.Test[1:]
 	}
 
-	return config.DefaultLivenessProbeCommand
+	return []string{
+		config.DefaultLivenessProbeCommand,
+	}
 }
 
 // livenessProbeInterval returns liveness probe interval

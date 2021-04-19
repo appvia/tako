@@ -28,9 +28,7 @@ services:
         livenessProbe:
           type: exec
           exec: 
-            command: 
-              - echo 
-              - I'm a useless check
+            command: "echo I'm a useless check"
     environment:
       - OVERRIDE_ME_EMPTY=empty-overridden
       - OVERRIDE_ME_WITH_VAL=val-overridden

@@ -189,7 +189,7 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 	if source.HealthCheck != nil && len(source.HealthCheck.Test) > 0 {
 		command = formatSlice(source.HealthCheck.Test)
 	} else {
-		command = formatSlice(config.DefaultLivenessProbeCommand)
+		command = config.DefaultLivenessProbeCommand
 	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeCommand, command)
 

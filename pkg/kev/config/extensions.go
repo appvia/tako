@@ -10,8 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const K8SExtensionKey = "x-k8s"
-
 // ExtensionRoot represents the root of the docker-compose extensions
 type ExtensionRoot struct {
 	K8S K8SConfiguration `yaml:"x-k8s"`
@@ -20,49 +18,8 @@ type ExtensionRoot struct {
 // K8SConfiguration represents the root of the k8s specific fields supported by kev.
 type K8SConfiguration struct {
 	Enabled  bool     `yaml:"enabled,omitempty"`
-	Workload Workload `yaml:"workload" validate:"required,dive"`
+	Workload Workload `yaml:"workload,omitempty" validate:"required"`
 	Service  Service  `yaml:"service,omitempty"`
-}
-
-func (k K8SConfiguration) ToMap() (map[string]interface{}, error) {
-	bs, err := yaml.Marshal(k)
-	if err != nil {
-		return nil, err
-	}
-
-	var m map[string]interface{}
-	err = yaml.Unmarshal(bs, &m)
-	if err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func (k K8SConfiguration) Merge(other K8SConfiguration) (K8SConfiguration, error) {
-	k8s := k
-
-	if err := mergo.Merge(&k8s, other, mergo.WithOverride); err != nil {
-		return K8SConfiguration{}, err
-	}
-
-	return k8s, nil
-}
-
-func (k K8SConfiguration) Validate() error {
-	err := validator.New().Struct(k.Workload)
-	if err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		for _, e := range validationErrors {
-			if e.Tag() == "required" {
-				return fmt.Errorf("%s is required", e.StructNamespace())
-			}
-		}
-
-		return errors.New(validationErrors[0].Error())
-	}
-
-	return nil
 }
 
 // DefaultK8SConfig returns a K8SServiceConfig with all the defaults set into it.
@@ -73,33 +30,13 @@ func DefaultK8SConfig() K8SConfiguration {
 			Type:           DefaultWorkload,
 			LivenessProbe:  DefaultLivenessProbe(),
 			ReadinessProbe: DefaultReadinessProbe(),
-			Replicas:       1,
 		},
 	}
 }
 
-type k8sConfigOptions struct {
-	requireExtensions bool
-}
-
-// K8SCfgOption will modify parsing behaviour of the x-k8s extension.
-type K8SCfgOption func(*k8sConfigOptions)
-
-// RequireExtensions will ensure that x-k8s is present and that it is validated.
-func RequireExtensions() K8SCfgOption {
-	return func(kco *k8sConfigOptions) {
-		kco.requireExtensions = true
-	}
-}
-
 // K8SCfgFromMap handles the extraction of the k8s-specific extension values from the top level map.
-func K8SCfgFromMap(m map[string]interface{}, opts ...K8SCfgOption) (K8SConfiguration, error) {
-	var options k8sConfigOptions
-	for _, o := range opts {
-		o(&options)
-	}
-
-	if _, ok := m[K8SExtensionKey]; !ok && !options.requireExtensions {
+func K8SCfgFromMap(m map[string]interface{}) (K8SConfiguration, error) {
+	if _, ok := m["x-k8s"]; !ok {
 		c := DefaultK8SConfig()
 		c.Workload.Replicas = DefaultReplicaNumber
 		return c, nil
@@ -116,23 +53,32 @@ func K8SCfgFromMap(m map[string]interface{}, opts ...K8SCfgOption) (K8SConfigura
 		return K8SConfiguration{}, err
 	}
 
-	if err := extensions.K8S.Validate(); err != nil {
-		return K8SConfiguration{}, err
-	}
-
-	k8s, err := DefaultK8SConfig().Merge(extensions.K8S)
+	err := validator.New().Struct(extensions.K8S.Workload)
 	if err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		for _, e := range validationErrors {
+			if e.Tag() == "required" {
+				return K8SConfiguration{}, fmt.Errorf("%s is required", e.StructNamespace())
+			}
+		}
+
+		return K8SConfiguration{}, errors.New(validationErrors[0].Error())
+	}
+
+	k8s := DefaultK8SConfig()
+
+	if err := mergo.Merge(&extensions.K8S, k8s); err != nil {
 		return K8SConfiguration{}, err
 	}
 
-	return k8s, nil
+	return extensions.K8S, nil
 }
 
 // Workload holds all the workload-related k8s configurations.
 type Workload struct {
 	Type           string         `yaml:"type,omitempty"`
-	Replicas       int            `yaml:"replicas" validate:"required,gt=0"`
-	LivenessProbe  LivenessProbe  `yaml:"livenessProbe" validate:"required"`
+	Replicas       int            `yaml:"replicas,omitempty" validate:"required"`
+	LivenessProbe  LivenessProbe  `yaml:"livenessProbe,omitempty"`
 	ReadinessProbe ReadinessProbe `yaml:"readinessProbe,omitempty"`
 }
 
