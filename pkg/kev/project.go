@@ -36,7 +36,7 @@ func (p *Project) Init(opts ...Options) {
 // validation (for now it detect any secrets found in the sources).
 func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string) error {
 	if err := p.eventHandler(PreValidateSources, p); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PreValidateSources)
+		return newEventError(err, PreValidateSources)
 	}
 
 	p.UI.Header("Validating compose sources...")
@@ -51,13 +51,13 @@ func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string
 
 	if secretsDetected {
 		if err := p.eventHandler(SecretsDetected, p); err != nil {
-			return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), SecretsDetected)
+			return newEventError(err, SecretsDetected)
 		}
 		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page: %s`, SecretsReferenceUrl))
 	}
 
 	if err := p.eventHandler(PostValidateSources, p); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), PostValidateSources)
+		return newEventError(err, PostValidateSources)
 	}
 	return nil
 }

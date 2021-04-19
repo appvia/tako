@@ -52,7 +52,7 @@ func NewDevRunner(workingDir string, opts ...Options) *DevRunner {
 // Run runs the dev command business logic
 func (r *DevRunner) Run() error {
 	if err := r.eventHandler(DevLoopStarting, r); err != nil {
-		return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), DevLoopStarting)
+		return newEventError(err, DevLoopStarting)
 	}
 
 	var renderRunner *RenderRunner
@@ -138,7 +138,7 @@ func (r *DevRunner) Run() error {
 			)
 
 			if err := r.eventHandler(DevLoopIterated, r); err != nil {
-				return errors.Errorf("%s\nwhen handling fired event: %s", err.Error(), DevLoopIterated)
+				return newEventError(err, DevLoopIterated)
 			}
 
 			_ = runPreCommands()
