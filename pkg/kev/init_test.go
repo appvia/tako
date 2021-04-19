@@ -22,7 +22,6 @@ import (
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -77,8 +76,8 @@ var _ = Describe("InitRunner", func() {
 		It("should write out a yaml file with manifest data", func() {
 			var buffer bytes.Buffer
 			_, err := manifest.WriteTo(&buffer)
-			Expect(err).ToNot(HaveOccurred())
 
+			Expect(err).ToNot(HaveOccurred())
 			Expect(buffer.String()).To(MatchRegexp(`id: [a-z0-9]+`))
 			Expect(buffer.String()).To(ContainSubstring("compose:"))
 			Expect(buffer.String()).To(MatchRegexp(`.*- .*compose.yml`))
@@ -206,8 +205,8 @@ var _ = Describe("InitRunner", func() {
 		Context("marshalling", func() {
 			It("should write out a yaml file with manifest data", func() {
 				var buffer bytes.Buffer
-				_, err := env.WriteTo(&buffer)
 
+				_, err := env.WriteTo(&buffer)
 				Expect(err).ToNot(HaveOccurred())
 
 				expected := `version: "3.9"
@@ -217,31 +216,11 @@ services:
       kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
       kev.workload.liveness-probe-type: exec
       kev.workload.replicas: "1"
-    x-k8s:
-      enabled: true
-      workload:
-        type: Deployment
-        replicas: 1
-        livenessProbe:
-          type: exec
-          exec:
-            command: Define healthcheck command for service %s
-          initialDelay: 1m0s
-          period: 1m0s
-          failureThreashold: 3
-          timeout: 10s
-        readinessProbe:
-          type: none
-          initialDelay: 1m0s
-          period: 1m0s
-          failureThreashold: 3
-          timeout: 10s
 volumes:
   db_data:
     labels:
       kev.volume.size: 100Mi
 `
-				Expect(cmp.Diff(buffer.String(), expected)).To(BeEmpty())
 				Expect(buffer.String()).To(Equal(expected))
 			})
 		})

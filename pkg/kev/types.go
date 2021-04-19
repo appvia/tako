@@ -19,7 +19,6 @@ package kev
 import (
 	"io"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 )
@@ -116,9 +115,7 @@ type ServiceConfig struct {
 	Name        string                      `yaml:"-" json:"-" diff:"name"`
 	Labels      composego.Labels            `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
-
-	Extensions map[string]interface{}  `yaml:",inline" json:"-"`
-	K8SConfig  config.K8SConfiguration `yaml:"-"`
+	Extensions  map[string]interface{}      `yaml:",inline" json:"-"`
 }
 
 type secretHit struct {

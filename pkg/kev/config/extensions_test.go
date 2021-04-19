@@ -13,14 +13,14 @@ var _ = Describe("Extentions", func() {
 
 	Describe("parsing", func() {
 		var (
-			parsedCfg  config.K8SConfiguration
-			k8s        config.K8SConfiguration
+			parsedCfg  config.K8SServiceConfig
+			k8s        config.K8SServiceConfig
 			extensions = make(map[string]interface{})
 			err        error
 		)
 
 		BeforeEach(func() {
-			k8s = config.K8SConfiguration{}
+			k8s = config.K8SServiceConfig{}
 		})
 
 		JustBeforeEach(func() {
@@ -41,27 +41,17 @@ var _ = Describe("Extentions", func() {
 			})
 
 			It("creates the config using defaults when the mandatory properties are present", func() {
-				parsedCfg, err = config.K8SCfgFromMap(extensions)
+				parsedCfg, err = config.K8SServiceCfgFromMap(extensions)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(parsedCfg).NotTo(BeNil())
+
+				Expect(parsedCfg.Workload.Replicas).To(Equal(10))
+				Expect(parsedCfg.Service).To(BeZero())
 
 				expectedLiveness := config.DefaultLivenessProbe()
 				expectedLiveness.Type = config.ProbeTypeNone.String()
 
-				Expect(parsedCfg.Workload.Replicas).To(Equal(10))
 				Expect(parsedCfg.Workload.LivenessProbe).To(BeEquivalentTo(expectedLiveness))
-				Expect(parsedCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
-			})
-		})
-
-		Context("works if no k8s is present", func() {
-			It("does not fail validations", func() {
-				parsedCfg, err = config.K8SCfgFromMap(map[string]interface{}{})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(parsedCfg).NotTo(BeNil())
-
-				Expect(parsedCfg.Workload.Replicas).To(Equal(config.DefaultReplicaNumber))
-				Expect(parsedCfg.Workload.LivenessProbe).To(BeEquivalentTo(config.DefaultLivenessProbe()))
 				Expect(parsedCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
 			})
 		})
@@ -73,7 +63,7 @@ var _ = Describe("Extentions", func() {
 				})
 
 				It("returns error", func() {
-					parsedCfg, err = config.K8SCfgFromMap(extensions)
+					parsedCfg, err = config.K8SServiceCfgFromMap(extensions)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("Workload.LivenessProbe.Type is required"))
 				})
@@ -85,7 +75,7 @@ var _ = Describe("Extentions", func() {
 				})
 
 				It("returns error", func() {
-					parsedCfg, err = config.K8SCfgFromMap(extensions)
+					parsedCfg, err = config.K8SServiceCfgFromMap(extensions)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("Workload.Replicas is required"))
 				})

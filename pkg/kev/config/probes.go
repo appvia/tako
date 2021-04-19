@@ -82,8 +82,8 @@ func DefaultLivenessProbe() LivenessProbe {
 // ReadinessProbe holds all the settings for the same k8s probe.
 type ReadinessProbe struct {
 	// TODO: find a decent way of using ProbeType here that validates the content of the string
-	Type        string `yaml:"type,omitempty"`
-	ProbeConfig `yaml:",inline,omitempty"`
+	Type        string `yaml:"type"`
+	ProbeConfig `yaml:",inline"`
 }
 
 // DefaultReadinessProbe defines the default readiness probe. Defaults to none.
@@ -105,14 +105,14 @@ func DefaultReadinessProbe() ReadinessProbe {
 
 // ProbeConfig holds all the shared properties between liveness and readiness probe.
 type ProbeConfig struct {
-	HTTP HTTPProbe `yaml:"http,omitempty"`
-	TCP  TCPProbe  `yaml:"tcp,omitempty"`
-	Exec ExecProbe `yaml:"exec,omitempty"`
+	HTTP HTTPProbe `yaml:"http"`
+	TCP  TCPProbe  `yaml:"tcp"`
+	Exec ExecProbe `yaml:"exec"`
 
-	InitialDelay      time.Duration `yaml:"initialDelay,omitempty"`
-	Period            time.Duration `yaml:"period,omitempty"`
-	FailureThreashold int           `yaml:"failureThreashold,omitempty"`
-	Timeout           time.Duration `yaml:"timeout,omitempty"`
+	InitialDelay      time.Duration `yaml:"initialDelay"`
+	Period            time.Duration `yaml:"period"`
+	FailureThreashold int           `yaml:"failureThreashold"`
+	Timeout           time.Duration `yaml:"timeout"`
 }
 
 // HTTPProbe holds the necessary properties to define the http check on the k8s probe.
