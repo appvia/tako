@@ -184,7 +184,7 @@ func (o *composeOverride) detectAndPatchServiceExtensions(dst *composeOverride) 
 			continue
 		}
 
-		k8sconf, err := config.K8SCfgFromMap(dstSvc.Extensions)
+		k8sconf, err := config.ParseK8SCfgFromMap(dstSvc.Extensions)
 		if err != nil {
 			log.Debugf("unable to convert extensions to k8s configuration %s", err.Error())
 			continue

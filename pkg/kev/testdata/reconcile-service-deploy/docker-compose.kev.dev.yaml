@@ -6,8 +6,8 @@ services:
         replicas: 1
         livenessProbe: 
           type: exec
-          exec:
-            command: ["echo", "Define healthcheck command for service db"]
+          # exec:
+          #   command: ["echo", "Define healthcheck command for service db"]
           initialDelay: 1m0s
           period: 1m0s
           failureThreashold: 3

@@ -29,9 +29,9 @@ import (
 
 // extractLabels extracts a set of labels from a compose project object.
 func extractLabels(s composego.ServiceConfig, target *ServiceConfig) {
-	extractServiceTypeLabels(s, target)
-	extractDeploymentLabels(s, target)
-	extractHealthcheckLabels(s, target)
+	// extractServiceTypeLabels(s, target)
+	// extractDeploymentLabels(s, target)
+	// extractHealthcheckLabels(s, target)
 }
 
 // setDefaultLabels sets sensible workload defaults as labels.
@@ -75,9 +75,9 @@ func extractServiceTypeLabels(source composego.ServiceConfig, target *ServiceCon
 
 // extractDeploymentLabels extracts deployment related into a label's Service.
 func extractDeploymentLabels(source composego.ServiceConfig, target *ServiceConfig) {
-	extractWorkloadType(source, target)
-	extractWorkloadReplicas(source, target)
-	extractWorkloadRestartPolicy(source, target)
+	// extractWorkloadType(source, target)
+	// extractWorkloadReplicas(source, target)
+	// extractWorkloadRestartPolicy(source, target)
 	extractWorkloadResourceRequests(source, target)
 	extractWorkloadResourceLimits(source, target)
 	extractWorkloadRollingUpdatePolicy(source, target)

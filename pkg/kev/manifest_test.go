@@ -103,7 +103,7 @@ var _ = Describe("Manifest", func() {
 				Expect(mergedSvcAnExt["key"]).To(Equal("value"))
 				Expect(mergedSvcAnExt["override-key"]).To(Equal(envSvcAnExt["override-key"]))
 
-				k8sconf, err := config.K8SCfgFromMap(mergedSvc.Extensions)
+				k8sconf, err := config.ParseK8SCfgFromMap(mergedSvc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeExec.String()))
 				Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(Equal([]string{"echo", "I'm a useless check"}))
