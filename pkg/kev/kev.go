@@ -60,20 +60,20 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 		return err
 	}
 
-	envs, err := runner.Manifest().GetEnvironments(runner.config.envs)
+	envs, err := runner.Manifest().GetEnvironments(runner.config.Envs)
 	if err != nil {
 		return err
 	}
 
-	printRenderProjectWithOptionsSuccess(ui, results, envs, runner.config.manifestFormat)
+	printRenderProjectWithOptionsSuccess(ui, results, envs, runner.config.ManifestFormat)
 
 	return nil
 }
 
 // DevWithOptions runs a continuous development cycle detecting project updates and
 // re-rendering compose files to Kubernetes manifests.
-func DevWithOptions(workingDir string, handler ChangeEventHandler, opts ...Options) error {
-	runner := NewDevRunner(workingDir, handler, opts...)
+func DevWithOptions(workingDir string, opts ...Options) error {
+	runner := NewDevRunner(workingDir, opts...)
 	err := runner.Run()
 
 	if err != nil {

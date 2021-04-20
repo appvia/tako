@@ -25,29 +25,52 @@ import (
 
 // runConfig stores configuration for a command
 type runConfig struct {
-	composeSources        []string
-	envs                  []string
-	manifestFormat        string
-	manifestsAsSingleFile bool
-	outputDir             string
-	k8sNamespace          string
-	kubecontext           string
-	skaffold              bool
-	skaffoldTail          bool
-	skaffoldManualTrigger bool
-	skaffoldVerbose       bool
+	ComposeSources        []string
+	Envs                  []string
+	ManifestFormat        string
+	ManifestsAsSingleFile bool
+	OutputDir             string
+	K8sNamespace          string
+	Kubecontext           string
+	Skaffold              bool
+	SkaffoldTail          bool
+	SkaffoldManualTrigger bool
+	SkaffoldVerbose       bool
+	// ExcludeServicesByEnv is used to exclude an environment's set of services from processing.
+	// Primary use is during render.
+	ExcludeServicesByEnv map[string][]string
 }
 
 // Options helps configure running project commands
 type Options func(project *Project, cfg *runConfig)
 
+// RunnerEvent a runner event.
+// This could be a pre/post runner step hook or a general significant event.
+// E.g.
+// - Pre step event: PreLoadProject
+// - post step event: PostLoadProject
+// - significant event: SecretsDetected
+type RunnerEvent uint
+
+// EventHandler is a callback function that handles a runner event
+type EventHandler func(RunnerEvent, Runner) error
+
+// Runner an interface used by the EventHandler
+type Runner interface {
+	Manifest() *Manifest
+	GetUI() kmd.UI
+	GetConfig() runConfig
+	SetConfig(opts ...Options)
+}
+
 // Project is the base struct for all runners.
 // Runners must initialise a project using Init().
 type Project struct {
-	workingDir string
-	manifest   *Manifest
-	config     runConfig
-	UI         kmd.UI
+	WorkingDir   string
+	UI           kmd.UI
+	manifest     *Manifest
+	config       *runConfig
+	eventHandler EventHandler
 }
 
 // InitRunner runs the required sequences to initialise a project.
@@ -60,13 +83,9 @@ type RenderRunner struct {
 	*Project
 }
 
-// ChangeEventHandler is a callback function that handles change and returns error, e.g. change event when in dev mode
-type ChangeEventHandler func(string) error
-
 // DevRunner runs the required sequences to use dev with a project.
 type DevRunner struct {
 	*Project
-	chgEventHandler ChangeEventHandler
 }
 
 // Manifest contains the tracked project's docker-compose sources and deployment environments

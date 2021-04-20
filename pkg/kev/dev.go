@@ -33,17 +33,28 @@ import (
 )
 
 // NewDevRunner creates a render runner instance
-func NewDevRunner(workingDir string, handler ChangeEventHandler, opts ...Options) *DevRunner {
-	runner := &DevRunner{chgEventHandler: handler, Project: &Project{workingDir: workingDir}}
+func NewDevRunner(workingDir string, opts ...Options) *DevRunner {
+	runner := &DevRunner{
+		Project: &Project{
+			WorkingDir: workingDir,
+			eventHandler: func(e RunnerEvent, r Runner) error {
+				return nil
+			},
+		},
+	}
 	runner.Init(opts...)
-	if runner.config.skaffold && len(runner.config.k8sNamespace) == 0 {
-		runner.config.k8sNamespace = DefaultSkaffoldNamespace
+	if runner.config.Skaffold && len(runner.config.K8sNamespace) == 0 {
+		runner.config.K8sNamespace = DefaultSkaffoldNamespace
 	}
 	return runner
 }
 
 // Run runs the dev command business logic
 func (r *DevRunner) Run() error {
+	if err := r.eventHandler(DevLoopStarting, r); err != nil {
+		return newEventError(err, DevLoopStarting)
+	}
+
 	var renderRunner *RenderRunner
 	r.UI.Output("[development mode] ... watching for changes - press Ctrl+C to stop", kmd.WithStyle(kmd.LogStyle))
 	r.DisplaySkaffoldOptionsIfAvailable()
@@ -52,9 +63,14 @@ func (r *DevRunner) Run() error {
 		sg := r.UI.StepGroup()
 		defer sg.Done()
 
-		step := sg.Add(fmt.Sprintf("Running render for environment: %s", r.config.envs[0]))
+		step := sg.Add(fmt.Sprintf("Running render for environment: %s", r.config.Envs[0]))
 
-		renderRunner = NewRenderRunner(r.workingDir, WithEnvs(r.config.envs), WithUI(kmd.NoOpUI()))
+		renderRunner = NewRenderRunner(
+			r.WorkingDir,
+			WithEventHandler(r.eventHandler),
+			WithEnvs(r.config.Envs),
+			WithUI(kmd.NoOpUI()),
+		)
 		if _, err := renderRunner.Run(); err != nil {
 			renderStepError(r.UI, step, renderStepRenderGeneral, err)
 			return err
@@ -72,13 +88,13 @@ func (r *DevRunner) Run() error {
 		return err
 	}
 
-	if r.config.skaffold {
+	if r.config.Skaffold {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		catchCtrlC(cancel, r.UI)
 
-		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(r.workingDir)
+		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(r.WorkingDir)
 		if err != nil {
 			r.UI.Output("")
 			r.UI.Output(
@@ -104,7 +120,7 @@ func (r *DevRunner) Run() error {
 		defer pw.Close()
 		defer pr.Close()
 
-		profileName := r.config.envs[0] + EnvProfileNameSuffix
+		profileName := r.config.Envs[0] + EnvProfileNameSuffix
 		go RunSkaffoldDev(ctx, pw, skaffoldConfigPath, []string{profileName}, r.config)
 		go r.DisplayLogs(pr, ctx)
 	}
@@ -121,8 +137,8 @@ func (r *DevRunner) Run() error {
 				kmd.WithStyle(kmd.LogStyle),
 			)
 
-			if r.chgEventHandler != nil {
-				r.chgEventHandler(ch)
+			if err := r.eventHandler(DevLoopIterated, r); err != nil {
+				return newEventError(err, DevLoopIterated)
 			}
 
 			_ = runPreCommands()
@@ -145,7 +161,7 @@ func (r *DevRunner) Watch(change chan<- string) error {
 	sg := r.UI.StepGroup()
 	defer sg.Done()
 
-	manifest, err := LoadManifest(r.workingDir)
+	manifest, err := LoadManifest(r.WorkingDir)
 	if err != nil {
 		log.Errorf("Unable to load app manifest - %s", err)
 		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
@@ -183,7 +199,7 @@ func (r *DevRunner) Watch(change chan<- string) error {
 	}()
 
 	files := manifest.GetSourcesFiles()
-	filteredEnvs, err := manifest.GetEnvironments(r.config.envs)
+	filteredEnvs, err := manifest.GetEnvironments(r.config.Envs)
 	for _, e := range filteredEnvs {
 		files = append(files, e.File)
 	}
@@ -205,7 +221,7 @@ func (r *DevRunner) Watch(change chan<- string) error {
 func (r *DevRunner) DisplaySkaffoldOptionsIfAvailable() {
 	config := r.config
 	indent := 1
-	if config.skaffold {
+	if config.Skaffold {
 		r.UI.Output(
 			"Dev mode activated with Skaffold dev loop enabled",
 			kmd.WithIndent(indent),
@@ -214,13 +230,13 @@ func (r *DevRunner) DisplaySkaffoldOptionsIfAvailable() {
 		)
 
 		r.UI.Output(
-			fmt.Sprintf("Will deploy to '%s' namespace. You may override it with '--namespace' flag.", config.k8sNamespace),
+			fmt.Sprintf("Will deploy to '%s' namespace. You may override it with '--namespace' flag.", config.K8sNamespace),
 			kmd.WithIndent(indent),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithStyle(kmd.LogStyle),
 		)
 
-		if len(config.kubecontext) == 0 {
+		if len(config.Kubecontext) == 0 {
 			r.UI.Output(
 				"Will use current kubectl context. You may override it with '--kubecontext' flag.",
 				kmd.WithIndent(indent),
@@ -229,30 +245,30 @@ func (r *DevRunner) DisplaySkaffoldOptionsIfAvailable() {
 			)
 		} else {
 			r.UI.Output(
-				fmt.Sprintf("Will use '%s' kube context. You may override it with '--kubecontext' flag.", config.kubecontext),
+				fmt.Sprintf("Will use '%s' kube context. You may override it with '--kubecontext' flag.", config.Kubecontext),
 				kmd.WithIndent(indent),
 				kmd.WithIndentChar(kmd.LogIndentChar),
 				kmd.WithStyle(kmd.LogStyle),
 			)
 		}
 
-		if config.envs[0] == SandboxEnv {
+		if config.Envs[0] == SandboxEnv {
 			r.UI.Output(
-				fmt.Sprintf("Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.", config.envs[0]),
+				fmt.Sprintf("Will use profile pointing at the sandbox '%s' environment. You may override it with '--kev-env' flag.", config.Envs[0]),
 				kmd.WithIndent(indent),
 				kmd.WithIndentChar(kmd.LogIndentChar),
 				kmd.WithStyle(kmd.LogStyle),
 			)
 		} else {
 			r.UI.Output(
-				fmt.Sprintf("Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.", config.envs[0]),
+				fmt.Sprintf("Will use profile pointing at Kev '%s' environment. You may override it with '--kev-env' flag.", config.Envs[0]),
 				kmd.WithIndent(indent),
 				kmd.WithIndentChar(kmd.LogIndentChar),
 				kmd.WithStyle(kmd.LogStyle),
 			)
 		}
 
-		if config.skaffoldTail {
+		if config.SkaffoldTail {
 			r.UI.Output(
 				"Will tail logs of deployed application.",
 				kmd.WithIndent(indent),
@@ -268,7 +284,7 @@ func (r *DevRunner) DisplaySkaffoldOptionsIfAvailable() {
 			)
 		}
 
-		if config.skaffoldManualTrigger {
+		if config.SkaffoldManualTrigger {
 			r.UI.Output(
 				"Will stack up all the code changes and only perform build/push/deploy when triggered manually by hitting ENTER.",
 				kmd.WithIndent(indent),
