@@ -560,16 +560,16 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	var handler v1.Handler
 
 	switch *probeType {
-	case config.ProbeTypeNone:
+	case ProbeTypeNone:
 		return nil, nil
-	case config.ProbeTypeTCP:
+	case ProbeTypeTCP:
 		hnd, err := p.livenessTCPProbe()
 		if err != nil {
 			return nil, err
 		}
 
 		handler.TCPSocket = hnd
-	case config.ProbeTypeExec:
+	case ProbeTypeExec:
 		handler.Exec = &v1.ExecAction{
 			Command: p.livenessProbeCommand(),
 		}
@@ -578,7 +578,7 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 			log.Error("Health check misconfigured")
 			return nil, errors.New("Health check misconfigured")
 		}
-	case config.ProbeTypeHTTP:
+	case ProbeTypeHTTP:
 		hprobe, err := p.livenessHTTPProbe()
 		if err != nil {
 			return nil, err
@@ -610,15 +610,15 @@ func (p *ProjectService) healthcheck() (*v1.Probe, error) {
 	return probe, nil
 }
 
-func (p *ProjectService) livenessProbeType() (*config.ProbeType, error) {
+func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
 	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
 	if !ok {
 		return nil, errors.New("probe type not provided")
 	}
 
-	pt, ok := config.ProbeTypeFromString(t)
+	pt, ok := ProbeTypeFromString(t)
 	if !ok {
-		return nil, errors.Wrapf(config.ErrUnsupportedProbeType, "type: %s", t)
+		return nil, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
 	}
 
 	return &pt, nil
@@ -767,9 +767,9 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 	var hnd v1.Handler
 
 	switch *probeType {
-	case config.ProbeTypeNone:
+	case ProbeTypeNone:
 		return nil, nil
-	case config.ProbeTypeExec:
+	case ProbeTypeExec:
 		hnd.Exec = &v1.ExecAction{
 			Command: p.readinessProbeCommand(),
 		}
@@ -779,14 +779,14 @@ func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
 			return nil, errors.New("Readiness probe misconfigured")
 		}
 
-	case config.ProbeTypeHTTP:
+	case ProbeTypeHTTP:
 		hp, err := p.readinessHTTPProbe()
 		if err != nil {
 			return nil, err
 		}
 
 		hnd.HTTPGet = hp
-	case config.ProbeTypeTCP:
+	case ProbeTypeTCP:
 		tcpP, err := p.readinessTCPProbe()
 		if err != nil {
 			return nil, err
@@ -920,15 +920,15 @@ func (p *ProjectService) readinessProbeRetries() int32 {
 	return int32(config.DefaultProbeRetries)
 }
 
-func (p *ProjectService) readinessProbeType() (*config.ProbeType, error) {
-	none := config.ProbeTypeNone
+func (p *ProjectService) readinessProbeType() (*ProbeType, error) {
+	none := ProbeTypeNone
 
 	t, ok := p.Labels[config.LabelWorkloadReadinessProbeType]
 	if !ok {
 		return &none, nil
 	}
 
-	pt, ok := config.ProbeTypeFromString(t)
+	pt, ok := ProbeTypeFromString(t)
 	if !ok {
 		return nil, errors.Errorf("%s is not a supported readiness probe type", t)
 	}
