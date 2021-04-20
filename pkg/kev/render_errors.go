@@ -30,7 +30,9 @@ const (
 	renderStepLoad renderStepType = iota
 	renderStepLoadSkaffold
 	renderStepReconcile
+	renderStepReconcileWrite
 	renderStepRenderGeneral
+	renderStepValidatingSources
 	renderStepRenderOverlay
 )
 
@@ -52,8 +54,16 @@ run the 'init' command with the '--skaffold' flag.
 		`, SkaffoldFileName),
 	},
 
+	renderStepValidatingSources: {
+		Error: "Encountered an error while validating sources!",
+	},
+
 	renderStepReconcile: {
 		Error: "Cannot detect project updates!",
+	},
+
+	renderStepReconcileWrite: {
+		Error: "Cannot write any found project updates!",
 	},
 
 	renderStepRenderGeneral: {
