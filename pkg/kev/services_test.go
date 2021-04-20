@@ -18,6 +18,7 @@ package kev
 
 import (
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
@@ -37,7 +38,7 @@ var _ = Describe("ServiceConfig", func() {
 				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadLivenessProbeType)))
 
 				err = ServiceConfig{Labels: composego.Labels{
-					config.LabelWorkloadLivenessProbeType:    config.ProbeTypeExec.String(),
+					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeExec.String(),
 					config.LabelWorkloadLivenessProbeCommand: "echo i'm a useless probe",
 				}}.validate()
 				Expect(err).Should(MatchError(ContainSubstring(config.LabelWorkloadReplicas)))
@@ -48,7 +49,7 @@ var _ = Describe("ServiceConfig", func() {
 
 			It("success if the necessary labels are present", func() {
 				err := ServiceConfig{Labels: composego.Labels{
-					config.LabelWorkloadLivenessProbeType:    config.ProbeTypeExec.String(),
+					config.LabelWorkloadLivenessProbeType:    kubernetes.ProbeTypeExec.String(),
 					config.LabelWorkloadLivenessProbeCommand: "echo i'm a useless probe",
 					config.LabelWorkloadReplicas:             "1",
 				}}.validate()
@@ -68,7 +69,7 @@ var _ = Describe("ServiceConfig", func() {
 			BeforeEach(func() {
 				serviceConfig = ServiceConfig{
 					Labels: composego.Labels{
-						config.LabelWorkloadLivenessProbeType: config.ProbeTypeNone.String(),
+						config.LabelWorkloadLivenessProbeType: kubernetes.ProbeTypeNone.String(),
 						config.LabelWorkloadReplicas:          "1",
 					}}
 			})
@@ -146,8 +147,8 @@ var _ = Describe("ServiceConfig", func() {
 			Context("http probe validation", func() {
 				Context("readiness", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
-						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = config.ProbeTypeHTTP.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeHTTP.String()
 					})
 
 					It("fails when http probe has missing path", func() {
@@ -179,7 +180,7 @@ var _ = Describe("ServiceConfig", func() {
 
 				Context("liveness", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeHTTP.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeHTTP.String()
 					})
 
 					It("fails when http probe has missing path", func() {
@@ -213,8 +214,8 @@ var _ = Describe("ServiceConfig", func() {
 			Context("tcp probe validation", func() {
 				Context("readiness", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
-						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = config.ProbeTypeTCP.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeTCP.String()
 					})
 
 					It("fails when tcp probe has missing port", func() {
@@ -233,7 +234,7 @@ var _ = Describe("ServiceConfig", func() {
 				})
 				Context("liveness", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeTCP.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeTCP.String()
 					})
 
 					It("fails when tcp probe has missing port", func() {
@@ -255,8 +256,8 @@ var _ = Describe("ServiceConfig", func() {
 			Context("command probe validation", func() {
 				Context("rediness probes", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
-						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = config.ProbeTypeExec.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeExec.String()
 					})
 
 					It("fails when command probe has missing properties", func() {
@@ -269,7 +270,7 @@ var _ = Describe("ServiceConfig", func() {
 
 				Context("liveness probe", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeExec.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeExec.String()
 					})
 
 					It("fails when command probe has missing properties", func() {
@@ -284,7 +285,7 @@ var _ = Describe("ServiceConfig", func() {
 			Context("probe type enum validation", func() {
 				Context("readiness", func() {
 					BeforeEach(func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
 					})
 
 					It("fails when type is misspelled", func() {
@@ -297,7 +298,7 @@ var _ = Describe("ServiceConfig", func() {
 					})
 
 					It("succeeds if set to none", func() {
-						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = config.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadReadinessProbeType] = kubernetes.ProbeTypeNone.String()
 						serviceConfig.Labels[config.LabelWorkloadReadinessProbeCommand] = "i'm just a leftover"
 
 						err := serviceConfig.validate()
@@ -316,7 +317,7 @@ var _ = Describe("ServiceConfig", func() {
 					})
 
 					It("succeeds if set to none", func() {
-						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
+						serviceConfig.Labels[config.LabelWorkloadLivenessProbeType] = kubernetes.ProbeTypeNone.String()
 						serviceConfig.Labels[config.LabelWorkloadLivenessProbeCommand] = "i'm just a leftover"
 
 						err := serviceConfig.validate()

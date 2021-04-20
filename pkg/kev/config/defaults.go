@@ -17,9 +17,6 @@
 package config
 
 const (
-	// DefaultServiceEnabled default value for x-k8s.enabled
-	DefaultServiceEnabled = true
-
 	// DefaultVolumeSize default value PV class
 	DefaultVolumeSize = "100Mi"
 
@@ -124,6 +121,9 @@ const (
 	// Default: 0.1, which is equivalent to 10% of CPU
 	DefaultResourceRequestCPU = "0.1"
 
+	// DefaultLivenessProbeCommand default command
+	DefaultLivenessProbeCommand = "Define healthcheck command for service %s"
+
 	// DefaultLivenessProbeType default probe type.
 	DefaultLivenessProbeType = "exec"
 
@@ -142,6 +142,3 @@ const (
 	// DefaultProbeDisable default false. Enabled by default
 	DefaultProbeDisable = false
 )
-
-// DefaultLivenessProbeCommand default command
-var DefaultLivenessProbeCommand = []string{"echo", "Define healthcheck command for service %s"}

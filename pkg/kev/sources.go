@@ -20,59 +20,24 @@ import (
 	"encoding/json"
 	"path/filepath"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
 type BaseOverrideOpts func(s *Sources, c *ComposeProject) error
 
-// CalculateBaseOverride calculates the extensions and the base set of labels deduced from a group of compose sources.
+// CalculateBaseOverride calculates the base set of labels deduced from a group of compose sources.
 func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
 		return errors.Errorf("%s\nsee compose files: %v", err.Error(), s.Files)
 	}
-
-	s.override = &composeOverride{
-		Version: ready.version,
-	}
-
-	for _, svc := range ready.Services {
-		target := ServiceConfig{
-			Name:       svc.Name,
-			Labels:     map[string]string{},
-			Extensions: svc.Extensions,
-		}
-
-		setDefaultLabels(&target)
-		extractVolumesLabels(ready, s.override)
-		extractLabels(svc, &target)
-
-		k8sConf, err := config.K8SCfgFromMap(svc.Extensions)
-		if err != nil {
-			return err
-		}
-
-		m, err := k8sConf.ToMap()
-		if err != nil {
-			return err
-		}
-
-		if target.Extensions == nil {
-			target.Extensions = make(map[string]interface{})
-		}
-		target.Extensions[config.K8SExtensionKey] = m
-
-		s.override.Services = append(s.override.Services, target)
-	}
-
+	s.override = extractLabels(ready)
 	for _, opt := range opts {
 		if err := opt(s, ready); err != nil {
 			return nil
 		}
 	}
-
 	return nil
 }
 
@@ -91,7 +56,6 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 			Name:        svc.Name,
 			Labels:      svc.Labels,
 			Environment: originSvc.Environment,
-			Extensions:  svc.Extensions,
 		})
 	}
 	s.override.Services = services

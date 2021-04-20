@@ -22,16 +22,31 @@ import (
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
 
 	composego "github.com/compose-spec/compose-go/types"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // extractLabels extracts a set of labels from a compose project object.
-func extractLabels(s composego.ServiceConfig, target *ServiceConfig) {
-	extractServiceTypeLabels(s, target)
-	extractDeploymentLabels(s, target)
-	extractHealthcheckLabels(s, target)
+func extractLabels(c *ComposeProject) *composeOverride {
+	out := &composeOverride{
+		Version: c.version,
+	}
+	extractVolumesLabels(c, out)
+
+	for _, s := range c.Services {
+		target := ServiceConfig{
+			Name:   s.Name,
+			Labels: map[string]string{},
+		}
+		setDefaultLabels(&target)
+		extractServiceTypeLabels(s, &target)
+		extractDeploymentLabels(s, &target)
+		extractHealthcheckLabels(s, &target)
+		out.Services = append(out.Services, target)
+	}
+	return out
 }
 
 // setDefaultLabels sets sensible workload defaults as labels.
@@ -160,9 +175,9 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 	)
 
 	if source.HealthCheck.Disable {
-		target.Labels.Add(config.LabelWorkloadLivenessProbeType, config.ProbeTypeNone.String())
+		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeNone.String())
 	} else {
-		target.Labels.Add(config.LabelWorkloadLivenessProbeType, config.ProbeTypeExec.String())
+		target.Labels.Add(config.LabelWorkloadLivenessProbeType, kubernetes.ProbeTypeExec.String())
 	}
 
 	if source.HealthCheck != nil && source.HealthCheck.Interval != nil {
@@ -189,7 +204,7 @@ func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceCon
 	if source.HealthCheck != nil && len(source.HealthCheck.Test) > 0 {
 		command = formatSlice(source.HealthCheck.Test)
 	} else {
-		command = formatSlice(config.DefaultLivenessProbeCommand)
+		command = config.DefaultLivenessProbeCommand
 	}
 	target.Labels.Add(config.LabelWorkloadLivenessProbeCommand, command)
 

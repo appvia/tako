@@ -106,30 +106,13 @@ func (chg change) patchService(override *composeOverride) string {
 			return msg
 		}
 	case UPDATE:
-		switch chg.Parent {
-		case "labels":
+		if chg.Parent == "labels" {
 			pre, canUpdate := override.Services[chg.Index.(int)].Labels[chg.Target]
 			newValue := chg.Value.(string)
 			override.Services[chg.Index.(int)].Labels[chg.Target] = newValue
 			if canUpdate {
 				log.Debugf("service [%s], label [%s] updated, from:[%s] to:[%s]", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)
 			}
-		case "extensions":
-			svc := override.Services[chg.Index.(int)]
-			svcName := svc.Name
-
-			newValue, ok := chg.Value.(map[string]interface{})
-			if !ok {
-				log.Debugf("unable to update service [%s], invalid value %+v", svcName, newValue)
-				return ""
-			}
-
-			if svc.Extensions == nil {
-				svc.Extensions = make(map[string]interface{})
-			}
-
-			svc.Extensions[config.K8SExtensionKey] = newValue
-			log.Debugf("service [%s] extensions updated to %+v", svcName, newValue)
 		}
 	}
 	return ""

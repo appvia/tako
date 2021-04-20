@@ -19,12 +19,14 @@ package kubernetes
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -548,20 +550,388 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 	return prts
 }
 
-func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
-	k8sconf, err := config.K8SCfgFromMap(p.Extensions)
+// healthcheck returns project service healthcheck probe
+func (p *ProjectService) healthcheck() (*v1.Probe, error) {
+	probeType, err := p.livenessProbeType()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unable to get a valid liveness probe type")
 	}
 
-	return LivenessProbeToV1Probe(k8sconf.Workload.LivenessProbe)
+	var handler v1.Handler
+
+	switch *probeType {
+	case ProbeTypeNone:
+		return nil, nil
+	case ProbeTypeTCP:
+		hnd, err := p.livenessTCPProbe()
+		if err != nil {
+			return nil, err
+		}
+
+		handler.TCPSocket = hnd
+	case ProbeTypeExec:
+		handler.Exec = &v1.ExecAction{
+			Command: p.livenessProbeCommand(),
+		}
+
+		if handler.Exec == nil || len(handler.Exec.Command) == 0 || len(handler.Exec.Command[0]) == 0 {
+			log.Error("Health check misconfigured")
+			return nil, errors.New("Health check misconfigured")
+		}
+	case ProbeTypeHTTP:
+		hprobe, err := p.livenessHTTPProbe()
+		if err != nil {
+			return nil, err
+		}
+
+		handler.HTTPGet = hprobe
+	default:
+		return nil, errors.Errorf("unsupported probe type: %s", probeType)
+	}
+
+	timeoutSeconds := p.livenessProbeTimeout()
+	periodSeconds := p.livenessProbeInterval()
+	initialDelaySeconds := p.livenessProbeInitialDelay()
+	failureThreshold := p.livenessProbeRetries()
+
+	if timeoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
+		log.Error("Health check misconfigured")
+		return nil, errors.New("Health check misconfigured")
+	}
+
+	probe := &v1.Probe{
+		Handler:             handler,
+		TimeoutSeconds:      timeoutSeconds,
+		PeriodSeconds:       periodSeconds,
+		InitialDelaySeconds: initialDelaySeconds,
+		FailureThreshold:    failureThreshold,
+	}
+
+	return probe, nil
 }
 
-func (p *ProjectService) ReadinessProbe() (*v1.Probe, error) {
-	k8sconf, err := config.K8SCfgFromMap(p.Extensions)
+func (p *ProjectService) livenessProbeType() (*ProbeType, error) {
+	t, ok := p.Labels[config.LabelWorkloadLivenessProbeType]
+	if !ok {
+		return nil, errors.New("probe type not provided")
+	}
+
+	pt, ok := ProbeTypeFromString(t)
+	if !ok {
+		return nil, errors.Wrapf(ErrUnsupportedProbeType, "type: %s", t)
+	}
+
+	return &pt, nil
+}
+
+// livenessTCPProbe returns a TCPSocketAction if all the necessary information is available.
+func (p *ProjectService) livenessTCPProbe() (*v1.TCPSocketAction, error) {
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbeTCPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeTCPPort)
+	}
+
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)
+	}
+
+	return &v1.TCPSocketAction{
+		Port: intstr.FromInt(int(intPort)),
+	}, nil
+}
+
+// livenessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
+func (p *ProjectService) livenessHTTPProbe() (*v1.HTTPGetAction, error) {
+	path, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPath]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath)
+	}
+
+	port, ok := p.Labels[config.LabelWorkloadLivenessProbeHTTPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort)
+	}
+
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadLivenessProbeHTTPPort)
+	}
+
+	return &v1.HTTPGetAction{
+		Path: path,
+		Port: intstr.FromInt(int(intPort)),
+	}, nil
+}
+
+// livenessProbeCommand returns liveness probe command
+func (p *ProjectService) livenessProbeCommand() []string {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeCommand]; ok {
+		isList, _ := regexp.MatchString(`\[.*\]`, val)
+		if isList {
+			list := strings.Split(strings.ReplaceAll(strings.Trim(val, "[]"), "\"", ""), ", ")
+
+			switch list[0] {
+			case "NONE", "CMD", "CMD-SHELL":
+				return list[1:]
+			}
+
+			return list
+		}
+
+		return []string{val}
+	}
+
+	if p.HealthCheck != nil && len(p.HealthCheck.Test) > 0 {
+		// test must be either a string or a list. If it’s a list,
+		// the first item must be either NONE, CMD or CMD-SHELL.
+		// If it’s a string, it’s equivalent to specifying CMD-SHELL followed by that string.
+		// Removing the first element of HealthCheck.Test
+		return p.HealthCheck.Test[1:]
+	}
+
+	return []string{
+		config.DefaultLivenessProbeCommand,
+	}
+}
+
+// livenessProbeInterval returns liveness probe interval
+func (p *ProjectService) livenessProbeInterval() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeInterval]; ok {
+		i, _ := durationStrToSecondsInt(val)
+		return *i
+	}
+
+	if p.HealthCheck != nil && p.HealthCheck.Interval != nil {
+		i, _ := durationStrToSecondsInt(p.HealthCheck.Interval.String())
+		return *i
+	}
+
+	i, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
+	return *i
+}
+
+// livenessProbeTimeout returns liveness probe timeout
+func (p *ProjectService) livenessProbeTimeout() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeTimeout]; ok {
+		to, _ := durationStrToSecondsInt(val)
+		return *to
+	}
+
+	if p.HealthCheck != nil && p.HealthCheck.Timeout != nil {
+		to, _ := durationStrToSecondsInt(p.HealthCheck.Timeout.String())
+		return *to
+	}
+
+	to, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
+	return *to
+}
+
+// livenessProbeInitialDelay returns liveness probe initial delay
+func (p *ProjectService) livenessProbeInitialDelay() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeInitialDelay]; ok {
+		d, _ := durationStrToSecondsInt(val)
+		return *d
+	}
+
+	if p.HealthCheck != nil && p.HealthCheck.StartPeriod != nil {
+		d, _ := durationStrToSecondsInt(p.HealthCheck.StartPeriod.String())
+		return *d
+	}
+
+	d, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
+	return *d
+}
+
+// livenessProbeRetries returns number of retries for the probe
+func (p *ProjectService) livenessProbeRetries() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadLivenessProbeRetries]; ok {
+		r, _ := strconv.Atoi(val)
+		return int32(r)
+	}
+
+	if p.HealthCheck != nil && p.HealthCheck.Retries != nil {
+		return int32(*p.HealthCheck.Retries)
+	}
+
+	return int32(config.DefaultProbeRetries)
+}
+
+// readinessProbe returns project service readiness probe
+func (p *ProjectService) readinessProbe() (*v1.Probe, error) {
+	probeType, err := p.readinessProbeType()
 	if err != nil {
 		return nil, err
 	}
 
-	return ReadinessProbeToV1Probe(k8sconf.Workload.ReadinessProbe)
+	var hnd v1.Handler
+
+	switch *probeType {
+	case ProbeTypeNone:
+		return nil, nil
+	case ProbeTypeExec:
+		hnd.Exec = &v1.ExecAction{
+			Command: p.readinessProbeCommand(),
+		}
+
+		if len(hnd.Exec.Command) == 0 || len(hnd.Exec.Command[0]) == 0 {
+			log.Error("Readiness probe misconfigured")
+			return nil, errors.New("Readiness probe misconfigured")
+		}
+
+	case ProbeTypeHTTP:
+		hp, err := p.readinessHTTPProbe()
+		if err != nil {
+			return nil, err
+		}
+
+		hnd.HTTPGet = hp
+	case ProbeTypeTCP:
+		tcpP, err := p.readinessTCPProbe()
+		if err != nil {
+			return nil, err
+		}
+
+		hnd.TCPSocket = tcpP
+	}
+
+	timeoutSeconds := p.readinessProbeTimeout()
+	periodSeconds := p.readinessProbeInterval()
+	initialDelaySeconds := p.readinessProbeInitialDelay()
+	failureThreshold := p.readinessProbeRetries()
+
+	if timeoutSeconds == 0 || periodSeconds == 0 || initialDelaySeconds == 0 || failureThreshold == 0 {
+		log.Error("Readiness probe misconfigured")
+		return nil, errors.New("Readiness probe misconfigured")
+	}
+
+	probe := &v1.Probe{
+		Handler:             hnd,
+		TimeoutSeconds:      timeoutSeconds,
+		PeriodSeconds:       periodSeconds,
+		InitialDelaySeconds: initialDelaySeconds,
+		FailureThreshold:    failureThreshold,
+	}
+
+	return probe, nil
+}
+
+// readinessTCPProbe returns a TCPSocketAction if all the necessary information is available.
+func (p *ProjectService) readinessTCPProbe() (*v1.TCPSocketAction, error) {
+	port, ok := p.Labels[config.LabelWorkloadReadinessProbeTCPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeTCPPort)
+	}
+
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort)
+	}
+
+	return &v1.TCPSocketAction{
+		Port: intstr.FromInt(int(intPort)),
+	}, nil
+}
+
+// readinessHTTPProbe returns an HTTPGetAction if all the necessary information is available.
+func (p *ProjectService) readinessHTTPProbe() (*v1.HTTPGetAction, error) {
+	path, ok := p.Labels[config.LabelWorkloadReadinessProbeHTTPPath]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPath)
+	}
+
+	port, ok := p.Labels[config.LabelWorkloadReadinessProbeHTTPPort]
+	if !ok {
+		return nil, errors.Errorf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPort)
+	}
+
+	intPort, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		return nil, errors.Errorf("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort)
+	}
+
+	return &v1.HTTPGetAction{
+		Path: path,
+		Port: intstr.FromInt(int(intPort)),
+	}, nil
+}
+
+// readinessProbeCommand returns readiness probe command
+func (p *ProjectService) readinessProbeCommand() []string {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeCommand]; ok {
+		isList, _ := regexp.MatchString(`\[.*\]`, val)
+		if isList {
+			list := strings.Split(strings.ReplaceAll(strings.Trim(val, "[]"), "\"", ""), ", ")
+
+			switch list[0] {
+			case "NONE", "CMD", "CMD-SHELL":
+				return list[1:]
+			}
+
+			return list
+		}
+
+		return []string{val}
+	}
+
+	return []string{}
+}
+
+// readinessProbeInterval returns readiness probe interval
+func (p *ProjectService) readinessProbeInterval() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeInterval]; ok {
+		i, _ := durationStrToSecondsInt(val)
+		return *i
+	}
+
+	i, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
+	return *i
+}
+
+// readinessProbeTimeout returns readiness probe timeout
+func (p *ProjectService) readinessProbeTimeout() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeTimeout]; ok {
+		to, _ := durationStrToSecondsInt(val)
+		return *to
+	}
+
+	to, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
+	return *to
+}
+
+// readinessProbeInitialDelay returns readiness probe initial delay
+func (p *ProjectService) readinessProbeInitialDelay() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeInitialDelay]; ok {
+		d, _ := durationStrToSecondsInt(val)
+		return *d
+	}
+
+	d, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
+	return *d
+}
+
+// readinessProbeRetries returns number of retries for the probe
+func (p *ProjectService) readinessProbeRetries() int32 {
+	if val, ok := p.Labels[config.LabelWorkloadReadinessProbeRetries]; ok {
+		r, _ := strconv.Atoi(val)
+		return int32(r)
+	}
+
+	return int32(config.DefaultProbeRetries)
+}
+
+func (p *ProjectService) readinessProbeType() (*ProbeType, error) {
+	none := ProbeTypeNone
+
+	t, ok := p.Labels[config.LabelWorkloadReadinessProbeType]
+	if !ok {
+		return &none, nil
+	}
+
+	pt, ok := ProbeTypeFromString(t)
+	if !ok {
+		return nil, errors.Errorf("%s is not a supported readiness probe type", t)
+	}
+
+	return &pt, nil
 }

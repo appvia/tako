@@ -18,12 +18,10 @@ package kev_test
 
 import (
 	"bytes"
-	"io/ioutil"
 	"path"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -78,8 +76,8 @@ var _ = Describe("InitRunner", func() {
 		It("should write out a yaml file with manifest data", func() {
 			var buffer bytes.Buffer
 			_, err := manifest.WriteTo(&buffer)
-			Expect(err).ToNot(HaveOccurred())
 
+			Expect(err).ToNot(HaveOccurred())
 			Expect(buffer.String()).To(MatchRegexp(`id: [a-z0-9]+`))
 			Expect(buffer.String()).To(ContainSubstring("compose:"))
 			Expect(buffer.String()).To(MatchRegexp(`.*- .*compose.yml`))
@@ -207,14 +205,22 @@ var _ = Describe("InitRunner", func() {
 		Context("marshalling", func() {
 			It("should write out a yaml file with manifest data", func() {
 				var buffer bytes.Buffer
+
 				_, err := env.WriteTo(&buffer)
 				Expect(err).ToNot(HaveOccurred())
 
-				bs, err := ioutil.ReadFile("./testdata/init-default/compose-yaml/output.yaml")
-				Expect(err).ToNot(HaveOccurred())
-
-				expected := string(bs)
-				Expect(cmp.Diff(buffer.String(), expected)).To(BeEmpty())
+				expected := `version: "3.9"
+services:
+  db:
+    labels:
+      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
+      kev.workload.liveness-probe-type: exec
+      kev.workload.replicas: "1"
+volumes:
+  db_data:
+    labels:
+      kev.volume.size: 100Mi
+`
 				Expect(buffer.String()).To(Equal(expected))
 			})
 		})
