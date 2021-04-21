@@ -117,7 +117,7 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 		cfg.Service.Type = ClusterIPService
 	}
 
-	cfg.Workload.LivenessProbe = LivenessProbeFromHealthcheck(svc.HealthCheck)
+	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
 
 	k8sext, err := ParseK8SCfgFromMap(svc.Extensions, DisableValidation())
@@ -173,7 +173,8 @@ func WorkloadTypeFromCompose(svc *composego.ServiceConfig) string {
 	return DeploymentWorkload
 }
 
-func LivenessProbeFromHealthcheck(healthcheck *composego.HealthCheckConfig) LivenessProbe {
+func LivenessProbeFromCompose(svc *composego.ServiceConfig) LivenessProbe {
+	healthcheck := svc.HealthCheck
 	var res LivenessProbe
 
 	if healthcheck == nil {
