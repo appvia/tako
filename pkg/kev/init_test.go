@@ -18,6 +18,7 @@ package kev_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"path"
 
@@ -220,15 +221,16 @@ var _ = Describe("InitRunner", func() {
 		})
 
 		Context("with services", func() {
-			It("should include a subset default config params", func() {
+			It("should include default config params", func() {
 				svc, _ := env.GetService("db")
 
 				k8sconf, err := config.ParseK8SCfgFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 
+				fmt.Println(k8sconf)
+
 				Expect(svc.GetLabels()).To(BeEmpty())
-				Expect(k8sconf.Workload.LivenessProbe.Type).NotTo(BeEmpty())
-				Expect(k8sconf.Workload.LivenessProbe.Exec.Command).NotTo(BeEmpty())
+				Expect(k8sconf.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
 				Expect(k8sconf.Workload.Replicas).NotTo(BeZero())
 			})
 		})
