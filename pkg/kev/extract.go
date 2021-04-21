@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+// TODO: Remove this whole thing when ready
 // extractLabels extracts a set of labels from a compose project object.
 func extractLabels(s composego.ServiceConfig, target *ServiceConfig) {
 	// extractServiceTypeLabels(s, target)
@@ -40,6 +41,7 @@ func setDefaultLabels(target *ServiceConfig) {
 	target.Labels.Add(config.LabelWorkloadServiceAccountName, config.DefaultServiceAccountName)
 }
 
+// TODO: Remove this whole thing when ready
 // extractVolumesLabels extracts volume labels into a label's Volumes attribute.
 func extractVolumesLabels(c *ComposeProject, out *composeOverride) {
 	vols := make(map[string]VolumeConfig)

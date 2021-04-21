@@ -267,7 +267,7 @@ var _ = Describe("Reconcile", func() {
 					workingDir = "testdata/reconcile-service-deploy"
 				})
 
-				It("should configure the added service labels from deploy config", func() {
+				It("should configure parse config into extensions", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
 						Workload: config.Workload{
 							Replicas: 3,
@@ -291,7 +291,7 @@ var _ = Describe("Reconcile", func() {
 					workingDir = "testdata/reconcile-service-healthcheck"
 				})
 
-				It("should configure the added service labels from healthcheck config", func() {
+				It("should configure the added service extensions from healthcheck config", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
 						Service: config.Service{
 							Type: config.ClusterIPService,

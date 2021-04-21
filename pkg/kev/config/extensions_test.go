@@ -114,9 +114,8 @@ var _ = Describe("Extentions", func() {
 				})
 
 				When("liveness probe type not provided", func() {
-					It("returns error", func() {
-						parsedCfg, err = config.K8SCfgFromCompose(&svc)
-						Expect(err).NotTo(HaveOccurred())
+					It("return default probe", func() {
+						Expect(parsedCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
 					})
 				})
 			})

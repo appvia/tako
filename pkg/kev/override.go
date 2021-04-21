@@ -99,6 +99,7 @@ func (o *composeOverride) volumesWithLabelsMatching(other *composeOverride) Volu
 // expandLabelsFrom returns a copy of the compose override
 // filling in gaps in services and volumes labels (keys and values) using the provided override.
 func (o *composeOverride) expandLabelsFrom(other *composeOverride) *composeOverride {
+	// TODO: Remove when ready
 	// services := o.servicesLabelsExpandedFrom(other)
 	volumes := o.volumesLabelsExpandedFrom(other)
 	return &composeOverride{Version: o.Version, Services: o.Services, Volumes: volumes}

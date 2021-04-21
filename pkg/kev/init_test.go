@@ -18,7 +18,6 @@ package kev_test
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"path"
 
@@ -226,8 +225,6 @@ var _ = Describe("InitRunner", func() {
 
 				k8sconf, err := config.ParseK8SCfgFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
-
-				fmt.Println(k8sconf)
 
 				Expect(svc.GetLabels()).To(BeEmpty())
 				Expect(k8sconf.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
