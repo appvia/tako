@@ -244,7 +244,7 @@ func printRenderProjectWithOptionsSuccess(r *RenderRunner, results map[string]st
 	ui.Output("Project manifests rendered!", kmd.WithStyle(kmd.SuccessBoldStyle))
 
 	if err := r.eventHandler(PrePrintSummary, r); err != nil {
-		return nil
+		return newEventError(err, PrePrintSummary)
 	}
 
 	ui.Output(
@@ -254,7 +254,7 @@ func printRenderProjectWithOptionsSuccess(r *RenderRunner, results map[string]st
 	ui.NamedValues(namedValues, kmd.WithStyle(kmd.SuccessStyle))
 
 	if err := r.eventHandler(PostPrintSummary, r); err != nil {
-		return nil
+		return newEventError(err, PostPrintSummary)
 	}
 
 	ui.Output("")

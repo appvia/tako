@@ -44,8 +44,7 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 		return err
 	}
 
-	printInitProjectWithOptionsSuccess(ui, runner.manifest.Environments)
-	return nil
+	return printInitProjectWithOptionsSuccess(runner, runner.manifest.Environments)
 }
 
 // RenderProjectWithOptions renders a kev project's compose files into Kubernetes manifests
