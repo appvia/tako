@@ -17,9 +17,8 @@ var _ = Describe("Extentions", func() {
 			k8s config.K8SConfiguration
 			err error
 
-			extensions map[string]interface{}
-			parsedCfg  config.K8SConfiguration
-			svc        composego.ServiceConfig
+			parsedCfg config.K8SConfiguration
+			svc       composego.ServiceConfig
 		)
 
 		BeforeEach(func() {
@@ -71,44 +70,39 @@ var _ = Describe("Extentions", func() {
 
 		Describe("validations", func() {
 			Context("with missing workload", func() {
-				BeforeEach(func() {
-					extensions = map[string]interface{}{
+				JustBeforeEach(func() {
+					svc.Extensions = map[string]interface{}{
 						"x-k8s": map[string]interface{}{
 							"bananas": 1,
 						},
 					}
-				})
 
-				JustBeforeEach(func() {
-					svc.Extensions = extensions
+					parsedCfg, err = config.K8SCfgFromCompose(&svc)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("returns defaults", func() {
-					parsedCfg, err = config.K8SCfgFromCompose(&svc)
-					Expect(err).ToNot(HaveOccurred())
 					Expect(parsedCfg).To(BeEquivalentTo(config.DefaultK8SConfig()))
 				})
 			})
 
 			Context("invalid/empty workload", func() {
-				BeforeEach(func() {
-					extensions = map[string]interface{}{
+				JustBeforeEach(func() {
+					svc.Extensions = map[string]interface{}{
 						"x-k8s": map[string]interface{}{
 							"workload": map[string]interface{}{
 								"bananas": 1,
 							},
 						},
 					}
-				})
 
-				JustBeforeEach(func() {
-					svc.Extensions = extensions
+					parsedCfg, err = config.K8SCfgFromCompose(&svc)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				When("workload is invalid", func() {
 					It("it is ignored and returns defaults", func() {
-						parsedCfg, err = config.K8SCfgFromCompose(&svc)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(parsedCfg).To(BeEquivalentTo(config.DefaultK8SConfig()))
 					})
 				})
 			})
@@ -119,9 +113,11 @@ var _ = Describe("Extentions", func() {
 					k8s.Workload.Replicas = 10
 				})
 
-				It("returns error", func() {
-					parsedCfg, err = config.K8SCfgFromCompose(&svc)
-					Expect(err).NotTo(HaveOccurred())
+				When("liveness probe type not provided", func() {
+					It("returns error", func() {
+						parsedCfg, err = config.K8SCfgFromCompose(&svc)
+						Expect(err).NotTo(HaveOccurred())
+					})
 				})
 			})
 
@@ -132,8 +128,10 @@ var _ = Describe("Extentions", func() {
 				})
 
 				It("returns in defaults", func() {
-					parsedCfg, err = config.K8SCfgFromCompose(&svc)
-					Expect(err).NotTo(HaveOccurred())
+					k8sconf := config.DefaultK8SConfig()
+					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+
+					Expect(parsedCfg).To(BeEquivalentTo(k8sconf))
 				})
 			})
 

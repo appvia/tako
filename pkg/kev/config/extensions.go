@@ -110,7 +110,7 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 
 	cfg.Enabled = true
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
-	cfg.Workload.Replicas = WorkloadReplicaFromCompose(svc)
+	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
 	cfg.Workload.RestartPolicy = WorkloadRestartPolicyFromCompose(svc)
 	cfg.Service.Type = NoService
 	if svc.Ports != nil {
@@ -152,7 +152,7 @@ func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) string {
 	}
 }
 
-func WorkloadReplicaFromCompose(svc *composego.ServiceConfig) int {
+func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {
 	if svc.Deploy == nil || svc.Deploy.Replicas == nil {
 		return 1
 	}
