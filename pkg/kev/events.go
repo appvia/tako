@@ -62,6 +62,10 @@ func (e RunnerEvent) String() string {
 		return "PreCreateOrUpdateSkaffoldManifest"
 	case PostCreateOrUpdateSkaffoldManifest:
 		return "PostCreateOrUpdateSkaffoldManifest"
+	case PrePrintSummary:
+		return "PrePrintSummary"
+	case PostPrintSummary:
+		return "PostPrintSummary"
 	case SecretsDetected:
 		return "SecretsDetected"
 	case DevLoopStarting:
@@ -95,6 +99,8 @@ const (
 	PostCreateManifest
 	PreCreateOrUpdateSkaffoldManifest
 	PostCreateOrUpdateSkaffoldManifest
+	PrePrintSummary
+	PostPrintSummary
 	SecretsDetected
 	DevLoopStarting
 	DevLoopIterated
