@@ -205,8 +205,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 	}
 
 	if renderedNetworkPolicy != nil {
-		stepNetworkPolicies := sg.Add("Creating networking policies")
-		stepNetworkPolicies.Success("Created networking policies")
+		stepNetworkPolicies := sg.Add("Creating network")
+		stepNetworkPolicies.Success("Created network")
 		k.UI.Output(
 			fmt.Sprintf("rendered %s", renderedNetworkPolicy.GetObjectKind().GroupVersionKind().Kind),
 			kmd.WithStyle(kmd.LogStyle),
