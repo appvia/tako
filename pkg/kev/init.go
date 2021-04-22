@@ -242,12 +242,12 @@ func createInitWritableResults(workingDir string, manifest *Manifest, skManifest
 	return out
 }
 
-func printInitProjectWithOptionsError(ui kmd.UI) {
+func printInitProjectWithOptionsError(appName string, ui kmd.UI) {
 	ui.Output("")
 	ui.Output("Project had errors during initialisation.\n"+
-		fmt.Sprintf("'%s' experienced some errors during project initialisation. The output\n", GetManifestName())+
+		fmt.Sprintf("'%s' experienced some errors during project initialisation. The output\n", appName)+
 		"above should contain the failure messages. Please correct these errors and\n"+
-		fmt.Sprintf("run '%s init' again.", GetManifestName()),
+		fmt.Sprintf("run '%s init' again.", appName),
 		kmd.WithErrorBoldStyle(),
 		kmd.WithIndentChar(kmd.ErrorIndentChar),
 	)
@@ -282,7 +282,7 @@ func printInitProjectWithOptionsSuccess(runner *InitRunner, envs Environments) e
 	}
 
 	ui.Output("")
-	ui.Output(fmt.Sprintf("You may now call `%s render` to prepare your project for deployment.", GetManifestName()))
+	ui.Output(fmt.Sprintf("You may now call `%s render` to prepare your project for deployment.", runner.AppName))
 
 	return nil
 }

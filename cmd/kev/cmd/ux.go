@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/sirupsen/logrus"
 )
@@ -28,13 +26,4 @@ func setReporting(verbose bool) {
 	if verbose {
 		log.SetLogLevel(logrus.DebugLevel)
 	}
-}
-
-func displayCmdStarted(cmdName string) {
-	_, _ = os.Stdout.Write([]byte("> " + cmdName + "...\n"))
-}
-
-func displayError(err error) error {
-	log.ErrorDetail(err)
-	return err
 }

@@ -72,11 +72,11 @@ run the 'init' command with the '--skaffold' flag.
 
 	renderStepRenderOverlay: {
 		Error: "Cannot overlay environment settings during render!",
-		ErrorDetails: fmt.Sprintf(`
-'%s' cannot super impose environment settings over the compose source values.
+		ErrorDetails: `
+Cannot overlay environment settings over the compose source values.
 This is important as it ensures that project rendered manifests will have 
 environment specific settings.
-		`, GetManifestName()),
+`,
 	},
 }
 

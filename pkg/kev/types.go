@@ -66,6 +66,7 @@ type Runner interface {
 // Project is the base struct for all runners.
 // Runners must initialise a project using Init().
 type Project struct {
+	AppName      string
 	WorkingDir   string
 	UI           kmd.UI
 	manifest     *Manifest

@@ -19,6 +19,7 @@ package kev
 import (
 	"fmt"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	"github.com/pkg/errors"
 )
@@ -26,6 +27,11 @@ import (
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
 	p.SetConfig(opts...)
+
+	if len(p.AppName) == 0 {
+		p.AppName = config.AppName
+	}
+
 	if p.UI == nil {
 		p.UI = kmd.ConsoleUI()
 	}
@@ -127,6 +133,13 @@ func (p *Project) SetConfig(opts ...Options) {
 		o(p, cfg)
 	}
 	p.config = cfg
+}
+
+// WithAppName configures a project app name
+func WithAppName(name string) Options {
+	return func(project *Project, cfg *runConfig) {
+		project.AppName = name
+	}
 }
 
 // WithUI configures a project with a terminal UI implementation
