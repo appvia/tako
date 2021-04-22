@@ -91,6 +91,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	wd := "."
 
 	return kev.RenderProjectWithOptions(wd,
+		kev.WithAppName(rootCmd.Use),
 		kev.WithManifestFormat(format),
 		kev.WithManifestsAsSingleFile(singleFile),
 		kev.WithOutputDir(dir),

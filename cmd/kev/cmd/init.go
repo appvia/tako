@@ -82,6 +82,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
 	wd := "."
 	return kev.InitProjectWithOptions(wd,
+		kev.WithAppName(rootCmd.Use),
 		kev.WithComposeSources(files),
 		kev.WithEnvs(envs),
 		kev.WithSkaffold(skaffold))

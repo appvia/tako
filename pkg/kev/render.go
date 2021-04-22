@@ -221,12 +221,12 @@ func (r *RenderRunner) RenderFromComposeToK8sManifests() (map[string]string, err
 	return results, err
 }
 
-func printRenderProjectWithOptionsError(ui kmd.UI) {
+func printRenderProjectWithOptionsError(appName string, ui kmd.UI) {
 	ui.Output("")
 	ui.Output("Project had errors during render.\n"+
-		fmt.Sprintf("'%s' experienced some errors during project render. The output\n", GetManifestName())+
+		fmt.Sprintf("'%s' experienced some errors during project render. The output\n", appName)+
 		"above should contain the failure messages. Please correct these errors and\n"+
-		fmt.Sprintf("run '%s render' again.", GetManifestName()),
+		fmt.Sprintf("run '%s render' again.", appName),
 		kmd.WithErrorBoldStyle(),
 		kmd.WithIndentChar(kmd.ErrorIndentChar),
 	)

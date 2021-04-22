@@ -25,7 +25,6 @@ import (
 
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
-	Use:              "kev",
 	Short:            "Develop Kubernetes apps iteratively using Docker-Compose.",
 	TraverseChildren: true,
 	SilenceErrors:    true,
@@ -57,7 +56,9 @@ func init() {
 }
 
 // Execute command
-func Execute() {
+func Execute(appName string) {
+	rootCmd.Use = appName
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

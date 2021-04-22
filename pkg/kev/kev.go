@@ -35,12 +35,12 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 
 	results, err := runner.Run()
 	if err != nil {
-		printInitProjectWithOptionsError(ui)
+		printInitProjectWithOptionsError(runner.AppName, ui)
 		return err
 	}
 
 	if err := results.Write(); err != nil {
-		printInitProjectWithOptionsError(ui)
+		printInitProjectWithOptionsError(runner.AppName, ui)
 		return err
 	}
 
@@ -55,7 +55,7 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 
 	results, err := runner.Run()
 	if err != nil {
-		printRenderProjectWithOptionsError(ui)
+		printRenderProjectWithOptionsError(runner.AppName, ui)
 		return err
 	}
 
@@ -74,7 +74,7 @@ func DevWithOptions(workingDir string, opts ...Options) error {
 	err := runner.Run()
 
 	if err != nil {
-		printDevProjectWithOptionsError(runner.UI)
+		printDevProjectWithOptionsError(runner.AppName, runner.UI)
 		return err
 	}
 
