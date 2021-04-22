@@ -1043,7 +1043,7 @@ func (k *Kubernetes) configSecretVolumes(projectService ProjectService) ([]v1.Vo
 				}
 
 				// if the target isn't absolute path
-				if strings.HasPrefix(secretConfig.Target, "/") == false {
+				if !strings.HasPrefix(secretConfig.Target, "/") {
 					// concat the default secret directory
 					mountPath = "/run/secrets/" + mountPath
 				}

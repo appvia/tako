@@ -21,6 +21,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/testutil"
 	kmd "github.com/appvia/komando"
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -231,9 +232,15 @@ var _ = Describe("Reconcile", func() {
 					Expect(env.GetServices()[1].Name).To(Equal("wordpress"))
 				})
 
-				It("should configure the added service labels with defaults", func() {
-					expected := newDefaultServiceLabels("wordpress")
-					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
+				It("should configure the added service extension value defaults", func() {
+					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+						Service: config.Service{
+							Type: config.ClusterIPService,
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(env.GetServices()[1].Extensions).To(Equal(expected))
 				})
 
 				It("should not include any env vars", func() {
@@ -260,10 +267,22 @@ var _ = Describe("Reconcile", func() {
 					workingDir = "testdata/reconcile-service-deploy"
 				})
 
-				It("should configure the added service labels from deploy config", func() {
-					expected := newDefaultServiceLabels("wordpress")
-					expected[config.LabelWorkloadReplicas] = "3"
-					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
+				It("should configure parse config into extensions", func() {
+					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+						Workload: config.Workload{
+							Replicas: 3,
+						},
+						Service: config.Service{
+							Type: config.ClusterIPService,
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					k8s, err := config.ParseK8SCfgFromMap(env.GetServices()[1].Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8s.Workload.Replicas).To(Equal(3))
+					Expect(cmp.Diff(env.GetServices()[1].Extensions, expected)).To(BeEmpty())
 				})
 			})
 
@@ -272,11 +291,18 @@ var _ = Describe("Reconcile", func() {
 					workingDir = "testdata/reconcile-service-healthcheck"
 				})
 
-				It("should configure the added service labels from healthcheck config", func() {
-					expected := newDefaultServiceLabels("wordpress")
-					expected[config.LabelWorkloadLivenessProbeType] = config.ProbeTypeNone.String()
-					expected[config.LabelWorkloadLivenessProbeCommand] = "[\"CMD\", \"curl\", \"localhost:80/healthy\"]"
-					Expect(env.GetServices()[1].GetLabels()).To(Equal(expected))
+				It("should configure the added service extensions from healthcheck config", func() {
+					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+						Service: config.Service{
+							Type: config.ClusterIPService,
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					expected["x-k8s"].(map[string]interface{})["workload"].(map[string]interface{})["livenessProbe"] = map[string]interface{}{
+						"type": config.ProbeTypeNone.String(),
+					}
+
+					Expect(env.GetServices()[1].Extensions).To(Equal(expected))
 				})
 			})
 		})
@@ -500,10 +526,32 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func newDefaultServiceLabels(name string) map[string]string {
-	return map[string]string{
-		config.LabelWorkloadLivenessProbeType:    config.ProbeTypeExec.String(),
-		config.LabelWorkloadLivenessProbeCommand: "[\"CMD\", \"echo\", \"Define healthcheck command for service " + name + "\"]",
-		config.LabelWorkloadReplicas:             "1",
+func newDefaultServiceExtensions(name string, k8sconfs ...config.K8SConfiguration) (map[string]interface{}, error) {
+	k8s := config.K8SConfiguration{
+		Enabled: true,
+		Workload: config.Workload{
+			LivenessProbe:  config.DefaultLivenessProbe(),
+			ReadinessProbe: config.DefaultReadinessProbe(),
+			Type:           config.DefaultWorkload,
+			Replicas:       config.DefaultReplicaNumber,
+		},
 	}
+
+	for _, conf := range k8sconfs {
+		c, err := k8s.Merge(conf)
+		if err != nil {
+			return nil, err
+		}
+
+		k8s = c
+	}
+
+	m, err := k8s.ToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		config.K8SExtensionKey: m,
+	}, nil
 }

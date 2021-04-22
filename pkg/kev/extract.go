@@ -27,11 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+// TODO: Remove this whole thing when ready
 // extractLabels extracts a set of labels from a compose project object.
 func extractLabels(s composego.ServiceConfig, target *ServiceConfig) {
-	extractServiceTypeLabels(s, target)
-	extractDeploymentLabels(s, target)
-	extractHealthcheckLabels(s, target)
+	// extractServiceTypeLabels(s, target)
+	// extractDeploymentLabels(s, target)
+	// extractHealthcheckLabels(s, target)
 }
 
 // setDefaultLabels sets sensible workload defaults as labels.
@@ -40,6 +41,7 @@ func setDefaultLabels(target *ServiceConfig) {
 	target.Labels.Add(config.LabelWorkloadServiceAccountName, config.DefaultServiceAccountName)
 }
 
+// TODO: Remove this whole thing when ready
 // extractVolumesLabels extracts volume labels into a label's Volumes attribute.
 func extractVolumesLabels(c *ComposeProject, out *composeOverride) {
 	vols := make(map[string]VolumeConfig)
@@ -75,9 +77,9 @@ func extractServiceTypeLabels(source composego.ServiceConfig, target *ServiceCon
 
 // extractDeploymentLabels extracts deployment related into a label's Service.
 func extractDeploymentLabels(source composego.ServiceConfig, target *ServiceConfig) {
-	extractWorkloadType(source, target)
-	extractWorkloadReplicas(source, target)
-	extractWorkloadRestartPolicy(source, target)
+	// extractWorkloadType(source, target)
+	// extractWorkloadReplicas(source, target)
+	// extractWorkloadRestartPolicy(source, target)
 	extractWorkloadResourceRequests(source, target)
 	extractWorkloadResourceLimits(source, target)
 	extractWorkloadRollingUpdatePolicy(source, target)

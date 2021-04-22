@@ -110,7 +110,7 @@ func createDeploy() composego.DeployConfig {
 
 // createHealthCheck returns a healthcheck block with configured placeholders.
 func createHealthCheck(svcName string) composego.HealthCheckConfig {
-	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand[1], svcName)
+	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand[1])
 	to, _ := time.ParseDuration(config.DefaultProbeTimeout)
 	iv, _ := time.ParseDuration(config.DefaultProbeInterval)
 	sp, _ := time.ParseDuration(config.DefaultProbeInitialDelay)
