@@ -153,12 +153,11 @@ func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	}
 
 	r.UI.Output("")
-	r.UI.Output("Validation successful!")
 	if detectHit {
 		if err := r.eventHandler(SecretsDetected, r); err != nil {
 			return newEventError(err, SecretsDetected)
 		}
-		r.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
+		r.UI.Output(fmt.Sprintf(`To prevent secrets leaking, see help page:
 %s`, SecretsReferenceUrl))
 	}
 

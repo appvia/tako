@@ -47,13 +47,13 @@ func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string
 	}
 
 	p.UI.Output("")
-	p.UI.Output("Validation successful!")
 
 	if secretsDetected {
 		if err := p.eventHandler(SecretsDetected, p); err != nil {
 			return newEventError(err, SecretsDetected)
 		}
-		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page: %s`, SecretsReferenceUrl))
+		p.UI.Output(fmt.Sprintf(`To prevent secrets leaking, see help page:
+%s`, SecretsReferenceUrl))
 	}
 
 	if err := p.eventHandler(PostValidateSources, p); err != nil {
@@ -82,7 +82,7 @@ func (p *Project) detectSecretsInSources(sources *Sources, matchers []map[string
 
 			hits := serviceConfig.detectSecretsInEnvVars(matchers)
 			if len(hits) == 0 {
-				step.Success("Non detected in service: ", s.Name)
+				step.Success("None detected in service: ", s.Name)
 				continue
 			}
 
