@@ -131,7 +131,7 @@ func (c *K8s) Render(singleFile bool,
 
 func getSortedEnvs(projects map[string]*composego.Project) []string {
 	var out []string
-	for env, _ := range projects {
+	for env := range projects {
 		out = append(out, env)
 	}
 	sort.Strings(out)

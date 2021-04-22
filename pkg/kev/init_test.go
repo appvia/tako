@@ -220,12 +220,15 @@ var _ = Describe("InitRunner", func() {
 		})
 
 		Context("with services", func() {
-			It("should include a subset of labels as config params", func() {
+			It("should include default config params", func() {
 				svc, _ := env.GetService("db")
-				Expect(svc.GetLabels()).To(HaveLen(3))
-				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeType))
-				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeCommand))
-				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadReplicas))
+
+				k8sconf, err := config.ParseK8SCfgFromMap(svc.Extensions)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(svc.GetLabels()).To(BeEmpty())
+				Expect(k8sconf.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
+				Expect(k8sconf.Workload.Replicas).NotTo(BeZero())
 			})
 		})
 		Context("with volumes", func() {

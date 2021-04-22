@@ -21,6 +21,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -197,7 +198,7 @@ func (e *Environment) loadOverride() (*Environment, error) {
 		envVarsFromNilToBlankInService(s)
 		serviceConfig, err := newServiceConfig(s)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Cannot load environment [%s], service [%s]", e.Name, name)
+			log.Debugf("cannot load environment [%s], service [%s]: err %s", e.Name, name, err.Error())
 		}
 		services = append(services, serviceConfig)
 	}

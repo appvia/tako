@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -49,7 +50,7 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 		extractVolumesLabels(ready, s.override)
 		extractLabels(svc, &target)
 
-		k8sConf, err := config.K8SCfgFromMap(svc.Extensions)
+		k8sConf, err := config.K8SCfgFromCompose(&svc)
 		if err != nil {
 			return err
 		}
@@ -69,7 +70,8 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 
 	for _, opt := range opts {
 		if err := opt(s, ready); err != nil {
-			return nil
+			log.Debug(err.Error())
+			return err
 		}
 	}
 

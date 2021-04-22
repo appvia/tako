@@ -549,7 +549,8 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 }
 
 func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
-	k8sconf, err := config.K8SCfgFromMap(p.Extensions)
+	p1 := composego.ServiceConfig(*p)
+	k8sconf, err := config.K8SCfgFromCompose(&p1)
 	if err != nil {
 		return nil, err
 	}
@@ -558,7 +559,8 @@ func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
 }
 
 func (p *ProjectService) ReadinessProbe() (*v1.Probe, error) {
-	k8sconf, err := config.K8SCfgFromMap(p.Extensions)
+	p1 := composego.ServiceConfig(*p)
+	k8sconf, err := config.K8SCfgFromCompose(&p1)
 	if err != nil {
 		return nil, err
 	}
