@@ -94,6 +94,7 @@ func (r *RenderRunner) LoadProject() error {
 	if err := r.eventHandler(PostLoadProject, r); err != nil {
 		return newEventError(err, PostLoadProject)
 	}
+
 	return nil
 }
 

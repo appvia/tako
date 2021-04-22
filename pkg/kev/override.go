@@ -99,9 +99,10 @@ func (o *composeOverride) volumesWithLabelsMatching(other *composeOverride) Volu
 // expandLabelsFrom returns a copy of the compose override
 // filling in gaps in services and volumes labels (keys and values) using the provided override.
 func (o *composeOverride) expandLabelsFrom(other *composeOverride) *composeOverride {
-	services := o.servicesLabelsExpandedFrom(other)
+	// TODO: Remove when ready
+	// services := o.servicesLabelsExpandedFrom(other)
 	volumes := o.volumesLabelsExpandedFrom(other)
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes}
+	return &composeOverride{Version: o.Version, Services: o.Services, Volumes: volumes}
 }
 
 func (o *composeOverride) servicesLabelsExpandedFrom(other *composeOverride) Services {
@@ -184,7 +185,7 @@ func (o *composeOverride) detectAndPatchServiceExtensions(dst *composeOverride) 
 			continue
 		}
 
-		k8sconf, err := config.K8SCfgFromMap(dstSvc.Extensions)
+		k8sconf, err := config.ParseK8SCfgFromMap(dstSvc.Extensions)
 		if err != nil {
 			log.Debugf("unable to convert extensions to k8s configuration %s", err.Error())
 			continue

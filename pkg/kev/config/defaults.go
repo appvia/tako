@@ -144,4 +144,4 @@ const (
 )
 
 // DefaultLivenessProbeCommand default command
-var DefaultLivenessProbeCommand = []string{"echo", "Define healthcheck command for service %s"}
+var DefaultLivenessProbeCommand = []string{"echo", "Define healthcheck command for service"}
