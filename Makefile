@@ -21,7 +21,13 @@ else
 	VERSION ?= $(GIT_LAST_TAG)
 endif
 
-LFLAGS ?= -X github.com/appvia/kev/pkg/${NAME}.Tag=${GIT_LAST_TAG} -X github.com/appvia/kev/pkg/${NAME}.GitSHA=${GIT_SHA} -X github.com/appvia/kev/pkg/${NAME}.Compiled=${BUILD_TIME} -X github.com/appvia/kev/pkg/${NAME}.Release=${VERSION} -X github.com/appvia/kev/pkg/${NAME}.GitBranch=${GIT_BRANCH}
+LFLAGS ?= -X 'github.com/appvia/kev/pkg/config.AppName=${NAME}' \
+		  -X 'github.com/appvia/kev/pkg/config.Tag=${GIT_LAST_TAG}' \
+ 		  -X 'github.com/appvia/kev/pkg/config.GitSHA=${GIT_SHA}' \
+ 		  -X 'github.com/appvia/kev/pkg/config.Compiled=${BUILD_TIME}' \
+ 		  -X 'github.com/appvia/kev/pkg/config.Release=${VERSION}' \
+ 		  -X 'github.com/appvia/kev/pkg/config.GitBranch=${GIT_BRANCH}'
+
 CLI_PLATFORMS=darwin linux windows
 CLI_ARCHITECTURES=amd64 arm64
 

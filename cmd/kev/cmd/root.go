@@ -20,12 +20,14 @@ import (
 	"errors"
 	"os"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/spf13/cobra"
 )
 
 var silentErr = errors.New("silentErr")
 var rootCmd = &cobra.Command{
 	Short:            "Develop Kubernetes apps iteratively using Docker-Compose.",
+	Use:              config.AppName,
 	TraverseChildren: true,
 	SilenceErrors:    true,
 	SilenceUsage:     true,
@@ -56,9 +58,7 @@ func init() {
 }
 
 // Execute command
-func Execute(appName string) {
-	rootCmd.Use = appName
-
+func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

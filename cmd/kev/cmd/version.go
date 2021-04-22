@@ -19,7 +19,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/appvia/kev/pkg/kev"
+	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/spf13/cobra"
 )
 
@@ -29,9 +29,9 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print Kev version",
-	Long:  `All software has versions. This is Kev's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(kev.Version())
+	Short: "Print version information.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println(config.Version())
+		return nil
 	},
 }

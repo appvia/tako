@@ -18,8 +18,6 @@ package main
 
 import "github.com/appvia/kev/cmd/kev/cmd"
 
-const AppName = "kev"
-
 func main() {
-	cmd.Execute(AppName)
+	cmd.Execute()
 }

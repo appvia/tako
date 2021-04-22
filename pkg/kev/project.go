@@ -19,6 +19,7 @@ package kev
 import (
 	"fmt"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	"github.com/pkg/errors"
 )
@@ -26,8 +27,9 @@ import (
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
 	p.SetConfig(opts...)
+
 	if len(p.AppName) == 0 {
-		p.AppName = GetManifestName()
+		p.AppName = config.AppName
 	}
 
 	if p.UI == nil {
