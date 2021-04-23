@@ -12,7 +12,7 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1
-	github.com/onsi/ginkgo v1.15.2
+	github.com/onsi/ginkgo v1.16.1
 	github.com/onsi/gomega v1.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
