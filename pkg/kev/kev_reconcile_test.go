@@ -270,7 +270,8 @@ var _ = Describe("Reconcile", func() {
 				It("should configure parse config into extensions", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
 						Workload: config.Workload{
-							Replicas: 3,
+							Replicas:      3,
+							RestartPolicy: "always",
 						},
 						Service: config.Service{
 							Type: config.ClusterIPService,
@@ -293,6 +294,9 @@ var _ = Describe("Reconcile", func() {
 
 				It("should configure the added service extensions from healthcheck config", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+						Workload: config.Workload{
+							RestartPolicy: "always",
+						},
 						Service: config.Service{
 							Type: config.ClusterIPService,
 						},
@@ -534,6 +538,7 @@ func newDefaultServiceExtensions(name string, k8sconfs ...config.K8SConfiguratio
 			ReadinessProbe: config.DefaultReadinessProbe(),
 			Type:           config.DefaultWorkload,
 			Replicas:       config.DefaultReplicaNumber,
+			RestartPolicy:  "always",
 		},
 	}
 

@@ -77,6 +77,7 @@ func DefaultK8SConfig() K8SConfiguration {
 			LivenessProbe:  DefaultLivenessProbe(),
 			ReadinessProbe: DefaultReadinessProbe(),
 			Replicas:       1,
+			RestartPolicy:  RestartPolicyAlways,
 		},
 		Service: Service{
 			Type: "None",
@@ -137,18 +138,17 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 }
 
 func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) string {
-	if svc.Deploy == nil || svc.Deploy.RestartPolicy == nil {
-		return ""
+	policy := RestartPolicyAlways
+
+	if svc.Restart != "" {
+		policy = svc.Restart
 	}
 
-	switch svc.Deploy.RestartPolicy.Condition {
-	case "on-failure":
-		return RestartPolicyOnFailure
-	case "none":
-		return RestartPolicyNever
-	default:
-		return RestartPolicyAlways
+	if svc.Deploy != nil && svc.Deploy.RestartPolicy != nil {
+		policy = svc.Deploy.RestartPolicy.Condition
 	}
+
+	return policy
 }
 
 func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {

@@ -253,13 +253,11 @@ var _ = Describe("ProjectService", func() {
 
 			workloadType := "StatefulSet"
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadType: workloadType,
-				}
+			JustBeforeEach(func() {
+				projectService.K8SConfig.Workload.Type = workloadType
 			})
 
-			It("will use a label value", func() {
+			It("will use a extension value", func() {
 				Expect(projectService.workloadType()).To(Equal(workloadType))
 			})
 		})
@@ -271,20 +269,29 @@ var _ = Describe("ProjectService", func() {
 		})
 
 		Context("when deploy block `mode` defined as `global` and workload type is different than DaemonSet", func() {
-
 			projectWorkloadType := config.StatefulsetWorkload
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadType: projectWorkloadType,
-				}
+			JustBeforeEach(func() {
+				projectService.K8SConfig.Workload.Type = projectWorkloadType
+				m, err := projectService.K8SConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
 
-				deploy = &composego.DeployConfig{
+				svc := projectService.ServiceConfig
+				svc.Deploy = &composego.DeployConfig{
 					Mode: "global",
 				}
+				svc.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
+				}
+
+				projectService, err = NewProjectService(svc)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("warns the user about the mismatch", func() {
+				Expect(projectService.K8SConfig.Workload.Type).To(Equal(projectWorkloadType))
+				Expect(projectService.Deploy.Mode).To(Equal("global"))
+
 				projectService.workloadType()
 				assertLog(logrus.WarnLevel,
 					"Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to StatefulSet",
@@ -958,8 +965,14 @@ var _ = Describe("ProjectService", func() {
 			Context("and defined on the project service directly with no deploy block", func() {
 				policy := config.RestartPolicyNever
 
-				It("returns restart policy defined on the project service level", func() {
+				JustBeforeEach(func() {
 					projectService.Restart = policy
+					ps, err := NewProjectService(projectService.ServiceConfig)
+					Expect(err).NotTo(HaveOccurred())
+					projectService = ps
+				})
+
+				It("returns restart policy defined on the project service level", func() {
 					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 				})
 			})
@@ -986,6 +999,7 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("warns the user and defaults restart policy to `Always`", func() {
+					Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.RestartPolicyAlways)))
 
 					assertLog(logrus.WarnLevel,
@@ -1002,11 +1016,19 @@ var _ = Describe("ProjectService", func() {
 			Context("when invalid policy has been provided", func() {
 				policy := "invalid-policy"
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					projectService.K8SConfig.Workload.RestartPolicy = policy
-					labels = composego.Labels{
-						config.LabelWorkloadRestartPolicy: policy,
+					m, err := projectService.K8SConfig.ToMap()
+					Expect(err).NotTo(HaveOccurred())
+
+					svc := projectService.ServiceConfig
+					svc.Extensions = map[string]interface{}{
+						config.K8SExtensionKey: m,
 					}
+
+					projectService, err = NewProjectService(svc)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 				})
 
 				It("warns the user and defaults restart policy to `Always`", func() {

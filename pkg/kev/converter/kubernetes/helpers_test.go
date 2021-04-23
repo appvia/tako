@@ -20,6 +20,7 @@ import (
 	"bytes"
 
 	"github.com/appvia/kev/pkg/kev/log"
+	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 
@@ -37,7 +38,7 @@ func init() {
 
 func assertLog(level logrus.Level, message string, fields map[string]string) {
 	Expect(hook.LastEntry().Level).To(Equal(level))
-	Expect(hook.LastEntry().Message).To(Equal(message))
+	Expect(cmp.Diff(hook.LastEntry().Message, message)).To(BeEmpty())
 	for k, v := range fields {
 		Expect(hook.LastEntry().Data).To(HaveKeyWithValue(k, v))
 	}

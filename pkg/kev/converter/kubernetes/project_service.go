@@ -116,6 +116,16 @@ func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
 
 // workloadType returns workload type for the project service
 func (p *ProjectService) workloadType() string {
+	workloadType := p.K8SConfig.Workload.Type
+
+	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
+		log.WarnfWithFields(log.Fields{
+			"project-service": p.Name,
+			"workload-type":   workloadType,
+		}, "Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s",
+			workloadType)
+	}
+
 	return p.K8SConfig.Workload.Type
 }
 
@@ -412,7 +422,10 @@ func (p *ProjectService) serviceAccountName() string {
 
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
 func (p *ProjectService) restartPolicy() v1.RestartPolicy {
-	policy := p.K8SConfig.Workload.RestartPolicy
+	policy := config.RestartPolicyAlways
+	if p.K8SConfig.Workload.RestartPolicy != "" {
+		policy = p.K8SConfig.Workload.RestartPolicy
+	}
 
 	if policy == "unless-stopped" {
 		log.WarnWithFields(log.Fields{

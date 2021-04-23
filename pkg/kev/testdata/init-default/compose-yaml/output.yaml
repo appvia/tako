@@ -23,6 +23,7 @@ services:
           timeout: 10s
           type: none
         replicas: 1
+        restartPolicy: always
         type: StatefulSet
 volumes:
   db_data:
