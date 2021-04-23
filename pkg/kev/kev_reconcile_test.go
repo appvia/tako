@@ -528,7 +528,7 @@ var _ = Describe("Reconcile", func() {
 
 func newDefaultServiceExtensions(name string, k8sconfs ...config.K8SConfiguration) (map[string]interface{}, error) {
 	k8s := config.K8SConfiguration{
-		Enabled: true,
+		Disabled: false,
 		Workload: config.Workload{
 			LivenessProbe:  config.DefaultLivenessProbe(),
 			ReadinessProbe: config.DefaultReadinessProbe(),

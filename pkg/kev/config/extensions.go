@@ -22,7 +22,7 @@ type ExtensionRoot struct {
 
 // K8SConfiguration represents the root of the k8s specific fields supported by kev.
 type K8SConfiguration struct {
-	Enabled  bool     `yaml:"enabled,omitempty"`
+	Disabled bool     `yaml:"disabled"`
 	Workload Workload `yaml:"workload" validate:"required,dive"`
 	Service  Service  `yaml:"service,omitempty"`
 }
@@ -71,7 +71,7 @@ func (k K8SConfiguration) Validate() error {
 // DefaultK8SConfig returns a K8SServiceConfig with all the defaults set into it.
 func DefaultK8SConfig() K8SConfiguration {
 	return K8SConfiguration{
-		Enabled: DefaultServiceEnabled,
+		Disabled: false,
 		Workload: Workload{
 			Type:           DefaultWorkload,
 			LivenessProbe:  DefaultLivenessProbe(),
@@ -108,7 +108,6 @@ func RequireExtensions() K8SCfgOption {
 func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	var cfg K8SConfiguration
 
-	cfg.Enabled = true
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
 	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
 	cfg.Workload.RestartPolicy = WorkloadRestartPolicyFromCompose(svc)
@@ -189,7 +188,7 @@ func LivenessProbeFromCompose(svc *composego.ServiceConfig) LivenessProbe {
 	res.Type = ProbeTypeExec.String()
 
 	test := healthcheck.Test
-	if len(test) > 0 && strings.ToLower(test[0]) == "cmd" {
+	if len(test) > 0 && (strings.ToLower(test[0]) == "cmd" || strings.ToLower(test[0]) == "cmd-shell") {
 		test = test[1:]
 	}
 	res.Exec.Command = test
