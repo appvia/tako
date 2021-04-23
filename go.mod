@@ -23,6 +23,6 @@ require (
 	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d // indirect
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	k8s.io/api v0.19.7
-	k8s.io/apimachinery v0.19.7
+	k8s.io/api v0.21.0
+	k8s.io/apimachinery v0.21.0
 )
