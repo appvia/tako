@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/go-playground/validator/v10"
 	"github.com/imdario/mergo"
@@ -146,6 +147,14 @@ func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) string {
 
 	if svc.Deploy != nil && svc.Deploy.RestartPolicy != nil {
 		policy = svc.Deploy.RestartPolicy.Condition
+	}
+
+	if policy == "unless-stopped" {
+		log.WarnWithFields(log.Fields{
+			"restart-policy": policy,
+		}, "Restart policy 'unless-stopped' is not supported, converting it to 'always'")
+
+		policy = "always"
 	}
 
 	return policy

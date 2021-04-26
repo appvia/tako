@@ -427,15 +427,6 @@ func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 		policy = p.K8SConfig.Workload.RestartPolicy
 	}
 
-	if policy == "unless-stopped" {
-		log.WarnWithFields(log.Fields{
-			"project-service": p.Name,
-			"restart-policy":  policy,
-		}, "Restart policy 'unless-stopped' is not supported, converting it to 'always'")
-
-		policy = "always"
-	}
-
 	restartPolicy, err := getRestartPolicy(p.Name, policy)
 	if err != nil {
 		log.WarnWithFields(log.Fields{

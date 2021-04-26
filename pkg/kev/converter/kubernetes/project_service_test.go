@@ -999,14 +999,12 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("warns the user and defaults restart policy to `Always`", func() {
-					Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.RestartPolicyAlways)))
 
 					assertLog(logrus.WarnLevel,
 						"Restart policy 'unless-stopped' is not supported, converting it to 'always'",
 						map[string]string{
-							"project-service": projectServiceName,
-							"restart-policy":  policy,
+							"restart-policy": policy,
 						},
 					)
 				})
