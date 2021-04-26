@@ -98,7 +98,7 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("enabled", func() {
-		When("component toggle label is set to Truthy value", func() {
+		When("component toggle extension is set to disable=true", func() {
 			BeforeEach(func() {
 				k8sconf.Disabled = true
 			})
@@ -108,7 +108,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		When("component toggle extension to set false value", func() {
+		When("component toggle extension to set disable=false", func() {
 			BeforeEach(func() {
 				k8sconf.Disabled = false
 			})
@@ -118,8 +118,8 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		When("component toggle label is not specified", func() {
-			It("defaults to true if no label", func() {
+		When("component toggle extension is not specified", func() {
+			It("defaults to true", func() {
 				Expect(projectService.enabled()).To(BeTrue())
 			})
 		})

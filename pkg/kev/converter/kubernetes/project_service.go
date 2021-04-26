@@ -126,7 +126,7 @@ func (p *ProjectService) workloadType() string {
 			workloadType)
 	}
 
-	return p.K8SConfig.Workload.Type
+	return workloadType
 }
 
 // serviceType returns service type for project service workload
