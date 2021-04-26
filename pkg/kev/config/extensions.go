@@ -138,6 +138,7 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	return cfg, nil
 }
 
+// WorkloadRestartPolicyFromCompose infers a kev-valid restart policy from compose data.
 func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) string {
 	policy := RestartPolicyAlways
 
