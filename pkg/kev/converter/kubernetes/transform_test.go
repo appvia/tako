@@ -54,15 +54,17 @@ var _ = Describe("Transform", func() {
 			Services: composego.Services{},
 		}
 
-		projectService = ProjectService{
+		ps, err := NewProjectService(composego.ServiceConfig{
 			Name:       "web",
 			Image:      "some-image",
 			Extensions: extensions,
-		}
+		})
+		Expect(err).NotTo(HaveOccurred())
+		projectService = ps
 	})
 
 	JustBeforeEach(func() {
-		project.Services = append(project.Services, composego.ServiceConfig(projectService))
+		project.Services = append(project.Services, projectService.ServiceConfig)
 
 		k = Kubernetes{
 			Opt:      ConvertOptions{},
@@ -113,9 +115,11 @@ var _ = Describe("Transform", func() {
 		When("project service doesn't have image specified", func() {
 
 			BeforeEach(func() {
-				projectService = ProjectService{
+				ps, err := NewProjectService(composego.ServiceConfig{
 					Name: "web",
-				}
+				})
+				Expect(err).NotTo(HaveOccurred())
+				projectService = ps
 			})
 
 			It("uses project service name as service image", func() {
@@ -979,10 +983,10 @@ var _ = Describe("Transform", func() {
 					})
 
 					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
-
 						BeforeEach(func() {
+							projectService.K8SConfig.Workload.Replicas = 10
+
 							projectService.Labels = composego.Labels{
-								config.LabelWorkloadReplicas:             "10",
 								config.LabelWorkloadAutoscaleMaxReplicas: "5",
 							}
 						})

@@ -2,7 +2,7 @@ version: "3.9"
 services:
   db:
     x-k8s:
-      enabled: true
+      disabled: false
       service:
         type: None
       workload:
@@ -23,6 +23,7 @@ services:
           timeout: 10s
           type: none
         replicas: 1
+        restartPolicy: always
         type: StatefulSet
 volumes:
   db_data:
