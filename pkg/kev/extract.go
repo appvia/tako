@@ -114,42 +114,42 @@ func extractWorkloadResourceRequests(source composego.ServiceConfig, target *Ser
 }
 
 // extractWorkloadRestartPolicy extracts deployment's restart policy.
-func extractWorkloadRestartPolicy(source composego.ServiceConfig, target *ServiceConfig) {
-	if source.Deploy != nil && source.Deploy.RestartPolicy != nil {
-		if source.Deploy.RestartPolicy.Condition == "on-failure" {
-			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyOnFailure)
-		} else if source.Deploy.RestartPolicy.Condition == "none" {
-			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyNever)
-		} else {
-			// Always restart by default
-			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyAlways)
-		}
-	}
-}
+// func extractWorkloadRestartPolicy(source composego.ServiceConfig, target *ServiceConfig) {
+// 	if source.Deploy != nil && source.Deploy.RestartPolicy != nil {
+// 		if source.Deploy.RestartPolicy.Condition == "on-failure" {
+// 			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyOnFailure)
+// 		} else if source.Deploy.RestartPolicy.Condition == "none" {
+// 			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyNever)
+// 		} else {
+// 			// Always restart by default
+// 			target.Labels.Add(config.LabelWorkloadRestartPolicy, config.RestartPolicyAlways)
+// 		}
+// 	}
+// }
 
 // extractWorkloadReplicas extracts deployment's restart policy.
-func extractWorkloadReplicas(source composego.ServiceConfig, target *ServiceConfig) {
-	if source.Deploy != nil {
-		value := strconv.FormatUint(*source.Deploy.Replicas, 10)
-		target.Labels.Add(config.LabelWorkloadReplicas, value)
-	}
-}
+// // func extractWorkloadReplicas(source composego.ServiceConfig, target *ServiceConfig) {
+// 	if source.Deploy != nil {
+// 		value := strconv.FormatUint(*source.Deploy.Replicas, 10)
+// 		target.Labels.Add(config.LabelWorkloadReplicas, value)
+// 	}
+// }
 
-// extractWorkloadType extracts deployment's workload type.
-func extractWorkloadType(source composego.ServiceConfig, target *ServiceConfig) {
-	if source.Deploy != nil && source.Deploy.Mode == "global" {
-		target.Labels.Add(config.LabelWorkloadType, config.DaemonsetWorkload)
-	} else {
-		// replicated
-		if source.Volumes != nil {
-			// Volumes in use so likely a Statefulset
-			target.Labels.Add(config.LabelWorkloadType, config.StatefulsetWorkload)
-		} else {
-			// default to deployment
-			target.Labels.Add(config.LabelWorkloadType, config.DeploymentWorkload)
-		}
-	}
-}
+// // extractWorkloadType extracts deployment's workload type.
+// func extractWorkloadType(source composego.ServiceConfig, target *ServiceConfig) {
+// 	if source.Deploy != nil && source.Deploy.Mode == "global" {
+// 		target.Labels.Add(config.LabelWorkloadType, config.DaemonsetWorkload)
+// 	} else {
+// 		// replicated
+// 		if source.Volumes != nil {
+// 			// Volumes in use so likely a Statefulset
+// 			target.Labels.Add(config.LabelWorkloadType, config.StatefulsetWorkload)
+// 		} else {
+// 			// default to deployment
+// 			target.Labels.Add(config.LabelWorkloadType, config.DeploymentWorkload)
+// 		}
+// 	}
+// }
 
 // extractHealthcheckLabels extracts health check labels into a label's Service.
 func extractHealthcheckLabels(source composego.ServiceConfig, target *ServiceConfig) {

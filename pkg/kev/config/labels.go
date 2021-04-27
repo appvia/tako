@@ -19,14 +19,6 @@ package config
 const (
 	LabelPrefix = "kev."
 
-	// LabelComponentEnabled = LabelPrefix + "component.enabled"
-
-	// LabelWorkloadType defines type of workload controller
-	LabelWorkloadType = LabelPrefix + "workload.type"
-
-	// LabelWorkloadReplicas represents number of replicas for given workload. Takes presedence if defined.
-	LabelWorkloadReplicas = LabelPrefix + "workload.replicas"
-
 	// LabelWorkloadAutoscaleMaxReplicas represents maximum number of replicas for given workload. Used in Horizontal Pod Autoscaler.
 	LabelWorkloadAutoscaleMaxReplicas = LabelPrefix + "workload.autoscale-max-replicas"
 
@@ -66,68 +58,8 @@ const (
 	// LabelWorkloadImagePullSecret defines docker registry image pull secret
 	LabelWorkloadImagePullSecret = LabelPrefix + "workload.image-pull-secret"
 
-	// LabelWorkloadRestartPolicy defines when to restart a pod
-	LabelWorkloadRestartPolicy = LabelPrefix + "workload.restart-policy"
-
 	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
 	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
-
-	// LabelWorkloadLivenessProbeType defines the command for workload liveness probe.
-	LabelWorkloadLivenessProbeType = LabelPrefix + "workload.liveness-probe-type"
-
-	// LabelWorkloadLivenessProbeCommand defines the command for workload liveness probe.
-	LabelWorkloadLivenessProbeCommand = LabelPrefix + "workload.liveness-probe-command"
-
-	// LabelWorkloadLivenessProbeHTTPPort defines the port for the http liveness probes.
-	LabelWorkloadLivenessProbeHTTPPort = LabelPrefix + "workload.liveness-probe-http-port"
-
-	// LabelWorkloadLivenessProbeHTTPPath defines the path for the http liveness probe.
-	LabelWorkloadLivenessProbeHTTPPath = LabelPrefix + "workload.liveness-probe-http-path"
-
-	// LabelWorkloadLivenessProbeTCPPort defines the path for the http liveness probe.
-	LabelWorkloadLivenessProbeTCPPort = LabelPrefix + "workload.liveness-probe-tcp-port"
-
-	// LabelWorkloadLivenessProbeInterval defines the interval for workload liveness probe
-	LabelWorkloadLivenessProbeInterval = LabelPrefix + "workload.liveness-probe-interval"
-
-	// LabelWorkloadLivenessProbeTimeout defines the timeout for workload liveness probe
-	LabelWorkloadLivenessProbeTimeout = LabelPrefix + "workload.liveness-probe-timeout"
-
-	// LabelWorkloadLivenessProbeInitialDelay defines the initial delay for workload liveness probe
-	LabelWorkloadLivenessProbeInitialDelay = LabelPrefix + "workload.liveness-probe-initial-delay"
-
-	// LabelWorkloadLivenessProbeRetries defines number of times workload liveness probe will retry
-	LabelWorkloadLivenessProbeRetries = LabelPrefix + "workload.liveness-probe-retries"
-
-	// LabelWorkloadReadinessProbeCommand defines the command for workload liveness probe
-	LabelWorkloadReadinessProbeCommand = LabelPrefix + "workload.readiness-probe-command"
-
-	// LabelWorkloadReadinessProbeInterval defines the interval for workload liveness probe
-	LabelWorkloadReadinessProbeInterval = LabelPrefix + "workload.readiness-probe-interval"
-
-	// LabelWorkloadReadinessProbeTimeout defines the timeout for workload liveness probe
-	LabelWorkloadReadinessProbeTimeout = LabelPrefix + "workload.readiness-probe-timeout"
-
-	// LabelWorkloadReadinessProbeInitialDelay defines the initial delay for workload liveness probe
-	LabelWorkloadReadinessProbeInitialDelay = LabelPrefix + "workload.readiness-probe-initial-delay"
-
-	// LabelWorkloadReadinessProbeRetries defines number of times workload liveness probe will retry
-	LabelWorkloadReadinessProbeRetries = LabelPrefix + "workload.readiness-probe-retries"
-
-	// LabelWorkloadLivenessProbeType defines the command for workload liveness probe.
-	LabelWorkloadReadinessProbeType = LabelPrefix + "workload.readiness-probe-type"
-
-	// LabelWorkloadLivenessProbeHTTPPort defines the port for the http liveness probes.
-	LabelWorkloadReadinessProbeHTTPPort = LabelPrefix + "workload.readiness-probe-http-port"
-
-	// LabelWorkloadLivenessProbeHTTPPath defines the path for the http liveness probe.
-	LabelWorkloadReadinessProbeHTTPPath = LabelPrefix + "workload.readiness-probe-http-path"
-
-	// LabelWorkloadLivenessProbeTCPPort defines the path for the http liveness probe.
-	LabelWorkloadReadinessProbeTCPPort = LabelPrefix + "workload.readiness-probe-tcp-port"
-
-	// LabelServiceType defines the type of service to be created
-	LabelServiceType = LabelPrefix + "service.type"
 
 	// LabelServiceNodePortPort defines port number for NodePort k8s service kind
 	LabelServiceNodePortPort = LabelPrefix + "service.nodeport.port"
@@ -148,11 +80,7 @@ const (
 	LabelVolumeStorageClass = LabelPrefix + "volume.storage-class"
 )
 
-var BaseServiceLabels = []string{
-	LabelWorkloadReplicas,
-	LabelWorkloadLivenessProbeType,
-	LabelWorkloadLivenessProbeCommand,
-}
+var BaseServiceLabels = []string{}
 
 var BaseVolumeLabels = []string{
 	LabelVolumeSize,

@@ -12,6 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
 )
 
 const K8SExtensionKey = "x-k8s"
@@ -136,6 +137,49 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	}
 
 	return cfg, nil
+}
+
+func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
+	serviceType := NoService
+
+	if svc.Ports != nil {
+		serviceType = ClusterIPService
+	}
+
+	if svc.Deploy != nil && svc.Deploy.EndpointMode == "vip" {
+		serviceType = NodePortService
+	}
+
+	serviceType, err := getServiceType(serviceType)
+	if err != nil {
+		log.ErrorWithFields(log.Fields{
+			"service-name": svc.Name,
+			"service-type": serviceType,
+		}, "Unrecognised k8s service type. Compose project service will not have k8s service generated.")
+
+		return "", fmt.Errorf("`%s` workload service type `%s` not supported", svc.Name, serviceType)
+	}
+
+	return serviceType, nil
+}
+
+// getServiceType returns service type based on passed string value
+// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L108
+func getServiceType(serviceType string) (string, error) {
+	switch strings.ToLower(serviceType) {
+	case "", "clusterip":
+		return string(v1.ServiceTypeClusterIP), nil
+	case "nodeport":
+		return string(v1.ServiceTypeNodePort), nil
+	case "loadbalancer":
+		return string(v1.ServiceTypeLoadBalancer), nil
+	case "headless":
+		return HeadlessService, nil
+	case "none":
+		return NoService, nil
+	default:
+		return "", fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
+	}
 }
 
 // WorkloadRestartPolicyFromCompose infers a kev-valid restart policy from compose data.
@@ -269,5 +313,5 @@ type Workload struct {
 // Service will hold the service specific extensions in the future.
 // TODO: expand with new properties.
 type Service struct {
-	Type string `yaml:"type" validate:"required,oneof=none, ClusterIP"`
+	Type string `yaml:"type" validate:"required,oneof=None NodePort ClusterIP Headless LoadBalancer"`
 }

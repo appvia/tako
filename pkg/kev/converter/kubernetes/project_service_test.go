@@ -933,10 +933,19 @@ var _ = Describe("ProjectService", func() {
 		Context("when defined via labels", func() {
 			policy := config.DefaultRestartPolicy
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadRestartPolicy: policy,
+			JustBeforeEach(func() {
+				projectService.K8SConfig.Workload.RestartPolicy = policy
+				m, err := projectService.K8SConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				svc := projectService.ServiceConfig
+				svc.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
 				}
+
+				projectService, err = NewProjectService(svc)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 			})
 
 			It("returns label value", func() {
