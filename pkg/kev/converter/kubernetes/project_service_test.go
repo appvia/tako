@@ -64,7 +64,7 @@ var _ = Describe("ProjectService", func() {
 		healthcheck = composego.HealthCheckConfig{}
 		projectVolumes = composego.Volumes{}
 
-		k8sconf = config.DefaultK8SConfig()
+		k8sconf = config.K8SConfiguration{}
 	})
 
 	JustBeforeEach(func() {
@@ -74,7 +74,7 @@ var _ = Describe("ProjectService", func() {
 			config.K8SExtensionKey: ext,
 		}
 
-		projectService = ProjectService{
+		projectService, err = NewProjectService(composego.ServiceConfig{
 			Name:        projectServiceName,
 			Labels:      labels,
 			Deploy:      deploy,
@@ -84,10 +84,11 @@ var _ = Describe("ProjectService", func() {
 			HealthCheck: &healthcheck,
 			Volumes:     volumes,
 			Extensions:  extensions,
-		}
+		})
+		Expect(err).NotTo(HaveOccurred())
 
 		services := composego.Services{}
-		services = append(services, composego.ServiceConfig(projectService))
+		services = append(services, projectService.ServiceConfig)
 
 		project = composego.Project{
 			Volumes:    projectVolumes,
@@ -97,45 +98,28 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("enabled", func() {
-
-		When("component toggle label is set to Truthy value", func() {
+		When("component toggle extension is set to disable=true", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelComponentEnabled: "true",
-				}
+				k8sconf.Disabled = true
 			})
 
 			It("returns true", func() {
-				Expect(projectService.enabled()).To(BeTrue())
-			})
-		})
-
-		When("component toggle label is set to Falsy value", func() {
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelComponentEnabled: "false",
-				}
-			})
-
-			It("returns false", func() {
 				Expect(projectService.enabled()).To(BeFalse())
 			})
 		})
 
-		When("component toggle label is set to any string value not representing a boolean value (one of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False.)", func() {
+		When("component toggle extension to set disable=false", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelComponentEnabled: "anyrandomstring",
-				}
+				k8sconf.Disabled = false
 			})
 
-			It("returns true", func() {
+			It("returns false", func() {
 				Expect(projectService.enabled()).To(BeTrue())
 			})
 		})
 
-		When("component toggle label is not specified", func() {
-			It("defaults to true if no label", func() {
+		When("component toggle extension is not specified", func() {
+			It("defaults to true", func() {
 				Expect(projectService.enabled()).To(BeTrue())
 			})
 		})
@@ -145,12 +129,10 @@ var _ = Describe("ProjectService", func() {
 
 		replicas := 10
 
-		Context("when provided via label", func() {
+		Context("when provided via extension", func() {
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReplicas: strconv.Itoa(replicas),
-				}
+				k8sconf.Workload.Replicas = replicas
 			})
 
 			It("will use a label value", func() {
@@ -158,12 +140,10 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		Context("when provided via both the label and as part of the project service spec", func() {
+		Context("when provided via both the extension and as part of the project service spec", func() {
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReplicas: strconv.Itoa(replicas),
-				}
+				k8sconf.Workload.Replicas = replicas
 
 				deployBlockReplicas := uint64(2)
 				deploy = &composego.DeployConfig{
@@ -176,8 +156,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		Context("when replicas label not present but specified as part of the project service spec", func() {
-
+		Context("when replicas extension not present but specified as part of the project service spec", func() {
 			replicas := uint64(2)
 
 			BeforeEach(func() {
@@ -187,11 +166,12 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("will use a replica number as specified in deploy block", func() {
+				Expect(projectService.Deploy.Replicas).NotTo(BeNil())
 				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
-		Context("when there is no replicas label supplied nor deploy block contains number of replicas", func() {
+		Context("when there is no replicas extensions supplied nor deploy block contains number of replicas", func() {
 			It("will use default number of replicas", func() {
 				Expect(projectService.replicas()).To(BeEquivalentTo(config.DefaultReplicaNumber))
 			})
@@ -273,13 +253,11 @@ var _ = Describe("ProjectService", func() {
 
 			workloadType := "StatefulSet"
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadType: workloadType,
-				}
+			JustBeforeEach(func() {
+				projectService.K8SConfig.Workload.Type = workloadType
 			})
 
-			It("will use a label value", func() {
+			It("will use a extension value", func() {
 				Expect(projectService.workloadType()).To(Equal(workloadType))
 			})
 		})
@@ -291,20 +269,29 @@ var _ = Describe("ProjectService", func() {
 		})
 
 		Context("when deploy block `mode` defined as `global` and workload type is different than DaemonSet", func() {
-
 			projectWorkloadType := config.StatefulsetWorkload
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadType: projectWorkloadType,
-				}
+			JustBeforeEach(func() {
+				projectService.K8SConfig.Workload.Type = projectWorkloadType
+				m, err := projectService.K8SConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
 
-				deploy = &composego.DeployConfig{
+				svc := projectService.ServiceConfig
+				svc.Deploy = &composego.DeployConfig{
 					Mode: "global",
 				}
+				svc.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
+				}
+
+				projectService, err = NewProjectService(svc)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("warns the user about the mismatch", func() {
+				Expect(projectService.K8SConfig.Workload.Type).To(Equal(projectWorkloadType))
+				Expect(projectService.Deploy.Mode).To(Equal("global"))
+
 				projectService.workloadType()
 				assertLog(logrus.WarnLevel,
 					"Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to StatefulSet",
@@ -978,8 +965,14 @@ var _ = Describe("ProjectService", func() {
 			Context("and defined on the project service directly with no deploy block", func() {
 				policy := config.RestartPolicyNever
 
-				It("returns restart policy defined on the project service level", func() {
+				JustBeforeEach(func() {
 					projectService.Restart = policy
+					ps, err := NewProjectService(projectService.ServiceConfig)
+					Expect(err).NotTo(HaveOccurred())
+					projectService = ps
+				})
+
+				It("returns restart policy defined on the project service level", func() {
 					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 				})
 			})
@@ -1011,8 +1004,7 @@ var _ = Describe("ProjectService", func() {
 					assertLog(logrus.WarnLevel,
 						"Restart policy 'unless-stopped' is not supported, converting it to 'always'",
 						map[string]string{
-							"project-service": projectServiceName,
-							"restart-policy":  policy,
+							"restart-policy": policy,
 						},
 					)
 				})
@@ -1022,10 +1014,19 @@ var _ = Describe("ProjectService", func() {
 			Context("when invalid policy has been provided", func() {
 				policy := "invalid-policy"
 
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadRestartPolicy: policy,
+				JustBeforeEach(func() {
+					projectService.K8SConfig.Workload.RestartPolicy = policy
+					m, err := projectService.K8SConfig.ToMap()
+					Expect(err).NotTo(HaveOccurred())
+
+					svc := projectService.ServiceConfig
+					svc.Extensions = map[string]interface{}{
+						config.K8SExtensionKey: m,
 					}
+
+					projectService, err = NewProjectService(svc)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 				})
 
 				It("warns the user and defaults restart policy to `Always`", func() {
@@ -1158,7 +1159,6 @@ var _ = Describe("ProjectService", func() {
 			retries := uint64(3)
 
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, config.ProbeTypeExec.String())
 				healthcheck = composego.HealthCheckConfig{
 					Test: composego.HealthCheckTest{
 						"CMD-SHELL",
@@ -1177,12 +1177,12 @@ var _ = Describe("ProjectService", func() {
 				Expect(cmp.Diff(result, &v1.Probe{
 					Handler: v1.Handler{
 						Exec: &v1.ExecAction{
-							Command: config.DefaultLivenessProbeCommand,
+							Command: []string{"my command"},
 						},
 					},
 					TimeoutSeconds:      10,
-					PeriodSeconds:       60,
-					InitialDelaySeconds: 60,
+					PeriodSeconds:       10,
+					InitialDelaySeconds: 10,
 					FailureThreshold:    3,
 					SuccessThreshold:    3,
 				})).To(BeEmpty())

@@ -21,6 +21,7 @@
 package kubernetes
 
 import (
+	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 )
 
@@ -52,4 +53,7 @@ type Volumes struct {
 }
 
 // ProjectService is a wrapper type around composego.ServiceConfig
-type ProjectService composego.ServiceConfig
+type ProjectService struct {
+	composego.ServiceConfig
+	K8SConfig config.K8SConfiguration
+}

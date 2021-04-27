@@ -32,42 +32,26 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// enabled returns Bool telling Kev whether app component is enabled/disabled
-func (p *ProjectService) enabled() bool {
-	if val, ok := p.Labels[config.LabelComponentEnabled]; ok {
-		if v, err := strconv.ParseBool(val); err == nil {
-			return v
-		}
-
-		log.WarnfWithFields(log.Fields{
-			"project-service": p.Name,
-			"enabled":         val,
-		}, "Unable to extract Bool value from %s label. Component will remain enabled.",
-			config.LabelComponentEnabled)
+func NewProjectService(svc composego.ServiceConfig) (ProjectService, error) {
+	cfg, err := config.K8SCfgFromCompose(&svc)
+	if err != nil {
+		return ProjectService{}, err
 	}
 
-	return true
+	return ProjectService{
+		ServiceConfig: svc,
+		K8SConfig:     cfg,
+	}, nil
+}
+
+// enabled returns Bool telling Kev whether app component is enabled/disabled
+func (p *ProjectService) enabled() bool {
+	return !p.K8SConfig.Disabled
 }
 
 // replicas returns number of replicas for given project service
 func (p *ProjectService) replicas() int32 {
-	if val, ok := p.Labels[config.LabelWorkloadReplicas]; ok {
-		replicas, err := strconv.Atoi(val)
-		if err != nil {
-			log.WarnfWithFields(log.Fields{
-				"project-service": p.Name,
-				"replicas":        val,
-			}, "Unable to extract integer value from %s label. Defaulting to 1 replica.",
-				config.LabelWorkloadReplicas)
-
-			return config.DefaultReplicaNumber
-		}
-		return int32(replicas)
-	} else if p.Deploy != nil && p.Deploy.Replicas != nil {
-		return int32(*p.Deploy.Replicas)
-	}
-
-	return config.DefaultReplicaNumber
+	return int32(p.K8SConfig.Workload.Replicas)
 }
 
 // autoscaleMaxReplicas returns maximum number of replicas for autoscaler
@@ -132,11 +116,7 @@ func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
 
 // workloadType returns workload type for the project service
 func (p *ProjectService) workloadType() string {
-	workloadType := config.DefaultWorkload
-
-	if val, ok := p.Labels[config.LabelWorkloadType]; ok {
-		workloadType = val
-	}
+	workloadType := p.K8SConfig.Workload.Type
 
 	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
 		log.WarnfWithFields(log.Fields{
@@ -443,28 +423,8 @@ func (p *ProjectService) serviceAccountName() string {
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
 func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 	policy := config.RestartPolicyAlways
-
-	// @step restart policy defined on the compose service
-	if len(p.Restart) > 0 {
-		policy = p.Restart
-	}
-
-	// @step restart policy defined in deploy block
-	if p.Deploy != nil && p.Deploy.RestartPolicy != nil {
-		policy = p.Deploy.RestartPolicy.Condition
-	}
-
-	if policy == "unless-stopped" {
-		log.WarnWithFields(log.Fields{
-			"project-service": p.Name,
-			"restart-policy":  policy,
-		}, "Restart policy 'unless-stopped' is not supported, converting it to 'always'")
-
-		policy = "always"
-	}
-
-	if val, ok := p.Labels[config.LabelWorkloadRestartPolicy]; ok {
-		policy = val
+	if p.K8SConfig.Workload.RestartPolicy != "" {
+		policy = p.K8SConfig.Workload.RestartPolicy
 	}
 
 	restartPolicy, err := getRestartPolicy(p.Name, policy)
@@ -549,7 +509,7 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 }
 
 func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
-	p1 := composego.ServiceConfig(*p)
+	p1 := composego.ServiceConfig(p.ServiceConfig)
 	k8sconf, err := config.K8SCfgFromCompose(&p1)
 	if err != nil {
 		return nil, err
@@ -559,7 +519,7 @@ func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
 }
 
 func (p *ProjectService) ReadinessProbe() (*v1.Probe, error) {
-	p1 := composego.ServiceConfig(*p)
+	p1 := composego.ServiceConfig(p.ServiceConfig)
 	k8sconf, err := config.K8SCfgFromCompose(&p1)
 	if err != nil {
 		return nil, err

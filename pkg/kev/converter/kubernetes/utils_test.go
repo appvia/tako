@@ -190,17 +190,20 @@ var _ = Describe("Utils", func() {
 	})
 
 	Describe("sortServices", func() {
-		s1 := ProjectService{Name: "z"}
-		s2 := ProjectService{Name: "a"}
-		s3 := ProjectService{Name: "c"}
+		s1, err := NewProjectService(composego.ServiceConfig{Name: "z"})
+		Expect(err).NotTo(HaveOccurred())
+		s2, err := NewProjectService(composego.ServiceConfig{Name: "a"})
+		Expect(err).NotTo(HaveOccurred())
+		s3, err := NewProjectService(composego.ServiceConfig{Name: "c"})
+		Expect(err).NotTo(HaveOccurred())
 
 		services := composego.Services{}
 
 		p := composego.Project{
 			Services: append(services,
-				composego.ServiceConfig(s1),
-				composego.ServiceConfig(s2),
-				composego.ServiceConfig(s3),
+				composego.ServiceConfig(s1.ServiceConfig),
+				composego.ServiceConfig(s2.ServiceConfig),
+				composego.ServiceConfig(s3.ServiceConfig),
 			),
 		}
 
@@ -240,13 +243,14 @@ var _ = Describe("Utils", func() {
 		networkNameA := "mynetA"
 		networkNameB := "mynetB"
 
-		projectService := ProjectService{
+		projectService, err := NewProjectService(composego.ServiceConfig{
 			Name: svcName,
 			Networks: map[string]*composego.ServiceNetworkConfig{
 				networkNameA: {},
 				networkNameB: {},
 			},
-		}
+		})
+		Expect(err).NotTo(HaveOccurred())
 
 		It("prepares template metadata labels with service and network policy selectors", func() {
 			l := configLabelsWithNetwork(projectService)
@@ -274,7 +278,7 @@ var _ = Describe("Utils", func() {
 		})
 
 		Context("when project services contain named service", func() {
-			s := ProjectService{
+			s, err := NewProjectService(composego.ServiceConfig{
 				Name: "db",
 				Volumes: []composego.ServiceVolumeConfig{
 					{
@@ -283,10 +287,11 @@ var _ = Describe("Utils", func() {
 						ReadOnly: false,
 					},
 				},
-			}
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			JustBeforeEach(func() {
-				project.Services = append(project.Services, composego.ServiceConfig(s))
+				project.Services = append(project.Services, s.ServiceConfig)
 			})
 
 			Context("and project service doesn't reference volumes from other project services (no VolumesFrom present)", func() {
@@ -300,7 +305,7 @@ var _ = Describe("Utils", func() {
 
 				Context("and the mount path for project volume and dependent volume are the same", func() {
 
-					s2 := ProjectService{
+					s2, err := NewProjectService(composego.ServiceConfig{
 						Name: "other",
 						Volumes: []composego.ServiceVolumeConfig{
 							{
@@ -310,12 +315,13 @@ var _ = Describe("Utils", func() {
 							},
 						},
 						VolumesFrom: []string{s.Name},
-					}
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					JustBeforeEach(func() {
 						project.Services = append(project.Services,
-							composego.ServiceConfig(s),
-							composego.ServiceConfig(s2),
+							s.ServiceConfig,
+							s2.ServiceConfig,
 						)
 					})
 
@@ -327,7 +333,7 @@ var _ = Describe("Utils", func() {
 
 				Context("and the mount path for project volume and dependent volume are different", func() {
 
-					s2 := ProjectService{
+					s2, err := NewProjectService(composego.ServiceConfig{
 						Name: "other",
 						Volumes: []composego.ServiceVolumeConfig{
 							{
@@ -337,12 +343,13 @@ var _ = Describe("Utils", func() {
 							},
 						},
 						VolumesFrom: []string{s.Name},
-					}
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					JustBeforeEach(func() {
 						project.Services = append(project.Services,
-							composego.ServiceConfig(s),
-							composego.ServiceConfig(s2),
+							s.ServiceConfig,
+							s2.ServiceConfig,
 						)
 					})
 
@@ -571,9 +578,10 @@ var _ = Describe("Utils", func() {
 
 	Describe("configAllLabels", func() {
 		svcName := "db"
-		projectService := ProjectService{
+		projectService, err := NewProjectService(composego.ServiceConfig{
 			Name: svcName,
-		}
+		})
+		Expect(err).NotTo(HaveOccurred())
 
 		Context("without any labels defined in deploy block", func() {
 			It("returns a map of labels containing selector only", func() {
@@ -599,12 +607,13 @@ var _ = Describe("Utils", func() {
 		Context("with project service labels present", func() {
 
 			Context("containing kev specific labels", func() {
-				projectService := ProjectService{
+				projectService, err := NewProjectService(composego.ServiceConfig{
 					Labels: composego.Labels{
 						"FOO":                   "BAR",
 						config.LabelServiceType: "value",
 					},
-				}
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				It("returns a map of labels excluding kev control labels", func() {
 					Expect(configAnnotations(projectService)).To(HaveLen(1))
@@ -613,12 +622,13 @@ var _ = Describe("Utils", func() {
 			})
 
 			Context("not containing kev specific labels", func() {
-				projectService := ProjectService{
+				projectService, err := NewProjectService(composego.ServiceConfig{
 					Labels: composego.Labels{
 						"FOO": "BAR",
 						"BAR": "BAZ",
 					},
-				}
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				It("returns a map of labels as expected", func() {
 					Expect(configAnnotations(projectService)).To(HaveLen(2))
