@@ -19,8 +19,7 @@ package config
 const (
 	LabelPrefix = "kev."
 
-	// LabelComponentEnabled toggles the project service component
-	LabelComponentEnabled = LabelPrefix + "component.enabled"
+	// LabelComponentEnabled = LabelPrefix + "component.enabled"
 
 	// LabelWorkloadType defines type of workload controller
 	LabelWorkloadType = LabelPrefix + "workload.type"

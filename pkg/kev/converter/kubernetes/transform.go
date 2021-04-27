@@ -99,7 +99,10 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		stepSvc := sg.Add(fmt.Sprintf("Converting service: %s", pSvc.Name))
 		var objects []runtime.Object
 
-		projectService := ProjectService(pSvc)
+		projectService, err := NewProjectService(pSvc)
+		if err != nil {
+			return nil, err
+		}
 
 		// @step skip disabled services
 		if !projectService.enabled() {
@@ -689,7 +692,6 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 
 // initHpa intialised horizontal pod autoscaler for a project service
 func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Object) *autoscalingv2beta2.HorizontalPodAutoscaler {
-
 	t := reflect.ValueOf(target).Elem()
 	typeMeta := t.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
 	if !contains([]string{"Deployment", "StatefulSet"}, typeMeta.Kind) {
