@@ -605,36 +605,18 @@ var _ = Describe("Utils", func() {
 	Describe("configAnnotations", func() {
 
 		Context("with project service labels present", func() {
-
-			Context("containing kev specific labels", func() {
-				projectService, err := NewProjectService(composego.ServiceConfig{
-					Labels: composego.Labels{
-						"FOO":                   "BAR",
-						config.LabelServiceType: "value",
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				It("returns a map of labels excluding kev control labels", func() {
-					Expect(configAnnotations(projectService)).To(HaveLen(1))
-					Expect(configAnnotations(projectService)).To(HaveKeyWithValue("FOO", "BAR"))
-				})
+			projectService, err := NewProjectService(composego.ServiceConfig{
+				Labels: composego.Labels{
+					"FOO": "BAR",
+					"BAR": "BAZ",
+				},
 			})
+			Expect(err).NotTo(HaveOccurred())
 
-			Context("not containing kev specific labels", func() {
-				projectService, err := NewProjectService(composego.ServiceConfig{
-					Labels: composego.Labels{
-						"FOO": "BAR",
-						"BAR": "BAZ",
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				It("returns a map of labels as expected", func() {
-					Expect(configAnnotations(projectService)).To(HaveLen(2))
-					Expect(configAnnotations(projectService)).To(HaveKeyWithValue("FOO", "BAR"))
-					Expect(configAnnotations(projectService)).To(HaveKeyWithValue("BAR", "BAZ"))
-				})
+			It("returns a map of labels as expected", func() {
+				Expect(configAnnotations(projectService)).To(HaveLen(2))
+				Expect(configAnnotations(projectService)).To(HaveKeyWithValue("FOO", "BAR"))
+				Expect(configAnnotations(projectService)).To(HaveKeyWithValue("BAR", "BAZ"))
 			})
 		})
 	})

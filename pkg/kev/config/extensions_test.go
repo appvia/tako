@@ -134,19 +134,27 @@ var _ = Describe("Extentions", func() {
 				})
 			})
 
-			// TODO: Will re-enable once this code is fixed, for now we're not failing on this.
-			// Context("missing workload type", func() {
-			// 	BeforeEach(func() {
-			// 		k8s.Workload.Replicas = 1
-			// 		k8s.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
-			// 	})
+			Context("missing service type", func() {
+				It("returns error", func() {
+					k8sconf := config.DefaultK8SConfig()
+					k8sconf.Service.Type = ""
 
-			// 	It("returns error", func() {
-			// 		parsedCfg, err = config.K8SCfgFromMap(extensions)
-			// 		Expect(err).To(HaveOccurred())
-			// 		Expect(err.Error()).To(Equal("Workload.Type is required"))
-			// 	})
-			// })
+					err = k8sconf.Validate()
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("K8SConfiguration.Service.Type is required"))
+				})
+			})
+
+			Context("missing workload type", func() {
+				It("returns error", func() {
+					k8sconf := config.DefaultK8SConfig()
+					k8sconf.Workload.Type = ""
+
+					err = k8sconf.Validate()
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("K8SConfiguration.Workload.Type is required"))
+				})
+			})
 		})
 	})
 

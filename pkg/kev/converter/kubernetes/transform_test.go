@@ -76,11 +76,6 @@ var _ = Describe("Transform", func() {
 
 	Describe("Transform", func() {
 		When("service exclusion list is empty", func() {
-			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeType: config.ProbeTypeNone.String(),
-				}
-			})
 
 			It("includes kubernetes objects for project services", func() {
 				objs, err := k.Transform()
@@ -1916,9 +1911,19 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType: config.ProbeTypeNone.String(),
+					k8sconf, err := config.ParseK8SCfgFromMap(project.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+
+					m, err := k8sconf.ToMap()
+					Expect(err).NotTo(HaveOccurred())
+
+					projectService.Extensions = map[string]interface{}{
+						config.K8SExtensionKey: m,
 					}
+
+					projectService, err = NewProjectService(projectService.ServiceConfig)
 				})
 
 				It("doesn't include readiness probe definition in the pod spec", func() {
