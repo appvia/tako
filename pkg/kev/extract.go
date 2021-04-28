@@ -19,7 +19,6 @@ package kev
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
 
@@ -94,12 +93,6 @@ func extractWorkloadResourceRequests(source composego.ServiceConfig, target *Ser
 		value := getMemoryQuantity(int64(source.Deploy.Resources.Reservations.MemoryBytes))
 		target.Labels.Add(config.LabelWorkloadMemory, value)
 	}
-}
-
-// formatSlice formats a string slice as '["value1", "value2", "value3"]'
-func formatSlice(test []string) string {
-	quoted := fmt.Sprintf("[%q]", strings.Join(test, `", "`))
-	return strings.ReplaceAll(quoted, "\\", "")
 }
 
 // GetMemoryQuantity returns memory amount as string in Kubernetes notation
