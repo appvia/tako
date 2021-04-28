@@ -13,7 +13,6 @@ services:
           period: 1m0s
           failureThreashold: 3
           timeout: 10s
-          timeout: 10s
       service:
         type: None
     labels:

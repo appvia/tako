@@ -328,16 +328,20 @@ var _ = Describe("ProjectService", func() {
 
 			Context("with an invalid service value", func() {
 
+				var m map[string]interface{}
 				invalidType := "some-invalid-type"
 
-				It("returns an error", func() {
+				JustBeforeEach(func() {
+					var err error
 					k8sconf := config.K8SConfiguration{}
 					k8sconf.Service.Type = invalidType
 
-					m, err := k8sconf.ToMap()
+					m, err = k8sconf.ToMap()
 					Expect(err).NotTo(HaveOccurred())
+				})
 
-					_, err = NewProjectService(composego.ServiceConfig{
+				It("returns an error", func() {
+					_, err := NewProjectService(composego.ServiceConfig{
 						Name: "some service",
 						Extensions: map[string]interface{}{
 							config.K8SExtensionKey: m,
