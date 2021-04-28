@@ -952,10 +952,10 @@ var _ = Describe("ProjectService", func() {
 
 				projectService, err = NewProjectService(svc)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 			})
 
 			It("returns label value", func() {
+				Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
 				Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 			})
 		})
