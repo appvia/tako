@@ -131,31 +131,15 @@ func (p *ProjectService) workloadType() string {
 
 // serviceType returns service type for project service workload
 func (p *ProjectService) serviceType() (string, error) {
-	sType := config.DefaultService
-
-	if val, ok := p.Labels[config.LabelServiceType]; ok {
-		sType = val
-	} else if p.Deploy != nil && p.Deploy.EndpointMode == "vip" {
-		sType = config.NodePortService
-	}
-
-	serviceType, err := getServiceType(sType)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"project-service": p.Name,
-			"service-type":    sType,
-		}, "Unrecognised k8s service type. Compose project service will not have k8s service generated.")
-
-		return "", fmt.Errorf("`%s` workload service type `%s` not supported", p.Name, sType)
-	}
+	serviceType := p.K8SConfig.Service.Type
 
 	// @step validate whether service type is set properly when node port is specified
-	if !strings.EqualFold(sType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
+	if !strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
 		log.ErrorfWithFields(log.Fields{
 			"project-service": p.Name,
-			"service-type":    sType,
+			"service-type":    serviceType,
 			"nodeport":        p.nodePort(),
-		}, "%s label value must be set as `NodePort` when assiging node port value", config.LabelServiceType)
+		}, "%s label value must be set as `NodePort` when assiging node port value", serviceType)
 
 		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assiging node port value", p.Name)
 	}

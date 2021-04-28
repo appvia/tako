@@ -12,16 +12,10 @@ services:
           period: 1m0s
           failureThreashold: 3
           timeout: 10s
+      service:
+        type: ClusterIP
     labels:
-      kev.service.type: ClusterIP
       kev.workload.cpu: "0.5"
-      kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.liveness-probe-type: exec
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.liveness-probe-initial-delay: 1m0s
-      kev.workload.liveness-probe-interval: 1m0s
-      kev.workload.liveness-probe-retries: "3"
-      kev.workload.liveness-probe-timeout: 10s
       kev.workload.max-cpu: "0.75"
       kev.workload.max-memory: 500Mi
       kev.workload.memory: 50Mi

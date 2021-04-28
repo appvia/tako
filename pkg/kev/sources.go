@@ -48,7 +48,6 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 
 		setDefaultLabels(&target)
 		extractVolumesLabels(ready, s.override)
-		extractLabels(svc, &target)
 
 		k8sConf, err := config.K8SCfgFromCompose(&svc)
 		if err != nil {
