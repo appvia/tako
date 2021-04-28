@@ -12,8 +12,9 @@ services:
           period: 1m0s
           failureThreashold: 3
           timeout: 10s
+      service:
+        type: None
     labels:
-      kev.service.type: None
       kev.workload.cpu: "0.1"
       kev.workload.image-pull-policy: IfNotPresent
       kev.workload.max-cpu: "0.5"

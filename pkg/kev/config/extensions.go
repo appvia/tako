@@ -55,7 +55,7 @@ func (k K8SConfiguration) Merge(other K8SConfiguration) (K8SConfiguration, error
 }
 
 func (k K8SConfiguration) Validate() error {
-	err := validator.New().Struct(k.Workload)
+	err := validator.New().Struct(k)
 	if err != nil {
 		validationErrors := err.(validator.ValidationErrors)
 		for _, e := range validationErrors {
@@ -114,10 +114,11 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
 	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
 	cfg.Workload.RestartPolicy = WorkloadRestartPolicyFromCompose(svc)
-	cfg.Service.Type = NoService
-	if svc.Ports != nil {
-		cfg.Service.Type = ClusterIPService
+	svcType, err := ServiceTypeFromCompose(svc)
+	if err != nil {
+		return K8SConfiguration{}, err
 	}
+	cfg.Service.Type = svcType
 
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
@@ -142,7 +143,7 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
 	serviceType := NoService
 
-	if svc.Ports != nil {
+	if len(svc.Ports) > 0 {
 		serviceType = ClusterIPService
 	}
 

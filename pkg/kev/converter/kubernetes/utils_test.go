@@ -609,8 +609,7 @@ var _ = Describe("Utils", func() {
 			Context("containing kev specific labels", func() {
 				projectService, err := NewProjectService(composego.ServiceConfig{
 					Labels: composego.Labels{
-						"FOO":                   "BAR",
-						config.LabelServiceType: "value",
+						"FOO": "BAR",
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())

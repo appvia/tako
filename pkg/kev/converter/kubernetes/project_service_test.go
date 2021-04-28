@@ -306,13 +306,11 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("serviceType", func() {
 
-		Context("when provided via label", func() {
+		Context("when provided via extension", func() {
 			validType := config.ClusterIPService
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceType: validType,
-				}
+				k8sconf.Service.Type = validType
 			})
 
 			It("returns service type as expected", func() {
@@ -320,7 +318,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		Context("when not specified via label", func() {
+		Context("when not specified via extension", func() {
 			It("returns service type as expected", func() {
 				Expect(projectService.serviceType()).To(Equal(config.DefaultService))
 			})
@@ -332,25 +330,30 @@ var _ = Describe("ProjectService", func() {
 
 				invalidType := "some-invalid-type"
 
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelServiceType: invalidType,
-					}
-				})
-
 				It("returns an error", func() {
-					_, err := projectService.serviceType()
+					k8sconf := config.K8SConfiguration{}
+					k8sconf.Service.Type = invalidType
+
+					m, err := k8sconf.ToMap()
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = NewProjectService(composego.ServiceConfig{
+						Name: "some service",
+						Extensions: map[string]interface{}{
+							config.K8SExtensionKey: m,
+						},
+					})
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(fmt.Sprintf("`%s` workload service type `%s` not supported", projectServiceName, invalidType)))
+					Expect(err.Error()).To(ContainSubstring("K8SConfiguration.Service.Type"))
 				})
 			})
 
-			Context("when node port is specified via label but service type was different that NodePort", func() {
+			Context("when node port is specified via extension but service type was different that NodePort", func() {
 				nodePort := "1234"
 
 				BeforeEach(func() {
+					k8sconf.Service.Type = config.ClusterIPService
 					labels = composego.Labels{
-						config.LabelServiceType:         config.ClusterIPService,
 						config.LabelServiceNodePortPort: nodePort,
 					}
 				})
@@ -366,8 +369,8 @@ var _ = Describe("ProjectService", func() {
 				nodePort := "1234"
 
 				BeforeEach(func() {
+					k8sconf.Service.Type = config.NodePortService
 					labels = composego.Labels{
-						config.LabelServiceType:         config.NodePortService,
 						config.LabelServiceNodePortPort: nodePort,
 					}
 					ports = []composego.ServicePortConfig{
@@ -1200,7 +1203,7 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, config.ProbeTypeExec.String())
+				k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
 			})
 
 			Context("when Test command is not defined", func() {

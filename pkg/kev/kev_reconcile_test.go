@@ -196,12 +196,20 @@ var _ = Describe("Reconcile", func() {
 			Context("and it changes port mode to host", func() {
 				It("confirms the edit pre reconciliation", func() {
 					s, _ := override.GetService("wordpress")
-					Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
+
+					k8sconf, err := config.ParseK8SCfgFromMap(s.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
 				})
 
 				It("should not update the label in all environments", func() {
 					s, _ := env.GetService("wordpress")
-					Expect(s.Labels["kev.service.type"]).To(Equal("LoadBalancer"))
+
+					k8sconf, err := config.ParseK8SCfgFromMap(s.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
 				})
 
 				It("should log the change summary using the debug level", func() {
@@ -426,7 +434,7 @@ var _ = Describe("Reconcile", func() {
 
 			It("confirms environment labels post reconciliation", func() {
 				s, _ := env.GetService("wordpress")
-				Expect(s.GetLabels()).To(HaveLen(16))
+				Expect(s.GetLabels()).To(HaveLen(10))
 			})
 
 			It("should log the change summary using the debug level", func() {
@@ -491,12 +499,12 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should have a valid tcp", func() {
-					labels := env.GetServices()[0].GetLabels()
+					k8sconf, err := config.ParseK8SCfgFromMap(env.GetServices()[0].Extensions)
+					Expect(err).NotTo(HaveOccurred())
 
-					Expect(labels).To(
-						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, config.ProbeTypeTCP.String()))
-					Expect(labels).To(HaveKeyWithValue(config.LabelWorkloadLivenessProbeTCPPort, "8080"))
-					Expect(labels).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
+					Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeTCP.String()))
+					Expect(k8sconf.Workload.LivenessProbe.TCP.Port).To(Equal(8080))
+					Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(BeEmpty())
 				})
 			})
 			Context("liveness and readiness http", func() {
@@ -507,23 +515,26 @@ var _ = Describe("Reconcile", func() {
 
 				It("should have a valid http liveness probe", func() {
 					svcCfg, err := env.GetService("db")
-					Expect(err).To(Succeed())
-					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadLivenessProbeType, config.ProbeTypeHTTP.String()))
-					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPort, "8080"))
-					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadLivenessProbeHTTPPath, "/status"))
-					Expect(svcCfg.GetLabels()).NotTo(HaveKey(config.LabelWorkloadLivenessProbeCommand))
+					Expect(err).NotTo(HaveOccurred())
+
+					k8sconf, err := config.ParseK8SCfgFromMap(svcCfg.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
+					Expect(k8sconf.Workload.LivenessProbe.HTTP.Port).To(Equal(8080))
+					Expect(k8sconf.Workload.LivenessProbe.HTTP.Path).To(Equal("/status"))
+					Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(BeEmpty())
 				})
 
 				It("should have a valid http readiness probe", func() {
 					svcCfg, err := env.GetService("wordpress")
-					Expect(err).To(Succeed())
-					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadReadinessProbeType, config.ProbeTypeHTTP.String()))
-					Expect(svcCfg.GetLabels()).To(
-						HaveKeyWithValue(config.LabelWorkloadReadinessProbeHTTPPort, "8080"))
+					Expect(err).NotTo(HaveOccurred())
+
+					k8sconf, err := config.ParseK8SCfgFromMap(svcCfg.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8sconf.Workload.ReadinessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
+					Expect(k8sconf.Workload.ReadinessProbe.HTTP.Port).To(Equal(8080))
 				})
 			})
 		})
