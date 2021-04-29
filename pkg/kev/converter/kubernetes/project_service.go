@@ -366,33 +366,12 @@ func (p *ProjectService) fsGroup() string {
 
 // imagePullPolicy returns image PullPolicy for project service
 func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
-	policy := config.DefaultImagePullPolicy
-
-	if val, ok := p.Labels[config.LabelWorkloadImagePullPolicy]; ok {
-		policy = val
-	}
-
-	pullPolicy, err := getImagePullPolicy(p.Name, policy)
-	if err != nil {
-		log.WarnfWithFields(log.Fields{
-			"project-service":   p.Name,
-			"image-pull-policy": policy,
-		}, "Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.",
-			config.LabelWorkloadImagePullPolicy)
-
-		return v1.PullPolicy(config.DefaultImagePullPolicy)
-	}
-
-	return pullPolicy
+	return v1.PullPolicy(p.K8SConfig.Workload.ImagePull.Policy)
 }
 
 // imagePullSecret returns image pull secret (for private registries)
 func (p *ProjectService) imagePullSecret() string {
-	if val, ok := p.Labels[config.LabelWorkloadImagePullSecret]; ok {
-		return val
-	}
-
-	return config.DefaultImagePullSecret
+	return p.K8SConfig.Workload.ImagePull.Secret
 }
 
 // serviceAccountName returns service account name to be used by the pod

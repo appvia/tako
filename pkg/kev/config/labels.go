@@ -53,10 +53,10 @@ const (
 	LabelWorkloadSecurityContextFsGroup = LabelPrefix + "workload.pod-security-fs-group"
 
 	// LabelWorkloadImagePullPolicy defines when to pull images from registry
-	LabelWorkloadImagePullPolicy = LabelPrefix + "workload.image-pull-policy"
+	// LabelWorkloadImagePullPolicy = LabelPrefix + "workload.image-pull-policy"
 
 	// LabelWorkloadImagePullSecret defines docker registry image pull secret
-	LabelWorkloadImagePullSecret = LabelPrefix + "workload.image-pull-secret"
+	// LabelWorkloadImagePullSecret = LabelPrefix + "workload.image-pull-secret"
 
 	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
 	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
