@@ -33,7 +33,7 @@ import (
 )
 
 func NewProjectService(svc composego.ServiceConfig) (ProjectService, error) {
-	cfg, err := config.K8SCfgFromCompose(&svc)
+	cfg, err := config.K8sSvcFromCompose(&svc)
 	if err != nil {
 		return ProjectService{}, err
 	}
@@ -472,7 +472,7 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 
 func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
 	p1 := composego.ServiceConfig(p.ServiceConfig)
-	k8sconf, err := config.K8SCfgFromCompose(&p1)
+	k8sconf, err := config.K8sSvcFromCompose(&p1)
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +482,7 @@ func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
 
 func (p *ProjectService) ReadinessProbe() (*v1.Probe, error) {
 	p1 := composego.ServiceConfig(p.ServiceConfig)
-	k8sconf, err := config.K8SCfgFromCompose(&p1)
+	k8sconf, err := config.K8sSvcFromCompose(&p1)
 	if err != nil {
 		return nil, err
 	}

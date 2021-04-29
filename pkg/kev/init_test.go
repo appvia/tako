@@ -223,7 +223,7 @@ var _ = Describe("InitRunner", func() {
 			It("should include default config params", func() {
 				svc, _ := env.GetService("db")
 
-				k8sconf, err := config.ParseK8SCfgFromMap(svc.Extensions)
+				k8sconf, err := config.ParseK8sSvcFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(svc.GetLabels()).To(BeEmpty())

@@ -1898,7 +1898,7 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
-					k8sconf := config.DefaultK8SConfig()
+					k8sconf := config.DefaultK8sSvc()
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
 					k8sconf.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
 					k8sconf.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
@@ -1920,7 +1920,7 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					k8sconf, err := config.ParseK8SCfgFromMap(project.Extensions)
+					k8sconf, err := config.ParseK8sSvcFromMap(project.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()

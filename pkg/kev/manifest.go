@@ -207,7 +207,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 
 func validateExtensions(services Services) error {
 	for _, s := range services {
-		_, err := config.ParseK8SCfgFromMap(s.Extensions, config.RequireExtensions())
+		_, err := config.ParseK8sSvcFromMap(s.Extensions, config.RequireExtensions())
 		if err != nil {
 			return errors.Wrapf(err, "%s extensions not valid for service %s", config.K8SExtensionKey, s.Name)
 		}
