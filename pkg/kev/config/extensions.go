@@ -139,7 +139,7 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 		return K8SConfiguration{}, err
 	}
 
-	resource, err := ResourcesFromCompose(svc)
+	resource, err := ResourceFromCompose(svc)
 	if err != nil {
 		return K8SConfiguration{}, err
 	}
@@ -158,20 +158,26 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	return cfg, nil
 }
 
-func ResourcesFromCompose(svc *composego.ServiceConfig) (Resource, error) {
+func ResourceFromCompose(svc *composego.ServiceConfig) (Resource, error) {
 	var memLimit string
+	var cpuLimit string
 	if svc.Deploy != nil && svc.Deploy.Resources.Limits != nil {
 		memLimit = getMemoryQuantity(int64(svc.Deploy.Resources.Limits.MemoryBytes))
+		cpuLimit = svc.Deploy.Resources.Limits.NanoCPUs
 	}
 
 	var memRequest string
+	var cpuRequest string
 	if svc.Deploy != nil && svc.Deploy.Resources.Reservations != nil {
 		memRequest = getMemoryQuantity(int64(svc.Deploy.Resources.Reservations.MemoryBytes))
+		cpuRequest = svc.Deploy.Resources.Reservations.NanoCPUs
 	}
 
 	return Resource{
 		MaxMemory: memLimit,
 		Memory:    memRequest,
+		CPU:       cpuRequest,
+		MaxCPU:    cpuLimit,
 	}, nil
 }
 
@@ -388,6 +394,8 @@ type Workload struct {
 type Resource struct {
 	Memory    string `yaml:"memory,omitempty"`
 	MaxMemory string `yaml:"maxMemory,omitempty"`
+	CPU       string `yaml:"cpu,omitempty"`
+	MaxCPU    string `yaml:"maxCpu,omitempty"`
 }
 
 type ImagePull struct {

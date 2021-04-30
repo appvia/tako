@@ -299,7 +299,7 @@ func (p *ProjectService) resourceRequests() (*int64, *int64) {
 		memRequest, _ = v.AsInt64()
 	}
 
-	if val, ok := p.Labels[config.LabelWorkloadCPU]; ok {
+	if val := p.K8SConfig.Workload.Resource.CPU; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		cpuRequest = v.ToDec().MilliValue()
 	}
@@ -328,7 +328,7 @@ func (p *ProjectService) resourceLimits() (*int64, *int64) {
 		memLimit, _ = v.AsInt64()
 	}
 
-	if val, ok := p.Labels[config.LabelWorkloadMaxCPU]; ok {
+	if val := p.K8SConfig.Workload.Resource.MaxCPU; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		cpuLimit = v.ToDec().MilliValue()
 	}
