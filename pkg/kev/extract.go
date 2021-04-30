@@ -57,8 +57,6 @@ func extractVolumesLabels(c *ComposeProject, out *composeOverride) {
 //TODO: Remove once all functions have been moved over.
 // extractDeploymentLabels extracts deployment related into a label's Service.
 func extractDeploymentLabels(source composego.ServiceConfig, target *ServiceConfig) {
-	extractWorkloadResourceRequests(source, target)
-	extractWorkloadResourceLimits(source, target)
 	extractWorkloadRollingUpdatePolicy(source, target)
 }
 
@@ -67,19 +65,5 @@ func extractWorkloadRollingUpdatePolicy(source composego.ServiceConfig, target *
 	if source.Deploy != nil && source.Deploy.UpdateConfig != nil {
 		value := strconv.FormatUint(*source.Deploy.UpdateConfig.Parallelism, 10)
 		target.Labels.Add(config.LabelWorkloadRollingUpdateMaxSurge, value)
-	}
-}
-
-// extractWorkloadResourceLimits extracts deployment's resource limits.
-func extractWorkloadResourceLimits(source composego.ServiceConfig, target *ServiceConfig) {
-	if source.Deploy != nil && source.Deploy.Resources.Limits != nil {
-		target.Labels.Add(config.LabelWorkloadMaxCPU, source.Deploy.Resources.Limits.NanoCPUs)
-	}
-}
-
-// extractWorkloadResourceRequests extracts deployment's resource requests.
-func extractWorkloadResourceRequests(source composego.ServiceConfig, target *ServiceConfig) {
-	if source.Deploy != nil && source.Deploy.Resources.Reservations != nil {
-		target.Labels.Add(config.LabelWorkloadCPU, source.Deploy.Resources.Reservations.NanoCPUs)
 	}
 }

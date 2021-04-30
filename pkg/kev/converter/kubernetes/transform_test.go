@@ -2063,9 +2063,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu request provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadCPU: "0.1",
+				k8sconf := config.DefaultK8SConfig()
+				k8sconf.Workload.Resource.CPU = "0.1"
+
+				ext, err := k8sconf.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container cpu request as expected", func() {
@@ -2076,9 +2083,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu limit provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadMaxCPU: "0.5",
+				k8sconf := config.DefaultK8SConfig()
+				k8sconf.Workload.Resource.MaxCPU = "0.5"
+
+				ext, err := k8sconf.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container cpu limit as expected", func() {
