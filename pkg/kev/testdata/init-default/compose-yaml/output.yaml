@@ -25,6 +25,9 @@ services:
           timeout: 10s
           type: none
         replicas: 1
+        resource:
+          maxMemory: 500Mi
+          memory: 10Mi
         restartPolicy: always
         type: StatefulSet
 volumes:

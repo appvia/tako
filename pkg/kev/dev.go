@@ -200,6 +200,10 @@ func (r *DevRunner) Watch(change chan<- string) error {
 
 	files := manifest.GetSourcesFiles()
 	filteredEnvs, err := manifest.GetEnvironments(r.config.Envs)
+	if err != nil {
+		return err
+	}
+
 	for _, e := range filteredEnvs {
 		files = append(files, e.File)
 	}
