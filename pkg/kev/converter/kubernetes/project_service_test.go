@@ -873,7 +873,7 @@ var _ = Describe("ProjectService", func() {
 					Extensions: extensions,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("K8SConfiguration.Workload.ImagePull.Policy"))
+				Expect(err.Error()).To(ContainSubstring("K8sSvc.Workload.ImagePull.Policy"))
 			})
 		})
 	})

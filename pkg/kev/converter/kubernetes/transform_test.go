@@ -132,7 +132,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with imaged pull secret specified via labels", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultK8sSvc()
 				k8sconf.Workload.ImagePull.Secret = "my-pp-secret"
 
 				m, err := k8sconf.ToMap()
