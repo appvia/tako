@@ -40,18 +40,18 @@ func NewProjectService(svc composego.ServiceConfig) (ProjectService, error) {
 
 	return ProjectService{
 		ServiceConfig: svc,
-		K8SConfig:     cfg,
+		K8sSvc:        cfg,
 	}, nil
 }
 
 // enabled returns Bool telling Kev whether app component is enabled/disabled
 func (p *ProjectService) enabled() bool {
-	return !p.K8SConfig.Disabled
+	return !p.K8sSvc.Disabled
 }
 
 // replicas returns number of replicas for given project service
 func (p *ProjectService) replicas() int32 {
-	return int32(p.K8SConfig.Workload.Replicas)
+	return int32(p.K8sSvc.Workload.Replicas)
 }
 
 // autoscaleMaxReplicas returns maximum number of replicas for autoscaler
@@ -116,7 +116,7 @@ func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
 
 // workloadType returns workload type for the project service
 func (p *ProjectService) workloadType() string {
-	workloadType := p.K8SConfig.Workload.Type
+	workloadType := p.K8sSvc.Workload.Type
 
 	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
 		log.WarnfWithFields(log.Fields{
@@ -131,7 +131,7 @@ func (p *ProjectService) workloadType() string {
 
 // serviceType returns service type for project service workload
 func (p *ProjectService) serviceType() (string, error) {
-	serviceType := p.K8SConfig.Service.Type
+	serviceType := p.K8sSvc.Service.Type
 
 	// @step validate whether service type is set properly when node port is specified
 	if !strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
@@ -200,12 +200,12 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 		return nil
 	}
 
-	config := p.Deploy.UpdateConfig
+	cfg := p.Deploy.UpdateConfig
 	r := v1apps.RollingUpdateDeployment{}
 
-	if config.Order == "stop-first" {
-		if config.Parallelism != nil {
-			maxUnavailable := intstr.FromInt(cast.ToInt(*config.Parallelism))
+	if cfg.Order == "stop-first" {
+		if cfg.Parallelism != nil {
+			maxUnavailable := intstr.FromInt(cast.ToInt(*cfg.Parallelism))
 			r.MaxUnavailable = &maxUnavailable
 		}
 
@@ -214,9 +214,9 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 		return &r
 	}
 
-	if config.Order == "start-first" {
-		if config.Parallelism != nil {
-			maxSurge := intstr.FromInt(cast.ToInt(*config.Parallelism))
+	if cfg.Order == "start-first" {
+		if cfg.Parallelism != nil {
+			maxSurge := intstr.FromInt(cast.ToInt(*cfg.Parallelism))
 			r.MaxSurge = &maxSurge
 		}
 		maxUnavailable := intstr.FromInt(0)
@@ -237,30 +237,17 @@ func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) 
 	}
 
 	for i, vol := range vols {
-		size, selector, storageClass := getVolumeLabels(project.Volumes[vol.VolumeName])
+		composeVol := project.Volumes[vol.VolumeName]
+		k8sVol, err := config.K8sVolFromCompose(&composeVol)
+		if err != nil {
+			return nil, err
+		}
 
 		// We can't assign value to struct field in map while iterating over it, so temporary variable `temp` is used here
 		var temp = vols[i]
-
-		// set PVC size from label if present, or default size
-		if len(size) > 0 {
-			temp.PVCSize = size
-		} else {
-			temp.PVCSize = config.DefaultVolumeSize
-		}
-
-		// set PVC selector from label if present
-		if len(selector) > 0 {
-			temp.SelectorValue = selector
-		}
-
-		// set PVC storage class from label if present, or default class
-		if len(storageClass) > 0 {
-			temp.StorageClass = storageClass
-		} else {
-			temp.StorageClass = config.DefaultVolumeStorageClass
-		}
-
+		temp.PVCSize = k8sVol.Size
+		temp.SelectorValue = k8sVol.Selector
+		temp.StorageClass = k8sVol.StorageClass
 		vols[i] = temp
 	}
 
@@ -365,12 +352,12 @@ func (p *ProjectService) fsGroup() string {
 
 // imagePullPolicy returns image PullPolicy for project service
 func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
-	return v1.PullPolicy(p.K8SConfig.Workload.ImagePull.Policy)
+	return v1.PullPolicy(p.K8sSvc.Workload.ImagePull.Policy)
 }
 
 // imagePullSecret returns image pull secret (for private registries)
 func (p *ProjectService) imagePullSecret() string {
-	return p.K8SConfig.Workload.ImagePull.Secret
+	return p.K8sSvc.Workload.ImagePull.Secret
 }
 
 // serviceAccountName returns service account name to be used by the pod
@@ -385,8 +372,8 @@ func (p *ProjectService) serviceAccountName() string {
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
 func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 	policy := config.RestartPolicyAlways
-	if p.K8SConfig.Workload.RestartPolicy != "" {
-		policy = p.K8SConfig.Workload.RestartPolicy
+	if p.K8sSvc.Workload.RestartPolicy != "" {
+		policy = p.K8sSvc.Workload.RestartPolicy
 	}
 
 	restartPolicy, err := getRestartPolicy(p.Name, policy)

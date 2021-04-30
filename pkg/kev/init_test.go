@@ -231,6 +231,7 @@ var _ = Describe("InitRunner", func() {
 				Expect(k8sconf.Workload.Replicas).NotTo(BeZero())
 			})
 		})
+
 		Context("with volumes", func() {
 			It("should include a subset of labels as config params", func() {
 				vol, _ := env.GetVolume("db_data")

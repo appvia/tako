@@ -25,37 +25,48 @@ import (
 
 var _ = Describe("Volume Extensions", func() {
 	var (
-		composeVol composego.VolumeConfig
-		extVolCfg  map[string]interface{}
+		composeVol    composego.VolumeConfig
+		composeVolExt map[string]interface{}
+		composeVolCfg map[string]interface{}
 	)
 
-	Context("simple load", func() {
+	Context("load", func() {
 		BeforeEach(func() {
-			extVolCfg = map[string]interface{}{
+			composeVolCfg = map[string]interface{}{
 				"storageClass": "ssd",
 				"size":         "10Gi",
 				"selector":     "my-volume-selector-label",
 			}
-			composeVol.Extensions = map[string]interface{}{config.K8SExtensionKey: extVolCfg}
+			composeVol.Extensions = map[string]interface{}{config.K8SExtensionKey: composeVolCfg}
+			composeVolExt = composeVol.Extensions[config.K8SExtensionKey].(map[string]interface{})
 		})
 
 		It("loads the extension from a compose-go volume config", func() {
 			cfg, err := config.K8sVolFromCompose(&composeVol)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cfg.Map()).To(Equal(extVolCfg))
+			Expect(cfg.Map()).To(Equal(composeVolCfg))
 		})
 
 		It("compensates from missing values with defaults", func() {
-			delete(composeVol.Extensions[config.K8SExtensionKey].(map[string]interface{}), "storageClass")
-			delete(composeVol.Extensions[config.K8SExtensionKey].(map[string]interface{}), "size")
+			delete(composeVolExt, "storageClass")
+			delete(composeVolExt, "size")
 
-			cfg, err := config.K8sVolFromCompose(&composeVol)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cfg.Map()).To(Equal(map[string]interface{}{
+			expected := map[string]interface{}{
 				"storageClass": config.DefaultVolumeStorageClass,
 				"size":         config.DefaultVolumeSize,
 				"selector":     "my-volume-selector-label",
-			}))
+			}
+
+			cfg, err := config.K8sVolFromCompose(&composeVol)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cfg.Map()).To(Equal(expected))
+		})
+
+		It("validates values", func() {
+			composeVolExt["size"] = "10Gbs"
+			_, err := config.K8sVolFromCompose(&composeVol)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid, use a resource quantity format"))
 		})
 	})
 })

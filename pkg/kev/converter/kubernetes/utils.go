@@ -42,7 +42,7 @@ import (
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -96,7 +96,12 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			log.Error("Error creating output file")
 			return err
 		}
-		defer f.Close()
+		defer func(f *os.File) {
+			err := f.Close()
+			if err != nil {
+				log.Error("Error closing output file")
+			}
+		}(f)
 	}
 
 	var files []string
@@ -226,7 +231,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 		file = fmt.Sprintf("%s-%s.yaml", name, trailing)
 	}
 	if toStdout {
-		fmt.Fprintf(os.Stdout, "%s\n", string(data))
+		_, _ = fmt.Fprintf(os.Stdout, "%s\n", string(data))
 		return "", nil
 	} else if f != nil {
 		// Write all content to a single file f
@@ -234,7 +239,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 			log.Error("Couldn't write manifests content to a single file")
 			return "", err
 		}
-		f.Sync()
+		_ = f.Sync()
 	} else {
 		// Write content separately to each file
 		file = filepath.Join(path, file)
@@ -320,7 +325,12 @@ func isDir(name string) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Error("error closing a file.")
+		}
+	}(f)
 
 	// Get file attributes and information
 	fileStat, err := f.Stat()
@@ -889,24 +899,6 @@ func checkVolDependent(dv Volumes, volumes []Volumes) bool {
 	return true
 }
 
-// getVolumeLabels returns size and selector if present in volume labels
-// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L559
-func getVolumeLabels(volume composego.VolumeConfig) (string, string, string) {
-	size, selector, storageClass := "", "", ""
-
-	for key, value := range volume.Labels {
-		if key == config.LabelVolumeSize {
-			size = value
-		} else if key == config.LabelVolumeSelector {
-			selector = value
-		} else if key == config.LabelVolumeStorageClass {
-			storageClass = value
-		}
-	}
-
-	return size, selector, storageClass
-}
-
 // useSubPathMount check if a configmap should be mounted as subpath
 // in this situation, this configmap will only contains 1 key in data
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L339
@@ -965,22 +957,22 @@ func contains(strs []string, s string) bool {
 
 // runtimeObjectConvertToTarget converts runtime object into a target
 func runtimeObjectConvertToTarget(o runtime.Object, target interface{}) error {
-	unstructured, err := ToUnstructured(o)
+	raw, err := ToUnstructured(o)
 	if err != nil {
 		return err
 	}
 
-	return FromUnstructured(unstructured, target)
+	return FromUnstructured(raw, target)
 }
 
 // ToUnstructured converts runtime.Object to unstructured map[string]interface{}
 func ToUnstructured(o runtime.Object) (map[string]interface{}, error) {
-	unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
+	raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
 	if err != nil {
 		return nil, err
 	}
 
-	return unstructured, nil
+	return raw, nil
 }
 
 // FromUnstructured converts unstructured to target object

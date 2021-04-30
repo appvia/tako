@@ -76,6 +76,13 @@ func (k K8sVol) Validate() error {
 			if e.Tag() == "required" {
 				return fmt.Errorf("%s is required", e.StructNamespace())
 			}
+
+			if e.Tag() == "quantity" {
+				return fmt.Errorf(
+					"%s is invalid, use a resource quantity format, e.g. 129M, 10Gi, 123Mi",
+					e.StructNamespace(),
+				)
+			}
 		}
 		return errors.New(validationErrors[0].Error())
 	}
@@ -98,7 +105,17 @@ func K8sVolFromCompose(vol *composego.VolumeConfig) (K8sVol, error) {
 	if err != nil {
 		return K8sVol{}, err
 	}
-	return cfg.Merge(volFromMap)
+
+	cfg, err = cfg.Merge(volFromMap)
+	if err != nil {
+		return K8sVol{}, err
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return K8sVol{}, err
+	}
+
+	return cfg, nil
 }
 
 // ParseK8sVolFromMap parses a volume extension from the related map
@@ -127,6 +144,5 @@ func ParseK8sVolFromMap(m map[string]interface{}) (K8sVol, error) {
 // https://github.com/kubernetes/community/blob/master/contributors/design-proposals/scheduling/resources.md#resource-quantities
 func validateResourceQuantity(fl validator.FieldLevel) bool {
 	quantity := fl.Field().String()
-	result := resourceQuantityRegex.MatchString(quantity)
-	return !result
+	return resourceQuantityRegex.MatchString(quantity)
 }

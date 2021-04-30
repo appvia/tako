@@ -32,7 +32,7 @@ import (
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -988,7 +988,7 @@ var _ = Describe("Transform", func() {
 
 					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
 						BeforeEach(func() {
-							projectService.K8SConfig.Workload.Replicas = 10
+							projectService.K8sSvc.Workload.Replicas = 10
 
 							projectService.Labels = composego.Labels{
 								config.LabelWorkloadAutoscaleMaxReplicas: "5",
