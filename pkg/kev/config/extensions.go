@@ -80,6 +80,9 @@ func DefaultK8SConfig() K8SConfiguration {
 			ReadinessProbe: DefaultReadinessProbe(),
 			Replicas:       1,
 			RestartPolicy:  RestartPolicyAlways,
+			ImagePull: ImagePull{
+				Policy: DefaultImagePullPolicy,
+			},
 		},
 		Service: Service{
 			Type: "None",
@@ -123,6 +126,13 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
 
+	imagePull, err := ImagePullFromCompose(svc)
+	if err != nil {
+		return K8SConfiguration{}, err
+	}
+
+	cfg.Workload.ImagePull = imagePull
+
 	k8sext, err := ParseK8SCfgFromMap(svc.Extensions, DisableValidation())
 	if err != nil {
 		return K8SConfiguration{}, err
@@ -138,6 +148,13 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	}
 
 	return cfg, nil
+}
+
+func ImagePullFromCompose(svc *composego.ServiceConfig) (ImagePull, error) {
+	return ImagePull{
+		Policy: DefaultImagePullPolicy,
+		Secret: DefaultImagePullSecret,
+	}, nil
 }
 
 func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
@@ -309,6 +326,12 @@ type Workload struct {
 	LivenessProbe  LivenessProbe  `yaml:"livenessProbe" validate:"required"`
 	ReadinessProbe ReadinessProbe `yaml:"readinessProbe,omitempty"`
 	RestartPolicy  string         `yaml:"restartPolicy,omitempty"`
+	ImagePull      ImagePull      `yaml:"imagePull,omitempty"`
+}
+
+type ImagePull struct {
+	Policy string `yaml:"policy,omitempty" validate:"oneof='' IfNotPresent Never Always"`
+	Secret string `yaml:"secret,omitempty"`
 }
 
 // Service will hold the service specific extensions in the future.

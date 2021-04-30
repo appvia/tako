@@ -6,6 +6,8 @@ services:
       service:
         type: None
       workload:
+        imagePull:
+          policy: IfNotPresent
         livenessProbe:
           exec:
             command:
