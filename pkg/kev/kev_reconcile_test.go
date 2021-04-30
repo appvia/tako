@@ -247,6 +247,8 @@ var _ = Describe("Reconcile", func() {
 						},
 						Workload: config.Workload{
 							Resource: config.Resource{
+								CPU:       "0.1",
+								MaxCPU:    "0.5",
 								Memory:    "10Mi",
 								MaxMemory: "500Mi",
 							},
@@ -287,6 +289,8 @@ var _ = Describe("Reconcile", func() {
 							Replicas:      3,
 							RestartPolicy: "always",
 							Resource: config.Resource{
+								CPU:       "0.25",
+								MaxCPU:    "0.25",
 								Memory:    "20Mi",
 								MaxMemory: "50Mi",
 							},
@@ -317,6 +321,8 @@ var _ = Describe("Reconcile", func() {
 							Resource: config.Resource{
 								Memory:    "10Mi",
 								MaxMemory: "500Mi",
+								CPU:       "0.1",
+								MaxCPU:    "0.5",
 							},
 						},
 						Service: config.Service{

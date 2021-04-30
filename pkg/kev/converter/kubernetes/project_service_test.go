@@ -690,9 +690,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and CPU request is specified via label", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadCPU: "0.2",
-					}
+					k8sconf.Workload.Resource.CPU = "0.2"
 				})
 
 				It("returns CPU request as defined by the label value ", func() {
@@ -747,9 +745,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and CPU limit is specified via label", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadMaxCPU: "0.2",
-					}
+					k8sconf.Workload.Resource.MaxCPU = "0.2"
 				})
 
 				It("returns CPU limit as defined by the label value ", func() {

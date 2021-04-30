@@ -26,6 +26,8 @@ services:
           type: none
         replicas: 1
         resource:
+          cpu: "0.1"
+          maxCpu: "0.5"
           maxMemory: 500Mi
           memory: 10Mi
         restartPolicy: always
