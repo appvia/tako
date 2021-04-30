@@ -550,6 +550,9 @@ func newDefaultServiceExtensions(name string, k8sconfs ...config.K8SConfiguratio
 			Type:           config.DefaultWorkload,
 			Replicas:       config.DefaultReplicaNumber,
 			RestartPolicy:  "always",
+			ImagePull: config.ImagePull{
+				Policy: config.DefaultImagePullPolicy,
+			},
 		},
 	}
 
