@@ -31,18 +31,6 @@ const (
 	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
 	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
 
-	// LabelWorkloadMemory defines Memory request for workload
-	// LabelWorkloadMemory = LabelPrefix + "workload.memory"
-
-	// LabelWorkloadCPU defines CPU request for workload
-	LabelWorkloadCPU = LabelPrefix + "workload.cpu"
-
-	// LabelWorkloadMaxMemory defines max Memory limit for workload
-	// LabelWorkloadMaxMemory = LabelPrefix + "workload.max-memory"
-
-	// LabelWorkloadMaxCPU defines max CPU limit for workload
-	LabelWorkloadMaxCPU = LabelPrefix + "workload.max-cpu"
-
 	// LabelWorkloadSecurityContextRunAsUser sets pod security context RunAsUser attribute
 	LabelWorkloadSecurityContextRunAsUser = LabelPrefix + "workload.pod-security-run-as-user"
 
