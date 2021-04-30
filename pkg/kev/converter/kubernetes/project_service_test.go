@@ -850,9 +850,7 @@ var _ = Describe("ProjectService", func() {
 			policy := "Always"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadImagePullPolicy: policy,
-				}
+				k8sconf.Workload.ImagePull.Policy = policy
 			})
 
 			It("returns label value", func() {
@@ -868,23 +866,22 @@ var _ = Describe("ProjectService", func() {
 
 		Context("for invalid image pull policy", func() {
 			policy := "invalid-policy-name"
+			extensions := make(map[string]interface{})
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadImagePullPolicy: policy,
-				}
+			JustBeforeEach(func() {
+				k8sconf.Workload.ImagePull.Policy = policy
+				m, err := k8sconf.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				extensions[config.K8SExtensionKey] = m
 			})
 
 			It("warn the user and returns default value", func() {
-				Expect(projectService.imagePullPolicy()).To(Equal(v1.PullPolicy(config.DefaultImagePullPolicy)))
-
-				assertLog(logrus.WarnLevel,
-					fmt.Sprintf("Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.", config.LabelWorkloadImagePullPolicy),
-					map[string]string{
-						"project-service":   projectServiceName,
-						"image-pull-policy": policy,
-					},
-				)
+				_, err := NewProjectService(composego.ServiceConfig{
+					Extensions: extensions,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("K8SConfiguration.Workload.ImagePull.Policy"))
 			})
 		})
 	})
@@ -895,9 +892,7 @@ var _ = Describe("ProjectService", func() {
 			secret := "image-pull-secret"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadImagePullSecret: secret,
-				}
+				k8sconf.Workload.ImagePull.Secret = secret
 			})
 
 			It("returns label value", func() {

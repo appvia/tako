@@ -28,7 +28,6 @@ import (
 
 // setDefaultLabels sets sensible workload defaults as labels.
 func setDefaultLabels(target *ServiceConfig) {
-	target.Labels.Add(config.LabelWorkloadImagePullPolicy, config.DefaultImagePullPolicy)
 	target.Labels.Add(config.LabelWorkloadServiceAccountName, config.DefaultServiceAccountName)
 }
 

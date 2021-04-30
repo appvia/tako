@@ -132,9 +132,18 @@ var _ = Describe("Transform", func() {
 
 		Context("with imaged pull secret specified via labels", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadImagePullSecret: "my-pp-secret",
+				k8sconf := config.DefaultK8SConfig()
+				k8sconf.Workload.ImagePull.Secret = "my-pp-secret"
+
+				m, err := k8sconf.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("uses passed image pull secret in the spec", func() {
