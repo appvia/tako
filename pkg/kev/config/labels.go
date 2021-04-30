@@ -32,13 +32,13 @@ const (
 	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
 
 	// LabelWorkloadMemory defines Memory request for workload
-	LabelWorkloadMemory = LabelPrefix + "workload.memory"
+	// LabelWorkloadMemory = LabelPrefix + "workload.memory"
 
 	// LabelWorkloadCPU defines CPU request for workload
 	LabelWorkloadCPU = LabelPrefix + "workload.cpu"
 
 	// LabelWorkloadMaxMemory defines max Memory limit for workload
-	LabelWorkloadMaxMemory = LabelPrefix + "workload.max-memory"
+	// LabelWorkloadMaxMemory = LabelPrefix + "workload.max-memory"
 
 	// LabelWorkloadMaxCPU defines max CPU limit for workload
 	LabelWorkloadMaxCPU = LabelPrefix + "workload.max-cpu"

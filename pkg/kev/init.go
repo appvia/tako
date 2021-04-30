@@ -131,7 +131,7 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 		return &Sources{Files: r.config.ComposeSources}, nil
 	}
 
-	s := sg.Add(fmt.Sprintf("Scanning for compose configuration"))
+	s := sg.Add("Scanning for compose configuration")
 	defaults, err := findDefaultComposeFiles(r.WorkingDir)
 	if err != nil {
 		initStepError(r.UI, s, initStepComposeSource, err)

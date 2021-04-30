@@ -102,9 +102,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 // MarshalYAML makes Sources implement yaml.Marshaler.
 func (s *Sources) MarshalYAML() (interface{}, error) {
 	var out []string
-	for _, f := range s.Files {
-		out = append(out, f)
-	}
+	out = append(out, s.Files...)
 	return out, nil
 }
 
@@ -134,16 +132,4 @@ func (s *Sources) getWorkingDir() string {
 
 func (s *Sources) toComposeProject() (*ComposeProject, error) {
 	return NewComposeProject(s.Files)
-}
-
-func newSources(files []string, workingDir string) (*Sources, error) {
-	if len(files) > 0 {
-		return &Sources{Files: files}, nil
-	}
-
-	defaults, err := findDefaultComposeFiles(workingDir)
-	if err != nil {
-		return nil, err
-	}
-	return &Sources{Files: defaults}, nil
 }

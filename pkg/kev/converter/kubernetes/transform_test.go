@@ -2023,9 +2023,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory request provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadMemory: "10Mi",
+				k8sconf := config.DefaultK8SConfig()
+				k8sconf.Workload.Resource.Memory = "10Mi"
+
+				ext, err := k8sconf.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container memory request as expected", func() {
@@ -2036,9 +2043,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory limit provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadMaxMemory: "10M",
+				k8sconf := config.DefaultK8SConfig()
+				k8sconf.Workload.Resource.MaxMemory = "10M"
+
+				ext, err := k8sconf.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container memory limit as expected", func() {
