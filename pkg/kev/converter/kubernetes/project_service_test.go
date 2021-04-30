@@ -703,9 +703,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and Memory request is specified via label", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadMemory: "1M",
-					}
+					k8sconf.Workload.Resource.Memory = "1M"
 				})
 
 				It("returns Memory request as defined by the label value ", func() {
@@ -762,9 +760,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and Memory limit is specified via label", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadMaxMemory: "200",
-					}
+					k8sconf.Workload.Resource.MaxMemory = "200"
 				})
 
 				It("returns Memory limit as defined by the label value ", func() {

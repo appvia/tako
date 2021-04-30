@@ -43,7 +43,7 @@ var _ = Describe("Manifest", func() {
 			})
 
 			It("confirms there are no volume labels", func() {
-				sourceVol, _ := source.Volumes["db_data"]
+				sourceVol := source.Volumes["db_data"]
 				Expect(sourceVol.Labels).To(HaveLen(0))
 			})
 		})
