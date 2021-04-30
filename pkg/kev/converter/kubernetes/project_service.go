@@ -294,7 +294,7 @@ func (p *ProjectService) resourceRequests() (*int64, *int64) {
 		cpuRequest = cpu.ToDec().MilliValue()
 	}
 
-	if val, ok := p.Labels[config.LabelWorkloadMemory]; ok {
+	if val := p.K8SConfig.Workload.Resource.Memory; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		memRequest, _ = v.AsInt64()
 	}
@@ -319,12 +319,11 @@ func (p *ProjectService) resourceLimits() (*int64, *int64) {
 
 	// @step extract limits from deploy block if present
 	if p.Deploy != nil && p.Deploy.Resources.Limits != nil {
-		memLimit = int64(p.Deploy.Resources.Limits.MemoryBytes)
 		cpu, _ := resource.ParseQuantity(p.Deploy.Resources.Limits.NanoCPUs)
 		cpuLimit = cpu.ToDec().MilliValue()
 	}
 
-	if val, ok := p.Labels[config.LabelWorkloadMaxMemory]; ok {
+	if val := p.K8SConfig.Workload.Resource.MaxMemory; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		memLimit, _ = v.AsInt64()
 	}

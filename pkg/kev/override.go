@@ -105,23 +105,6 @@ func (o *composeOverride) expandLabelsFrom(other *composeOverride) *composeOverr
 	return &composeOverride{Version: o.Version, Services: o.Services, Volumes: volumes}
 }
 
-func (o *composeOverride) servicesLabelsExpandedFrom(other *composeOverride) Services {
-	var out Services
-	for _, otherSvc := range other.Services {
-		dstSvc, err := o.getService(otherSvc.Name)
-		if err != nil {
-			continue
-		}
-		for key, value := range otherSvc.GetLabels() {
-			if _, ok := dstSvc.Labels[key]; !ok {
-				dstSvc.Labels[key] = value
-			}
-		}
-		out = append(out, dstSvc)
-	}
-	return out
-}
-
 func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volumes {
 	out := Volumes{}
 	for otherVolKey, otherVolConfig := range other.Volumes {

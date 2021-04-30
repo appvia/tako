@@ -13,6 +13,7 @@ import (
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const K8SExtensionKey = "x-k8s"
@@ -138,6 +139,13 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 		return K8SConfiguration{}, err
 	}
 
+	resource, err := ResourcesFromCompose(svc)
+	if err != nil {
+		return K8SConfiguration{}, err
+	}
+
+	cfg.Workload.Resource = resource
+
 	cfg, err = cfg.Merge(k8sext)
 	if err != nil {
 		return K8SConfiguration{}, err
@@ -148,6 +156,53 @@ func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
 	}
 
 	return cfg, nil
+}
+
+func ResourcesFromCompose(svc *composego.ServiceConfig) (Resource, error) {
+	var memLimit string
+	if svc.Deploy != nil && svc.Deploy.Resources.Limits != nil {
+		memLimit = getMemoryQuantity(int64(svc.Deploy.Resources.Limits.MemoryBytes))
+	}
+
+	var memRequest string
+	if svc.Deploy != nil && svc.Deploy.Resources.Reservations != nil {
+		memRequest = getMemoryQuantity(int64(svc.Deploy.Resources.Reservations.MemoryBytes))
+	}
+
+	return Resource{
+		MaxMemory: memLimit,
+		Memory:    memRequest,
+	}, nil
+}
+
+// GetMemoryQuantity returns memory amount as string in Kubernetes notation
+// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
+// Example: 100Mi, 20Gi
+func getMemoryQuantity(b int64) string {
+	const unit int64 = 1024
+
+	q := resource.NewQuantity(b, resource.BinarySI)
+
+	quantity, _ := q.AsInt64()
+	if quantity%unit == 0 {
+		return q.String()
+	}
+
+	// Kubernetes resource quantity computation doesn't do well with values containing decimal points
+	// Example: 10.6Mi would translate to 11114905 (bytes)
+	// Let's keep consistent with kubernetes resource amount notation (below).
+
+	if b < unit {
+		return fmt.Sprintf("%d", b)
+	}
+
+	div, exp := unit, 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	return fmt.Sprintf("%.1f%ci", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 func ImagePullFromCompose(svc *composego.ServiceConfig) (ImagePull, error) {
@@ -327,6 +382,12 @@ type Workload struct {
 	ReadinessProbe ReadinessProbe `yaml:"readinessProbe,omitempty"`
 	RestartPolicy  string         `yaml:"restartPolicy,omitempty"`
 	ImagePull      ImagePull      `yaml:"imagePull,omitempty"`
+	Resource       Resource       `yaml:"resource,omitempty"`
+}
+
+type Resource struct {
+	Memory    string `yaml:"memory,omitempty"`
+	MaxMemory string `yaml:"maxMemory,omitempty"`
 }
 
 type ImagePull struct {

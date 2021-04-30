@@ -550,9 +550,11 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	}
 
 	runCtx, cfg, err := runContext(skaffoldOpts, profiles, out)
+	if err != nil {
+		return errors.Wrap(err, "Skaffold dev failed")
+	}
 
 	r, err := runner.NewForConfig(runCtx)
-
 	if err != nil {
 		return errors.Wrap(err, "Skaffold dev failed")
 	}

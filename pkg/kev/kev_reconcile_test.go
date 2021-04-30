@@ -114,7 +114,7 @@ var _ = Describe("Reconcile", func() {
 
 			When("the override volume label overrides have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
-					v, _ := override.Volumes["db_data"]
+					v := override.Volumes["db_data"]
 					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
 				})
 
@@ -245,6 +245,12 @@ var _ = Describe("Reconcile", func() {
 						Service: config.Service{
 							Type: config.ClusterIPService,
 						},
+						Workload: config.Workload{
+							Resource: config.Resource{
+								Memory:    "10Mi",
+								MaxMemory: "500Mi",
+							},
+						},
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -280,6 +286,10 @@ var _ = Describe("Reconcile", func() {
 						Workload: config.Workload{
 							Replicas:      3,
 							RestartPolicy: "always",
+							Resource: config.Resource{
+								Memory:    "20Mi",
+								MaxMemory: "50Mi",
+							},
 						},
 						Service: config.Service{
 							Type: config.ClusterIPService,
@@ -304,6 +314,10 @@ var _ = Describe("Reconcile", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
 						Workload: config.Workload{
 							RestartPolicy: "always",
+							Resource: config.Resource{
+								Memory:    "10Mi",
+								MaxMemory: "500Mi",
+							},
 						},
 						Service: config.Service{
 							Type: config.ClusterIPService,

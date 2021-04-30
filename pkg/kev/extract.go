@@ -17,13 +17,11 @@
 package kev
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/appvia/kev/pkg/kev/config"
 
 	composego "github.com/compose-spec/compose-go/types"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // setDefaultLabels sets sensible workload defaults as labels.
@@ -56,11 +54,9 @@ func extractVolumesLabels(c *ComposeProject, out *composeOverride) {
 	out.Volumes = vols
 }
 
+//TODO: Remove once all functions have been moved over.
 // extractDeploymentLabels extracts deployment related into a label's Service.
 func extractDeploymentLabels(source composego.ServiceConfig, target *ServiceConfig) {
-	// extractWorkloadType(source, target)
-	// extractWorkloadReplicas(source, target)
-	// extractWorkloadRestartPolicy(source, target)
 	extractWorkloadResourceRequests(source, target)
 	extractWorkloadResourceLimits(source, target)
 	extractWorkloadRollingUpdatePolicy(source, target)
@@ -78,9 +74,6 @@ func extractWorkloadRollingUpdatePolicy(source composego.ServiceConfig, target *
 func extractWorkloadResourceLimits(source composego.ServiceConfig, target *ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Resources.Limits != nil {
 		target.Labels.Add(config.LabelWorkloadMaxCPU, source.Deploy.Resources.Limits.NanoCPUs)
-
-		value := getMemoryQuantity(int64(source.Deploy.Resources.Limits.MemoryBytes))
-		target.Labels.Add(config.LabelWorkloadMaxMemory, value)
 	}
 }
 
@@ -88,38 +81,5 @@ func extractWorkloadResourceLimits(source composego.ServiceConfig, target *Servi
 func extractWorkloadResourceRequests(source composego.ServiceConfig, target *ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.Resources.Reservations != nil {
 		target.Labels.Add(config.LabelWorkloadCPU, source.Deploy.Resources.Reservations.NanoCPUs)
-
-		value := getMemoryQuantity(int64(source.Deploy.Resources.Reservations.MemoryBytes))
-		target.Labels.Add(config.LabelWorkloadMemory, value)
 	}
-}
-
-// GetMemoryQuantity returns memory amount as string in Kubernetes notation
-// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
-// Example: 100Mi, 20Gi
-func getMemoryQuantity(b int64) string {
-	const unit int64 = 1024
-
-	q := resource.NewQuantity(b, resource.BinarySI)
-
-	quantity, _ := q.AsInt64()
-	if quantity%unit == 0 {
-		return q.String()
-	}
-
-	// Kubernetes resource quantity computation doesn't do well with values containing decimal points
-	// Example: 10.6Mi would translate to 11114905 (bytes)
-	// Let's keep consistent with kubernetes resource amount notation (below).
-
-	if b < unit {
-		return fmt.Sprintf("%d", b)
-	}
-
-	div, exp := unit, 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-
-	return fmt.Sprintf("%.1f%ci", float64(b)/float64(div), "KMGTPE"[exp])
 }
