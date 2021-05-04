@@ -155,12 +155,12 @@ func K8sSvcFromCompose(svc *composego.ServiceConfig) (K8sSvc, error) {
 		return K8sSvc{}, err
 	}
 
-	resource, err := ResourceFromCompose(svc)
+	svcResource, err := ResourceFromCompose(svc)
 	if err != nil {
-		return K8SConfiguration{}, err
+		return K8sSvc{}, err
 	}
 
-	cfg.Workload.Resource = resource
+	cfg.Workload.Resource = svcResource
 
 	cfg, err = cfg.Merge(k8sext)
 	if err != nil {
@@ -227,7 +227,7 @@ func getMemoryQuantity(b int64) string {
 	return fmt.Sprintf("%.1f%ci", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-func ImagePullFromCompose(svc *composego.ServiceConfig) (ImagePull, error) {
+func ImagePullFromCompose(_ *composego.ServiceConfig) (ImagePull, error) {
 	return ImagePull{
 		Policy: DefaultImagePullPolicy,
 		Secret: DefaultImagePullSecret,

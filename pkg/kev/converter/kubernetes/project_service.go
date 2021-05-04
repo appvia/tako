@@ -281,12 +281,12 @@ func (p *ProjectService) resourceRequests() (*int64, *int64) {
 		cpuRequest = cpu.ToDec().MilliValue()
 	}
 
-	if val := p.K8SConfig.Workload.Resource.Memory; val != "" {
+	if val := p.K8sSvc.Workload.Resource.Memory; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		memRequest, _ = v.AsInt64()
 	}
 
-	if val := p.K8SConfig.Workload.Resource.CPU; val != "" {
+	if val := p.K8sSvc.Workload.Resource.CPU; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		cpuRequest = v.ToDec().MilliValue()
 	}
@@ -310,12 +310,12 @@ func (p *ProjectService) resourceLimits() (*int64, *int64) {
 		cpuLimit = cpu.ToDec().MilliValue()
 	}
 
-	if val := p.K8SConfig.Workload.Resource.MaxMemory; val != "" {
+	if val := p.K8sSvc.Workload.Resource.MaxMemory; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		memLimit, _ = v.AsInt64()
 	}
 
-	if val := p.K8SConfig.Workload.Resource.MaxCPU; val != "" {
+	if val := p.K8sSvc.Workload.Resource.MaxCPU; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		cpuLimit = v.ToDec().MilliValue()
 	}

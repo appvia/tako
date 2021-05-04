@@ -223,20 +223,31 @@ var _ = Describe("InitRunner", func() {
 			It("should include default config params", func() {
 				svc, _ := env.GetService("db")
 
-				k8sconf, err := config.ParseK8sSvcFromMap(svc.Extensions)
+				k8sSvc, err := config.ParseK8sSvcFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(svc.GetLabels()).To(BeEmpty())
-				Expect(k8sconf.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
-				Expect(k8sconf.Workload.Replicas).NotTo(BeZero())
+				Expect(k8sSvc.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
+				Expect(k8sSvc.Workload.Replicas).NotTo(BeZero())
 			})
 		})
 
-		Context("with volumes", func() {
+		Context("with volumes legacy", func() {
 			It("should include a subset of labels as config params", func() {
 				vol, _ := env.GetVolume("db_data")
 				Expect(vol.Labels).To(HaveLen(1))
 				Expect(vol.Labels).To(HaveKey(config.LabelVolumeSize))
+			})
+		})
+
+		Context("with volumes extensions", func() {
+			It("should include default values", func() {
+				vol, _ := env.GetVolume("db_data")
+				k8sVol, err := config.ParseK8sVolFromMap(vol.Extensions)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(k8sVol.Size).To(Equal(config.DefaultVolumeSize))
+				Expect(k8sVol.StorageClass).To(Equal(config.DefaultVolumeStorageClass))
 			})
 		})
 	})

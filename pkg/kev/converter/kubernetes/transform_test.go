@@ -1502,12 +1502,10 @@ var _ = Describe("Transform", func() {
 	Describe("configPVCVolumeSource", func() {
 		It("creates PVC volume source as expected", func() {
 			claimName := "claimName"
-			readOnly := false
-
-			Expect(k.configPVCVolumeSource(claimName, readOnly)).To(Equal(&v1.VolumeSource{
+			Expect(k.configPVCVolumeSource(claimName, false)).To(Equal(&v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 					ClaimName: claimName,
-					ReadOnly:  readOnly,
+					ReadOnly:  false,
 				},
 			}))
 		})
@@ -2023,7 +2021,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultK8sSvc()
 				k8sconf.Workload.Resource.Memory = "10Mi"
 
 				ext, err := k8sconf.ToMap()
@@ -2043,7 +2041,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultK8sSvc()
 				k8sconf.Workload.Resource.MaxMemory = "10M"
 
 				ext, err := k8sconf.ToMap()
@@ -2063,7 +2061,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultK8sSvc()
 				k8sconf.Workload.Resource.CPU = "0.1"
 
 				ext, err := k8sconf.ToMap()
@@ -2083,7 +2081,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultK8sSvc()
 				k8sconf.Workload.Resource.MaxCPU = "0.5"
 
 				ext, err := k8sconf.ToMap()
