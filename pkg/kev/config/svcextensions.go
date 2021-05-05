@@ -108,8 +108,7 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 }
 
 type svcK8sConfigOptions struct {
-	requireExtensions bool
-	skipValidation    bool
+	skipValidation bool
 }
 
 // SvcK8sConfigOption will modify parsing behaviour of the x-k8s extension.
@@ -121,17 +120,13 @@ func SkipValidation() SvcK8sConfigOption {
 	}
 }
 
-// RequireExtensions will ensure that x-k8s is present and that it is validated.
-func RequireExtensions() SvcK8sConfigOption {
-	return func(options *svcK8sConfigOptions) {
-		options.requireExtensions = true
-	}
-}
-
 // SvcK8sConfigFromCompose creates a K8s service extension from a compose-go service.
 // It extracts and infers values based on rules applied to the compose-go service.
 func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error) {
-	var cfg SvcK8sConfig
+	var (
+		cfg    SvcK8sConfig
+		k8sExt SvcK8sConfig
+	)
 
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
 	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
@@ -152,17 +147,18 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 
 	cfg.Workload.ImagePull = imagePull
 
-	k8sExt, err := ParseSvcK8sConfigFromMap(svc.Extensions, SkipValidation())
-	if err != nil {
-		return SvcK8sConfig{}, err
-	}
-
 	svcResource, err := ResourceFromCompose(svc)
 	if err != nil {
 		return SvcK8sConfig{}, err
 	}
 
 	cfg.Workload.Resource = svcResource
+
+	if _, ok := svc.Extensions[K8SExtensionKey]; ok {
+		if k8sExt, err = ParseSvcK8sConfigFromMap(svc.Extensions, SkipValidation()); err != nil {
+			return SvcK8sConfig{}, err
+		}
+	}
 
 	cfg, err = cfg.Merge(k8sExt)
 	if err != nil {
@@ -370,8 +366,8 @@ func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...SvcK8sConfigOpti
 		o(&options)
 	}
 
-	if _, ok := m[K8SExtensionKey]; !ok && !options.requireExtensions {
-		return SvcK8sConfig{}, nil
+	if _, ok := m[K8SExtensionKey]; !ok {
+		return SvcK8sConfig{}, fmt.Errorf("missing %s service extension", K8SExtensionKey)
 	}
 
 	var extensions ServiceExtension
