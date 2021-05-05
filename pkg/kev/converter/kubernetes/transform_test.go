@@ -1918,18 +1918,13 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(project.Extensions)
+					k8sSvc := config.SvcK8sConfig{}
+					k8sSvc.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					m, err := k8sSvc.ToMap()
+
 					Expect(err).NotTo(HaveOccurred())
 
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
-
-					m, err := k8sconf.ToMap()
-					Expect(err).NotTo(HaveOccurred())
-
-					projectService.Extensions = map[string]interface{}{
-						config.K8SExtensionKey: m,
-					}
-
+					projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
 					projectService, err = NewProjectService(projectService.ServiceConfig)
 				})
 
