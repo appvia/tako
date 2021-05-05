@@ -109,15 +109,15 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 
 type svcK8sConfigOptions struct {
 	requireExtensions bool
-	disableValidation bool
+	skipValidation    bool
 }
 
 // SvcK8sConfigOption will modify parsing behaviour of the x-k8s extension.
 type SvcK8sConfigOption func(*svcK8sConfigOptions)
 
-func DisableValidation() SvcK8sConfigOption {
+func SkipValidation() SvcK8sConfigOption {
 	return func(options *svcK8sConfigOptions) {
-		options.disableValidation = true
+		options.skipValidation = true
 	}
 }
 
@@ -152,7 +152,7 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 
 	cfg.Workload.ImagePull = imagePull
 
-	k8sExt, err := ParseSvcK8sConfigFromMap(svc.Extensions, DisableValidation())
+	k8sExt, err := ParseSvcK8sConfigFromMap(svc.Extensions, SkipValidation())
 	if err != nil {
 		return SvcK8sConfig{}, err
 	}
@@ -385,16 +385,14 @@ func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...SvcK8sConfigOpti
 		return SvcK8sConfig{}, err
 	}
 
-	if options.disableValidation {
-		return extensions.K8S, nil
-	}
+	if !options.skipValidation {
+		if extensions.K8S.Workload.Type == "" {
+			extensions.K8S.Workload.Type = DefaultWorkload
+		}
 
-	if extensions.K8S.Workload.Type == "" {
-		extensions.K8S.Workload.Type = DefaultWorkload
-	}
-
-	if err := extensions.K8S.Validate(); err != nil {
-		return SvcK8sConfig{}, err
+		if err := extensions.K8S.Validate(); err != nil {
+			return SvcK8sConfig{}, err
+		}
 	}
 
 	return extensions.K8S, nil
