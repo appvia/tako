@@ -107,16 +107,17 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 	}
 }
 
-type svcK8sConfigOptions struct {
+type extensionOptions struct {
 	skipValidation bool
 }
 
-// SvcK8sConfigOption will modify parsing behaviour of the x-k8s extension.
-type SvcK8sConfigOption func(*svcK8sConfigOptions)
+// K8sExtensionOption will modify parsing behaviour of the k8s extension.
+type K8sExtensionOption func(*extensionOptions)
 
-func SkipValidation() SvcK8sConfigOption {
-	return func(options *svcK8sConfigOptions) {
-		options.skipValidation = true
+// SkipValidation skips validation when parsing a k8s extension from a service.
+func SkipValidation() K8sExtensionOption {
+	return func(extOpts *extensionOptions) {
+		extOpts.skipValidation = true
 	}
 }
 
@@ -360,8 +361,8 @@ func LivenessProbeFromCompose(svc *composego.ServiceConfig) LivenessProbe {
 }
 
 // ParseSvcK8sConfigFromMap handles the extraction of the k8s-specific extension values from the top level map.
-func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...SvcK8sConfigOption) (SvcK8sConfig, error) {
-	var options svcK8sConfigOptions
+func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...K8sExtensionOption) (SvcK8sConfig, error) {
+	var options extensionOptions
 	for _, o := range opts {
 		o(&options)
 	}
