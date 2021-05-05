@@ -100,6 +100,7 @@ func DefaultVolK8sConfig() VolK8sConfig {
 }
 
 // VolK8sConfigFromCompose returns a VolK8sConfig from a compose-go VolumeConfig
+// It extracts and infers values based on rules applied to the compose-go volume.
 func VolK8sConfigFromCompose(vol *composego.VolumeConfig) (VolK8sConfig, error) {
 	cfg := DefaultVolK8sConfig()
 	volFromMap, err := ParseVolK8sConfigFromMap(vol.Extensions)
