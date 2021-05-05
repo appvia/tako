@@ -128,6 +128,8 @@ func RequireExtensions() SvcK8sConfigOption {
 	}
 }
 
+// SvcK8sConfigFromCompose creates a K8s service extension from a compose-go service.
+// It extracts and infers values based on rules applied to the compose-go service.
 func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error) {
 	var cfg SvcK8sConfig
 
