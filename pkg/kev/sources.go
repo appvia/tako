@@ -41,7 +41,9 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 
 	// TODO(es): stop extracting labels once volumes is finalised.
 	extractVolumesLabels(ready, s.override)
-	extractVolumesExtensions(ready, s.override)
+	if err := extractVolumesExtensions(ready, s.override); err != nil {
+		return err
+	}
 
 	for _, svc := range ready.Services {
 		target := ServiceConfig{
@@ -52,7 +54,7 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 
 		setDefaultLabels(&target)
 
-		k8sConf, err := config.K8sSvcFromCompose(&svc)
+		k8sConf, err := config.SvcK8sConfigFromCompose(&svc)
 		if err != nil {
 			return err
 		}
@@ -90,7 +92,7 @@ func extractVolumesExtensions(c *ComposeProject, out *composeOverride) error {
 			Extensions: vol.Extensions,
 		}
 
-		k8sVol, err := config.K8sVolFromCompose(&vol)
+		k8sVol, err := config.VolK8sConfigFromCompose(&vol)
 		if err != nil {
 			return nil
 		}

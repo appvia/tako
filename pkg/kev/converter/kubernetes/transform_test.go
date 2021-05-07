@@ -132,7 +132,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with imaged pull secret specified via labels", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8sSvc()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.ImagePull.Secret = "my-pp-secret"
 
 				m, err := k8sconf.ToMap()
@@ -1896,7 +1896,7 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
-					k8sconf := config.DefaultK8sSvc()
+					k8sconf := config.DefaultSvcK8sConfig()
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
 					k8sconf.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
 					k8sconf.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
@@ -1918,7 +1918,7 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					k8sconf, err := config.ParseK8sSvcFromMap(project.Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(project.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
@@ -2021,7 +2021,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8sSvc()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.Memory = "10Mi"
 
 				ext, err := k8sconf.ToMap()
@@ -2041,7 +2041,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8sSvc()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.MaxMemory = "10M"
 
 				ext, err := k8sconf.ToMap()
@@ -2061,7 +2061,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8sSvc()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.CPU = "0.1"
 
 				ext, err := k8sconf.ToMap()
@@ -2081,7 +2081,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8sSvc()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.MaxCPU = "0.5"
 
 				ext, err := k8sconf.ToMap()

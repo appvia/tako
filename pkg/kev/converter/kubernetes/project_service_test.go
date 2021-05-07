@@ -49,7 +49,7 @@ var _ = Describe("ProjectService", func() {
 		environment        composego.MappingWithEquals
 		healthcheck        composego.HealthCheckConfig
 		projectVolumes     composego.Volumes
-		k8sconf            config.K8sSvc
+		k8sconf            config.SvcK8sConfig
 	)
 
 	BeforeEach(func() {
@@ -64,7 +64,7 @@ var _ = Describe("ProjectService", func() {
 		healthcheck = composego.HealthCheckConfig{}
 		projectVolumes = composego.Volumes{}
 
-		k8sconf = config.K8sSvc{}
+		k8sconf = config.SvcK8sConfig{}
 	})
 
 	JustBeforeEach(func() {
@@ -333,7 +333,7 @@ var _ = Describe("ProjectService", func() {
 
 				JustBeforeEach(func() {
 					var err error
-					k8sconf := config.K8sSvc{}
+					k8sconf := config.SvcK8sConfig{}
 					k8sconf.Service.Type = invalidType
 
 					m, err = k8sconf.ToMap()
@@ -348,7 +348,7 @@ var _ = Describe("ProjectService", func() {
 						},
 					})
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("K8sSvc.Service.Type"))
+					Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Service.Type"))
 				})
 			})
 
@@ -872,7 +872,7 @@ var _ = Describe("ProjectService", func() {
 					Extensions: extensions,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("K8sSvc.Workload.ImagePull.Policy"))
+				Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Workload.ImagePull.Policy"))
 			})
 		})
 	})

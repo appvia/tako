@@ -223,7 +223,7 @@ var _ = Describe("InitRunner", func() {
 			It("should include default config params", func() {
 				svc, _ := env.GetService("db")
 
-				k8sSvc, err := config.ParseK8sSvcFromMap(svc.Extensions)
+				k8sSvc, err := config.ParseSvcK8sConfigFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(svc.GetLabels()).To(BeEmpty())
@@ -243,7 +243,7 @@ var _ = Describe("InitRunner", func() {
 		Context("with volumes extensions", func() {
 			It("should include default values", func() {
 				vol, _ := env.GetVolume("db_data")
-				k8sVol, err := config.ParseK8sVolFromMap(vol.Extensions)
+				k8sVol, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(k8sVol.Size).To(Equal(config.DefaultVolumeSize))

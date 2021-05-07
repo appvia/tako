@@ -34,27 +34,27 @@ var resourceQuantityRegex = regexp.MustCompile(resourceQuantityPattern)
 
 // VolumeExtension represents the root of the docker-compose extensions for a volume
 type VolumeExtension struct {
-	K8S K8sVol `yaml:"x-k8s"`
+	K8S VolK8sConfig `yaml:"x-k8s"`
 }
 
-// K8sVol represents the root of the k8s specific fields supported by kev.
-type K8sVol struct {
+// VolK8sConfig represents the root of the k8s specific fields supported by kev.
+type VolK8sConfig struct {
 	Size         string `yaml:"size,omitempty" validate:"required,quantity"`
 	StorageClass string `yaml:"storageClass,omitempty"`
 	Selector     string `yaml:"selector,omitempty"`
 }
 
-// Merge merges a src K8s volume config
-func (k K8sVol) Merge(src K8sVol) (K8sVol, error) {
-	if err := mergo.Merge(&k, src, mergo.WithOverride); err != nil {
-		return K8sVol{}, err
+// Merge merges in a src volume's K8s config
+func (vkc VolK8sConfig) Merge(src VolK8sConfig) (VolK8sConfig, error) {
+	if err := mergo.Merge(&vkc, src, mergo.WithOverride); err != nil {
+		return VolK8sConfig{}, err
 	}
-	return k, nil
+	return vkc, nil
 }
 
-// Map converts a K8sVol config into a map
-func (k K8sVol) Map() (map[string]interface{}, error) {
-	bs, err := yaml.Marshal(k)
+// Map converts a VolK8sConfig config into a map
+func (vkc VolK8sConfig) Map() (map[string]interface{}, error) {
+	bs, err := yaml.Marshal(vkc)
 	if err != nil {
 		return nil, err
 	}
@@ -63,14 +63,15 @@ func (k K8sVol) Map() (map[string]interface{}, error) {
 	return m, yaml.Unmarshal(bs, &m)
 }
 
-func (k K8sVol) Validate() error {
+// Validate validates a volumes K8s config
+func (vkc VolK8sConfig) Validate() error {
 	validate := validator.New()
 
 	if err := validate.RegisterValidation("quantity", validateResourceQuantity); err != nil {
 		return err
 	}
 
-	if err := validate.Struct(k); err != nil {
+	if err := validate.Struct(vkc); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
 		for _, e := range validationErrors {
 			if e.Tag() == "required" {
@@ -90,49 +91,49 @@ func (k K8sVol) Validate() error {
 	return nil
 }
 
-// DefaultK8sVol returns a K8s Volume config with all the defaults set into it.
-func DefaultK8sVol() K8sVol {
-	return K8sVol{
+// DefaultVolK8sConfig returns a volume's K8s config with set defaults.
+func DefaultVolK8sConfig() VolK8sConfig {
+	return VolK8sConfig{
 		Size:         DefaultVolumeSize,
 		StorageClass: DefaultVolumeStorageClass,
 	}
 }
 
-// K8sVolFromCompose returns a K8sVol from a compose-go VolumeConfig
-func K8sVolFromCompose(vol *composego.VolumeConfig) (K8sVol, error) {
-	cfg := DefaultK8sVol()
-	volFromMap, err := ParseK8sVolFromMap(vol.Extensions)
+// VolK8sConfigFromCompose returns a VolK8sConfig from a compose-go VolumeConfig
+func VolK8sConfigFromCompose(vol *composego.VolumeConfig) (VolK8sConfig, error) {
+	cfg := DefaultVolK8sConfig()
+	volFromMap, err := ParseVolK8sConfigFromMap(vol.Extensions)
 	if err != nil {
-		return K8sVol{}, err
+		return VolK8sConfig{}, err
 	}
 
 	cfg, err = cfg.Merge(volFromMap)
 	if err != nil {
-		return K8sVol{}, err
+		return VolK8sConfig{}, err
 	}
 
 	if err := cfg.Validate(); err != nil {
-		return K8sVol{}, err
+		return VolK8sConfig{}, err
 	}
 
 	return cfg, nil
 }
 
-// ParseK8sVolFromMap parses a volume extension from the related map
-func ParseK8sVolFromMap(m map[string]interface{}) (K8sVol, error) {
+// ParseVolK8sConfigFromMap parses a volume extension from the related map
+func ParseVolK8sConfigFromMap(m map[string]interface{}) (VolK8sConfig, error) {
 	if _, ok := m[K8SExtensionKey]; !ok {
-		return K8sVol{}, nil
+		return VolK8sConfig{}, nil
 	}
 
 	var ext VolumeExtension
 
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf).Encode(m); err != nil {
-		return K8sVol{}, err
+		return VolK8sConfig{}, err
 	}
 
 	if err := yaml.NewDecoder(&buf).Decode(&ext); err != nil {
-		return K8sVol{}, err
+		return VolK8sConfig{}, err
 	}
 
 	return ext.K8S, nil

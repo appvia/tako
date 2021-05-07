@@ -30,15 +30,15 @@ var _ = Describe("Service Extensions", func() {
 
 	Describe("parsing", func() {
 		var (
-			k8s config.K8sSvc
+			k8s config.SvcK8sConfig
 			err error
 
-			parsedCfg config.K8sSvc
+			parsedCfg config.SvcK8sConfig
 			svc       composego.ServiceConfig
 		)
 
 		BeforeEach(func() {
-			k8s = config.K8sSvc{}
+			k8s = config.SvcK8sConfig{}
 		})
 
 		JustBeforeEach(func() {
@@ -48,7 +48,7 @@ var _ = Describe("Service Extensions", func() {
 				config.K8SExtensionKey: m,
 			}
 
-			parsedCfg, err = config.K8sSvcFromCompose(&svc)
+			parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
 			Expect(err).NotTo(HaveOccurred())
 
 		})
@@ -73,7 +73,7 @@ var _ = Describe("Service Extensions", func() {
 		When("there is no k8s extension present", func() {
 			Context("Without RequirePresent configuration", func() {
 				It("does not fail validations", func() {
-					parsedCfg, err = config.K8sSvcFromCompose(&svc)
+					parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(parsedCfg).NotTo(BeNil())
 
@@ -93,12 +93,12 @@ var _ = Describe("Service Extensions", func() {
 						},
 					}
 
-					parsedCfg, err = config.K8sSvcFromCompose(&svc)
+					parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("returns defaults", func() {
-					Expect(parsedCfg).To(BeEquivalentTo(config.DefaultK8sSvc()))
+					Expect(parsedCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 				})
 			})
 
@@ -112,13 +112,13 @@ var _ = Describe("Service Extensions", func() {
 						},
 					}
 
-					parsedCfg, err = config.K8sSvcFromCompose(&svc)
+					parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				When("workload is invalid", func() {
 					It("it is ignored and returns defaults", func() {
-						Expect(parsedCfg).To(BeEquivalentTo(config.DefaultK8sSvc()))
+						Expect(parsedCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 					})
 				})
 			})
@@ -143,7 +143,7 @@ var _ = Describe("Service Extensions", func() {
 				})
 
 				It("returns in defaults", func() {
-					k8sconf := config.DefaultK8sSvc()
+					k8sconf := config.DefaultSvcK8sConfig()
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
 
 					Expect(parsedCfg).To(BeEquivalentTo(k8sconf))
@@ -152,23 +152,23 @@ var _ = Describe("Service Extensions", func() {
 
 			Context("missing service type", func() {
 				It("returns error", func() {
-					k8sconf := config.DefaultK8sSvc()
+					k8sconf := config.DefaultSvcK8sConfig()
 					k8sconf.Service.Type = ""
 
 					err = k8sconf.Validate()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("K8sSvc.Service.Type is required"))
+					Expect(err.Error()).To(Equal("SvcK8sConfig.Service.Type is required"))
 				})
 			})
 
 			Context("missing workload type", func() {
 				It("returns error", func() {
-					k8sconf := config.DefaultK8sSvc()
+					k8sconf := config.DefaultSvcK8sConfig()
 					k8sconf.Workload.Type = ""
 
 					err = k8sconf.Validate()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("K8sSvc.Workload.Type is required"))
+					Expect(err.Error()).To(Equal("SvcK8sConfig.Workload.Type is required"))
 				})
 			})
 		})
@@ -207,8 +207,8 @@ var _ = Describe("Service Extensions", func() {
 
 	Describe("Merge", func() {
 		It("merges target into base", func() {
-			k8sBase := config.DefaultK8sSvc()
-			var k8sTarget config.K8sSvc
+			k8sBase := config.DefaultSvcK8sConfig()
+			var k8sTarget config.SvcK8sConfig
 			k8sTarget.Workload.Replicas = 10
 			k8sTarget.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
 
@@ -225,12 +225,12 @@ var _ = Describe("Service Extensions", func() {
 			var extensions map[string]interface{}
 			var svc composego.ServiceConfig
 
-			var parsedConf config.K8sSvc
+			var parsedConf config.SvcK8sConfig
 			var err error
 
 			JustBeforeEach(func() {
 				svc.Extensions = extensions
-				parsedConf, err = config.K8sSvcFromCompose(&svc)
+				parsedConf, err = config.SvcK8sConfigFromCompose(&svc)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -240,9 +240,9 @@ var _ = Describe("Service Extensions", func() {
 				})
 
 				It("returns default when map is empty", func() {
-					result, err := config.DefaultK8sSvc().Merge(parsedConf)
+					result, err := config.DefaultSvcK8sConfig().Merge(parsedConf)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(result).To(BeEquivalentTo(config.DefaultK8sSvc()))
+					Expect(result).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 				})
 			})
 
@@ -252,9 +252,9 @@ var _ = Describe("Service Extensions", func() {
 				})
 
 				It("returns default when map is nil", func() {
-					result, err := config.DefaultK8sSvc().Merge(parsedConf)
+					result, err := config.DefaultSvcK8sConfig().Merge(parsedConf)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(result).To(BeEquivalentTo(config.DefaultK8sSvc()))
+					Expect(result).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 				})
 			})
 		})

@@ -42,7 +42,7 @@ var _ = Describe("Volume Extensions", func() {
 		})
 
 		It("loads the extension from a compose-go volume config", func() {
-			cfg, err := config.K8sVolFromCompose(&composeVol)
+			cfg, err := config.VolK8sConfigFromCompose(&composeVol)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg.Map()).To(Equal(composeVolCfg))
 		})
@@ -57,14 +57,14 @@ var _ = Describe("Volume Extensions", func() {
 				"selector":     "my-volume-selector-label",
 			}
 
-			cfg, err := config.K8sVolFromCompose(&composeVol)
+			cfg, err := config.VolK8sConfigFromCompose(&composeVol)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg.Map()).To(Equal(expected))
 		})
 
 		It("validates values", func() {
 			composeVolExt["size"] = "10Gbs"
-			_, err := config.K8sVolFromCompose(&composeVol)
+			_, err := config.VolK8sConfigFromCompose(&composeVol)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("invalid, use a resource quantity format"))
 		})
