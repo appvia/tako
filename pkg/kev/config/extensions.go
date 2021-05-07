@@ -371,7 +371,9 @@ func ParseK8SCfgFromMap(m map[string]interface{}, opts ...K8SCfgOption) (K8SConf
 		return extensions.K8S, nil
 	}
 
-	extensions.K8S.Workload.Type = DefaultWorkload
+	if extensions.K8S.Workload.Type == "" {
+		extensions.K8S.Workload.Type = DefaultWorkload
+	}
 
 	if err := extensions.K8S.Validate(); err != nil {
 		return K8SConfiguration{}, err
