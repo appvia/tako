@@ -132,10 +132,10 @@ var _ = Describe("Transform", func() {
 
 		Context("with imaged pull secret specified via labels", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultSvcK8sConfig()
-				k8sconf.Workload.ImagePull.Secret = "my-pp-secret"
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.ImagePull.Secret = "my-pp-secret"
 
-				m, err := k8sconf.ToMap()
+				m, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 
 				projectService.Extensions = map[string]interface{}{
@@ -235,13 +235,11 @@ var _ = Describe("Transform", func() {
 			Context("and the config metadata points at external config", func() {
 				BeforeEach(func() {
 					project.Configs = composego.Configs{
-						configName: composego.ConfigObjConfig(
-							composego.ConfigObjConfig{
-								External: composego.External{
-									External: true,
-								},
+						configName: composego.ConfigObjConfig{
+							External: composego.External{
+								External: true,
 							},
-						),
+						},
 					}
 				})
 
@@ -472,11 +470,9 @@ var _ = Describe("Transform", func() {
 				mountPath = "/mount/path"
 
 				project.Configs = composego.Configs{
-					configName: composego.ConfigObjConfig(
-						composego.ConfigObjConfig{
-							File: "/path/to/config/file",
-						},
-					),
+					configName: composego.ConfigObjConfig{
+						File: "/path/to/config/file",
+					},
 				}
 
 				projectService.Configs = []composego.ServiceConfigObjConfig{
@@ -565,12 +561,12 @@ var _ = Describe("Transform", func() {
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
 							Annotations: configAnnotations(projectService),
-							Labels:      configLabels(projectService.Name), //added
+							Labels:      configLabels(projectService.Name), // added
 						},
 						Spec: expectedPodSpec,
 					},
-					ServiceName: projectService.Name, //added
-					UpdateStrategy: v1apps.StatefulSetUpdateStrategy{ //added
+					ServiceName: projectService.Name, // added
+					UpdateStrategy: v1apps.StatefulSetUpdateStrategy{ // added
 						Type:          v1apps.RollingUpdateStatefulSetStrategyType,
 						RollingUpdate: &v1apps.RollingUpdateStatefulSetStrategy{},
 					},
@@ -603,11 +599,9 @@ var _ = Describe("Transform", func() {
 				mountPath = "/mount/path"
 
 				project.Configs = composego.Configs{
-					configName: composego.ConfigObjConfig(
-						composego.ConfigObjConfig{
-							File: "/path/to/config/file",
-						},
-					),
+					configName: composego.ConfigObjConfig{
+						File: "/path/to/config/file",
+					},
 				}
 
 				projectService.Configs = []composego.ServiceConfigObjConfig{
@@ -692,11 +686,9 @@ var _ = Describe("Transform", func() {
 				mountPath = "/mount/path"
 
 				project.Configs = composego.Configs{
-					configName: composego.ConfigObjConfig(
-						composego.ConfigObjConfig{
-							File: "/path/to/config/file",
-						},
-					),
+					configName: composego.ConfigObjConfig{
+						File: "/path/to/config/file",
+					},
 				}
 
 				projectService.Configs = []composego.ServiceConfigObjConfig{
@@ -1282,7 +1274,7 @@ var _ = Describe("Transform", func() {
 				Expect(p).To(Equal([]v1.ContainerPort{
 					{
 						ContainerPort: int32(8080),
-						Protocol:      v1.Protocol("TCP"),
+						Protocol:      "TCP",
 						HostIP:        "10.10.10.10",
 					},
 				}))
@@ -1741,7 +1733,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("warns and continues", func() {
-				objects := []runtime.Object{}
+				var objects []runtime.Object
 				newObjs := k.createConfigMapFromComposeConfig(projectService, objects)
 				Expect(newObjs).To(HaveLen(0))
 			})
@@ -1757,7 +1749,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates a ConfigMap object and appends it to objects slice", func() {
-				objects := []runtime.Object{}
+				var objects []runtime.Object
 				newObjs := k.createConfigMapFromComposeConfig(projectService, objects)
 				Expect(newObjs).To(HaveLen(1))
 			})
@@ -1776,7 +1768,7 @@ var _ = Describe("Transform", func() {
 				},
 				ObjectMeta: meta.ObjectMeta{
 					Name: networkName,
-					//Labels: ConfigLabels(name),
+					// Labels: ConfigLabels(name),
 				},
 				Spec: networking.NetworkPolicySpec{
 					PodSelector: meta.LabelSelector{
@@ -1896,12 +1888,12 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
-					k8sconf := config.DefaultSvcK8sConfig()
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
-					k8sconf.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
-					k8sconf.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
+					svcK8sConfig := config.DefaultSvcK8sConfig()
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					svcK8sConfig.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
+					svcK8sConfig.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
 
-					ext, err := k8sconf.ToMap()
+					ext, err := svcK8sConfig.ToMap()
 					Expect(err).NotTo(HaveOccurred())
 					projectService.Extensions = map[string]interface{}{
 						config.K8SExtensionKey: ext,
@@ -1918,9 +1910,9 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					k8sSvc := config.SvcK8sConfig{}
-					k8sSvc.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
-					m, err := k8sSvc.ToMap()
+					svcK8sConfig := config.SvcK8sConfig{}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					m, err := svcK8sConfig.ToMap()
 
 					Expect(err).NotTo(HaveOccurred())
 
@@ -2016,10 +2008,10 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultSvcK8sConfig()
-				k8sconf.Workload.Resource.Memory = "10Mi"
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.Memory = "10Mi"
 
-				ext, err := k8sconf.ToMap()
+				ext, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -2036,10 +2028,10 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultSvcK8sConfig()
-				k8sconf.Workload.Resource.MaxMemory = "10M"
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.MaxMemory = "10M"
 
-				ext, err := k8sconf.ToMap()
+				ext, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -2056,10 +2048,10 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultSvcK8sConfig()
-				k8sconf.Workload.Resource.CPU = "0.1"
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.CPU = "0.1"
 
-				ext, err := k8sconf.ToMap()
+				ext, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -2076,10 +2068,10 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultSvcK8sConfig()
-				k8sconf.Workload.Resource.MaxCPU = "0.5"
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.MaxCPU = "0.5"
 
-				ext, err := k8sconf.ToMap()
+				ext, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
