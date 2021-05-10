@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -487,39 +487,6 @@ var _ = Describe("Utils", func() {
 			Context("with container format", func() {
 				v := container2
 				validateVolumeElements(v, "", "", container2, "")
-			})
-		})
-	})
-
-	Describe("getVolumeLabels", func() {
-		vol := composego.VolumeConfig{
-			Labels: composego.Labels{},
-		}
-
-		Context("when volume size label present", func() {
-			vol.Labels.Add(config.LabelVolumeSize, "10Gi")
-
-			It("returns volume size with value from label", func() {
-				size, _, _ := getVolumeLabels(vol)
-				Expect(size).To(Equal("10Gi"))
-			})
-		})
-
-		Context("when volume storage class label present", func() {
-			vol.Labels.Add(config.LabelVolumeStorageClass, "ssd")
-
-			It("returns volume storage class with value from label", func() {
-				_, _, class := getVolumeLabels(vol)
-				Expect(class).To(Equal("ssd"))
-			})
-		})
-
-		Context("when volume selector label present", func() {
-			vol.Labels.Add(config.LabelVolumeSelector, "select")
-
-			It("returns volume selector with value from label", func() {
-				_, selector, _ := getVolumeLabels(vol)
-				Expect(selector).To(Equal("select"))
 			})
 		})
 	})

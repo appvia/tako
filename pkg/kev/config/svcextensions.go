@@ -1,3 +1,19 @@
+/**
+ * Copyright 2021 Appvia Ltd <info@appvia.io>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package config
 
 import (
@@ -18,20 +34,20 @@ import (
 
 const K8SExtensionKey = "x-k8s"
 
-// ExtensionRoot represents the root of the docker-compose extensions
-type ExtensionRoot struct {
-	K8S K8SConfiguration `yaml:"x-k8s"`
+// ServiceExtension represents the root of the docker-compose extensions for a service
+type ServiceExtension struct {
+	K8S SvcK8sConfig `yaml:"x-k8s"`
 }
 
-// K8SConfiguration represents the root of the k8s specific fields supported by kev.
-type K8SConfiguration struct {
+// SvcK8sConfig represents the root of the k8s specific fields supported by kev.
+type SvcK8sConfig struct {
 	Disabled bool     `yaml:"disabled"`
 	Workload Workload `yaml:"workload" validate:"required,dive"`
 	Service  Service  `yaml:"service,omitempty"`
 }
 
-func (k K8SConfiguration) ToMap() (map[string]interface{}, error) {
-	bs, err := yaml.Marshal(k)
+func (skc SvcK8sConfig) ToMap() (map[string]interface{}, error) {
+	bs, err := yaml.Marshal(skc)
 	if err != nil {
 		return nil, err
 	}
@@ -45,18 +61,18 @@ func (k K8SConfiguration) ToMap() (map[string]interface{}, error) {
 	return m, nil
 }
 
-func (k K8SConfiguration) Merge(other K8SConfiguration) (K8SConfiguration, error) {
-	k8s := k
+func (skc SvcK8sConfig) Merge(other SvcK8sConfig) (SvcK8sConfig, error) {
+	k8s := skc
 
 	if err := mergo.Merge(&k8s, other, mergo.WithOverride); err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	return k8s, nil
 }
 
-func (k K8SConfiguration) Validate() error {
-	err := validator.New().Struct(k)
+func (skc SvcK8sConfig) Validate() error {
+	err := validator.New().Struct(skc)
 	if err != nil {
 		validationErrors := err.(validator.ValidationErrors)
 		for _, e := range validationErrors {
@@ -71,9 +87,9 @@ func (k K8SConfiguration) Validate() error {
 	return nil
 }
 
-// DefaultK8SConfig returns a K8SServiceConfig with all the defaults set into it.
-func DefaultK8SConfig() K8SConfiguration {
-	return K8SConfiguration{
+// DefaultSvcK8sConfig returns a service's K8S Config with set defaults.
+func DefaultSvcK8sConfig() SvcK8sConfig {
+	return SvcK8sConfig{
 		Disabled: false,
 		Workload: Workload{
 			Type:           DefaultWorkload,
@@ -91,68 +107,68 @@ func DefaultK8SConfig() K8SConfiguration {
 	}
 }
 
-type k8sConfigOptions struct {
+type svcK8sConfigOptions struct {
 	requireExtensions bool
 	disableValidation bool
 }
 
-// K8SCfgOption will modify parsing behaviour of the x-k8s extension.
-type K8SCfgOption func(*k8sConfigOptions)
+// SvcK8sConfigOption will modify parsing behaviour of the x-k8s extension.
+type SvcK8sConfigOption func(*svcK8sConfigOptions)
 
-func DisableValidation() K8SCfgOption {
-	return func(kco *k8sConfigOptions) {
-		kco.disableValidation = true
+func DisableValidation() SvcK8sConfigOption {
+	return func(options *svcK8sConfigOptions) {
+		options.disableValidation = true
 	}
 }
 
 // RequireExtensions will ensure that x-k8s is present and that it is validated.
-func RequireExtensions() K8SCfgOption {
-	return func(kco *k8sConfigOptions) {
-		kco.requireExtensions = true
+func RequireExtensions() SvcK8sConfigOption {
+	return func(options *svcK8sConfigOptions) {
+		options.requireExtensions = true
 	}
 }
 
-func K8SCfgFromCompose(svc *composego.ServiceConfig) (K8SConfiguration, error) {
-	var cfg K8SConfiguration
+func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error) {
+	var cfg SvcK8sConfig
 
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
 	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
 	cfg.Workload.RestartPolicy = WorkloadRestartPolicyFromCompose(svc)
 	svcType, err := ServiceTypeFromCompose(svc)
 	if err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 	cfg.Service.Type = svcType
 
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
 
-	imagePull, err := ImagePullFromCompose(svc)
+	imagePull, err := ImagePullFromCompose()
 	if err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	cfg.Workload.ImagePull = imagePull
 
-	k8sext, err := ParseK8SCfgFromMap(svc.Extensions, DisableValidation())
+	k8sExt, err := ParseSvcK8sConfigFromMap(svc.Extensions, DisableValidation())
 	if err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
-	resource, err := ResourceFromCompose(svc)
+	svcResource, err := ResourceFromCompose(svc)
 	if err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
-	cfg.Workload.Resource = resource
+	cfg.Workload.Resource = svcResource
 
-	cfg, err = cfg.Merge(k8sext)
+	cfg, err = cfg.Merge(k8sExt)
 	if err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	if err := cfg.Validate(); err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	return cfg, nil
@@ -211,7 +227,7 @@ func getMemoryQuantity(b int64) string {
 	return fmt.Sprintf("%.1f%ci", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-func ImagePullFromCompose(svc *composego.ServiceConfig) (ImagePull, error) {
+func ImagePullFromCompose() (ImagePull, error) {
 	return ImagePull{
 		Policy: DefaultImagePullPolicy,
 		Secret: DefaultImagePullSecret,
@@ -345,26 +361,26 @@ func LivenessProbeFromCompose(svc *composego.ServiceConfig) LivenessProbe {
 	return res
 }
 
-// ParseK8SCfgFromMap handles the extraction of the k8s-specific extension values from the top level map.
-func ParseK8SCfgFromMap(m map[string]interface{}, opts ...K8SCfgOption) (K8SConfiguration, error) {
-	var options k8sConfigOptions
+// ParseSvcK8sConfigFromMap handles the extraction of the k8s-specific extension values from the top level map.
+func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...SvcK8sConfigOption) (SvcK8sConfig, error) {
+	var options svcK8sConfigOptions
 	for _, o := range opts {
 		o(&options)
 	}
 
 	if _, ok := m[K8SExtensionKey]; !ok && !options.requireExtensions {
-		return K8SConfiguration{}, nil
+		return SvcK8sConfig{}, nil
 	}
 
-	var extensions ExtensionRoot
+	var extensions ServiceExtension
 
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf).Encode(m); err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	if err := yaml.NewDecoder(&buf).Decode(&extensions); err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	if options.disableValidation {
@@ -376,7 +392,7 @@ func ParseK8SCfgFromMap(m map[string]interface{}, opts ...K8SCfgOption) (K8SConf
 	}
 
 	if err := extensions.K8S.Validate(); err != nil {
-		return K8SConfiguration{}, err
+		return SvcK8sConfig{}, err
 	}
 
 	return extensions.K8S, nil
