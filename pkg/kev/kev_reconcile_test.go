@@ -50,7 +50,9 @@ var _ = Describe("Reconcile", func() {
 		hook = testutil.NewLogger(logrus.DebugLevel)
 
 		r := kev.NewRenderRunner(workingDir, kev.WithUI(kmd.NoOpUI()))
-		r.LoadProject()
+		err = r.LoadProject()
+		Expect(err).NotTo(HaveOccurred(), workingDir)
+
 		manifest, mErr = r.Manifest().ReconcileConfig()
 		Expect(mErr).NotTo(HaveOccurred(), workingDir)
 
@@ -206,10 +208,10 @@ var _ = Describe("Reconcile", func() {
 				It("should not update the label in all environments", func() {
 					s, _ := env.GetService("wordpress")
 
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
+					Expect(svcK8sConfig.Service.Type).To(Equal("LoadBalancer"))
 				})
 
 				It("should log the change summary using the debug level", func() {

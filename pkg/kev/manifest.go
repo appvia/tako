@@ -186,7 +186,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	}
 
 	for _, e := range filteredEnvs {
-		if err := validateExtensions(e.override.Services); err != nil {
+		if err := validateExtensions(e.override); err != nil {
 			sg := m.UI.StepGroup()
 			defer sg.Done()
 			renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
@@ -205,14 +205,19 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	return m, nil
 }
 
-func validateExtensions(services Services) error {
-	for _, s := range services {
+func validateExtensions(override *composeOverride) error {
+	for _, s := range override.Services {
 		_, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 		if err != nil {
 			return errors.Wrapf(err, "when parsing service %s extensions", s.Name)
 		}
 	}
-
+	for name, vol := range override.Volumes {
+		_, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
+		if err != nil {
+			return errors.Wrapf(err, "when parsing vol %s extensions", name)
+		}
+	}
 	return nil
 }
 
