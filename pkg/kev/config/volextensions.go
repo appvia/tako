@@ -108,7 +108,7 @@ func VolK8sConfigFromCompose(vol *composego.VolumeConfig) (VolK8sConfig, error) 
 	)
 	cfg := DefaultVolK8sConfig()
 	if _, ok := vol.Extensions[K8SExtensionKey]; ok {
-		if k8sExt, err = ParseVolK8sConfigFromMap(vol.Extensions); err != nil {
+		if k8sExt, err = ParseVolK8sConfigFromMap(vol.Extensions, SkipValidation()); err != nil {
 			return VolK8sConfig{}, err
 		}
 	}
