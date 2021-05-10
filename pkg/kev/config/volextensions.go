@@ -80,7 +80,7 @@ func (vkc VolK8sConfig) Validate() error {
 
 			if e.Tag() == "quantity" {
 				return fmt.Errorf(
-					"%s is invalid, use a resource quantity format, e.g. 129M, 10Gi, 123Mi",
+					"%s is invalid, use a resource quantity format, e.g. 10M, 10Gi, 10Mi",
 					e.StructNamespace(),
 				)
 			}

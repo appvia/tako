@@ -30,56 +30,56 @@ var _ = Describe("Service Extensions", func() {
 
 	Describe("parsing", func() {
 		var (
-			k8s config.SvcK8sConfig
-			err error
+			k8sCfg config.SvcK8sConfig
+			err    error
 
-			parsedCfg config.SvcK8sConfig
-			svc       composego.ServiceConfig
+			parsedK8sCfg config.SvcK8sConfig
+			svc          composego.ServiceConfig
 		)
 
 		BeforeEach(func() {
-			k8s = config.SvcK8sConfig{}
+			k8sCfg = config.SvcK8sConfig{}
 		})
 
 		JustBeforeEach(func() {
-			m, err := k8s.ToMap()
+			m, err := k8sCfg.ToMap()
 			Expect(err).NotTo(HaveOccurred())
 			svc.Extensions = map[string]interface{}{
 				config.K8SExtensionKey: m,
 			}
 
-			parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
+			parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
 			Expect(err).NotTo(HaveOccurred())
 
 		})
 
 		Context("works with defaults", func() {
 			BeforeEach(func() {
-				k8s.Workload.Type = "Deployment"
-				k8s.Workload.Replicas = 10
-				k8s.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+				k8sCfg.Workload.Type = "Deployment"
+				k8sCfg.Workload.Replicas = 10
+				k8sCfg.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
 			})
 
 			It("creates the config using defaults when the mandatory properties are present", func() {
 				expectedLiveness := config.DefaultLivenessProbe()
 				expectedLiveness.Type = config.ProbeTypeNone.String()
 
-				Expect(parsedCfg.Workload.Replicas).To(Equal(10))
-				Expect(parsedCfg.Workload.LivenessProbe).To(BeEquivalentTo(expectedLiveness))
-				Expect(parsedCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
+				Expect(parsedK8sCfg.Workload.Replicas).To(Equal(10))
+				Expect(parsedK8sCfg.Workload.LivenessProbe).To(BeEquivalentTo(expectedLiveness))
+				Expect(parsedK8sCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
 			})
 		})
 
 		When("there is no k8s extension present", func() {
 			Context("Without RequirePresent configuration", func() {
 				It("does not fail validations", func() {
-					parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
+					parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(parsedCfg).NotTo(BeNil())
+					Expect(parsedK8sCfg).NotTo(BeNil())
 
-					Expect(parsedCfg.Workload.Replicas).To(Equal(config.DefaultReplicaNumber))
-					Expect(parsedCfg.Workload.LivenessProbe).To(BeEquivalentTo(config.DefaultLivenessProbe()))
-					Expect(parsedCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
+					Expect(parsedK8sCfg.Workload.Replicas).To(Equal(config.DefaultReplicaNumber))
+					Expect(parsedK8sCfg.Workload.LivenessProbe).To(BeEquivalentTo(config.DefaultLivenessProbe()))
+					Expect(parsedK8sCfg.Workload.ReadinessProbe).To(BeEquivalentTo(config.DefaultReadinessProbe()))
 				})
 			})
 		})
@@ -93,12 +93,13 @@ var _ = Describe("Service Extensions", func() {
 						},
 					}
 
-					parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
+					parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("returns defaults", func() {
-					Expect(parsedCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
+					defaultWorkload := config.DefaultSvcK8sConfig().Workload
+					Expect(parsedK8sCfg.Workload).To(BeEquivalentTo(defaultWorkload))
 				})
 			})
 
@@ -112,41 +113,38 @@ var _ = Describe("Service Extensions", func() {
 						},
 					}
 
-					parsedCfg, err = config.SvcK8sConfigFromCompose(&svc)
+					parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				When("workload is invalid", func() {
 					It("it is ignored and returns defaults", func() {
-						Expect(parsedCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
+						Expect(parsedK8sCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 					})
 				})
 			})
 
 			Context("missing liveness probe type", func() {
 				BeforeEach(func() {
-					k8s.Workload.Type = config.DefaultWorkload
-					k8s.Workload.Replicas = 10
+					k8sCfg.Workload.Type = config.DefaultWorkload
+					k8sCfg.Workload.Replicas = 10
 				})
 
 				When("liveness probe type not provided", func() {
 					It("return default probe", func() {
-						Expect(parsedCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
+						Expect(parsedK8sCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
 					})
 				})
 			})
 
 			Context("missing replicas", func() {
 				BeforeEach(func() {
-					k8s.Workload.Type = config.DefaultWorkload
-					k8s.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					k8sCfg.Workload.Replicas = 0
 				})
 
 				It("returns in defaults", func() {
-					k8sconf := config.DefaultSvcK8sConfig()
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
-
-					Expect(parsedCfg).To(BeEquivalentTo(k8sconf))
+					defaultReplicas := config.DefaultSvcK8sConfig().Workload.Replicas
+					Expect(parsedK8sCfg.Workload.Replicas).To(BeEquivalentTo(defaultReplicas))
 				})
 			})
 

@@ -55,5 +55,5 @@ type Volumes struct {
 // ProjectService is a wrapper type around composego.ServiceConfig
 type ProjectService struct {
 	composego.ServiceConfig
-	K8sSvc config.SvcK8sConfig
+	SvcK8sConfig config.SvcK8sConfig
 }

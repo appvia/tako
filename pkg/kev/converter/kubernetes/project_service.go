@@ -40,18 +40,18 @@ func NewProjectService(svc composego.ServiceConfig) (ProjectService, error) {
 
 	return ProjectService{
 		ServiceConfig: svc,
-		K8sSvc:        cfg,
+		SvcK8sConfig:  cfg,
 	}, nil
 }
 
 // enabled returns Bool telling Kev whether app component is enabled/disabled
 func (p *ProjectService) enabled() bool {
-	return !p.K8sSvc.Disabled
+	return !p.SvcK8sConfig.Disabled
 }
 
 // replicas returns number of replicas for given project service
 func (p *ProjectService) replicas() int32 {
-	return int32(p.K8sSvc.Workload.Replicas)
+	return int32(p.SvcK8sConfig.Workload.Replicas)
 }
 
 // autoscaleMaxReplicas returns maximum number of replicas for autoscaler
@@ -116,7 +116,7 @@ func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
 
 // workloadType returns workload type for the project service
 func (p *ProjectService) workloadType() string {
-	workloadType := p.K8sSvc.Workload.Type
+	workloadType := p.SvcK8sConfig.Workload.Type
 
 	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
 		log.WarnfWithFields(log.Fields{
@@ -131,7 +131,7 @@ func (p *ProjectService) workloadType() string {
 
 // serviceType returns service type for project service workload
 func (p *ProjectService) serviceType() (string, error) {
-	serviceType := p.K8sSvc.Service.Type
+	serviceType := p.SvcK8sConfig.Service.Type
 
 	// @step validate whether service type is set properly when node port is specified
 	if !strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
@@ -281,12 +281,12 @@ func (p *ProjectService) resourceRequests() (*int64, *int64) {
 		cpuRequest = cpu.ToDec().MilliValue()
 	}
 
-	if val := p.K8sSvc.Workload.Resource.Memory; val != "" {
+	if val := p.SvcK8sConfig.Workload.Resource.Memory; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		memRequest, _ = v.AsInt64()
 	}
 
-	if val := p.K8sSvc.Workload.Resource.CPU; val != "" {
+	if val := p.SvcK8sConfig.Workload.Resource.CPU; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		cpuRequest = v.ToDec().MilliValue()
 	}
@@ -310,12 +310,12 @@ func (p *ProjectService) resourceLimits() (*int64, *int64) {
 		cpuLimit = cpu.ToDec().MilliValue()
 	}
 
-	if val := p.K8sSvc.Workload.Resource.MaxMemory; val != "" {
+	if val := p.SvcK8sConfig.Workload.Resource.MaxMemory; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		memLimit, _ = v.AsInt64()
 	}
 
-	if val := p.K8sSvc.Workload.Resource.MaxCPU; val != "" {
+	if val := p.SvcK8sConfig.Workload.Resource.MaxCPU; val != "" {
 		v, _ := resource.ParseQuantity(val)
 		cpuLimit = v.ToDec().MilliValue()
 	}
@@ -352,12 +352,12 @@ func (p *ProjectService) fsGroup() string {
 
 // imagePullPolicy returns image PullPolicy for project service
 func (p *ProjectService) imagePullPolicy() v1.PullPolicy {
-	return v1.PullPolicy(p.K8sSvc.Workload.ImagePull.Policy)
+	return v1.PullPolicy(p.SvcK8sConfig.Workload.ImagePull.Policy)
 }
 
 // imagePullSecret returns image pull secret (for private registries)
 func (p *ProjectService) imagePullSecret() string {
-	return p.K8sSvc.Workload.ImagePull.Secret
+	return p.SvcK8sConfig.Workload.ImagePull.Secret
 }
 
 // serviceAccountName returns service account name to be used by the pod
@@ -372,8 +372,8 @@ func (p *ProjectService) serviceAccountName() string {
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
 func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 	policy := config.RestartPolicyAlways
-	if p.K8sSvc.Workload.RestartPolicy != "" {
-		policy = p.K8sSvc.Workload.RestartPolicy
+	if p.SvcK8sConfig.Workload.RestartPolicy != "" {
+		policy = p.SvcK8sConfig.Workload.RestartPolicy
 	}
 
 	restartPolicy, err := getRestartPolicy(p.Name, policy)

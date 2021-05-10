@@ -24,7 +24,7 @@ const (
 	DefaultVolumeSize = "100Mi"
 
 	// DefaultVolumeStorageClass default PV storage class
-	DefaultVolumeStorageClass = "standard"
+	DefaultVolumeStorageClass = ""
 
 	// DefaultService is a default service
 	DefaultService = NoService

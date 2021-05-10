@@ -988,7 +988,7 @@ var _ = Describe("Transform", func() {
 
 					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
 						BeforeEach(func() {
-							projectService.K8sSvc.Workload.Replicas = 10
+							projectService.SvcK8sConfig.Workload.Replicas = 10
 
 							projectService.Labels = composego.Labels{
 								config.LabelWorkloadAutoscaleMaxReplicas: "5",

@@ -254,7 +254,7 @@ var _ = Describe("ProjectService", func() {
 			workloadType := "StatefulSet"
 
 			JustBeforeEach(func() {
-				projectService.K8sSvc.Workload.Type = workloadType
+				projectService.SvcK8sConfig.Workload.Type = workloadType
 			})
 
 			It("will use a extension value", func() {
@@ -272,8 +272,8 @@ var _ = Describe("ProjectService", func() {
 			projectWorkloadType := config.StatefulsetWorkload
 
 			JustBeforeEach(func() {
-				projectService.K8sSvc.Workload.Type = projectWorkloadType
-				m, err := projectService.K8sSvc.ToMap()
+				projectService.SvcK8sConfig.Workload.Type = projectWorkloadType
+				m, err := projectService.SvcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 
 				svc := projectService.ServiceConfig
@@ -289,7 +289,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("warns the user about the mismatch", func() {
-				Expect(projectService.K8sSvc.Workload.Type).To(Equal(projectWorkloadType))
+				Expect(projectService.SvcK8sConfig.Workload.Type).To(Equal(projectWorkloadType))
 				Expect(projectService.Deploy.Mode).To(Equal("global"))
 
 				projectService.workloadType()
@@ -927,8 +927,8 @@ var _ = Describe("ProjectService", func() {
 			policy := config.DefaultRestartPolicy
 
 			JustBeforeEach(func() {
-				projectService.K8sSvc.Workload.RestartPolicy = policy
-				m, err := projectService.K8sSvc.ToMap()
+				projectService.SvcK8sConfig.Workload.RestartPolicy = policy
+				m, err := projectService.SvcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 
 				svc := projectService.ServiceConfig
@@ -941,7 +941,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				Expect(projectService.K8sSvc.Workload.RestartPolicy).To(Equal(policy))
+				Expect(projectService.SvcK8sConfig.Workload.RestartPolicy).To(Equal(policy))
 				Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 			})
 		})
@@ -1017,8 +1017,8 @@ var _ = Describe("ProjectService", func() {
 				policy := "invalid-policy"
 
 				JustBeforeEach(func() {
-					projectService.K8sSvc.Workload.RestartPolicy = policy
-					m, err := projectService.K8sSvc.ToMap()
+					projectService.SvcK8sConfig.Workload.RestartPolicy = policy
+					m, err := projectService.SvcK8sConfig.ToMap()
 					Expect(err).NotTo(HaveOccurred())
 
 					svc := projectService.ServiceConfig
@@ -1028,7 +1028,7 @@ var _ = Describe("ProjectService", func() {
 
 					projectService, err = NewProjectService(svc)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(projectService.K8sSvc.Workload.RestartPolicy).To(Equal(policy))
+					Expect(projectService.SvcK8sConfig.Workload.RestartPolicy).To(Equal(policy))
 				})
 
 				It("warns the user and defaults restart policy to `Always`", func() {

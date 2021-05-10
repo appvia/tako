@@ -38,4 +38,3 @@ volumes:
       kev.volume.size: 100Mi
     x-k8s:
       size: 100Mi
-      storageClass: standard

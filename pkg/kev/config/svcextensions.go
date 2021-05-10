@@ -143,7 +143,7 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
 
-	imagePull, err := ImagePullFromCompose(svc)
+	imagePull, err := ImagePullFromCompose()
 	if err != nil {
 		return SvcK8sConfig{}, err
 	}
@@ -227,7 +227,7 @@ func getMemoryQuantity(b int64) string {
 	return fmt.Sprintf("%.1f%ci", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-func ImagePullFromCompose(_ *composego.ServiceConfig) (ImagePull, error) {
+func ImagePullFromCompose() (ImagePull, error) {
 	return ImagePull{
 		Policy: DefaultImagePullPolicy,
 		Secret: DefaultImagePullSecret,

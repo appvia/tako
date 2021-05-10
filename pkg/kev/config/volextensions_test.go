@@ -52,9 +52,8 @@ var _ = Describe("Volume Extensions", func() {
 			delete(composeVolExt, "size")
 
 			expected := map[string]interface{}{
-				"storageClass": config.DefaultVolumeStorageClass,
-				"size":         config.DefaultVolumeSize,
-				"selector":     "my-volume-selector-label",
+				"size":     config.DefaultVolumeSize,
+				"selector": "my-volume-selector-label",
 			}
 
 			cfg, err := config.VolK8sConfigFromCompose(&composeVol)

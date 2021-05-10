@@ -223,16 +223,16 @@ var _ = Describe("InitRunner", func() {
 			It("should include default config params", func() {
 				svc, _ := env.GetService("db")
 
-				k8sSvc, err := config.ParseSvcK8sConfigFromMap(svc.Extensions)
+				svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(svc.GetLabels()).To(BeEmpty())
-				Expect(k8sSvc.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
-				Expect(k8sSvc.Workload.Replicas).NotTo(BeZero())
+				Expect(svcK8sConfig.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
+				Expect(svcK8sConfig.Workload.Replicas).NotTo(BeZero())
 			})
 		})
 
-		Context("with volumes legacy", func() {
+		Context("with volumes config labels", func() {
 			It("should include a subset of labels as config params", func() {
 				vol, _ := env.GetVolume("db_data")
 				Expect(vol.Labels).To(HaveLen(1))
