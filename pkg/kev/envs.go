@@ -203,12 +203,12 @@ func (e *Environment) loadOverride() (*Environment, error) {
 		services = append(services, serviceConfig)
 	}
 	volumes := Volumes{}
-	for _, v := range p.VolumeNames() {
-		volumeConfig, err := newVolumeConfig(v, p)
+	for _, volName := range p.VolumeNames() {
+		volumeConfig, err := newVolumeConfig(volName, p)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Cannot load environment [%s], volume [%s]", e.Name, v)
+			return nil, errors.Wrapf(err, "Cannot load environment [%s], volume [%s]", e.Name, volName)
 		}
-		volumes[v] = volumeConfig
+		volumes[volName] = volumeConfig
 	}
 	e.override = &composeOverride{
 		Version:  p.GetVersion(),

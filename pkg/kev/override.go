@@ -18,10 +18,8 @@ package kev
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
@@ -149,67 +147,10 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 func (o *composeOverride) diffAndPatch(dst *composeOverride) {
 	o.detectAndPatchVersionUpdate(dst)
 	o.detectAndPatchServicesCreate(dst)
-	o.detectAndPatchServiceExtensions(dst)
 	o.detectAndPatchServicesDelete(dst)
 	o.detectAndPatchServicesEnvironmentDelete(dst)
 	o.detectAndPatchVolumesCreate(dst)
 	o.detectAndPatchVolumesDelete(dst)
-}
-
-func (o *composeOverride) detectAndPatchServiceExtensions(dst *composeOverride) {
-	sg := o.UI.StepGroup()
-	defer sg.Done()
-	step := sg.Add("Detecting service extension updates")
-
-	cset := changeset{}
-	for i, srcSvc := range o.Services {
-		dstSvc, err := dst.getService(srcSvc.Name)
-		if err != nil {
-			continue
-		}
-
-		k8sconf, err := config.ParseSvcK8sConfigFromMap(dstSvc.Extensions)
-		if err != nil {
-			log.Debugf("unable to convert extensions to k8s configuration %s", err.Error())
-			continue
-		}
-
-		k8sconf, err = k8sconf.Merge(k8sconf)
-		if err != nil {
-			log.Debugf("unable to merge extensions to k8s configuration %s", err.Error())
-			continue
-		}
-
-		k8smap, err := k8sconf.ToMap()
-		if err != nil {
-			log.Debugf("unable to convert k8s configuration to map %s", err.Error())
-			continue
-		}
-
-		if reflect.DeepEqual(k8smap, dstSvc.Extensions) {
-			continue
-		}
-
-		cset.services = append(cset.services, change{
-			Type:   UPDATE,
-			Parent: "extensions",
-			Index:  i,
-			Value:  k8smap,
-		})
-	}
-
-	if cset.HasNoPatches() {
-		step.Success("No extension updates detected")
-		return
-	}
-
-	msgs := cset.applyServicesPatchesIfAny(dst)
-	step.Success("Applied extension updates")
-	for _, msg := range msgs {
-		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
-			kmd.WithIndentChar(kmd.LogIndentChar),
-			kmd.WithIndent(3))
-	}
 }
 
 func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
