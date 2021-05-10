@@ -32,7 +32,7 @@ import (
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -132,7 +132,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with imaged pull secret specified via labels", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.ImagePull.Secret = "my-pp-secret"
 
 				m, err := k8sconf.ToMap()
@@ -988,7 +988,7 @@ var _ = Describe("Transform", func() {
 
 					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
 						BeforeEach(func() {
-							projectService.K8SConfig.Workload.Replicas = 10
+							projectService.SvcK8sConfig.Workload.Replicas = 10
 
 							projectService.Labels = composego.Labels{
 								config.LabelWorkloadAutoscaleMaxReplicas: "5",
@@ -1502,12 +1502,10 @@ var _ = Describe("Transform", func() {
 	Describe("configPVCVolumeSource", func() {
 		It("creates PVC volume source as expected", func() {
 			claimName := "claimName"
-			readOnly := false
-
-			Expect(k.configPVCVolumeSource(claimName, readOnly)).To(Equal(&v1.VolumeSource{
+			Expect(k.configPVCVolumeSource(claimName, false)).To(Equal(&v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 					ClaimName: claimName,
-					ReadOnly:  readOnly,
+					ReadOnly:  false,
 				},
 			}))
 		})
@@ -1898,7 +1896,7 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
-					k8sconf := config.DefaultK8SConfig()
+					k8sconf := config.DefaultSvcK8sConfig()
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
 					k8sconf.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
 					k8sconf.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
@@ -1920,7 +1918,7 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					k8sconf, err := config.ParseK8SCfgFromMap(project.Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(project.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
@@ -2023,7 +2021,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.Memory = "10Mi"
 
 				ext, err := k8sconf.ToMap()
@@ -2043,7 +2041,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.MaxMemory = "10M"
 
 				ext, err := k8sconf.ToMap()
@@ -2063,7 +2061,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu request provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.CPU = "0.1"
 
 				ext, err := k8sconf.ToMap()
@@ -2083,7 +2081,7 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu limit provided in configuration", func() {
 			BeforeEach(func() {
-				k8sconf := config.DefaultK8SConfig()
+				k8sconf := config.DefaultSvcK8sConfig()
 				k8sconf.Workload.Resource.MaxCPU = "0.5"
 
 				ext, err := k8sconf.ToMap()

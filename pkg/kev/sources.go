@@ -39,6 +39,12 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 		Version: ready.version,
 	}
 
+	// TODO(es): stop extracting labels once volumes is finalised.
+	extractVolumesLabels(ready, s.override)
+	if err := extractVolumesExtensions(ready, s.override); err != nil {
+		return err
+	}
+
 	for _, svc := range ready.Services {
 		target := ServiceConfig{
 			Name:       svc.Name,
@@ -47,9 +53,8 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 		}
 
 		setDefaultLabels(&target)
-		extractVolumesLabels(ready, s.override)
 
-		k8sConf, err := config.K8SCfgFromCompose(&svc)
+		k8sConf, err := config.SvcK8sConfigFromCompose(&svc)
 		if err != nil {
 			return err
 		}
@@ -72,6 +77,37 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 			log.Debug(err.Error())
 			return err
 		}
+	}
+
+	return nil
+}
+
+// extractVolumesExtensions adds a k8s extension to each defined volume.
+// Every extension contains default k8s settings.
+func extractVolumesExtensions(c *ComposeProject, out *composeOverride) error {
+	for _, v := range c.VolumeNames() {
+		vol := c.Volumes[v]
+		target := VolumeConfig{
+			Labels:     out.Volumes[v].Labels,
+			Extensions: vol.Extensions,
+		}
+
+		k8sVol, err := config.VolK8sConfigFromCompose(&vol)
+		if err != nil {
+			return nil
+		}
+
+		m, err := k8sVol.Map()
+		if err != nil {
+			return err
+		}
+
+		if target.Extensions == nil {
+			target.Extensions = make(map[string]interface{})
+		}
+		target.Extensions[config.K8SExtensionKey] = m
+
+		out.Volumes[v] = target
 	}
 
 	return nil
