@@ -25,7 +25,8 @@ import (
 
 func newVolumeConfig(name string, p *ComposeProject) (VolumeConfig, error) {
 	cfg := VolumeConfig{
-		Labels: p.Volumes[name].Labels,
+		Labels:     p.Volumes[name].Labels,
+		Extensions: p.Volumes[name].Extensions,
 	}
 	return cfg, cfg.validate()
 }
