@@ -100,14 +100,20 @@ func DefaultVolK8sConfig() VolK8sConfig {
 }
 
 // VolK8sConfigFromCompose returns a VolK8sConfig from a compose-go VolumeConfig
+// It extracts and infers values based on rules applied to the compose-go volume.
 func VolK8sConfigFromCompose(vol *composego.VolumeConfig) (VolK8sConfig, error) {
+	var (
+		k8sExt VolK8sConfig
+		err    error
+	)
 	cfg := DefaultVolK8sConfig()
-	volFromMap, err := ParseVolK8sConfigFromMap(vol.Extensions)
-	if err != nil {
-		return VolK8sConfig{}, err
+	if _, ok := vol.Extensions[K8SExtensionKey]; ok {
+		if k8sExt, err = ParseVolK8sConfigFromMap(vol.Extensions, SkipValidation()); err != nil {
+			return VolK8sConfig{}, err
+		}
 	}
 
-	cfg, err = cfg.Merge(volFromMap)
+	cfg, err = cfg.Merge(k8sExt)
 	if err != nil {
 		return VolK8sConfig{}, err
 	}
@@ -120,9 +126,14 @@ func VolK8sConfigFromCompose(vol *composego.VolumeConfig) (VolK8sConfig, error) 
 }
 
 // ParseVolK8sConfigFromMap parses a volume extension from the related map
-func ParseVolK8sConfigFromMap(m map[string]interface{}) (VolK8sConfig, error) {
+func ParseVolK8sConfigFromMap(m map[string]interface{}, opts ...K8sExtensionOption) (VolK8sConfig, error) {
+	var options extensionOptions
+	for _, o := range opts {
+		o(&options)
+	}
+
 	if _, ok := m[K8SExtensionKey]; !ok {
-		return VolK8sConfig{}, nil
+		return VolK8sConfig{}, fmt.Errorf("missing %s volume extension", K8SExtensionKey)
 	}
 
 	var ext VolumeExtension
@@ -134,6 +145,12 @@ func ParseVolK8sConfigFromMap(m map[string]interface{}) (VolK8sConfig, error) {
 
 	if err := yaml.NewDecoder(&buf).Decode(&ext); err != nil {
 		return VolK8sConfig{}, err
+	}
+
+	if !options.skipValidation {
+		if err := ext.K8S.Validate(); err != nil {
+			return VolK8sConfig{}, err
+		}
 	}
 
 	return ext.K8S, nil

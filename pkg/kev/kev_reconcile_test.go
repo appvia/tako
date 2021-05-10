@@ -50,7 +50,9 @@ var _ = Describe("Reconcile", func() {
 		hook = testutil.NewLogger(logrus.DebugLevel)
 
 		r := kev.NewRenderRunner(workingDir, kev.WithUI(kmd.NoOpUI()))
-		r.LoadProject()
+		err = r.LoadProject()
+		Expect(err).NotTo(HaveOccurred(), workingDir)
+
 		manifest, mErr = r.Manifest().ReconcileConfig()
 		Expect(mErr).NotTo(HaveOccurred(), workingDir)
 
@@ -197,19 +199,19 @@ var _ = Describe("Reconcile", func() {
 				It("confirms the edit pre reconciliation", func() {
 					s, _ := override.GetService("wordpress")
 
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
+					Expect(svcK8sConfig.Service.Type).To(Equal("LoadBalancer"))
 				})
 
 				It("should not update the label in all environments", func() {
 					s, _ := env.GetService("wordpress")
 
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
+					Expect(svcK8sConfig.Service.Type).To(Equal("LoadBalancer"))
 				})
 
 				It("should log the change summary using the debug level", func() {
@@ -519,12 +521,12 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should have a valid tcp", func() {
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(env.GetServices()[0].Extensions)
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(env.GetServices()[0].Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeTCP.String()))
-					Expect(k8sconf.Workload.LivenessProbe.TCP.Port).To(Equal(8080))
-					Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(BeEmpty())
+					Expect(svcK8sConfig.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeTCP.String()))
+					Expect(svcK8sConfig.Workload.LivenessProbe.TCP.Port).To(Equal(8080))
+					Expect(svcK8sConfig.Workload.LivenessProbe.Exec.Command).To(BeEmpty())
 				})
 			})
 			Context("liveness and readiness http", func() {
@@ -537,24 +539,24 @@ var _ = Describe("Reconcile", func() {
 					svcCfg, err := env.GetService("db")
 					Expect(err).NotTo(HaveOccurred())
 
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(svcCfg.Extensions)
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(svcCfg.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
-					Expect(k8sconf.Workload.LivenessProbe.HTTP.Port).To(Equal(8080))
-					Expect(k8sconf.Workload.LivenessProbe.HTTP.Path).To(Equal("/status"))
-					Expect(k8sconf.Workload.LivenessProbe.Exec.Command).To(BeEmpty())
+					Expect(svcK8sConfig.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
+					Expect(svcK8sConfig.Workload.LivenessProbe.HTTP.Port).To(Equal(8080))
+					Expect(svcK8sConfig.Workload.LivenessProbe.HTTP.Path).To(Equal("/status"))
+					Expect(svcK8sConfig.Workload.LivenessProbe.Exec.Command).To(BeEmpty())
 				})
 
 				It("should have a valid http readiness probe", func() {
 					svcCfg, err := env.GetService("wordpress")
 					Expect(err).NotTo(HaveOccurred())
 
-					k8sconf, err := config.ParseSvcK8sConfigFromMap(svcCfg.Extensions)
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(svcCfg.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sconf.Workload.ReadinessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
-					Expect(k8sconf.Workload.ReadinessProbe.HTTP.Port).To(Equal(8080))
+					Expect(svcK8sConfig.Workload.ReadinessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
+					Expect(svcK8sConfig.Workload.ReadinessProbe.HTTP.Port).To(Equal(8080))
 				})
 			})
 		})
