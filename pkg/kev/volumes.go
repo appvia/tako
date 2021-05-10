@@ -24,10 +24,10 @@ import (
 )
 
 func newVolumeConfig(name string, p *ComposeProject) (VolumeConfig, error) {
-	config := VolumeConfig{
+	cfg := VolumeConfig{
 		Labels: p.Volumes[name].Labels,
 	}
-	return config, config.validate()
+	return cfg, cfg.validate()
 }
 
 func (vc VolumeConfig) validate() error {
@@ -54,7 +54,8 @@ func (vc VolumeConfig) condenseLabels(labels []string) VolumeConfig {
 	}
 
 	return VolumeConfig{
-		Name:   vc.Name,
-		Labels: vc.Labels,
+		Name:       vc.Name,
+		Labels:     vc.Labels,
+		Extensions: vc.Extensions,
 	}
 }

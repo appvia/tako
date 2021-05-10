@@ -197,7 +197,7 @@ var _ = Describe("Reconcile", func() {
 				It("confirms the edit pre reconciliation", func() {
 					s, _ := override.GetService("wordpress")
 
-					k8sconf, err := config.ParseK8SCfgFromMap(s.Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
@@ -206,7 +206,7 @@ var _ = Describe("Reconcile", func() {
 				It("should not update the label in all environments", func() {
 					s, _ := env.GetService("wordpress")
 
-					k8sconf, err := config.ParseK8SCfgFromMap(s.Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sconf.Service.Type).To(Equal("LoadBalancer"))
@@ -241,7 +241,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service extension value defaults", func() {
-					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
 						Service: config.Service{
 							Type: config.ClusterIPService,
 						},
@@ -284,7 +284,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure parse config into extensions", func() {
-					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
 						Workload: config.Workload{
 							Replicas:      3,
 							RestartPolicy: "always",
@@ -301,7 +301,7 @@ var _ = Describe("Reconcile", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					k8s, err := config.ParseK8SCfgFromMap(env.GetServices()[1].Extensions)
+					k8s, err := config.ParseSvcK8sConfigFromMap(env.GetServices()[1].Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8s.Workload.Replicas).To(Equal(3))
@@ -315,7 +315,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service extensions from healthcheck config", func() {
-					expected, err := newDefaultServiceExtensions("wordpress", config.K8SConfiguration{
+					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
 						Workload: config.Workload{
 							RestartPolicy: "always",
 							Resource: config.Resource{
@@ -519,7 +519,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should have a valid tcp", func() {
-					k8sconf, err := config.ParseK8SCfgFromMap(env.GetServices()[0].Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(env.GetServices()[0].Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeTCP.String()))
@@ -537,7 +537,7 @@ var _ = Describe("Reconcile", func() {
 					svcCfg, err := env.GetService("db")
 					Expect(err).NotTo(HaveOccurred())
 
-					k8sconf, err := config.ParseK8SCfgFromMap(svcCfg.Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(svcCfg.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sconf.Workload.LivenessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
@@ -550,7 +550,7 @@ var _ = Describe("Reconcile", func() {
 					svcCfg, err := env.GetService("wordpress")
 					Expect(err).NotTo(HaveOccurred())
 
-					k8sconf, err := config.ParseK8SCfgFromMap(svcCfg.Extensions)
+					k8sconf, err := config.ParseSvcK8sConfigFromMap(svcCfg.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sconf.Workload.ReadinessProbe.Type).To(Equal(config.ProbeTypeHTTP.String()))
@@ -561,8 +561,8 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func newDefaultServiceExtensions(name string, k8sconfs ...config.K8SConfiguration) (map[string]interface{}, error) {
-	k8s := config.K8SConfiguration{
+func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig) (map[string]interface{}, error) {
+	k8s := config.SvcK8sConfig{
 		Disabled: false,
 		Workload: config.Workload{
 			LivenessProbe:  config.DefaultLivenessProbe(),
@@ -576,7 +576,7 @@ func newDefaultServiceExtensions(name string, k8sconfs ...config.K8SConfiguratio
 		},
 	}
 
-	for _, conf := range k8sconfs {
+	for _, conf := range svcK8sConfigs {
 		c, err := k8s.Merge(conf)
 		if err != nil {
 			return nil, err

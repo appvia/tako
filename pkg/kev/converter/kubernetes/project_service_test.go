@@ -49,7 +49,7 @@ var _ = Describe("ProjectService", func() {
 		environment        composego.MappingWithEquals
 		healthcheck        composego.HealthCheckConfig
 		projectVolumes     composego.Volumes
-		k8sconf            config.K8SConfiguration
+		k8sconf            config.SvcK8sConfig
 	)
 
 	BeforeEach(func() {
@@ -64,7 +64,7 @@ var _ = Describe("ProjectService", func() {
 		healthcheck = composego.HealthCheckConfig{}
 		projectVolumes = composego.Volumes{}
 
-		k8sconf = config.K8SConfiguration{}
+		k8sconf = config.SvcK8sConfig{}
 	})
 
 	JustBeforeEach(func() {
@@ -254,7 +254,7 @@ var _ = Describe("ProjectService", func() {
 			workloadType := "StatefulSet"
 
 			JustBeforeEach(func() {
-				projectService.K8SConfig.Workload.Type = workloadType
+				projectService.SvcK8sConfig.Workload.Type = workloadType
 			})
 
 			It("will use a extension value", func() {
@@ -272,8 +272,8 @@ var _ = Describe("ProjectService", func() {
 			projectWorkloadType := config.StatefulsetWorkload
 
 			JustBeforeEach(func() {
-				projectService.K8SConfig.Workload.Type = projectWorkloadType
-				m, err := projectService.K8SConfig.ToMap()
+				projectService.SvcK8sConfig.Workload.Type = projectWorkloadType
+				m, err := projectService.SvcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 
 				svc := projectService.ServiceConfig
@@ -289,7 +289,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("warns the user about the mismatch", func() {
-				Expect(projectService.K8SConfig.Workload.Type).To(Equal(projectWorkloadType))
+				Expect(projectService.SvcK8sConfig.Workload.Type).To(Equal(projectWorkloadType))
 				Expect(projectService.Deploy.Mode).To(Equal("global"))
 
 				projectService.workloadType()
@@ -333,7 +333,7 @@ var _ = Describe("ProjectService", func() {
 
 				JustBeforeEach(func() {
 					var err error
-					k8sconf := config.K8SConfiguration{}
+					k8sconf := config.SvcK8sConfig{}
 					k8sconf.Service.Type = invalidType
 
 					m, err = k8sconf.ToMap()
@@ -348,7 +348,7 @@ var _ = Describe("ProjectService", func() {
 						},
 					})
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("K8SConfiguration.Service.Type"))
+					Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Service.Type"))
 				})
 			})
 
@@ -549,7 +549,6 @@ var _ = Describe("ProjectService", func() {
 
 		volumeName := "vol-a"
 		targetPath := "/some/path"
-		volumeLabels := composego.Labels{}
 
 		BeforeEach(func() {
 			volumes = []composego.ServiceVolumeConfig{
@@ -582,18 +581,18 @@ var _ = Describe("ProjectService", func() {
 				}))
 			})
 
-			Context("when volume contains storage class label", func() {
+			Context("when volume contains a storage class in k8s extension", func() {
 				storageClass := "ssd"
 
 				BeforeEach(func() {
-					volumeLabels = composego.Labels{
-						config.LabelVolumeStorageClass: storageClass,
-					}
-
 					projectVolumes = composego.Volumes{
 						volumeName: composego.VolumeConfig{
-							Name:   volumeName,
-							Labels: volumeLabels,
+							Name: volumeName,
+							Extensions: map[string]interface{}{
+								config.K8SExtensionKey: map[string]interface{}{
+									"storageClass": storageClass,
+								},
+							},
 						},
 					}
 				})
@@ -604,18 +603,18 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 
-			Context("when volume contains volume size label", func() {
+			Context("when volume contains a volume size in k8s extension", func() {
 				storageSize := "1Gi"
 
 				BeforeEach(func() {
-					volumeLabels = composego.Labels{
-						config.LabelVolumeSize: storageSize,
-					}
-
 					projectVolumes = composego.Volumes{
 						volumeName: composego.VolumeConfig{
-							Name:   volumeName,
-							Labels: volumeLabels,
+							Name: volumeName,
+							Extensions: map[string]interface{}{
+								config.K8SExtensionKey: map[string]interface{}{
+									"size": storageSize,
+								},
+							},
 						},
 					}
 				})
@@ -873,7 +872,7 @@ var _ = Describe("ProjectService", func() {
 					Extensions: extensions,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("K8SConfiguration.Workload.ImagePull.Policy"))
+				Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Workload.ImagePull.Policy"))
 			})
 		})
 	})
@@ -928,8 +927,8 @@ var _ = Describe("ProjectService", func() {
 			policy := config.DefaultRestartPolicy
 
 			JustBeforeEach(func() {
-				projectService.K8SConfig.Workload.RestartPolicy = policy
-				m, err := projectService.K8SConfig.ToMap()
+				projectService.SvcK8sConfig.Workload.RestartPolicy = policy
+				m, err := projectService.SvcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 
 				svc := projectService.ServiceConfig
@@ -942,7 +941,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns label value", func() {
-				Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
+				Expect(projectService.SvcK8sConfig.Workload.RestartPolicy).To(Equal(policy))
 				Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 			})
 		})
@@ -1018,8 +1017,8 @@ var _ = Describe("ProjectService", func() {
 				policy := "invalid-policy"
 
 				JustBeforeEach(func() {
-					projectService.K8SConfig.Workload.RestartPolicy = policy
-					m, err := projectService.K8SConfig.ToMap()
+					projectService.SvcK8sConfig.Workload.RestartPolicy = policy
+					m, err := projectService.SvcK8sConfig.ToMap()
 					Expect(err).NotTo(HaveOccurred())
 
 					svc := projectService.ServiceConfig
@@ -1029,7 +1028,7 @@ var _ = Describe("ProjectService", func() {
 
 					projectService, err = NewProjectService(svc)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(projectService.K8SConfig.Workload.RestartPolicy).To(Equal(policy))
+					Expect(projectService.SvcK8sConfig.Workload.RestartPolicy).To(Equal(policy))
 				})
 
 				It("warns the user and defaults restart policy to `Always`", func() {
@@ -1075,11 +1074,11 @@ var _ = Describe("ProjectService", func() {
 				osVal := "BAZ"
 
 				BeforeEach(func() {
-					os.Setenv(key, osVal)
+					_ = os.Setenv(key, osVal)
 				})
 
 				AfterEach(func() {
-					os.Unsetenv(key)
+					_ = os.Unsetenv(key)
 				})
 
 				It("takes the value from the OS environment", func() {
