@@ -20,9 +20,6 @@ services:
       kev.workload.type: StatefulSet
 volumes:
   db_data:
-    labels:
-      kev.volume.size: 100Mi
-      kev.volume.storage-class: standard
     x-k8s:
       size: 100Mi
       storageClass: standard

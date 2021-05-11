@@ -114,15 +114,21 @@ var _ = Describe("Reconcile", func() {
 				})
 			})
 
-			When("the override volume label overrides have been updated", func() {
+			When("the override volume extensions overrides have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
 					v := override.Volumes["db_data"]
-					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
+					volK8sConfig, err := config.ParseVolK8sConfigFromMap(v.Extensions)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(volK8sConfig.Size).To(Equal("200Mi"))
 				})
 
 				It("keeps overridden override values", func() {
 					v, _ := env.GetVolume("db_data")
-					Expect(v.Labels["kev.volume.size"]).To(Equal("200Mi"))
+					volK8sConfig, err := config.ParseVolK8sConfigFromMap(v.Extensions)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(volK8sConfig.Size).To(Equal("200Mi"))
 				})
 			})
 		})
@@ -355,8 +361,10 @@ var _ = Describe("Reconcile", func() {
 				Expect(env.GetVolumes()).To(HaveLen(1))
 
 				v, _ := env.GetVolume("db_data")
-				Expect(v.Labels).To(HaveLen(1))
-				Expect(v.Labels[config.LabelVolumeSize]).To(Equal("100Mi"))
+				volExt := v.Extensions[config.K8SExtensionKey].(map[string]interface{})
+
+				Expect(v.Extensions).To(HaveLen(1))
+				Expect(volExt["size"]).To(Equal("100Mi"))
 			})
 
 			It("should log the change summary using the debug level", func() {

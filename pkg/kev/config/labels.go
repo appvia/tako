@@ -53,17 +53,13 @@ const (
 	LabelServiceExposeTLSSecret = LabelPrefix + "service.expose.tls-secret"
 
 	// LabelVolumeSize defines persistent volume size
-	LabelVolumeSize = LabelPrefix + "volume.size"
+	// LabelVolumeSize = LabelPrefix + "volume.size"
 
 	// LabelVolumeSelector defines persistent volume selector
-	LabelVolumeSelector = LabelPrefix + "volume.selector"
+	// LabelVolumeSelector = LabelPrefix + "volume.selector"
 
 	// LabelVolumeStorageClass defines persistent volume storage class
-	LabelVolumeStorageClass = LabelPrefix + "volume.storage-class"
+	// LabelVolumeStorageClass = LabelPrefix + "volume.storage-class"
 )
 
 var BaseServiceLabels = []string{}
-
-var BaseVolumeLabels = []string{
-	LabelVolumeSize,
-}

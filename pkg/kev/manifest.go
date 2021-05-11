@@ -224,8 +224,6 @@ func validateExtensions(override *composeOverride) error {
 // MergeEnvIntoSources merges an environment into a parsed instance of the tracked docker-compose sources.
 // It returns the merged ComposeProject.
 func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) {
-	e.prepareForMergeUsing(m.getSourcesOverride())
-
 	p, err := m.SourcesToComposeProject()
 	if err != nil {
 		return nil, err

@@ -138,7 +138,7 @@ func (chg change) patchService(override *composeOverride) string {
 func (chg change) patchVolume(override *composeOverride) string {
 	switch chg.Type {
 	case CREATE:
-		newValue := chg.Value.(VolumeConfig).condenseLabels(config.BaseVolumeLabels)
+		newValue := chg.Value.(VolumeConfig)
 		override.Volumes[chg.Index.(string)] = newValue
 		msg := fmt.Sprintf("added volume: %s", chg.Index.(string))
 		log.Debugf(msg)

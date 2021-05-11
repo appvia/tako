@@ -37,10 +37,9 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 
 	s.override = &composeOverride{
 		Version: ready.version,
+		Volumes: map[string]VolumeConfig{},
 	}
 
-	// TODO(es): stop extracting labels once volumes is finalised.
-	extractVolumesLabels(ready, s.override)
 	if err := extractVolumesExtensions(ready, s.override); err != nil {
 		return err
 	}
@@ -87,14 +86,18 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 func extractVolumesExtensions(c *ComposeProject, out *composeOverride) error {
 	for _, v := range c.VolumeNames() {
 		vol := c.Volumes[v]
-		target := VolumeConfig{
-			Labels:     out.Volumes[v].Labels,
-			Extensions: vol.Extensions,
-		}
 
 		k8sVol, err := config.VolK8sConfigFromCompose(&vol)
 		if err != nil {
 			return nil
+		}
+
+		target := VolumeConfig{
+			Extensions: vol.Extensions,
+		}
+
+		if target.Extensions == nil {
+			target.Extensions = make(map[string]interface{})
 		}
 
 		m, err := k8sVol.Map()
@@ -102,9 +105,6 @@ func extractVolumesExtensions(c *ComposeProject, out *composeOverride) error {
 			return err
 		}
 
-		if target.Extensions == nil {
-			target.Extensions = make(map[string]interface{})
-		}
 		target.Extensions[config.K8SExtensionKey] = m
 
 		out.Volumes[v] = target
