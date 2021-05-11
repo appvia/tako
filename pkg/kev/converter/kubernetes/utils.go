@@ -979,3 +979,13 @@ func ToUnstructured(o runtime.Object) (map[string]interface{}, error) {
 func FromUnstructured(unstructured map[string]interface{}, target interface{}) error {
 	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured, target)
 }
+
+// volumeByNameAndFormat find a volume using a name, and the name's underlying format.
+func volumeByNameAndFormat(name string, formatter func(string) string, volumes composego.Volumes) composego.VolumeConfig {
+	for _, v := range volumes {
+		if name == formatter(v.Name) {
+			return v
+		}
+	}
+	return composego.VolumeConfig{}
+}

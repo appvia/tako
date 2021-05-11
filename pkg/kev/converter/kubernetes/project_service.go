@@ -237,7 +237,7 @@ func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) 
 	}
 
 	for i, vol := range vols {
-		composeVol := project.Volumes[vol.VolumeName]
+		composeVol := volumeByNameAndFormat(vol.VolumeName, rfc1123, project.Volumes)
 		k8sVol, err := config.VolK8sConfigFromCompose(&composeVol)
 		if err != nil {
 			return nil, err
