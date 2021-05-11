@@ -107,20 +107,6 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 	}
 }
 
-type extensionOptions struct {
-	skipValidation bool
-}
-
-// K8sExtensionOption will modify parsing behaviour of the k8s extension.
-type K8sExtensionOption func(*extensionOptions)
-
-// SkipValidation skips validation when parsing a k8s extension from a service.
-func SkipValidation() K8sExtensionOption {
-	return func(extOpts *extensionOptions) {
-		extOpts.skipValidation = true
-	}
-}
-
 // SvcK8sConfigFromCompose creates a K8s service extension from a compose-go service.
 // It extracts and infers values based on rules applied to the compose-go service.
 func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error) {

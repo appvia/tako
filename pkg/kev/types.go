@@ -135,8 +135,7 @@ type ServiceConfig struct {
 	Name        string                      `yaml:"-" json:"-" diff:"name"`
 	Labels      composego.Labels            `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
-
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	Extensions  map[string]interface{}      `yaml:",inline" json:"-"`
 }
 
 type secretHit struct {
