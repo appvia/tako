@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Volume Extensions", func() {
+var _ = Describe("Volume Extension", func() {
 	var (
 		composeVol    composego.VolumeConfig
 		composeVolExt map[string]interface{}

@@ -26,7 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var _ = Describe("Service Extensions", func() {
+var _ = Describe("Service Extension", func() {
 
 	Describe("parsing", func() {
 		var (
