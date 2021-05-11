@@ -547,7 +547,7 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("volumes", func() {
 
-		volumeName := "vol-a"
+		volumeName := "vol_a"
 		targetPath := "/some/path"
 
 		BeforeEach(func() {
@@ -572,7 +572,7 @@ var _ = Describe("ProjectService", func() {
 					{
 						SvcName:      projectServiceName,
 						MountPath:    ":" + targetPath,
-						VolumeName:   volumeName,
+						VolumeName:   rfc1123(volumeName),
 						Container:    targetPath,
 						PVCName:      projectServiceName + "-claim0",
 						PVCSize:      config.DefaultVolumeSize,
