@@ -49,7 +49,7 @@ var _ = Describe("ProjectService", func() {
 		environment        composego.MappingWithEquals
 		healthcheck        composego.HealthCheckConfig
 		projectVolumes     composego.Volumes
-		k8sconf            config.SvcK8sConfig
+		svcK8sConfig       config.SvcK8sConfig
 	)
 
 	BeforeEach(func() {
@@ -64,11 +64,11 @@ var _ = Describe("ProjectService", func() {
 		healthcheck = composego.HealthCheckConfig{}
 		projectVolumes = composego.Volumes{}
 
-		k8sconf = config.SvcK8sConfig{}
+		svcK8sConfig = config.SvcK8sConfig{}
 	})
 
 	JustBeforeEach(func() {
-		ext, err := k8sconf.ToMap()
+		ext, err := svcK8sConfig.ToMap()
 		Expect(err).NotTo(HaveOccurred())
 		extensions = map[string]interface{}{
 			config.K8SExtensionKey: ext,
@@ -100,7 +100,7 @@ var _ = Describe("ProjectService", func() {
 	Describe("enabled", func() {
 		When("component toggle extension is set to disable=true", func() {
 			BeforeEach(func() {
-				k8sconf.Disabled = true
+				svcK8sConfig.Disabled = true
 			})
 
 			It("returns true", func() {
@@ -110,7 +110,7 @@ var _ = Describe("ProjectService", func() {
 
 		When("component toggle extension to set disable=false", func() {
 			BeforeEach(func() {
-				k8sconf.Disabled = false
+				svcK8sConfig.Disabled = false
 			})
 
 			It("returns false", func() {
@@ -132,7 +132,7 @@ var _ = Describe("ProjectService", func() {
 		Context("when provided via extension", func() {
 
 			BeforeEach(func() {
-				k8sconf.Workload.Replicas = replicas
+				svcK8sConfig.Workload.Replicas = replicas
 			})
 
 			It("will use a label value", func() {
@@ -143,7 +143,7 @@ var _ = Describe("ProjectService", func() {
 		Context("when provided via both the extension and as part of the project service spec", func() {
 
 			BeforeEach(func() {
-				k8sconf.Workload.Replicas = replicas
+				svcK8sConfig.Workload.Replicas = replicas
 
 				deployBlockReplicas := uint64(2)
 				deploy = &composego.DeployConfig{
@@ -151,7 +151,7 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
@@ -181,20 +181,17 @@ var _ = Describe("ProjectService", func() {
 	Describe("autoscaleMaxReplicas", func() {
 		replicas := 10
 
-		Context("when provided via label", func() {
-
+		Context("when provided via extension", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadAutoscaleMaxReplicas: strconv.Itoa(replicas),
-				}
+				svcK8sConfig.Workload.Autoscale.MaxReplicas = replicas
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.autoscaleMaxReplicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
-		Context("when there is no autoscale max replicas label supplied", func() {
+		Context("when autoscale max replicas is not supplied in the extension", func() {
 			It("will use default max number of replicas for autoscaling purposes ", func() {
 				Expect(projectService.autoscaleMaxReplicas()).To(BeEquivalentTo(config.DefaultAutoscaleMaxReplicaNumber))
 			})
@@ -202,22 +199,19 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("autoscaleTargetCPUUtilization", func() {
-		cpuThreshold := 70 // 70% utilization should kick off the autoscaling
+		cpuThreshold := 80 // 80% utilization should kick off the autoscaling
 
-		Context("when provided via label", func() {
-
+		Context("when provided via an extension", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadAutoscaleCPUUtilizationThreshold: strconv.Itoa(cpuThreshold),
-				}
+				svcK8sConfig.Workload.Autoscale.CPUThreshold = cpuThreshold
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.autoscaleTargetCPUUtilization()).To(BeEquivalentTo(cpuThreshold))
 			})
 		})
 
-		Context("when there is no autoscale target CPU utilization label supplied", func() {
+		Context("when autoscale target CPU utilization is not supplied in the extension", func() {
 			It("will use default CPU threshold for autoscaling purposes ", func() {
 				Expect(projectService.autoscaleTargetCPUUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleCPUThreshold))
 			})
@@ -225,22 +219,19 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("autoscaleTargetMemoryUtilization", func() {
-		memThreshold := 70 // 70% utilization should kick off the autoscaling
+		memThreshold := 80 // 80% utilization should kick off the autoscaling
 
-		Context("when provided via label", func() {
-
+		Context("when provided via an extension", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: strconv.Itoa(memThreshold),
-				}
+				svcK8sConfig.Workload.Autoscale.MemoryThreshold = memThreshold
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(memThreshold))
 			})
 		})
 
-		Context("when there is no autoscale target Memory utilization label supplied", func() {
+		Context("when the autoscale target Memory utilization is not supplied in the extension", func() {
 			It("will use default Memory threshold for autoscaling purposes ", func() {
 				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleMemoryThreshold))
 			})
@@ -310,7 +301,7 @@ var _ = Describe("ProjectService", func() {
 			validType := config.ClusterIPService
 
 			BeforeEach(func() {
-				k8sconf.Service.Type = validType
+				svcK8sConfig.Service.Type = validType
 			})
 
 			It("returns service type as expected", func() {
@@ -333,10 +324,10 @@ var _ = Describe("ProjectService", func() {
 
 				JustBeforeEach(func() {
 					var err error
-					k8sconf := config.SvcK8sConfig{}
-					k8sconf.Service.Type = invalidType
+					svcK8sConfig := config.SvcK8sConfig{}
+					svcK8sConfig.Service.Type = invalidType
 
-					m, err = k8sconf.ToMap()
+					m, err = svcK8sConfig.ToMap()
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -356,7 +347,7 @@ var _ = Describe("ProjectService", func() {
 				nodePort := "1234"
 
 				BeforeEach(func() {
-					k8sconf.Service.Type = config.ClusterIPService
+					svcK8sConfig.Service.Type = config.ClusterIPService
 					labels = composego.Labels{
 						config.LabelServiceNodePortPort: nodePort,
 					}
@@ -373,7 +364,7 @@ var _ = Describe("ProjectService", func() {
 				nodePort := "1234"
 
 				BeforeEach(func() {
-					k8sconf.Service.Type = config.NodePortService
+					svcK8sConfig.Service.Type = config.NodePortService
 					labels = composego.Labels{
 						config.LabelServiceNodePortPort: nodePort,
 					}
@@ -689,7 +680,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and CPU request is specified via label", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.Resource.CPU = "0.2"
+					svcK8sConfig.Workload.Resource.CPU = "0.2"
 				})
 
 				It("returns CPU request as defined by the label value ", func() {
@@ -700,7 +691,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and Memory request is specified via label", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.Resource.Memory = "1M"
+					svcK8sConfig.Workload.Resource.Memory = "1M"
 				})
 
 				It("returns Memory request as defined by the label value ", func() {
@@ -744,7 +735,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and CPU limit is specified via label", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.Resource.MaxCPU = "0.2"
+					svcK8sConfig.Workload.Resource.MaxCPU = "0.2"
 				})
 
 				It("returns CPU limit as defined by the label value ", func() {
@@ -755,7 +746,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and Memory limit is specified via label", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.Resource.MaxMemory = "200"
+					svcK8sConfig.Workload.Resource.MaxMemory = "200"
 				})
 
 				It("returns Memory limit as defined by the label value ", func() {
@@ -841,7 +832,7 @@ var _ = Describe("ProjectService", func() {
 			policy := "Always"
 
 			BeforeEach(func() {
-				k8sconf.Workload.ImagePull.Policy = policy
+				svcK8sConfig.Workload.ImagePull.Policy = policy
 			})
 
 			It("returns label value", func() {
@@ -860,8 +851,8 @@ var _ = Describe("ProjectService", func() {
 			extensions := make(map[string]interface{})
 
 			JustBeforeEach(func() {
-				k8sconf.Workload.ImagePull.Policy = policy
-				m, err := k8sconf.ToMap()
+				svcK8sConfig.Workload.ImagePull.Policy = policy
+				m, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
 
 				extensions[config.K8SExtensionKey] = m
@@ -883,7 +874,7 @@ var _ = Describe("ProjectService", func() {
 			secret := "image-pull-secret"
 
 			BeforeEach(func() {
-				k8sconf.Workload.ImagePull.Secret = secret
+				svcK8sConfig.Workload.ImagePull.Secret = secret
 			})
 
 			It("returns label value", func() {
@@ -1070,7 +1061,7 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			Context("when value defined in the OS environemnt", func() {
+			Context("when value defined in the OS environment", func() {
 				osVal := "BAZ"
 
 				BeforeEach(func() {
@@ -1193,7 +1184,7 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 			BeforeEach(func() {
-				k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
+				svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
 			})
 
 			Context("when Test command is not defined", func() {
@@ -1217,10 +1208,10 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 
-			When("any of time based paramaters is set to 0", func() {
+			When("any of time based parameters is set to 0", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
-					k8sconf.Workload.LivenessProbe.Timeout = 0
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
+					svcK8sConfig.Workload.LivenessProbe.Timeout = 0
 				})
 
 				It("logs and returns error", func() {
@@ -1242,9 +1233,9 @@ var _ = Describe("ProjectService", func() {
 		When("defined via labels", func() {
 			Context("with all the parameters", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeHTTP.String()
-					k8sconf.Workload.LivenessProbe.HTTP.Path = "/status"
-					k8sconf.Workload.LivenessProbe.HTTP.Port = 8080
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeHTTP.String()
+					svcK8sConfig.Workload.LivenessProbe.HTTP.Path = "/status"
+					svcK8sConfig.Workload.LivenessProbe.HTTP.Port = 8080
 				})
 
 				It("returns a handler", func() {
@@ -1257,8 +1248,8 @@ var _ = Describe("ProjectService", func() {
 
 			Context("with missing path", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeHTTP.String()
-					k8sconf.Workload.LivenessProbe.HTTP.Port = 8080
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeHTTP.String()
+					svcK8sConfig.Workload.LivenessProbe.HTTP.Port = 8080
 				})
 
 				It("returns an error", func() {
@@ -1280,8 +1271,8 @@ var _ = Describe("ProjectService", func() {
 				port := "8080"
 
 				BeforeEach(func() {
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
-					k8sconf.Workload.LivenessProbe.TCP.Port = 8080
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
+					svcK8sConfig.Workload.LivenessProbe.TCP.Port = 8080
 				})
 
 				It("returns label value", func() {
@@ -1293,8 +1284,8 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and empty port", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
-					k8sconf.Workload.LivenessProbe.TCP.Port = 0
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
+					svcK8sConfig.Workload.LivenessProbe.TCP.Port = 0
 				})
 
 				It("returns an error", func() {
@@ -1306,7 +1297,7 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and no port label", func() {
 				BeforeEach(func() {
-					k8sconf.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
 				})
 
 				It("returns an error", func() {
@@ -1537,7 +1528,7 @@ var _ = Describe("ProjectService", func() {
 
 	// 		Describe("validations", func() {
 
-	// 			When("any of time based paramaters is set to 0", func() {
+	// 			When("any of time based parameters is set to 0", func() {
 	// 				JustBeforeEach(func() {
 	// 					projectService.Labels = composego.Labels{
 	// 						config.LabelWorkloadReadinessProbeType:    config.ProbeTypeExec.String(),

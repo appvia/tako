@@ -6,13 +6,16 @@ services:
       service:
         type: None
       workload:
+        autoscale:
+          cpuThreshold: 70
+          memThreshold: 70
         imagePull:
           policy: IfNotPresent
         livenessProbe:
           exec:
             command:
-              - echo
-              - Define healthcheck command for service
+            - echo
+            - Define healthcheck command for service
           failureThreashold: 3
           initialDelay: 1m0s
           period: 1m0s
