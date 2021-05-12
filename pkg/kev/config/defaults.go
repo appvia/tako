@@ -45,13 +45,13 @@ const (
 	DefaultImagePullSecret = ""
 
 	// DefaultSecurityContextRunAsUser default UID for pod security context
-	DefaultSecurityContextRunAsUser = ""
+	DefaultSecurityContextRunAsUser = 0
 
 	// DefaultSecurityContextRunAsGroup default GID for pod security context
-	DefaultSecurityContextRunAsGroup = ""
+	DefaultSecurityContextRunAsGroup = 0
 
 	// DefaultSecurityContextFsGroup default fs Group for pod security context
-	DefaultSecurityContextFsGroup = ""
+	DefaultSecurityContextFsGroup = 0
 
 	// NoService default value
 	NoService = "None"

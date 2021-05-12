@@ -279,30 +279,18 @@ func (p *ProjectService) resourceLimits() (*int64, *int64) {
 }
 
 // runAsUser returns pod security context runAsUser value
-func (p *ProjectService) runAsUser() string {
-	if val, ok := p.Labels[config.LabelWorkloadSecurityContextRunAsUser]; ok {
-		return val
-	}
-
-	return config.DefaultSecurityContextRunAsUser
+func (p *ProjectService) runAsUser() int64 {
+	return int64(p.SvcK8sConfig.Workload.PodSecurity.RunAsUser)
 }
 
 // runAsGroup returns pod security context runAsGroup value
-func (p *ProjectService) runAsGroup() string {
-	if val, ok := p.Labels[config.LabelWorkloadSecurityContextRunAsGroup]; ok {
-		return val
-	}
-
-	return config.DefaultSecurityContextRunAsGroup
+func (p *ProjectService) runAsGroup() int64 {
+	return int64(p.SvcK8sConfig.Workload.PodSecurity.RunAsGroup)
 }
 
 // fsGroup returns pod security context fsGroup value
-func (p *ProjectService) fsGroup() string {
-	if val, ok := p.Labels[config.LabelWorkloadSecurityContextFsGroup]; ok {
-		return val
-	}
-
-	return config.DefaultSecurityContextFsGroup
+func (p *ProjectService) fsGroup() int64 {
+	return int64(p.SvcK8sConfig.Workload.PodSecurity.FsGroup)
 }
 
 // imagePullPolicy returns image PullPolicy for project service

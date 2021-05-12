@@ -759,69 +759,63 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("runAsUser", func() {
 
-		Context("when defined via labels", func() {
-			runAsUser := "1000"
+		Context("when defined via an extension", func() {
+			runAsUser := 1000
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsUser: runAsUser,
-				}
+				svcK8sConfig.Workload.PodSecurity.RunAsUser = runAsUser
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.runAsUser()).To(Equal(runAsUser))
+			It("returns the extension value", func() {
+				Expect(projectService.runAsUser()).To(Equal(int64(runAsUser)))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
-				Expect(projectService.runAsUser()).To(Equal(config.DefaultSecurityContextRunAsUser))
+				Expect(projectService.runAsUser()).To(Equal(int64(config.DefaultSecurityContextRunAsUser)))
 			})
 		})
 	})
 
 	Describe("runAsGroup", func() {
 
-		Context("when defined via labels", func() {
-			runAsGroup := "1000"
+		Context("when defined via an extension", func() {
+			runAsGroup := 1000
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsGroup: runAsGroup,
-				}
+				svcK8sConfig.Workload.PodSecurity.RunAsGroup = runAsGroup
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.runAsGroup()).To(Equal(runAsGroup))
+			It("returns the extension value", func() {
+				Expect(projectService.runAsGroup()).To(Equal(int64(runAsGroup)))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
-				Expect(projectService.runAsGroup()).To(Equal(config.DefaultSecurityContextRunAsGroup))
+				Expect(projectService.runAsGroup()).To(Equal(int64(config.DefaultSecurityContextRunAsGroup)))
 			})
 		})
 	})
 
 	Describe("fsGroup", func() {
 
-		Context("when defined via labels", func() {
-			fsGroup := "1000"
+		Context("when defined via an extension", func() {
+			fsGroup := 1000
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadSecurityContextFsGroup: fsGroup,
-				}
+				svcK8sConfig.Workload.PodSecurity.FsGroup = fsGroup
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.fsGroup()).To(Equal(fsGroup))
+			It("returns the extension value", func() {
+				Expect(projectService.fsGroup()).To(Equal(int64(fsGroup)))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
-				Expect(projectService.fsGroup()).To(Equal(config.DefaultSecurityContextFsGroup))
+				Expect(projectService.fsGroup()).To(Equal(int64(config.DefaultSecurityContextFsGroup)))
 			})
 		})
 	})
