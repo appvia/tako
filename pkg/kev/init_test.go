@@ -232,14 +232,6 @@ var _ = Describe("InitRunner", func() {
 			})
 		})
 
-		Context("with volumes config labels", func() {
-			It("should include a subset of labels as config params", func() {
-				vol, _ := env.GetVolume("db_data")
-				Expect(vol.Labels).To(HaveLen(1))
-				Expect(vol.Labels).To(HaveKey(config.LabelVolumeSize))
-			})
-		})
-
 		Context("with volumes extensions", func() {
 			It("should include default values", func() {
 				vol, _ := env.GetVolume("db_data")

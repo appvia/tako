@@ -119,7 +119,7 @@ var _ = Describe("Manifest", func() {
 			It("merged the environment volume labels into sources", func() {
 				mergedVol := merged.Volumes["db_data"]
 				envVol, _ := env.GetVolume("db_data")
-				Expect(mergedVol.Labels).To(Equal(envVol.Labels))
+				Expect(mergedVol.Extensions).To(Equal(envVol.Extensions))
 			})
 
 			It("should not error", func() {

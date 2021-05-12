@@ -55,7 +55,7 @@ func (o *composeOverride) toBaseLabels() *composeOverride {
 		services = append(services, svcConfig.condenseLabels(config.BaseServiceLabels))
 	}
 	for key, volConfig := range o.Volumes {
-		volumes[key] = volConfig.condenseLabels(config.BaseVolumeLabels)
+		volumes[key] = volConfig
 	}
 
 	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes}
@@ -64,8 +64,7 @@ func (o *composeOverride) toBaseLabels() *composeOverride {
 // toLabelsMatching condenses an override's labels to the same label keys found in the provided override.
 func (o *composeOverride) toLabelsMatching(other *composeOverride) *composeOverride {
 	services := o.servicesWithLabelsMatching(other)
-	volumes := o.volumesWithLabelsMatching(other)
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes, UI: o.UI}
+	return &composeOverride{Version: o.Version, Services: services, Volumes: o.Volumes, UI: o.UI}
 }
 
 func (o *composeOverride) servicesWithLabelsMatching(other *composeOverride) Services {
@@ -79,46 +78,6 @@ func (o *composeOverride) servicesWithLabelsMatching(other *composeOverride) Ser
 		services = append(services, svc.condenseLabels(keys(otherSvc.Labels)))
 	}
 	return services
-}
-
-func (o *composeOverride) volumesWithLabelsMatching(other *composeOverride) Volumes {
-	volumes := Volumes{}
-	for volKey, volConfig := range o.Volumes {
-		otherVol, err := other.getVolume(volKey)
-		if err != nil {
-			volumes[volKey] = volConfig
-			continue
-		}
-		volumes[volKey] = volConfig.condenseLabels(keys(otherVol.Labels))
-	}
-	return volumes
-}
-
-// expandLabelsFrom returns a copy of the compose override
-// filling in gaps in services and volumes labels (keys and values) using the provided override.
-func (o *composeOverride) expandLabelsFrom(other *composeOverride) *composeOverride {
-	// TODO: Remove when ready
-	// services := o.servicesLabelsExpandedFrom(other)
-	volumes := o.volumesLabelsExpandedFrom(other)
-	return &composeOverride{Version: o.Version, Services: o.Services, Volumes: volumes}
-}
-
-func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volumes {
-	out := Volumes{}
-	for otherVolKey, otherVolConfig := range other.Volumes {
-		dstVol, err := o.getVolume(otherVolKey)
-		if err != nil {
-			continue
-		}
-
-		for key, value := range otherVolConfig.Labels {
-			if _, ok := dstVol.Labels[key]; !ok {
-				dstVol.Labels[key] = value
-			}
-		}
-		out[otherVolKey] = dstVol
-	}
-	return out
 }
 
 // diffAndPatch detects and patches all changes between a destination override and the current override.
@@ -374,7 +333,7 @@ func (o *composeOverride) mergeVolumesInto(p *ComposeProject) error {
 			return fmt.Errorf("could not find volume %s", override.Name)
 		}
 
-		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverwriteWithEmptyValue); err != nil {
+		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge labels for volume %s", name)
 		}
 		p.Volumes[name] = base
