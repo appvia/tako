@@ -583,6 +583,7 @@ func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig)
 			ImagePull: config.ImagePull{
 				Policy: config.DefaultImagePullPolicy,
 			},
+			Autoscale: config.AutoscaleWithDefaults(),
 		},
 	}
 

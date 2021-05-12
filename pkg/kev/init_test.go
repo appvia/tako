@@ -23,7 +23,6 @@ import (
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -210,12 +209,10 @@ var _ = Describe("InitRunner", func() {
 				_, err := env.WriteTo(&buffer)
 				Expect(err).ToNot(HaveOccurred())
 
-				bs, err := ioutil.ReadFile("./testdata/init-default/compose-yaml/output.yaml")
+				expected, err := ioutil.ReadFile("./testdata/init-default/compose-yaml/output.yaml")
 				Expect(err).ToNot(HaveOccurred())
 
-				expected := string(bs)
-				Expect(cmp.Diff(buffer.String(), expected)).To(BeEmpty())
-				Expect(buffer.String()).To(Equal(expected))
+				Expect(buffer.String()).To(MatchYAML(expected))
 			})
 		})
 
