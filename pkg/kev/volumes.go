@@ -17,46 +17,17 @@
 package kev
 
 import (
-	"errors"
-
 	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/xeipuuv/gojsonschema"
+	"github.com/pkg/errors"
 )
 
 func newVolumeConfig(name string, p *ComposeProject) (VolumeConfig, error) {
-	cfg := VolumeConfig{
-		Labels:     p.Volumes[name].Labels,
-		Extensions: p.Volumes[name].Extensions,
-	}
-	return cfg, cfg.validate()
-}
+	ext := p.Volumes[name].Extensions
 
-func (vc VolumeConfig) validate() error {
-	ls := gojsonschema.NewGoLoader(config.VolumesSchema)
-	ld := gojsonschema.NewGoLoader(vc.Labels)
-
-	result, err := gojsonschema.Validate(ls, ld)
+	_, err := config.ParseVolK8sConfigFromMap(ext)
 	if err != nil {
-		return err
+		return VolumeConfig{}, errors.Wrapf(err, "when parsing vol %s extensions", name)
 	}
 
-	if !result.Valid() {
-		return errors.New(result.Errors()[0].Description())
-	}
-	return nil
-}
-
-// condenseLabels returns a copy of the VolumeConfig with only condensed base volume labels
-func (vc VolumeConfig) condenseLabels(labels []string) VolumeConfig {
-	for key := range vc.Labels {
-		if !contains(labels, key) {
-			delete(vc.Labels, key)
-		}
-	}
-
-	return VolumeConfig{
-		Name:       vc.Name,
-		Labels:     vc.Labels,
-		Extensions: vc.Extensions,
-	}
+	return VolumeConfig{Extensions: ext}, nil
 }

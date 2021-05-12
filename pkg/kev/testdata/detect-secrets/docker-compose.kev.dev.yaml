@@ -11,5 +11,5 @@ services:
       - CACHE_SWITCH=off
 volumes:
   db_data:
-    labels:
-      kev.volume.size: "10Gi"
+    x-k8s:
+      size: "10Gi"

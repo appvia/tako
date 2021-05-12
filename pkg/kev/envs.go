@@ -218,10 +218,6 @@ func (e *Environment) loadOverride() (*Environment, error) {
 	return e, nil
 }
 
-func (e *Environment) prepareForMergeUsing(override *composeOverride) {
-	e.override = e.override.expandLabelsFrom(override)
-}
-
 func (e *Environment) mergeInto(p *ComposeProject) error {
 	return e.override.mergeInto(p)
 }
