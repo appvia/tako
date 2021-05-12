@@ -114,7 +114,7 @@ var _ = Describe("Reconcile", func() {
 				})
 			})
 
-			When("the override volume extensions overrides have been updated", func() {
+			When("the override volume extensions have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
 					v := override.Volumes["db_data"]
 					volK8sConfig, err := config.ParseVolK8sConfigFromMap(v.Extensions)
