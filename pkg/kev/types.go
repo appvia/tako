@@ -153,7 +153,6 @@ type Volumes map[string]VolumeConfig
 // VolumeConfig is a shallow version of a compose-go VolumeConfig
 type VolumeConfig struct {
 	Name       string                 `yaml:",omitempty" json:"name,omitempty" diff:"name"`
-	Labels     composego.Labels       `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 

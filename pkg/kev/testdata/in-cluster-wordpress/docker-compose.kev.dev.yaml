@@ -12,5 +12,5 @@ services:
       kev.workload.replicas: "1"
 volumes:
   db_data:
-    labels:
-      kev.volume.size: 100Mi
+    x-k8s:
+      size: 100Mi

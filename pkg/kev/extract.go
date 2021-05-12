@@ -29,31 +29,6 @@ func setDefaultLabels(target *ServiceConfig) {
 	target.Labels.Add(config.LabelWorkloadServiceAccountName, config.DefaultServiceAccountName)
 }
 
-// TODO: Remove this whole thing when ready
-// extractVolumesLabels extracts volume labels into a label's Volumes attribute.
-func extractVolumesLabels(c *ComposeProject, out *composeOverride) {
-	vols := make(map[string]VolumeConfig)
-
-	for _, v := range c.VolumeNames() {
-		labels := map[string]string{}
-
-		if storageClass, ok := c.Volumes[v].Labels[config.LabelVolumeStorageClass]; ok {
-			labels[config.LabelVolumeStorageClass] = storageClass
-		} else {
-			labels[config.LabelVolumeStorageClass] = config.DefaultVolumeStorageClass
-		}
-
-		if volSize, ok := c.Volumes[v].Labels[config.LabelVolumeSize]; ok {
-			labels[config.LabelVolumeSize] = volSize
-		} else {
-			labels[config.LabelVolumeSize] = config.DefaultVolumeSize
-		}
-
-		vols[v] = VolumeConfig{Labels: labels}
-	}
-	out.Volumes = vols
-}
-
 //TODO: Remove once all functions have been moved over.
 // extractDeploymentLabels extracts deployment related into a label's Service.
 func extractDeploymentLabels(source composego.ServiceConfig, target *ServiceConfig) {

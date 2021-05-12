@@ -34,7 +34,5 @@ services:
         type: StatefulSet
 volumes:
   db_data:
-    labels:
-      kev.volume.size: 100Mi
     x-k8s:
       size: 100Mi
