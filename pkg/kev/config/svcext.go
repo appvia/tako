@@ -100,6 +100,7 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 			ImagePull: ImagePull{
 				Policy: DefaultImagePullPolicy,
 			},
+			Autoscale: AutoscaleWithDefaults(),
 		},
 		Service: Service{
 			Type: "None",
@@ -127,12 +128,7 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
 
-	imagePull, err := ImagePullFromCompose()
-	if err != nil {
-		return SvcK8sConfig{}, err
-	}
-
-	cfg.Workload.ImagePull = imagePull
+	cfg.Workload.ImagePull = ImagePullWithDefaults()
 
 	svcResource, err := ResourceFromCompose(svc)
 	if err != nil {
@@ -140,6 +136,7 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 	}
 
 	cfg.Workload.Resource = svcResource
+	cfg.Workload.Autoscale = AutoscaleWithDefaults()
 
 	if _, ok := svc.Extensions[K8SExtensionKey]; ok {
 		if k8sExt, err = ParseSvcK8sConfigFromMap(svc.Extensions, SkipValidation()); err != nil {
@@ -212,11 +209,19 @@ func getMemoryQuantity(b int64) string {
 	return fmt.Sprintf("%.1f%ci", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-func ImagePullFromCompose() (ImagePull, error) {
+func ImagePullWithDefaults() ImagePull {
 	return ImagePull{
 		Policy: DefaultImagePullPolicy,
 		Secret: DefaultImagePullSecret,
-	}, nil
+	}
+}
+
+func AutoscaleWithDefaults() Autoscale {
+	return Autoscale{
+		MaxReplicas:     DefaultAutoscaleMaxReplicaNumber,
+		CPUThreshold:    DefaultAutoscaleCPUThreshold,
+		MemoryThreshold: DefaultAutoscaleMemoryThreshold,
+	}
 }
 
 func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
@@ -390,6 +395,7 @@ type Workload struct {
 	RestartPolicy  string         `yaml:"restartPolicy,omitempty"`
 	ImagePull      ImagePull      `yaml:"imagePull,omitempty"`
 	Resource       Resource       `yaml:"resource,omitempty"`
+	Autoscale      Autoscale      `yaml:"autoscale,omitempty"`
 }
 
 type Resource struct {
@@ -402,6 +408,12 @@ type Resource struct {
 type ImagePull struct {
 	Policy string `yaml:"policy,omitempty" validate:"oneof='' IfNotPresent Never Always"`
 	Secret string `yaml:"secret,omitempty"`
+}
+
+type Autoscale struct {
+	MaxReplicas     int `yaml:"maxReplicas,omitempty"`
+	CPUThreshold    int `yaml:"cpuThreshold,omitempty"`
+	MemoryThreshold int `yaml:"memThreshold,omitempty"`
 }
 
 // Service will hold the service specific extensions in the future.

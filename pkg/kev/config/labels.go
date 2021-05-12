@@ -19,15 +19,6 @@ package config
 const (
 	LabelPrefix = "kev."
 
-	// LabelWorkloadAutoscaleMaxReplicas represents maximum number of replicas for given workload. Used in Horizontal Pod Autoscaler.
-	LabelWorkloadAutoscaleMaxReplicas = LabelPrefix + "workload.autoscale-max-replicas"
-
-	// LabelWorkloadAutoscaleCPUUtilizationThreshold represents a maximum CPU utilization for given workload that instructs horizontal pod autoscaler.
-	LabelWorkloadAutoscaleCPUUtilizationThreshold = LabelPrefix + "workload.autoscale-cpu-threshold"
-
-	// LabelWorkloadAutoscaleMemoryUtilizationThreshold represents a maximum Memory utilization for given workload that instructs horizontal pod autoscaler.
-	LabelWorkloadAutoscaleMemoryUtilizationThreshold = LabelPrefix + "workload.autoscale-mem-threshold"
-
 	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
 	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
 

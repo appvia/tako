@@ -347,7 +347,7 @@ var _ = Describe("Transform", func() {
 		})
 	})
 
-	Describe("initiConfigMap", func() {
+	Describe("initConfigMap", func() {
 
 		configMapName := "myConfig"
 		data := map[string]string{
@@ -498,7 +498,7 @@ var _ = Describe("Transform", func() {
 
 		When("update strategy is defined in project service deploy block", func() {
 			BeforeEach(func() {
-				// @todo add support for update stragy via label
+				// @todo add support for update strategy via label
 				parallelism := uint64(2)
 				projectService.Deploy = &composego.DeployConfig{
 					UpdateConfig: &composego.UpdateConfig{
@@ -723,7 +723,7 @@ var _ = Describe("Transform", func() {
 				}
 			})
 
-			It("doesn't initiat an ingress", func() {
+			It("doesn't initiate an ingress", func() {
 				Expect(k.initIngress(projectService, port)).To(BeNil())
 			})
 		})
@@ -929,9 +929,7 @@ var _ = Describe("Transform", func() {
 
 				When("the maximum number of replicas is defined", func() {
 					BeforeEach(func() {
-						projectService.Labels = composego.Labels{
-							config.LabelWorkloadAutoscaleMaxReplicas: "10",
-						}
+						projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
 					})
 
 					It("initialises HPA with expected API version referencing passed object", func() {
@@ -942,12 +940,10 @@ var _ = Describe("Transform", func() {
 						Expect(hpa.Spec.ScaleTargetRef.Name).To(Equal(projectService.Name))
 					})
 
-					When("workload CPU threshold paramters is also specified", func() {
+					When("workload CPU threshold parameters is also specified", func() {
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas:             "10",
-								config.LabelWorkloadAutoscaleCPUUtilizationThreshold: "65",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
+							projectService.SvcK8sConfig.Workload.Autoscale.CPUThreshold = 65
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service", func() {
@@ -963,9 +959,7 @@ var _ = Describe("Transform", func() {
 					When("workload CPU threshold is not specified", func() {
 
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "10",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service with default target CPU utilization of 70%", func() {
@@ -981,10 +975,7 @@ var _ = Describe("Transform", func() {
 					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
 						BeforeEach(func() {
 							projectService.SvcK8sConfig.Workload.Replicas = 10
-
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "5",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 5
 						})
 
 						It("doesn't initialise the Horizontal Pod Autoscaler", func() {
@@ -995,23 +986,19 @@ var _ = Describe("Transform", func() {
 
 					When("the maximum number of replicas is specified as 0", func() {
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "0",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 0
 						})
 
-						It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+						It("doesn't initialize Horizontal Pod Autoscaler for that project service", func() {
 							hpa := k.initHpa(projectService, obj)
 							Expect(hpa).To(BeNil())
 						})
 					})
 
-					When("workload Memory threshold paramter is also specified", func() {
+					When("workload Memory threshold parameter is also specified", func() {
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas:                "10",
-								config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: "40",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
+							projectService.SvcK8sConfig.Workload.Autoscale.MemoryThreshold = 40
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service", func() {
@@ -1027,9 +1014,7 @@ var _ = Describe("Transform", func() {
 					When("workload Memory threshold is not specified", func() {
 
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "10",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service with default target Memory utilization of 70%", func() {
@@ -1044,7 +1029,7 @@ var _ = Describe("Transform", func() {
 				})
 
 				When("the maximum number of replicas is not defined", func() {
-					It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+					It("doesn't initialize Horizontal Pod Autoscaler for that project service", func() {
 						hpa := k.initHpa(projectService, obj)
 						Expect(hpa).To(BeNil())
 					})
@@ -1063,7 +1048,7 @@ var _ = Describe("Transform", func() {
 				}
 			})
 
-			It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+			It("doesn't initialize Horizontal Pod Autoscaler for that project service", func() {
 				hpa := k.initHpa(projectService, obj)
 				Expect(hpa).To(BeNil())
 			})
@@ -1401,7 +1386,7 @@ var _ = Describe("Transform", func() {
 
 	Describe("configEmptyVolumeSource", func() {
 		When("key passed as `tmpfs`", func() {
-			It("retuens EmptyDir volume source as expected", func() {
+			It("returns EmptyDir volume source as expected", func() {
 				Expect(k.configEmptyVolumeSource("tmpfs")).To(Equal(&v1.VolumeSource{
 					EmptyDir: &v1.EmptyDirVolumeSource{Medium: v1.StorageMediumMemory},
 				}))
@@ -1409,7 +1394,7 @@ var _ = Describe("Transform", func() {
 		})
 
 		When("key is passed with value other than `tmpfs`", func() {
-			It("retuens EmptyDir volume source as expected", func() {
+			It("returns EmptyDir volume source as expected", func() {
 				Expect(k.configEmptyVolumeSource("")).To(Equal(&v1.VolumeSource{
 					EmptyDir: &v1.EmptyDirVolumeSource{},
 				}))
@@ -1424,7 +1409,7 @@ var _ = Describe("Transform", func() {
 		When("ConfigMap doesn't use sub-paths", func() {
 			configMap := &v1.ConfigMap{}
 
-			It("configures ConfigMapVolumeSource as expecte", func() {
+			It("configures ConfigMapVolumeSource as expected", func() {
 				volSrc := k.configConfigMapVolumeSource(configMapName, targetPath, configMap)
 				Expect(volSrc).To(Equal(&v1.VolumeSource{
 					ConfigMap: &v1.ConfigMapVolumeSource{
@@ -1448,7 +1433,7 @@ var _ = Describe("Transform", func() {
 				},
 			}
 
-			It("configures ConfigMapVolumeSource as expecte", func() {
+			It("configures ConfigMapVolumeSource as expected", func() {
 				volSrc := k.configConfigMapVolumeSource(configMapName, targetPath, configMap)
 
 				_, expectedPath := path.Split(targetPath)
@@ -1530,7 +1515,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("for env dependend vars containing double curly braces e.g. {{OTHER_ENV_VAR_NAME}} ", func() {
+		Context("for env dependent vars containing double curly braces e.g. {{OTHER_ENV_VAR_NAME}} ", func() {
 
 			secretRef := "postgres://{{USER}}:{{PASS}}@{{HOST}}:{{PORT}}/{{DB}}"
 
@@ -1540,7 +1525,7 @@ var _ = Describe("Transform", func() {
 				}
 			})
 
-			It("expands that env variable value to reference dependet variables", func() {
+			It("expands that env variable value to reference dependent variables", func() {
 				vars, err := k.configEnvs(projectService)
 
 				Expect(vars[0].Value).To(Equal("postgres://$(USER):$(PASS)@$(HOST):$(PORT)/$(DB)"))
@@ -1631,7 +1616,7 @@ var _ = Describe("Transform", func() {
 						}
 					})
 
-					It("doesn't add environment variable with malconfigured reference", func() {
+					It("doesn't add environment variable with misconfigured reference", func() {
 						vars, err := k.configEnvs(projectService)
 
 						Expect(vars).To(HaveLen(0))
@@ -1682,7 +1667,7 @@ var _ = Describe("Transform", func() {
 						}
 					})
 
-					It("doesn't add environment variable with malconfigured reference", func() {
+					It("doesn't add environment variable with misconfigured reference", func() {
 						vars, err := k.configEnvs(projectService)
 
 						Expect(vars).To(HaveLen(0))
@@ -1814,7 +1799,7 @@ var _ = Describe("Transform", func() {
 			},
 		}
 
-		Context("for healdess service type", func() {
+		Context("for headless service type", func() {
 			It("creates headless service", func() {
 				svc := k.createService(config.HeadlessService, projectService)
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeClusterIP))
