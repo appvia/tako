@@ -22,15 +22,6 @@ const (
 	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
 	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
 
-	// LabelWorkloadSecurityContextRunAsUser sets pod security context RunAsUser attribute
-	LabelWorkloadSecurityContextRunAsUser = LabelPrefix + "workload.pod-security-run-as-user"
-
-	// LabelWorkloadSecurityContextRunAsGroup sets pod security context RunAsGroup attribute
-	LabelWorkloadSecurityContextRunAsGroup = LabelPrefix + "workload.pod-security-run-as-group"
-
-	// LabelWorkloadSecurityContextFsGroup sets pod security context FsGroup attribute
-	LabelWorkloadSecurityContextFsGroup = LabelPrefix + "workload.pod-security-fs-group"
-
 	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
 	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
 
@@ -44,4 +35,4 @@ const (
 	LabelServiceExposeTLSSecret = LabelPrefix + "service.expose.tls-secret"
 )
 
-var BaseServiceLabels = []string{}
+var BaseServiceLabels []string
