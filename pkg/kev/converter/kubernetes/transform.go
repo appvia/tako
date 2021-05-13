@@ -786,12 +786,12 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L502
 func (k *Kubernetes) createSecrets() ([]*v1.Secret, error) {
 	var objects []*v1.Secret
-	for name, config := range k.Project.Secrets {
-		if config.File != "" {
-			dataString, err := getContentFromFile(config.File)
+	for name, secretConfig := range k.Project.Secrets {
+		if secretConfig.File != "" {
+			dataString, err := getContentFromFile(secretConfig.File)
 			if err != nil {
 				log.ErrorWithFields(log.Fields{
-					"file": config.File,
+					"file": secretConfig.File,
 				}, "Unable to read secret(s) from file")
 
 				return nil, err
@@ -1512,7 +1512,7 @@ func (k *Kubernetes) initPod(projectService ProjectService) *v1.Pod {
 
 // createNetworkPolicy initializes Network policy
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1109
-func (k *Kubernetes) createNetworkPolicy(projectServiceName string, networkName string) (*networking.NetworkPolicy, error) {
+func (k *Kubernetes) createNetworkPolicy(_, networkName string) (*networking.NetworkPolicy, error) {
 	str := "true"
 
 	np := &networking.NetworkPolicy{
@@ -1899,31 +1899,13 @@ func (k *Kubernetes) setPodResources(projectService ProjectService, template *v1
 // setPodSecurityContext sets a pod security context
 func (k *Kubernetes) setPodSecurityContext(projectService ProjectService, podSecurityContext *v1.PodSecurityContext) {
 	// @step set RunAsUser
-	runAsUser := projectService.runAsUser()
-	if runAsUser != "" {
-		if i, err := strconv.Atoi(runAsUser); err == nil {
-			v := int64(i)
-			podSecurityContext.RunAsUser = &v
-		}
-	}
+	podSecurityContext.RunAsUser = projectService.runAsUser()
 
 	// @step set RunAsGroup
-	runAsGroup := projectService.runAsGroup()
-	if runAsGroup != "" {
-		if i, err := strconv.Atoi(runAsGroup); err == nil {
-			v := int64(i)
-			podSecurityContext.RunAsGroup = &v
-		}
-	}
+	podSecurityContext.RunAsGroup = projectService.runAsGroup()
 
 	// @step set FsGroup
-	fsGroup := projectService.fsGroup()
-	if fsGroup != "" {
-		if i, err := strconv.Atoi(fsGroup); err == nil {
-			v := int64(i)
-			podSecurityContext.FSGroup = &v
-		}
-	}
+	podSecurityContext.FSGroup = projectService.fsGroup()
 
 	// @step set supplementalGroups
 	if projectService.GroupAdd != nil {

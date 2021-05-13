@@ -100,7 +100,8 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 			ImagePull: ImagePull{
 				Policy: DefaultImagePullPolicy,
 			},
-			Autoscale: AutoscaleWithDefaults(),
+			Autoscale:   AutoscaleWithDefaults(),
+			PodSecurity: PodSecurityWithDefaults(),
 		},
 		Service: Service{
 			Type: "None",
@@ -137,6 +138,7 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 
 	cfg.Workload.Resource = svcResource
 	cfg.Workload.Autoscale = AutoscaleWithDefaults()
+	cfg.Workload.PodSecurity = PodSecurityWithDefaults()
 
 	if _, ok := svc.Extensions[K8SExtensionKey]; ok {
 		if k8sExt, err = ParseSvcK8sConfigFromMap(svc.Extensions, SkipValidation()); err != nil {
@@ -221,6 +223,14 @@ func AutoscaleWithDefaults() Autoscale {
 		MaxReplicas:     DefaultAutoscaleMaxReplicaNumber,
 		CPUThreshold:    DefaultAutoscaleCPUThreshold,
 		MemoryThreshold: DefaultAutoscaleMemoryThreshold,
+	}
+}
+
+func PodSecurityWithDefaults() PodSecurity {
+	return PodSecurity{
+		RunAsUser:  DefaultSecurityContextRunAsUser,
+		RunAsGroup: DefaultSecurityContextRunAsGroup,
+		FsGroup:    DefaultSecurityContextFsGroup,
 	}
 }
 
@@ -396,6 +406,7 @@ type Workload struct {
 	ImagePull      ImagePull      `yaml:"imagePull,omitempty"`
 	Resource       Resource       `yaml:"resource,omitempty"`
 	Autoscale      Autoscale      `yaml:"autoscale,omitempty"`
+	PodSecurity    PodSecurity    `yaml:"podSecurity,omitempty"`
 }
 
 type Resource struct {
@@ -414,6 +425,12 @@ type Autoscale struct {
 	MaxReplicas     int `yaml:"maxReplicas,omitempty"`
 	CPUThreshold    int `yaml:"cpuThreshold,omitempty"`
 	MemoryThreshold int `yaml:"memThreshold,omitempty"`
+}
+
+type PodSecurity struct {
+	RunAsUser  *int64 `yaml:"runAsUser,omitempty"`
+	RunAsGroup *int64 `yaml:"runAsGroup,omitempty"`
+	FsGroup    *int64 `yaml:"fsGroup,omitempty"`
 }
 
 // Service will hold the service specific extensions in the future.
