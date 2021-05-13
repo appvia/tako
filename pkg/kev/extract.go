@@ -24,17 +24,7 @@ import (
 	composego "github.com/compose-spec/compose-go/types"
 )
 
-// setDefaultLabels sets sensible workload defaults as labels.
-func setDefaultLabels(target *ServiceConfig) {
-	target.Labels.Add(config.LabelWorkloadServiceAccountName, config.DefaultServiceAccountName)
-}
-
 //TODO: Remove once all functions have been moved over.
-// extractDeploymentLabels extracts deployment related into a label's Service.
-func extractDeploymentLabels(source composego.ServiceConfig, target *ServiceConfig) {
-	extractWorkloadRollingUpdatePolicy(source, target)
-}
-
 // extractWorkloadRollingUpdatePolicy extracts deployment's rolling update policy.
 func extractWorkloadRollingUpdatePolicy(source composego.ServiceConfig, target *ServiceConfig) {
 	if source.Deploy != nil && source.Deploy.UpdateConfig != nil {

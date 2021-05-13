@@ -34,6 +34,7 @@ services:
           maxMemory: 500Mi
           memory: 10Mi
         restartPolicy: always
+        serviceAccountName: default
         type: StatefulSet
 volumes:
   db_data:

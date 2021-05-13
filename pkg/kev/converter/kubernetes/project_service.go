@@ -305,11 +305,12 @@ func (p *ProjectService) imagePullSecret() string {
 
 // serviceAccountName returns service account name to be used by the pod
 func (p *ProjectService) serviceAccountName() string {
-	if val, ok := p.Labels[config.LabelWorkloadServiceAccountName]; ok {
-		return val
-	}
+	// if val, ok := p.Labels[config.LabelWorkloadServiceAccountName]; ok {
+	// 	return val
+	// }
 
-	return config.DefaultServiceAccountName
+	// return config.DefaultServiceAccountName
+	return p.SvcK8sConfig.Workload.ServiceAccountName
 }
 
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.

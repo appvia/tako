@@ -575,11 +575,12 @@ func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig)
 	k8s := config.SvcK8sConfig{
 		Disabled: false,
 		Workload: config.Workload{
-			LivenessProbe:  config.DefaultLivenessProbe(),
-			ReadinessProbe: config.DefaultReadinessProbe(),
-			Type:           config.DefaultWorkload,
-			Replicas:       config.DefaultReplicaNumber,
-			RestartPolicy:  "always",
+			LivenessProbe:      config.DefaultLivenessProbe(),
+			ReadinessProbe:     config.DefaultReadinessProbe(),
+			ServiceAccountName: config.DefaultServiceAccountName,
+			Type:               config.DefaultWorkload,
+			Replicas:           config.DefaultReplicaNumber,
+			RestartPolicy:      "always",
 			ImagePull: config.ImagePull{
 				Policy: config.DefaultImagePullPolicy,
 			},

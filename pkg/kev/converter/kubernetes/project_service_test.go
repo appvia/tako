@@ -888,21 +888,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("serviceAccountName", func() {
 
-		Context("when defined via labels", func() {
+		Context("when defined an extension", func() {
 			sa := "sa"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadServiceAccountName: sa,
-				}
+				svcK8sConfig.Workload.ServiceAccountName = sa
 			})
 
-			It("returns label value", func() {
+			It("returns the extension value", func() {
 				Expect(projectService.serviceAccountName()).To(Equal(sa))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.serviceAccountName()).To(Equal(config.DefaultServiceAccountName))
 			})
