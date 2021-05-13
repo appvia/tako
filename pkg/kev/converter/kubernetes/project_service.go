@@ -305,11 +305,6 @@ func (p *ProjectService) imagePullSecret() string {
 
 // serviceAccountName returns service account name to be used by the pod
 func (p *ProjectService) serviceAccountName() string {
-	// if val, ok := p.Labels[config.LabelWorkloadServiceAccountName]; ok {
-	// 	return val
-	// }
-
-	// return config.DefaultServiceAccountName
 	return p.SvcK8sConfig.Workload.ServiceAccountName
 }
 
@@ -402,7 +397,7 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 }
 
 func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
-	p1 := composego.ServiceConfig(p.ServiceConfig)
+	p1 := p.ServiceConfig
 	k8sconf, err := config.SvcK8sConfigFromCompose(&p1)
 	if err != nil {
 		return nil, err
@@ -412,7 +407,7 @@ func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
 }
 
 func (p *ProjectService) ReadinessProbe() (*v1.Probe, error) {
-	p1 := composego.ServiceConfig(p.ServiceConfig)
+	p1 := p.ServiceConfig
 	k8sconf, err := config.SvcK8sConfigFromCompose(&p1)
 	if err != nil {
 		return nil, err
