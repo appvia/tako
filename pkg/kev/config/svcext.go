@@ -428,9 +428,9 @@ type Autoscale struct {
 }
 
 type PodSecurity struct {
-	RunAsUser  int `yaml:"runAsUser,omitempty"`
-	RunAsGroup int `yaml:"runAsGroup,omitempty"`
-	FsGroup    int `yaml:"fsGroup,omitempty"`
+	RunAsUser  *int64 `yaml:"runAsUser,omitempty"`
+	RunAsGroup *int64 `yaml:"runAsGroup,omitempty"`
+	FsGroup    *int64 `yaml:"fsGroup,omitempty"`
 }
 
 // Service will hold the service specific extensions in the future.

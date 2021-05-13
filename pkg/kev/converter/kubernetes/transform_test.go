@@ -2080,7 +2080,7 @@ var _ = Describe("Transform", func() {
 
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
-				svcK8sConfig.Workload.PodSecurity.RunAsUser = int(runAsUser)
+				svcK8sConfig.Workload.PodSecurity.RunAsUser = &runAsUser
 
 				m, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
@@ -2102,7 +2102,7 @@ var _ = Describe("Transform", func() {
 
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
-				svcK8sConfig.Workload.PodSecurity.RunAsGroup = int(runAsGroup)
+				svcK8sConfig.Workload.PodSecurity.RunAsGroup = &runAsGroup
 
 				m, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())
@@ -2124,7 +2124,7 @@ var _ = Describe("Transform", func() {
 
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
-				svcK8sConfig.Workload.PodSecurity.FsGroup = int(fsGroup)
+				svcK8sConfig.Workload.PodSecurity.FsGroup = &fsGroup
 
 				m, err := svcK8sConfig.ToMap()
 				Expect(err).NotTo(HaveOccurred())

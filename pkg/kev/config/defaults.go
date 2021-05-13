@@ -44,15 +44,6 @@ const (
 	// DefaultImagePullSecret default image pull credentials secret name
 	DefaultImagePullSecret = ""
 
-	// DefaultSecurityContextRunAsUser default UID for pod security context
-	DefaultSecurityContextRunAsUser = 0
-
-	// DefaultSecurityContextRunAsGroup default GID for pod security context
-	DefaultSecurityContextRunAsGroup = 0
-
-	// DefaultSecurityContextFsGroup default fs Group for pod security context
-	DefaultSecurityContextFsGroup = 0
-
 	// NoService default value
 	NoService = "None"
 
@@ -143,5 +134,16 @@ const (
 	DefaultProbeDisable = false
 )
 
-// DefaultLivenessProbeCommand default command
-var DefaultLivenessProbeCommand = []string{"echo", "Define healthcheck command for service"}
+var (
+	// DefaultSecurityContextRunAsUser default UID for pod security context
+	DefaultSecurityContextRunAsUser *int64 = nil
+
+	// DefaultSecurityContextRunAsGroup default GID for pod security context
+	DefaultSecurityContextRunAsGroup *int64 = nil
+
+	// DefaultSecurityContextFsGroup default fs Group for pod security context
+	DefaultSecurityContextFsGroup *int64 = nil
+
+	// DefaultLivenessProbeCommand default command
+	DefaultLivenessProbeCommand = []string{"echo", "Define healthcheck command for service"}
+)

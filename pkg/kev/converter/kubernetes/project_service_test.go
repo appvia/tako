@@ -760,20 +760,21 @@ var _ = Describe("ProjectService", func() {
 	Describe("runAsUser", func() {
 
 		Context("when defined via an extension", func() {
-			runAsUser := 1000
+			runAsUser := int64(1000)
 
 			BeforeEach(func() {
-				svcK8sConfig.Workload.PodSecurity.RunAsUser = runAsUser
+				svcK8sConfig.Workload.PodSecurity.RunAsUser = &runAsUser
 			})
 
 			It("returns the extension value", func() {
-				Expect(projectService.runAsUser()).To(Equal(int64(runAsUser)))
+				expected := runAsUser
+				Expect(projectService.runAsUser()).To(Equal(&expected))
 			})
 		})
 
 		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
-				Expect(projectService.runAsUser()).To(Equal(int64(config.DefaultSecurityContextRunAsUser)))
+				Expect(projectService.runAsUser()).To(Equal(config.DefaultSecurityContextRunAsUser))
 			})
 		})
 	})
@@ -781,20 +782,21 @@ var _ = Describe("ProjectService", func() {
 	Describe("runAsGroup", func() {
 
 		Context("when defined via an extension", func() {
-			runAsGroup := 1000
+			runAsGroup := int64(1000)
 
 			BeforeEach(func() {
-				svcK8sConfig.Workload.PodSecurity.RunAsGroup = runAsGroup
+				svcK8sConfig.Workload.PodSecurity.RunAsGroup = &runAsGroup
 			})
 
 			It("returns the extension value", func() {
-				Expect(projectService.runAsGroup()).To(Equal(int64(runAsGroup)))
+				expected := runAsGroup
+				Expect(projectService.runAsGroup()).To(Equal(&expected))
 			})
 		})
 
 		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
-				Expect(projectService.runAsGroup()).To(Equal(int64(config.DefaultSecurityContextRunAsGroup)))
+				Expect(projectService.runAsGroup()).To(Equal(config.DefaultSecurityContextRunAsGroup))
 			})
 		})
 	})
@@ -802,20 +804,21 @@ var _ = Describe("ProjectService", func() {
 	Describe("fsGroup", func() {
 
 		Context("when defined via an extension", func() {
-			fsGroup := 1000
+			fsGroup := int64(1000)
 
 			BeforeEach(func() {
-				svcK8sConfig.Workload.PodSecurity.FsGroup = fsGroup
+				svcK8sConfig.Workload.PodSecurity.FsGroup = &fsGroup
 			})
 
 			It("returns the extension value", func() {
-				Expect(projectService.fsGroup()).To(Equal(int64(fsGroup)))
+				expected := fsGroup
+				Expect(projectService.fsGroup()).To(Equal(&expected))
 			})
 		})
 
 		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
-				Expect(projectService.fsGroup()).To(Equal(int64(config.DefaultSecurityContextFsGroup)))
+				Expect(projectService.fsGroup()).To(Equal(config.DefaultSecurityContextFsGroup))
 			})
 		})
 	})

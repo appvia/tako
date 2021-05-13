@@ -1900,16 +1900,13 @@ func (k *Kubernetes) setPodResources(projectService ProjectService, template *v1
 // setPodSecurityContext sets a pod security context
 func (k *Kubernetes) setPodSecurityContext(projectService ProjectService, podSecurityContext *v1.PodSecurityContext) {
 	// @step set RunAsUser
-	runAsUser := projectService.runAsUser()
-	podSecurityContext.RunAsUser = &runAsUser
+	podSecurityContext.RunAsUser = projectService.runAsUser()
 
 	// @step set RunAsGroup
-	runAsGroup := projectService.runAsGroup()
-	podSecurityContext.RunAsGroup = &runAsGroup
+	podSecurityContext.RunAsGroup = projectService.runAsGroup()
 
 	// @step set FsGroup
-	fsGroup := projectService.fsGroup()
-	podSecurityContext.FSGroup = &fsGroup
+	podSecurityContext.FSGroup = projectService.fsGroup()
 
 	// @step set supplementalGroups
 	if projectService.GroupAdd != nil {
