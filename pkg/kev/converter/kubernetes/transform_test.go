@@ -2075,13 +2075,20 @@ var _ = Describe("Transform", func() {
 	Describe("setPodSecurityContext", func() {
 		podSecContext := &v1.PodSecurityContext{}
 
-		When("runAsUser label is specified", func() {
+		When("runAsUser is specified in a k8s extension", func() {
 			runAsUser := int64(1000)
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsUser: strconv.Itoa(int(runAsUser)),
-				}
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodSecurity.RunAsUser = &runAsUser
+
+				m, err := svcK8sConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("adds RunAsUser into pod security context as expected", func() {
@@ -2090,13 +2097,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("runAsGroup label is specified", func() {
+		When("runAsGroup is specified in a k8s extension", func() {
 			runAsGroup := int64(1000)
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsGroup: strconv.Itoa(int(runAsGroup)),
-				}
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodSecurity.RunAsGroup = &runAsGroup
+
+				m, err := svcK8sConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("adds RunAsGroup into pod security context as expected", func() {
@@ -2105,13 +2119,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("fsGroup label is specified", func() {
+		When("fsGroup is specified in a k8s extension", func() {
 			fsGroup := int64(1000)
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadSecurityContextFsGroup: strconv.Itoa(int(fsGroup)),
-				}
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodSecurity.FsGroup = &fsGroup
+
+				m, err := svcK8sConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("adds FSGroup into pod security context as expected", func() {
