@@ -223,7 +223,6 @@ var _ = Describe("InitRunner", func() {
 				svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(svc.Extensions)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(svc.GetLabels()).To(BeEmpty())
 				Expect(svcK8sConfig.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
 				Expect(svcK8sConfig.Workload.Replicas).NotTo(BeZero())
 			})

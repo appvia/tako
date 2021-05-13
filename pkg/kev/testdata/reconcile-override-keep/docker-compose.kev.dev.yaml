@@ -3,7 +3,15 @@ services:
   db:
     x-k8s:
       workload:
-        replicas: 1
+        type: StatefulSet
+        serviceAccountName: overridden-service-account-name
+        rollingUpdateMaxSurge: 1
+        replicas: 5
+        resource:
+          cpu: 0.5
+          maxCpu: 0.75
+          memory: 50Mi
+          maxMemory: 500Mi
         livenessProbe: 
           type: exec
           exec:
@@ -14,15 +22,6 @@ services:
           timeout: 10s
       service:
         type: ClusterIP
-    labels:
-      kev.workload.cpu: "0.5"
-      kev.workload.max-cpu: "0.75"
-      kev.workload.max-memory: 500Mi
-      kev.workload.memory: 50Mi
-      kev.workload.replicas: "5"
-      kev.workload.rolling-update-max-surge: "1"
-      kev.workload.service-account-name: overridden-service-account-name
-      kev.workload.type: StatefulSet
 volumes:
   db_data:
     x-k8s:

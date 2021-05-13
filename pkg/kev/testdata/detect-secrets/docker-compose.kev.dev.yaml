@@ -1,10 +1,15 @@
 version: "3.7"
 services:
   db:
-    labels:
-      kev.workload.liveness-probe-type: exec
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.replicas: "1"
+    x-k8s:
+      workload:
+        replicas: 1
+        livenessProbe:
+          type: exec
+          exec:
+            command:
+              - echo
+              - Define healthcheck command for service db
     environment:
       - AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
       - AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY

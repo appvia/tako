@@ -323,8 +323,6 @@ var _ = Describe("Skaffold", func() {
 
 		When("list of detected build artefacts had not changed", func() {
 			It("doesn't update build artefacts in skaffold manifest", func() {
-				// TODO: fix this, broken by not validating labels
-				// Expect(changed).To(BeFalse())
 				Expect(err).ToNot(HaveOccurred())
 				Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
 
