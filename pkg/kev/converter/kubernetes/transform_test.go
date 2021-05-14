@@ -443,6 +443,13 @@ var _ = Describe("Transform", func() {
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},
+					Strategy: v1apps.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &v1apps.RollingUpdateDeployment{
+							MaxSurge:       &intstr.IntOrString{Type: 0, IntVal: 1, StrVal: ""},
+							MaxUnavailable: &intstr.IntOrString{Type: 0, IntVal: 0, StrVal: ""},
+						},
+					},
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
 							Annotations: configAnnotations(projectService),
@@ -515,6 +522,9 @@ var _ = Describe("Transform", func() {
 						Order:       "start-first",
 					},
 				}
+				svcK8sConfig, err := config.SvcK8sConfigFromCompose(&projectService.ServiceConfig)
+				Expect(err).ToNot(HaveOccurred())
+				projectService.SvcK8sConfig = svcK8sConfig
 			})
 
 			It("it includes update strategy in the deployment spec", func() {

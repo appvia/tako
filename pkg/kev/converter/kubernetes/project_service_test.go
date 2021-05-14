@@ -449,7 +449,7 @@ var _ = Describe("ProjectService", func() {
 				It("returns an error", func() {
 					_, err := projectService.exposeService()
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Service can't have TLS secret name when it hasn't been exposed"))
+					Expect(err).To(MatchError("service can't have TLS secret name when it hasn't been exposed"))
 				})
 			})
 
@@ -486,7 +486,8 @@ var _ = Describe("ProjectService", func() {
 
 			parallelism := uint64(2)
 
-			Context("with update config order set as `stop-first`", func() {
+			// Pending: see implementation comments in project_service.goL:153
+			PContext("with update config order set as `stop-first`", func() {
 
 				BeforeEach(func() {
 					deploy = &composego.DeployConfig{

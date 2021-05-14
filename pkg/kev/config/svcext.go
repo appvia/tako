@@ -103,12 +103,13 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 	return SvcK8sConfig{
 		Disabled: false,
 		Workload: Workload{
-			Type:               DefaultWorkload,
-			ServiceAccountName: DefaultServiceAccountName,
-			LivenessProbe:      DefaultLivenessProbe(),
-			ReadinessProbe:     DefaultReadinessProbe(),
-			Replicas:           1,
-			RestartPolicy:      RestartPolicyAlways,
+			Type:                  DefaultWorkload,
+			ServiceAccountName:    DefaultServiceAccountName,
+			LivenessProbe:         DefaultLivenessProbe(),
+			ReadinessProbe:        DefaultReadinessProbe(),
+			Replicas:              1,
+			RollingUpdateMaxSurge: DefaultRollingUpdateMaxSurge,
+			RestartPolicy:         RestartPolicyAlways,
 			ImagePull: ImagePull{
 				Policy: DefaultImagePullPolicy,
 			},
@@ -132,6 +133,7 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 	cfg.Workload.ServiceAccountName = DefaultServiceAccountName
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
 	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
+	cfg.Workload.RollingUpdateMaxSurge = WorkloadRollingUpdateMaxSurgeFromCompose(svc)
 	cfg.Workload.RestartPolicy = WorkloadRestartPolicyFromCompose(svc)
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
@@ -167,6 +169,15 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 	}
 
 	return cfg, nil
+}
+
+func WorkloadRollingUpdateMaxSurgeFromCompose(svc *composego.ServiceConfig) int {
+	if svc.Deploy == nil || svc.Deploy.UpdateConfig == nil {
+		return DefaultRollingUpdateMaxSurge
+	}
+
+	return int(*svc.Deploy.UpdateConfig.Parallelism)
+
 }
 
 func ResourceFromCompose(svc *composego.ServiceConfig) (Resource, error) {
@@ -417,16 +428,17 @@ func validateDNSSubdomainNameIfAny(fl validator.FieldLevel) bool {
 
 // Workload holds all the workload-related k8s configurations.
 type Workload struct {
-	Type               string         `yaml:"type,omitempty" validate:"required,oneof=DaemonSet StatefulSet Deployment"`
-	Replicas           int            `yaml:"replicas" validate:""`
-	ServiceAccountName string         `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
-	LivenessProbe      LivenessProbe  `yaml:"livenessProbe" validate:"required"`
-	ReadinessProbe     ReadinessProbe `yaml:"readinessProbe,omitempty"`
-	RestartPolicy      string         `yaml:"restartPolicy,omitempty"`
-	ImagePull          ImagePull      `yaml:"imagePull,omitempty"`
-	Resource           Resource       `yaml:"resource,omitempty"`
-	Autoscale          Autoscale      `yaml:"autoscale,omitempty"`
-	PodSecurity        PodSecurity    `yaml:"podSecurity,omitempty"`
+	Type                  string         `yaml:"type,omitempty" validate:"required,oneof=DaemonSet StatefulSet Deployment"`
+	Replicas              int            `yaml:"replicas" validate:""`
+	ServiceAccountName    string         `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
+	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
+	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
+	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
+	RestartPolicy         string         `yaml:"restartPolicy,omitempty"`
+	ImagePull             ImagePull      `yaml:"imagePull,omitempty"`
+	Resource              Resource       `yaml:"resource,omitempty"`
+	Autoscale             Autoscale      `yaml:"autoscale,omitempty"`
+	PodSecurity           PodSecurity    `yaml:"podSecurity,omitempty"`
 }
 
 type Resource struct {
