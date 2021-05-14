@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -90,20 +89,10 @@ func (p *ProjectService) serviceType() (string, error) {
 
 	// @step validate whether service type is set properly when node port is specified
 	if !strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
-		log.ErrorfWithFields(log.Fields{
-			"project-service": p.Name,
-			"service-type":    serviceType,
-			"nodeport":        p.nodePort(),
-		}, "%s label value must be set as `NodePort` when assiging node port value", serviceType)
-
-		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assiging node port value", p.Name)
+		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assigning node port value", p.Name)
 	}
 
 	if len(p.ports()) > 1 && p.nodePort() != 0 {
-		log.ErrorfWithFields(log.Fields{
-			"project-service": p.Name,
-		}, "Cannot set %s label value when service has multiple ports specified.", config.LabelServiceNodePortPort)
-
 		return "", fmt.Errorf("`%s` cannot set NodePort service port when project service has multiple ports defined", p.Name)
 	}
 
@@ -112,39 +101,32 @@ func (p *ProjectService) serviceType() (string, error) {
 
 // nodePort returns the port for NodePort service type
 func (p *ProjectService) nodePort() int32 {
-	if val, ok := p.Labels[config.LabelServiceNodePortPort]; ok {
-		nodePort, _ := strconv.Atoi(val)
-		return int32(nodePort)
-	}
-
-	return 0
+	return int32(p.SvcK8sConfig.Service.NodePort)
 }
 
 // exposeService tells whether service for project component should be exposed
 func (p *ProjectService) exposeService() (string, error) {
-	if val, ok := p.Labels[config.LabelServiceExpose]; ok {
-		if val == "" && p.tlsSecretName() != "" {
-			log.ErrorfWithFields(log.Fields{
-				"project-service": p.Name,
-				"tls-secret-name": p.tlsSecretName(),
-			}, "TLS secret name specified via %s label but project service not exposed!",
-				config.LabelServiceExposeTLSSecret)
+	val := p.SvcK8sConfig.Service.Expose.Domain
 
-			return "", fmt.Errorf("Service can't have TLS secret name when it hasn't been exposed")
-		}
-		return val, nil
+	if val == "" && p.tlsSecretName() != "" {
+		return "", fmt.Errorf("service can't have TLS secret name when it hasn't been exposed")
 	}
 
-	return "", nil
+	return val, nil
 }
 
 // tlsSecretName returns TLS secret name for exposed service (to be used in the ingress configuration)
 func (p *ProjectService) tlsSecretName() string {
-	if val, ok := p.Labels[config.LabelServiceExposeTLSSecret]; ok {
-		return val
-	}
+	return p.SvcK8sConfig.Service.Expose.TlsSecret
+}
 
-	return ""
+// ingressAnnotations returns the ingress annotations for exposed service (to be used in the ingress configuration)
+func (p *ProjectService) ingressAnnotations() map[string]string {
+	annotations := p.SvcK8sConfig.Service.Expose.IngressAnnotations
+	if len(annotations) == 0 {
+		annotations = map[string]string{}
+	}
+	return annotations
 }
 
 // getKubernetesUpdateStrategy gets update strategy for compose project service
@@ -210,7 +192,7 @@ func (p *ProjectService) volumes(project *composego.Project) ([]Volumes, error) 
 }
 
 // placement returns information regarding pod affinity
-// @todo Add placement support via labels!
+// @todo Add placement support via an extension!
 func (p *ProjectService) placement() map[string]string {
 	if p.Deploy != nil && p.Deploy.Placement.Constraints != nil {
 		return loadPlacement(p.Deploy.Placement.Constraints)
@@ -221,7 +203,7 @@ func (p *ProjectService) placement() map[string]string {
 
 // resourceRequests returns workload resource requests (memory & cpu)
 // It parses CPU & Memory as k8s resource.Quantity regardless
-// of how values are supplied (via deploy block or labels).
+// of how values are supplied (via deploy block or an extension).
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
 // - Memory: 1, 1M, 1m, 1G, 1Gi
@@ -251,7 +233,7 @@ func (p *ProjectService) resourceRequests() (*int64, *int64) {
 
 // resourceLimits returns workload resource limits (memory & cpu)
 // It parses CPU & Memory as k8s resource.Quantity regardless
-// of how values are supplied (via deploy block or labels).
+// of how values are supplied (via deploy block or an extension).
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
 // - Memory: 1, 1M, 1m, 1G, 1Gi

@@ -718,9 +718,10 @@ var _ = Describe("Transform", func() {
 
 		When("project service label instructing to expose the k8s service is specified as empty string", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: "",
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = ""
+				// projectService.Labels = composego.Labels{
+				// 	config.LabelServiceExpose: "",
+				// }
 			})
 
 			It("doesn't initiate an ingress", func() {
@@ -728,11 +729,19 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service label instructing to expose the k8s service is specified as `true`", func() {
+		When("project service extension instructing to expose the k8s service", func() {
+			domain := "domain.name"
+			ingressAnnotations := map[string]string{
+				"kubernetes.io/ingress.class":    "external",
+				"cert-manager.io/cluster-issuer": "prod-le-dns01",
+			}
+
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: "true",
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = domain
+				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
+				// projectService.Labels = composego.Labels{
+				// 	config.LabelServiceExpose: "true",
+				// }
 			})
 
 			It("initialises Ingress with a port routing to the project service name", func() {
@@ -746,11 +755,12 @@ var _ = Describe("Transform", func() {
 					ObjectMeta: meta.ObjectMeta{
 						Name:        projectService.Name,
 						Labels:      configLabels(projectService.Name),
-						Annotations: configAnnotations(projectService),
+						Annotations: ingressAnnotations,
 					},
 					Spec: networkingv1beta1.IngressSpec{
 						Rules: []networkingv1beta1.IngressRule{
 							{
+								Host: domain,
 								IngressRuleValue: networkingv1beta1.IngressRuleValue{
 									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
 										Paths: []networkingv1beta1.HTTPIngressPath{
@@ -774,13 +784,20 @@ var _ = Describe("Transform", func() {
 		})
 
 		When("project service label instructing to expose the k8s service is specified as `domain.name`", func() {
+			ingressAnnotations := map[string]string{
+				"kubernetes.io/ingress.class":    "external",
+				"cert-manager.io/cluster-issuer": "prod-le-dns01",
+			}
 			domain := "domain.name"
 			path := "path"
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: filepath.Join(domain, path),
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = filepath.Join(domain, path)
+				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
+
+				// projectService.Labels = composego.Labels{
+				// 	config.LabelServiceExpose: filepath.Join(domain, path),
+				// }
 			})
 
 			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
@@ -792,9 +809,10 @@ var _ = Describe("Transform", func() {
 						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
-						Name:        projectService.Name,
-						Labels:      configLabels(projectService.Name),
-						Annotations: configAnnotations(projectService),
+						Name:   projectService.Name,
+						Labels: configLabels(projectService.Name),
+						// Annotations: configAnnotations(projectService),
+						Annotations: ingressAnnotations,
 					},
 					Spec: networkingv1beta1.IngressSpec{
 						Rules: []networkingv1beta1.IngressRule{
@@ -823,15 +841,21 @@ var _ = Describe("Transform", func() {
 		})
 
 		When("project service label instructing to expose the k8s service is specified as comma separated list of domain names", func() {
+			ingressAnnotations := map[string]string{
+				"kubernetes.io/ingress.class":    "external",
+				"cert-manager.io/cluster-issuer": "prod-le-dns01",
+			}
 			domains := []string{
 				"domain.name",
 				"another.domain.name",
 			}
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: strings.Join(domains, ","),
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = strings.Join(domains, ",")
+				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
+				// projectService.Labels = composego.Labels{
+				// 	config.LabelServiceExpose: strings.Join(domains, ","),
+				// }
 			})
 
 			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
@@ -843,9 +867,10 @@ var _ = Describe("Transform", func() {
 						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
-						Name:        projectService.Name,
-						Labels:      configLabels(projectService.Name),
-						Annotations: configAnnotations(projectService),
+						Name:   projectService.Name,
+						Labels: configLabels(projectService.Name),
+						// Annotations: configAnnotations(projectService),
+						Annotations: ingressAnnotations,
 					},
 					Spec: networkingv1beta1.IngressSpec{
 						Rules: []networkingv1beta1.IngressRule{
@@ -893,10 +918,12 @@ var _ = Describe("Transform", func() {
 
 		When("TLS secret name was specified via label", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose:          "domain.name",
-					config.LabelServiceExposeTLSSecret: "my-tls-secret",
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
+				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
+				// projectService.Labels = composego.Labels{
+				// 	config.LabelServiceExpose:          "domain.name",
+				// 	config.LabelServiceExposeTLSSecret: "my-tls-secret",
+				// }
 			})
 
 			It("will include it in the ingress spec", func() {
@@ -1317,9 +1344,10 @@ var _ = Describe("Transform", func() {
 				nodePort := int32(4444)
 
 				BeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelServiceNodePortPort: strconv.Itoa(int(nodePort)),
-					}
+					projectService.SvcK8sConfig.Service.NodePort = int(nodePort)
+					// projectService.Labels = composego.Labels{
+					// 	config.LabelServiceNodePortPort: strconv.Itoa(int(nodePort)),
+					// }
 				})
 
 				It("specifies that port in the service port spec", func() {

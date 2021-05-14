@@ -16,23 +16,4 @@
 
 package config
 
-const (
-	LabelPrefix = "kev."
-
-	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
-	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
-
-	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
-	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
-
-	// LabelServiceNodePortPort defines port number for NodePort k8s service kind
-	LabelServiceNodePortPort = LabelPrefix + "service.nodeport.port"
-
-	// LabelServiceExpose informs whether K8s service should be exposed externally. To enable set as "true" or "domain.com,otherdomain.com".
-	LabelServiceExpose = LabelPrefix + "service.expose"
-
-	// LabelServiceExposeTLSSecret  provides the name of the TLS secret to use with the Kubernetes ingress controller
-	LabelServiceExposeTLSSecret = LabelPrefix + "service.expose.tls-secret"
-)
-
 var BaseServiceLabels []string

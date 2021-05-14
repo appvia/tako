@@ -268,7 +268,6 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 
 	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered, excluded)
 	if err != nil {
-		log.Errorf("Couldn't render manifests")
 		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
 	}
@@ -276,7 +275,6 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 	if len(m.Skaffold) > 0 {
 		// Update skaffold profiles upon render - this ensures profiles stay up to date
 		if err := UpdateSkaffoldProfiles(m.Skaffold, outputPaths); err != nil {
-			log.Errorf("Couldn't update skaffold.yaml profiles")
 			decoratedErr := errors.Errorf("Couldn't update skaffold.yaml profiles, details:\n%s", err)
 			renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, decoratedErr)
 			return nil, err
@@ -285,14 +283,12 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		// Update skaffold build artifacts - these may change over time, usually by manual update in base docker compose
 		composeProject, err := m.SourcesToComposeProject()
 		if err != nil {
-			log.Errorf("Couldn't build Docker Compose Project from tracked source files")
 			decoratedErr := errors.Errorf("Couldn't build Docker Compose Project from tracked source files, details:\n%s", err)
 			renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, decoratedErr)
 			return nil, err
 		}
 
 		if err = UpdateSkaffoldBuildArtifacts(m.Skaffold, composeProject); err != nil {
-			log.Errorf("Couldn't update skaffold.yaml build artifacts")
 			decoratedErr := errors.Errorf("Couldn't update skaffold.yaml build artifacts, details:\n%s", err)
 			renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, decoratedErr)
 			return nil, err
