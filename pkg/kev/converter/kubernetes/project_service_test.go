@@ -498,7 +498,7 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				expectedMaxSurge := intstr.FromInt(0)
+				expectedMaxSurge := intstr.FromString("25%")
 				expectedMaxUnavailable := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
@@ -522,7 +522,8 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				expectedMaxUnavailable := intstr.FromInt(0)
+				// expectedMaxUnavailable := intstr.FromInt(0)
+				expectedMaxUnavailable := intstr.FromString("25%")
 				expectedMaxSurge := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {

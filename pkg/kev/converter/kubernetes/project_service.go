@@ -175,7 +175,7 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 		maxSurge := intstr.FromInt(p.SvcK8sConfig.Workload.RollingUpdateMaxSurge)
 		r.MaxSurge = &maxSurge
 
-		maxUnavailable := intstr.FromInt(0)
+		maxUnavailable := intstr.FromString("25%")
 		r.MaxUnavailable = &maxUnavailable
 
 		return &r
@@ -193,7 +193,7 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 			r.MaxUnavailable = &maxUnavailable
 		}
 
-		maxSurge := intstr.FromInt(0)
+		maxSurge := intstr.FromString("25%")
 		r.MaxSurge = &maxSurge
 		return &r
 	}
@@ -204,7 +204,7 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 			r.MaxSurge = &maxSurge
 		}
 
-		maxUnavailable := intstr.FromInt(0)
+		maxUnavailable := intstr.FromString("25%")
 		r.MaxUnavailable = &maxUnavailable
 		return &r
 	}

@@ -447,7 +447,7 @@ var _ = Describe("Transform", func() {
 						Type: "RollingUpdate",
 						RollingUpdate: &v1apps.RollingUpdateDeployment{
 							MaxSurge:       &intstr.IntOrString{Type: 0, IntVal: 1, StrVal: ""},
-							MaxUnavailable: &intstr.IntOrString{Type: 0, IntVal: 0, StrVal: ""},
+							MaxUnavailable: &intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "25%"},
 						},
 					},
 					Template: v1.PodTemplateSpec{
