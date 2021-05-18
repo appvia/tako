@@ -809,9 +809,8 @@ var _ = Describe("Transform", func() {
 						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
-						Name:   projectService.Name,
-						Labels: configLabels(projectService.Name),
-						// Annotations: configAnnotations(projectService),
+						Name:        projectService.Name,
+						Labels:      configLabels(projectService.Name),
 						Annotations: ingressAnnotations,
 					},
 					Spec: networkingv1beta1.IngressSpec{
@@ -867,9 +866,8 @@ var _ = Describe("Transform", func() {
 						APIVersion: "networking.k8s.io/v1beta1",
 					},
 					ObjectMeta: meta.ObjectMeta{
-						Name:   projectService.Name,
-						Labels: configLabels(projectService.Name),
-						// Annotations: configAnnotations(projectService),
+						Name:        projectService.Name,
+						Labels:      configLabels(projectService.Name),
 						Annotations: ingressAnnotations,
 					},
 					Spec: networkingv1beta1.IngressSpec{
