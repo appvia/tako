@@ -154,17 +154,21 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 	// already been inferred from the compose.go Deploy.UpdateConfig block.
 	//
 	// *****For now, as we can only configure settings for RollingUpdateMaxSurge, this is the only
-	// strategy that is enabled be default.*****
+	// strategy that is enabled by default.*****
 	//
-	// An extra setting, e.g. strategy, should be defined to qualify which UpdateStrategy to use. As before,
-	// 'strategy' can be inferred from the Deploy block with defaults added as required.
+	// If we are also to enable MaxUnavailable, we need an extra extension setting and a toggle
+	// to inform which setting to use.
 	//
-	// The 'strategy' setting will definitely be required when MaxUnavailable config is made available to a k8s extension.
 	// E.g. here's a yaml sample of the proposal:
-	// rollingUpdate:
-	//   strategy: surge
-	//	 maxSurge: 1
-	//   maxUnavailable: 1
+	// strategy:  # will cover Pod replacement / Statefulset update strategies perhaps
+	//  type: RollingUpdate
+	//  rollingUpdate: # there is no additional settings for `Replace` strategy currently.
+	//    maxUnavailable: 2
+	//    maxSurge: 2
+
+	// However, the above is applicable to Deployments and we also should rethink this in
+	// context of StatefulSet update strategies.
+
 	r := v1apps.RollingUpdateDeployment{}
 
 	if p.SvcK8sConfig.Workload.RollingUpdateMaxSurge > 0 {
@@ -191,6 +195,17 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 
 		maxSurge := intstr.FromInt(0)
 		r.MaxSurge = &maxSurge
+		return &r
+	}
+
+	if cfg.Order == "start-first" {
+		if cfg.Parallelism != nil {
+			maxSurge := intstr.FromInt(cast.ToInt(*cfg.Parallelism))
+			r.MaxSurge = &maxSurge
+		}
+
+		maxUnavailable := intstr.FromInt(0)
+		r.MaxUnavailable = &maxUnavailable
 		return &r
 	}
 

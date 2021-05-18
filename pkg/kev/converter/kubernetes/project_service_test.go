@@ -487,7 +487,7 @@ var _ = Describe("ProjectService", func() {
 			parallelism := uint64(2)
 
 			// Pending: see implementation comments in project_service.goL:153
-			PContext("with update config order set as `stop-first`", func() {
+			Context("with update config order set as `stop-first`", func() {
 
 				BeforeEach(func() {
 					deploy = &composego.DeployConfig{
@@ -502,6 +502,7 @@ var _ = Describe("ProjectService", func() {
 				expectedMaxUnavailable := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
+					projectService.SvcK8sConfig.Workload.RollingUpdateMaxSurge = 0
 					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
@@ -525,6 +526,7 @@ var _ = Describe("ProjectService", func() {
 				expectedMaxSurge := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
+					projectService.SvcK8sConfig.Workload.RollingUpdateMaxSurge = 0
 					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
