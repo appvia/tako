@@ -16,17 +16,4 @@
 
 package config
 
-const (
-	LabelPrefix = "kev."
-
-	// LabelServiceNodePortPort defines port number for NodePort k8s service kind
-	LabelServiceNodePortPort = LabelPrefix + "service.nodeport.port"
-
-	// LabelServiceExpose informs whether K8s service should be exposed externally. To enable set as "true" or "domain.com,otherdomain.com".
-	LabelServiceExpose = LabelPrefix + "service.expose"
-
-	// LabelServiceExposeTLSSecret  provides the name of the TLS secret to use with the Kubernetes ingress controller
-	LabelServiceExposeTLSSecret = LabelPrefix + "service.expose.tls-secret"
-)
-
 var BaseServiceLabels []string

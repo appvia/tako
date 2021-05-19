@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -344,30 +343,26 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			Context("when node port is specified via extension but service type was different that NodePort", func() {
-				nodePort := "1234"
+				nodePort := 1234
 
 				BeforeEach(func() {
 					svcK8sConfig.Service.Type = config.ClusterIPService
-					labels = composego.Labels{
-						config.LabelServiceNodePortPort: nodePort,
-					}
+					svcK8sConfig.Service.NodePort = nodePort
 				})
 
 				It("returns an error", func() {
 					_, err := projectService.serviceType()
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(fmt.Sprintf("`%s` workload service type must be set as `NodePort` when assiging node port value", projectServiceName)))
+					Expect(err).To(MatchError(fmt.Sprintf("`%s` workload service type must be set as `NodePort` when assigning node port value", projectServiceName)))
 				})
 			})
 
-			Context("when node port is specified via label and project service has multiple ports specified", func() {
-				nodePort := "1234"
+			Context("when node port is specified via extension and project service has multiple ports specified", func() {
+				nodePort := 1234
 
 				BeforeEach(func() {
 					svcK8sConfig.Service.Type = config.NodePortService
-					labels = composego.Labels{
-						config.LabelServiceNodePortPort: nodePort,
-					}
+					svcK8sConfig.Service.NodePort = nodePort
 					ports = []composego.ServicePortConfig{
 						{
 							Target:    8080,
@@ -393,21 +388,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("nodePort", func() {
 
-		Context("when specified via labels", func() {
+		Context("when specified via an extension", func() {
 			nodePort := 1234
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceNodePortPort: strconv.Itoa(nodePort),
-				}
+				svcK8sConfig.Service.NodePort = nodePort
 			})
 
-			It("will use label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.nodePort()).To(Equal(int32(nodePort)))
 			})
 		})
 
-		Context("when not specified via labels", func() {
+		Context("when not specified via an extension", func() {
 			It("will return 0", func() {
 				Expect(projectService.nodePort()).To(Equal(int32(0)))
 			})
@@ -416,21 +409,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("exposeService", func() {
 
-		Context("when specified via labels", func() {
-			expose := "true"
+		Context("when specified via an extension", func() {
+			expose := "domain.com"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceExpose: expose,
-				}
+				svcK8sConfig.Service.Expose.Domain = expose
 			})
 
-			It("will use label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.exposeService()).To(Equal(expose))
 			})
 		})
 
-		Context("when not specified via labels", func() {
+		Context("when not specified via an extension", func() {
 			It("will return empty string", func() {
 				Expect(projectService.exposeService()).To(Equal(""))
 			})
@@ -438,12 +429,10 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 
-			Context("when service hasn't been exposed via labels but TLS secret was provided", func() {
+			Context("when service hasn't been exposed via an extension but TLS secret was provided", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelServiceExpose:          "",
-						config.LabelServiceExposeTLSSecret: "my-tls-secret-name",
-					}
+					svcK8sConfig.Service.Expose.Domain = ""
+					svcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret-name"
 				})
 
 				It("returns an error", func() {
@@ -459,21 +448,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("tlsSecretName", func() {
 
-		Context("when specified via labels", func() {
+		Context("when specified via an extension", func() {
 			tls := "my-secret"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceExposeTLSSecret: tls,
-				}
+				svcK8sConfig.Service.Expose.TlsSecret = tls
 			})
 
-			It("will use label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.tlsSecretName()).To(Equal(tls))
 			})
 		})
 
-		Context("when not specified via labels", func() {
+		Context("when not specified via an extension", func() {
 			It("will return an empty string", func() {
 				Expect(projectService.tlsSecretName()).To(Equal(""))
 			})

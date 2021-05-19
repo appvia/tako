@@ -78,7 +78,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			msg := "Unable to create Secret resource"
 			log.Error(msg)
 			stepSecrets.Error()
-			return nil, errors.Wrapf(err, "%s, details:\n", msg)
+			return nil, errors.Wrapf(err, "%s", msg)
 		}
 		for _, item := range secrets {
 			allobjects = append(allobjects, item)
@@ -137,10 +137,9 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		// @step create service / ingress
 		serviceType, err := projectService.serviceType()
 		if err != nil {
-			msg := "Could not establish service type. Service hasn't been created!"
-			log.Error(msg)
+			msg := "Could not establish service type. Service hasn't been created"
 			stepSvc.Error()
-			return nil, errors.Wrapf(err, "%s, details:\n", msg)
+			return nil, errors.Wrapf(err, "%s", msg)
 		}
 
 		if k.portsExist(projectService) && serviceType != config.NoService {
@@ -152,10 +151,9 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			// For exposed service also create an ingress (Note only the first port is used for ingress!)
 			expose, err := projectService.exposeService()
 			if err != nil {
-				msg := "Could not expose the service. Ingress hasn't been created!"
-				log.Error(msg)
+				msg := "Could not expose the service. Ingress hasn't been created"
 				stepSvc.Error()
-				return nil, errors.Wrapf(err, "%s, details:\n", msg)
+				return nil, errors.Wrapf(err, "%s", msg)
 			}
 			if expose != "" {
 				objects = append(objects, k.initIngress(projectService, svc.Spec.Ports[0].Port))
@@ -169,9 +167,8 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 		// @step updating all objects related to a current compose service
 		if err = k.updateKubernetesObjects(projectService, &objects); err != nil {
 			msg := "Error occurred while transforming Kubernetes objects"
-			log.Error(msg)
 			stepSvc.Error()
-			return nil, errors.Wrapf(err, "%s, details:\n", msg)
+			return nil, errors.Wrapf(err, "%s", msg)
 		}
 
 		stepSvc.Success(fmt.Sprintf("Converted service: %s", pSvc.Name))
@@ -197,7 +194,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 					msg := fmt.Sprintf("Unable to create Network Policy for network %v for service %v", name, projectService.Name)
 					log.Error(msg)
 					stepSvc.Error()
-					return nil, err
+					return nil, errors.Wrapf(err, "%s", msg)
 				}
 				objects = append(objects, np)
 				renderedNetworkPolicy = np
@@ -272,13 +269,13 @@ func (k *Kubernetes) getConfigMapKeyFromMeta(configName string) (string, error) 
 		return "", fmt.Errorf("config %s not found", configName)
 	}
 
-	config := k.Project.Configs[configName]
+	cfg := k.Project.Configs[configName]
 
-	if config.External.External {
+	if cfg.External.External {
 		return "", fmt.Errorf("config %s is external", configName)
 	}
 
-	return filepath.Base(config.File), nil
+	return filepath.Base(cfg.File), nil
 }
 
 // initPodSpecWithConfigMap creates the pod specification
@@ -643,9 +640,10 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 			APIVersion: "networking.k8s.io/v1beta1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:        projectService.Name,
-			Labels:      configLabels(projectService.Name),
-			Annotations: configAnnotations(projectService),
+			Name:   projectService.Name,
+			Labels: configLabels(projectService.Name),
+			// Annotations: configAnnotations(projectService),
+			Annotations: projectService.ingressAnnotations(),
 		},
 		Spec: networkingv1beta1.IngressSpec{
 			Rules: make([]networkingv1beta1.IngressRule, len(hosts)),

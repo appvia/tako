@@ -594,15 +594,11 @@ func configAllLabels(projectService ProjectService) map[string]string {
 }
 
 // configAnnotations configures annotations - they are effectively compose project service labels,
-// but will exclude all Kev configuration labels by default.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L152
 func configAnnotations(projectService ProjectService) map[string]string {
 	annotations := map[string]string{}
 	for key, value := range projectService.Labels {
-		// don't turn kev configuration labels into kubernetes annotations!
-		if !strings.HasPrefix(key, config.LabelPrefix) {
-			annotations[key] = value
-		}
+		annotations[key] = value
 	}
 	return annotations
 }
@@ -955,16 +951,6 @@ func contains(strs []string, s string) bool {
 	return i < len(strs) && strs[i] == s
 }
 
-// runtimeObjectConvertToTarget converts runtime object into a target
-func runtimeObjectConvertToTarget(o runtime.Object, target interface{}) error {
-	raw, err := ToUnstructured(o)
-	if err != nil {
-		return err
-	}
-
-	return FromUnstructured(raw, target)
-}
-
 // ToUnstructured converts runtime.Object to unstructured map[string]interface{}
 func ToUnstructured(o runtime.Object) (map[string]interface{}, error) {
 	raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
@@ -973,11 +959,6 @@ func ToUnstructured(o runtime.Object) (map[string]interface{}, error) {
 	}
 
 	return raw, nil
-}
-
-// FromUnstructured converts unstructured to target object
-func FromUnstructured(unstructured map[string]interface{}, target interface{}) error {
-	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured, target)
 }
 
 // volumeByNameAndFormat find a volume using a name, and the name's underlying format.
