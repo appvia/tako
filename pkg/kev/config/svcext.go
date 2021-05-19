@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -32,7 +33,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-const K8SExtensionKey = "x-k8s"
+const (
+	K8SExtensionKey         = "x-k8s"
+	dnsSubdomainNamePattern = `^[a-zA-Z]([a-zA-Z0-9\-]+[\.]?)*[a-zA-Z0-9]$`
+)
+
+var dnsSubdomainNameRegex = regexp.MustCompile(dnsSubdomainNamePattern)
 
 // ServiceExtension represents the root of the docker-compose extensions for a service
 type ServiceExtension struct {
@@ -72,7 +78,12 @@ func (skc SvcK8sConfig) Merge(other SvcK8sConfig) (SvcK8sConfig, error) {
 }
 
 func (skc SvcK8sConfig) Validate() error {
-	err := validator.New().Struct(skc)
+	validate := validator.New()
+	if err := validate.RegisterValidation("subdomainIfAny", validateDNSSubdomainNameIfAny); err != nil {
+		return err
+	}
+
+	err := validate.Struct(skc)
 	if err != nil {
 		validationErrors := err.(validator.ValidationErrors)
 		for _, e := range validationErrors {
@@ -92,11 +103,13 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 	return SvcK8sConfig{
 		Disabled: false,
 		Workload: Workload{
-			Type:           DefaultWorkload,
-			LivenessProbe:  DefaultLivenessProbe(),
-			ReadinessProbe: DefaultReadinessProbe(),
-			Replicas:       1,
-			RestartPolicy:  RestartPolicyAlways,
+			Type:                  DefaultWorkload,
+			ServiceAccountName:    DefaultServiceAccountName,
+			LivenessProbe:         DefaultLivenessProbe(),
+			ReadinessProbe:        DefaultReadinessProbe(),
+			Replicas:              1,
+			RollingUpdateMaxSurge: DefaultRollingUpdateMaxSurge,
+			RestartPolicy:         RestartPolicyAlways,
 			ImagePull: ImagePull{
 				Policy: DefaultImagePullPolicy,
 			},
@@ -117,28 +130,28 @@ func SvcK8sConfigFromCompose(svc *composego.ServiceConfig) (SvcK8sConfig, error)
 		k8sExt SvcK8sConfig
 	)
 
+	cfg.Workload.ServiceAccountName = DefaultServiceAccountName
 	cfg.Workload.Type = WorkloadTypeFromCompose(svc)
 	cfg.Workload.Replicas = WorkloadReplicasFromCompose(svc)
+	cfg.Workload.RollingUpdateMaxSurge = WorkloadRollingUpdateMaxSurgeFromCompose(svc)
 	cfg.Workload.RestartPolicy = WorkloadRestartPolicyFromCompose(svc)
-	svcType, err := ServiceTypeFromCompose(svc)
-	if err != nil {
-		return SvcK8sConfig{}, err
-	}
-	cfg.Service.Type = svcType
-
 	cfg.Workload.LivenessProbe = LivenessProbeFromCompose(svc)
 	cfg.Workload.ReadinessProbe = DefaultReadinessProbe()
-
 	cfg.Workload.ImagePull = ImagePullWithDefaults()
+	cfg.Workload.Autoscale = AutoscaleWithDefaults()
+	cfg.Workload.PodSecurity = PodSecurityWithDefaults()
 
 	svcResource, err := ResourceFromCompose(svc)
 	if err != nil {
 		return SvcK8sConfig{}, err
 	}
-
 	cfg.Workload.Resource = svcResource
-	cfg.Workload.Autoscale = AutoscaleWithDefaults()
-	cfg.Workload.PodSecurity = PodSecurityWithDefaults()
+
+	svcType, err := ServiceTypeFromCompose(svc)
+	if err != nil {
+		return SvcK8sConfig{}, err
+	}
+	cfg.Service.Type = svcType
 
 	if _, ok := svc.Extensions[K8SExtensionKey]; ok {
 		if k8sExt, err = ParseSvcK8sConfigFromMap(svc.Extensions, SkipValidation()); err != nil {
@@ -281,7 +294,7 @@ func getServiceType(serviceType string) (string, error) {
 	case "none":
 		return NoService, nil
 	default:
-		return "", fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
+		return "", fmt.Errorf("unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
 	}
 }
 
@@ -316,8 +329,8 @@ func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {
 	return int(*svc.Deploy.Replicas)
 }
 
-// TODO: Turn these strings into enums
 func WorkloadTypeFromCompose(svc *composego.ServiceConfig) string {
+	// TODO: Turn these strings into enums
 	if svc.Deploy != nil && svc.Deploy.Mode == "global" {
 		return DaemonsetWorkload
 	}
@@ -404,17 +417,27 @@ func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...K8sExtensionOpti
 	return extensions.K8S, nil
 }
 
+func validateDNSSubdomainNameIfAny(fl validator.FieldLevel) bool {
+	target := fl.Field().String()
+	if len(target) == 0 {
+		return true
+	}
+	return dnsSubdomainNameRegex.MatchString(target) && len(target) <= 253
+}
+
 // Workload holds all the workload-related k8s configurations.
 type Workload struct {
-	Type           string         `yaml:"type,omitempty" validate:"required,oneof=DaemonSet StatefulSet Deployment"`
-	Replicas       int            `yaml:"replicas" validate:"required,gt=0"`
-	LivenessProbe  LivenessProbe  `yaml:"livenessProbe" validate:"required"`
-	ReadinessProbe ReadinessProbe `yaml:"readinessProbe,omitempty"`
-	RestartPolicy  string         `yaml:"restartPolicy,omitempty"`
-	ImagePull      ImagePull      `yaml:"imagePull,omitempty"`
-	Resource       Resource       `yaml:"resource,omitempty"`
-	Autoscale      Autoscale      `yaml:"autoscale,omitempty"`
-	PodSecurity    PodSecurity    `yaml:"podSecurity,omitempty"`
+	Type                  string         `yaml:"type,omitempty" validate:"required,oneof=DaemonSet StatefulSet Deployment"`
+	Replicas              int            `yaml:"replicas" validate:""`
+	ServiceAccountName    string         `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
+	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
+	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
+	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
+	RestartPolicy         string         `yaml:"restartPolicy,omitempty"`
+	ImagePull             ImagePull      `yaml:"imagePull,omitempty"`
+	Resource              Resource       `yaml:"resource,omitempty"`
+	Autoscale             Autoscale      `yaml:"autoscale,omitempty"`
+	PodSecurity           PodSecurity    `yaml:"podSecurity,omitempty"`
 }
 
 type Resource struct {
