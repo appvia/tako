@@ -802,6 +802,24 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
+		When("project service extension instructing to expose the k8s service", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
+			})
+
+			It("initialises Ingress with the correct service", func() {
+				ingress := k.initIngress(projectService, port)
+				configuredService := ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.ServiceName
+				Expect(configuredService).To(Equal(projectService.Name))
+			})
+
+			It("initialises Ingress with the correct port", func() {
+				ingress := k.initIngress(projectService, port)
+				configuredPort := ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.ServicePort.IntVal
+				Expect(configuredPort).To(Equal(port))
+			})
+		})
+
 		When("project service extension instructing to expose the k8s service is specified as `domain.name`", func() {
 			domain := "domain.name"
 			path := "path"
