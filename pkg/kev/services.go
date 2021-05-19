@@ -25,7 +25,7 @@ import (
 )
 
 func newServiceConfig(s composego.ServiceConfig) (ServiceConfig, error) {
-	config := ServiceConfig{Name: s.Name, Labels: s.Labels, Environment: s.Environment, Extensions: s.Extensions}
+	config := ServiceConfig{Name: s.Name, Environment: s.Environment, Extensions: s.Extensions}
 	return config, nil
 }
 
@@ -90,33 +90,11 @@ func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []s
 	return matches
 }
 
-// GetLabels gets a service's labels
-func (sc ServiceConfig) GetLabels() map[string]string {
-	return sc.Labels
-}
-
 // minusEnvVars returns a copy of the ServiceConfig with blank env vars
 func (sc ServiceConfig) minusEnvVars() ServiceConfig {
 	return ServiceConfig{
 		Name:        sc.Name,
-		Labels:      sc.Labels,
 		Environment: map[string]*string{},
-		Extensions:  sc.Extensions,
-	}
-}
-
-// condenseLabels returns a copy of the ServiceConfig with only condensed base service labels
-func (sc ServiceConfig) condenseLabels(labels []string) ServiceConfig {
-	for key := range sc.GetLabels() {
-		if !contains(labels, key) {
-			delete(sc.Labels, key)
-		}
-	}
-
-	return ServiceConfig{
-		Name:        sc.Name,
-		Labels:      sc.Labels,
-		Environment: sc.Environment,
 		Extensions:  sc.Extensions,
 	}
 }

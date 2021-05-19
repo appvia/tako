@@ -14,16 +14,6 @@ services:
           timeout: 10s
       service:
         type: None
-    labels:
-      kev.workload.cpu: "0.1"
-      kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.max-cpu: "0.5"
-      kev.workload.max-memory: 500Mi
-      kev.workload.memory: 10Mi
-      kev.workload.replicas: "1"
-      kev.workload.rolling-update-max-surge: "1"
-      kev.workload.service-account-name: default
-      kev.workload.type: StatefulSet
 volumes:
   db_data:
     x-k8s:

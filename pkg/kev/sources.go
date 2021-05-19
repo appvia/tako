@@ -28,7 +28,7 @@ import (
 
 type BaseOverrideOpts func(s *Sources, c *ComposeProject) error
 
-// CalculateBaseOverride calculates the extensions and the base set of labels deduced from a group of compose sources.
+// CalculateBaseOverride calculates the extensions deduced from a group of compose sources.
 func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
@@ -47,7 +47,6 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	for _, svc := range ready.Services {
 		target := ServiceConfig{
 			Name:       svc.Name,
-			Labels:     map[string]string{},
 			Extensions: svc.Extensions,
 		}
 
@@ -124,7 +123,6 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 
 		services = append(services, ServiceConfig{
 			Name:        svc.Name,
-			Labels:      svc.Labels,
 			Environment: originSvc.Environment,
 			Extensions:  svc.Extensions,
 		})

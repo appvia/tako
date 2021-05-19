@@ -19,7 +19,6 @@ package kev
 import (
 	"fmt"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
@@ -46,40 +45,6 @@ func (o *composeOverride) getVolume(name string) (VolumeConfig, error) {
 	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
-// toBaseLabels returns a copy of the composeOverride with condensed base labels for services and volumes.
-func (o *composeOverride) toBaseLabels() *composeOverride {
-	var services Services
-	volumes := Volumes{}
-
-	for _, svcConfig := range o.Services {
-		services = append(services, svcConfig.condenseLabels(config.BaseServiceLabels))
-	}
-	for key, volConfig := range o.Volumes {
-		volumes[key] = volConfig
-	}
-
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes}
-}
-
-// toLabelsMatching condenses an override's labels to the same label keys found in the provided override.
-func (o *composeOverride) toLabelsMatching(other *composeOverride) *composeOverride {
-	services := o.servicesWithLabelsMatching(other)
-	return &composeOverride{Version: o.Version, Services: services, Volumes: o.Volumes, UI: o.UI}
-}
-
-func (o *composeOverride) servicesWithLabelsMatching(other *composeOverride) Services {
-	var services Services
-	for _, svc := range o.Services {
-		otherSvc, err := other.getService(svc.Name)
-		if err != nil {
-			services = append(services, svc)
-			continue
-		}
-		services = append(services, svc.condenseLabels(keys(otherSvc.Labels)))
-	}
-	return services
-}
-
 // diffAndPatch detects and patches all changes between a destination override and the current override.
 // A change is either a create, update or delete event.
 // A change targets an override's version, services or volumes and its properties will depend on the actual target.
@@ -88,15 +53,6 @@ func (o *composeOverride) servicesWithLabelsMatching(other *composeOverride) Ser
 //    Type: "create",   //string
 //    Value: srcSvc,    //interface{} in this case: ServiceConfig
 // }
-// Example: here's a Change that updates a service's label:
-// {
-// 		Type:   "update",                 //string
-// 		Index:  index,                    // interface{} in this case: int
-// 		Parent: "labels",                 // string
-// 		Target: config.LabelServiceType,  // string
-// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
-// }
-//
 // ENV VARS NOTE:
 // The changeset deals with the docker-compose `environment` attribute as a special case:
 // - Env vars specified in docker compose overrides modify a project's docker-compose env vars.
@@ -311,9 +267,6 @@ func (o *composeOverride) mergeServicesInto(p *ComposeProject) error {
 
 		envVarsFromNilToBlankInService(base)
 
-		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
-			return errors.Wrapf(err, "cannot merge labels for service %s", override.Name)
-		}
 		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge extensions for service %s", override.Name)
 		}
@@ -334,7 +287,7 @@ func (o *composeOverride) mergeVolumesInto(p *ComposeProject) error {
 		}
 
 		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
-			return errors.Wrapf(err, "cannot merge labels for volume %s", name)
+			return errors.Wrapf(err, "cannot merge extensions for volume %s", name)
 		}
 		p.Volumes[name] = base
 	}
