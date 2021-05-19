@@ -3,7 +3,7 @@ module github.com/appvia/kev
 go 1.16
 
 require (
-	github.com/GoogleContainerTools/skaffold v1.22.0
+	github.com/GoogleContainerTools/skaffold v1.24.1
 	github.com/appvia/komando v0.0.0-20210422143608-82ceb612412d
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.4.9
