@@ -177,7 +177,6 @@ func WorkloadRollingUpdateMaxSurgeFromCompose(svc *composego.ServiceConfig) int 
 	}
 
 	return int(*svc.Deploy.UpdateConfig.Parallelism)
-
 }
 
 func ResourceFromCompose(svc *composego.ServiceConfig) (Resource, error) {
@@ -466,7 +465,14 @@ type PodSecurity struct {
 }
 
 // Service will hold the service specific extensions in the future.
-// TODO: expand with new properties.
 type Service struct {
-	Type string `yaml:"type" validate:"required,oneof=None NodePort ClusterIP Headless LoadBalancer"`
+	Type     string `yaml:"type" validate:"required,oneof=None NodePort ClusterIP Headless LoadBalancer"`
+	NodePort int    `yaml:"nodeport,omitempty"`
+	Expose   Expose `yaml:"expose,omitempty"`
+}
+
+type Expose struct {
+	Domain             string            `yaml:"domain,omitempty"`
+	TlsSecret          string            `yaml:"tlsSecret,omitempty"`
+	IngressAnnotations map[string]string `yaml:"ingressAnnotations,omitempty"`
 }
