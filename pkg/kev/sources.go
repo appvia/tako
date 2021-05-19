@@ -51,8 +51,6 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 			Extensions: svc.Extensions,
 		}
 
-		setDefaultLabels(&target)
-
 		k8sConf, err := config.SvcK8sConfigFromCompose(&svc)
 		if err != nil {
 			return err
