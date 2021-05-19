@@ -783,67 +783,27 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service label instructing to expose the k8s service is specified as `domain.name`", func() {
-			ingressAnnotations := map[string]string{
-				"kubernetes.io/ingress.class":    "external",
-				"cert-manager.io/cluster-issuer": "prod-le-dns01",
-			}
+		When("project service extension instructing to expose the k8s service is specified as `domain.name`", func() {
 			domain := "domain.name"
 			path := "path"
 
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = filepath.Join(domain, path)
-				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
-
-				// projectService.Labels = composego.Labels{
-				// 	config.LabelServiceExpose: filepath.Join(domain, path),
-				// }
 			})
 
-			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
-				ing := k.initIngress(projectService, port)
+			It("specifies host in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.Spec.Rules[0].Host).To(Equal(domain))
+			})
 
-				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
-					TypeMeta: meta.TypeMeta{
-						Kind:       "Ingress",
-						APIVersion: "networking.k8s.io/v1beta1",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name:        projectService.Name,
-						Labels:      configLabels(projectService.Name),
-						Annotations: ingressAnnotations,
-					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
-							{
-								Host: domain,
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
-											{
-												Path: "/" + path,
-												Backend: networkingv1beta1.IngressBackend{
-													ServiceName: projectService.Name,
-													ServicePort: intstr.IntOrString{
-														IntVal: port,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}))
+			It("specifies path in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				ingressPath := ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path
+				Expect(ingressPath).To(Equal("/" + path))
 			})
 		})
 
-		When("project service label instructing to expose the k8s service is specified as comma separated list of domain names", func() {
-			ingressAnnotations := map[string]string{
-				"kubernetes.io/ingress.class":    "external",
-				"cert-manager.io/cluster-issuer": "prod-le-dns01",
-			}
+		When("project service extension instructing to expose the k8s service is specified as comma separated list of domain names", func() {
 			domains := []string{
 				"domain.name",
 				"another.domain.name",
@@ -851,66 +811,29 @@ var _ = Describe("Transform", func() {
 
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = strings.Join(domains, ",")
-				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
-				// projectService.Labels = composego.Labels{
-				// 	config.LabelServiceExpose: strings.Join(domains, ","),
-				// }
 			})
 
-			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
-				ing := k.initIngress(projectService, port)
+			It("specifies all comma separated hosts in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.Spec.Rules[0].Host).To(Equal(domains[0]))
+				Expect(ingress.Spec.Rules[1].Host).To(Equal(domains[1]))
+			})
+		})
 
-				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
-					TypeMeta: meta.TypeMeta{
-						Kind:       "Ingress",
-						APIVersion: "networking.k8s.io/v1beta1",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name:        projectService.Name,
-						Labels:      configLabels(projectService.Name),
-						Annotations: ingressAnnotations,
-					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
-							{
-								Host: domains[0],
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
-											{
-												Path: "",
-												Backend: networkingv1beta1.IngressBackend{
-													ServiceName: projectService.Name,
-													ServicePort: intstr.IntOrString{
-														IntVal: port,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-							{
-								Host: domains[1],
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
-											{
-												Path: "",
-												Backend: networkingv1beta1.IngressBackend{
-													ServiceName: projectService.Name,
-													ServicePort: intstr.IntOrString{
-														IntVal: port,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}))
+		When("project service extension instructing to expose the k8s service", func() {
+			ingressAnnotations := map[string]string{
+				"kubernetes.io/ingress.class":    "external",
+				"cert-manager.io/cluster-issuer": "prod-le-dns01",
+			}
+
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
+				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
+			})
+
+			It("initialises Ingress with configured ingress annotations", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.ObjectMeta.Annotations).To(Equal(ingressAnnotations))
 			})
 		})
 
