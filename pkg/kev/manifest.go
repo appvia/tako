@@ -124,7 +124,7 @@ func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Mani
 	return m, nil
 }
 
-// MintEnvironments create new environments based on candidate environments and manifest base labels.
+// MintEnvironments create new environments based on candidate environments.
 // This includes an implicit sandbox environment that will always be created.
 func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 	m.UI.Header("Creating deployment environments...")
@@ -138,7 +138,7 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		candidates = append([]string{SandboxEnv}, candidates...)
 	}
 
-	override := m.getSourcesOverride().toBaseLabels()
+	override := m.getSourcesOverride()
 	for _, env := range candidates {
 		envFilename := path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
 		var step kmd.Step
@@ -197,9 +197,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 
 		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
 
-		sourcesOverride.
-			toLabelsMatching(e.override).
-			diffAndPatch(e.override)
+		sourcesOverride.diffAndPatch(e.override)
 	}
 
 	return m, nil

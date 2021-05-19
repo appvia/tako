@@ -297,7 +297,7 @@ var _ = Describe("Transform", func() {
 				projectService.Name = strings.Repeat("a", 100)
 			})
 
-			It("trims down service name to max 63 chars as per DNS label standard RFC-1123", func() {
+			It("trims down service name to max 63 chars as per DNS extension standard RFC-1123", func() {
 				Expect(k.initSvc(projectService).Name).To(HaveLen(63))
 			})
 		})
@@ -514,7 +514,6 @@ var _ = Describe("Transform", func() {
 
 		When("update strategy is defined in project service deploy block", func() {
 			BeforeEach(func() {
-				// @todo add support for update strategy via label
 				parallelism := uint64(2)
 				projectService.Deploy = &composego.DeployConfig{
 					UpdateConfig: &composego.UpdateConfig{
@@ -735,12 +734,9 @@ var _ = Describe("Transform", func() {
 	Describe("initIngress", func() {
 		port := int32(1234)
 
-		When("project service label instructing to expose the k8s service is specified as empty string", func() {
+		When("project service extension instructing to expose the k8s service is specified as empty string", func() {
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = ""
-				// projectService.Labels = composego.Labels{
-				// 	config.LabelServiceExpose: "",
-				// }
 			})
 
 			It("doesn't initiate an ingress", func() {
@@ -758,9 +754,6 @@ var _ = Describe("Transform", func() {
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = domain
 				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
-				// projectService.Labels = composego.Labels{
-				// 	config.LabelServiceExpose: "true",
-				// }
 			})
 
 			It("initialises Ingress with a port routing to the project service name", func() {
@@ -874,14 +867,10 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("TLS secret name was specified via label", func() {
+		When("TLS secret name was specified via extension", func() {
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
 				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
-				// projectService.Labels = composego.Labels{
-				// 	config.LabelServiceExpose:          "domain.name",
-				// 	config.LabelServiceExposeTLSSecret: "my-tls-secret",
-				// }
 			})
 
 			It("will include it in the ingress spec", func() {
@@ -1309,9 +1298,6 @@ var _ = Describe("Transform", func() {
 
 				BeforeEach(func() {
 					projectService.SvcK8sConfig.Service.NodePort = int(nodePort)
-					// projectService.Labels = composego.Labels{
-					// 	config.LabelServiceNodePortPort: strconv.Itoa(int(nodePort)),
-					// }
 				})
 
 				It("specifies that port in the service port spec", func() {
@@ -1745,7 +1731,6 @@ var _ = Describe("Transform", func() {
 				},
 				ObjectMeta: meta.ObjectMeta{
 					Name: networkName,
-					// Labels: ConfigLabels(name),
 				},
 				Spec: networking.NetworkPolicySpec{
 					PodSelector: meta.LabelSelector{

@@ -15,17 +15,6 @@ services:
           timeout: 10s
       service:
         type: None
-    labels:
-      kev.service.type: None
-      kev.workload.cpu: "0.1"
-      kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.max-cpu: "0.5"
-      kev.workload.max-memory: 500Mi
-      kev.workload.memory: 10Mi
-      kev.workload.replicas: "1"
-      kev.workload.rolling-update-max-surge: "1"
-      kev.workload.service-account-name: default
-      kev.workload.type: StatefulSet
   wordpress:
     x-k8s:
       workload:
@@ -43,12 +32,6 @@ services:
           timeout: 10s
       service:
         type: None
-    labels:
-      kev.workload.liveness-probe-type: none
-      kev.workload.readiness-probe-type: http
-      kev.workload.readiness-probe-http-path: /status
-      kev.workload.readiness-probe-http-port: 8080
-      kev.workload.replicas: "1"
 volumes:
   db_data:
     x-k8s:
