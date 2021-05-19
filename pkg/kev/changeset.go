@@ -86,7 +86,7 @@ func (chg change) patchVersion(override *composeOverride) string {
 func (chg change) patchService(override *composeOverride) string {
 	switch chg.Type {
 	case CREATE:
-		newValue := chg.Value.(ServiceConfig).condenseLabels(config.BaseServiceLabels)
+		newValue := chg.Value.(ServiceConfig)
 		override.Services = append(override.Services, newValue)
 		msg := fmt.Sprintf("added service: %s", newValue.Name)
 		log.Debugf(msg)
@@ -107,13 +107,6 @@ func (chg change) patchService(override *composeOverride) string {
 		}
 	case UPDATE:
 		switch chg.Parent {
-		case "labels":
-			pre, canUpdate := override.Services[chg.Index.(int)].Labels[chg.Target]
-			newValue := chg.Value.(string)
-			override.Services[chg.Index.(int)].Labels[chg.Target] = newValue
-			if canUpdate {
-				log.Debugf("service [%s], label [%s] updated, from:[%s] to:[%s]", override.Services[chg.Index.(int)].Name, chg.Target, pre, newValue)
-			}
 		case "extensions":
 			svc := override.Services[chg.Index.(int)]
 			svcName := svc.Name

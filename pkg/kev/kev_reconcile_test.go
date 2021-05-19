@@ -89,28 +89,35 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-override-keep"
 				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
-
 			})
 
-			When("the override service label overrides have been updated", func() {
+			When("the override service extensions have been updated", func() {
 				It("confirms the values pre reconciliation", func() {
 					s, err := override.GetService("db")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
-					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
-					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
-					Expect(s.Labels["kev.workload.replicas"]).To(Equal("5"))
-					Expect(s.Labels["kev.workload.service-account-name"]).To(Equal("overridden-service-account-name"))
+
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(svcK8sConfig.Workload.Resource.CPU).To(Equal("0.5"))
+					Expect(svcK8sConfig.Workload.Resource.MaxCPU).To(Equal("0.75"))
+					Expect(svcK8sConfig.Workload.Resource.Memory).To(Equal("50Mi"))
+					Expect(svcK8sConfig.Workload.Replicas).To(Equal(5))
+					Expect(svcK8sConfig.Workload.ServiceAccountName).To(Equal("overridden-service-account-name"))
 				})
 
 				It("keeps overridden override values", func() {
 					s, err := env.GetService("db")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(s.Labels["kev.workload.cpu"]).To(Equal("0.5"))
-					Expect(s.Labels["kev.workload.max-cpu"]).To(Equal("0.75"))
-					Expect(s.Labels["kev.workload.memory"]).To(Equal("50Mi"))
-					Expect(s.Labels["kev.workload.replicas"]).To(Equal("5"))
-					Expect(s.Labels["kev.workload.service-account-name"]).To(Equal("overridden-service-account-name"))
+
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(svcK8sConfig.Workload.Resource.CPU).To(Equal("0.5"))
+					Expect(svcK8sConfig.Workload.Resource.MaxCPU).To(Equal("0.75"))
+					Expect(svcK8sConfig.Workload.Resource.Memory).To(Equal("50Mi"))
+					Expect(svcK8sConfig.Workload.Replicas).To(Equal(5))
+					Expect(svcK8sConfig.Workload.ServiceAccountName).To(Equal("overridden-service-account-name"))
 				})
 			})
 
@@ -211,7 +218,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(svcK8sConfig.Service.Type).To(Equal("LoadBalancer"))
 				})
 
-				It("should not update the label in all environments", func() {
+				It("should not update any of the environments", func() {
 					s, _ := env.GetService("wordpress")
 
 					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
@@ -242,7 +249,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(override.ServiceNames()).To(ContainElements("db"))
 				})
 
-				It("should add the new service labels to all environments", func() {
+				It("should add the new service to all environments", func() {
 					Expect(env.GetServices()).To(HaveLen(2))
 					Expect(env.GetServices()[0].Name).To(Equal("db"))
 					Expect(env.GetServices()[1].Name).To(Equal("wordpress"))
@@ -357,7 +364,7 @@ var _ = Describe("Reconcile", func() {
 				Expect(override.Volumes).To(HaveLen(0))
 			})
 
-			It("should add the new volume labels to all environments", func() {
+			It("should add the new volumes to all environments", func() {
 				Expect(env.GetVolumes()).To(HaveLen(1))
 
 				v, _ := env.GetVolume("db_data")
@@ -460,11 +467,6 @@ var _ = Describe("Reconcile", func() {
 			It("should remove the env vars from all environments", func() {
 				vars, _ := env.GetEnvVarsForService("wordpress")
 				Expect(vars).To(HaveLen(0))
-			})
-
-			It("confirms environment labels post reconciliation", func() {
-				s, _ := env.GetService("wordpress")
-				Expect(s.GetLabels()).To(HaveLen(10))
 			})
 
 			It("should log the change summary using the debug level", func() {
