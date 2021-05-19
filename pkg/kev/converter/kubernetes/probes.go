@@ -32,8 +32,8 @@ func v1probe(probeType string, pc config.ProbeConfig) (*v1.Probe, error) {
 		InitialDelaySeconds: int32(pc.InitialDelay.Seconds()),
 		TimeoutSeconds:      int32(pc.Timeout.Seconds()),
 		PeriodSeconds:       int32(pc.Period.Seconds()),
-		SuccessThreshold:    int32(pc.FailureThreashold),
-		FailureThreshold:    int32(pc.FailureThreashold),
+		SuccessThreshold:    int32(pc.FailureThreshold),
+		FailureThreshold:    int32(pc.FailureThreshold),
 	}, nil
 }
 

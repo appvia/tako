@@ -71,10 +71,10 @@ func DefaultLivenessProbe() LivenessProbe {
 			Exec: ExecProbe{
 				Command: DefaultLivenessProbeCommand,
 			},
-			InitialDelay:      delay,
-			Period:            interval,
-			FailureThreashold: DefaultProbeRetries,
-			Timeout:           timeout,
+			InitialDelay:     delay,
+			Period:           interval,
+			FailureThreshold: DefaultProbeRetries,
+			Timeout:          timeout,
 		},
 	}
 }
@@ -95,10 +95,10 @@ func DefaultReadinessProbe() ReadinessProbe {
 	return ReadinessProbe{
 		Type: ProbeTypeNone.String(),
 		ProbeConfig: ProbeConfig{
-			InitialDelay:      delay,
-			Period:            interval,
-			FailureThreashold: DefaultProbeRetries,
-			Timeout:           timeout,
+			InitialDelay:     delay,
+			Period:           interval,
+			FailureThreshold: DefaultProbeRetries,
+			Timeout:          timeout,
 		},
 	}
 }
@@ -109,10 +109,10 @@ type ProbeConfig struct {
 	TCP  TCPProbe  `yaml:"tcp,omitempty"`
 	Exec ExecProbe `yaml:"exec,omitempty"`
 
-	InitialDelay      time.Duration `yaml:"initialDelay,omitempty"`
-	Period            time.Duration `yaml:"period,omitempty"`
-	FailureThreashold int           `yaml:"failureThreashold,omitempty"`
-	Timeout           time.Duration `yaml:"timeout,omitempty"`
+	InitialDelay     time.Duration `yaml:"initialDelay,omitempty"`
+	Period           time.Duration `yaml:"period,omitempty"`
+	FailureThreshold int           `yaml:"failureThreshold,omitempty"`
+	Timeout          time.Duration `yaml:"timeout,omitempty"`
 }
 
 // HTTPProbe holds the necessary properties to define the http check on the k8s probe.

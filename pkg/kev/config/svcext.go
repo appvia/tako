@@ -40,6 +40,38 @@ const (
 
 var dnsSubdomainNameRegex = regexp.MustCompile(dnsSubdomainNamePattern)
 
+type RestartPolicy string
+
+const (
+	// RestartPolicyAlways default value
+	RestartPolicyAlways RestartPolicy = "Always"
+
+	// RestartPolicyOnFailure restart policy
+	RestartPolicyOnFailure RestartPolicy = "OnFailure"
+
+	// RestartPolicyNever restart policy
+	RestartPolicyNever RestartPolicy = "Never"
+)
+
+func (p RestartPolicy) String() string {
+	return string(p)
+}
+
+var restartPolicies = map[RestartPolicy]bool{
+	RestartPolicyAlways:    true,
+	RestartPolicyOnFailure: true,
+	RestartPolicyNever:     true,
+}
+
+func RestartPoliciesFromValue(s string) (RestartPolicy, bool) {
+	for k, v := range restartPolicies {
+		if strings.ToLower(k.String()) == strings.ToLower(s) {
+			return k, v
+		}
+	}
+	return "", false
+}
+
 // ServiceExtension represents the root of the docker-compose extensions for a service
 type ServiceExtension struct {
 	K8S SvcK8sConfig `yaml:"x-k8s"`
@@ -79,7 +111,12 @@ func (skc SvcK8sConfig) Merge(other SvcK8sConfig) (SvcK8sConfig, error) {
 
 func (skc SvcK8sConfig) Validate() error {
 	validate := validator.New()
+
 	if err := validate.RegisterValidation("subdomainIfAny", validateDNSSubdomainNameIfAny); err != nil {
+		return err
+	}
+
+	if err := validate.RegisterValidation("restartPolicy", validateRestartPolicy); err != nil {
 		return err
 	}
 
@@ -98,6 +135,11 @@ func (skc SvcK8sConfig) Validate() error {
 	return nil
 }
 
+func validateRestartPolicy(fl validator.FieldLevel) bool {
+	_, valid := RestartPoliciesFromValue(fl.Field().String())
+	return valid
+}
+
 // DefaultSvcK8sConfig returns a service's K8S Config with set defaults.
 func DefaultSvcK8sConfig() SvcK8sConfig {
 	return SvcK8sConfig{
@@ -109,7 +151,7 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 			ReadinessProbe:        DefaultReadinessProbe(),
 			Replicas:              1,
 			RollingUpdateMaxSurge: DefaultRollingUpdateMaxSurge,
-			RestartPolicy:         RestartPolicyAlways,
+			RestartPolicy:         DefaultRestartPolicy,
 			ImagePull: ImagePull{
 				Policy: DefaultImagePullPolicy,
 			},
@@ -299,26 +341,33 @@ func getServiceType(serviceType string) (string, error) {
 }
 
 // WorkloadRestartPolicyFromCompose infers a kev-valid restart policy from compose data.
-func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) string {
-	policy := RestartPolicyAlways
-
-	if svc.Restart != "" {
-		policy = svc.Restart
+func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) RestartPolicy {
+	switch {
+	case svc.Restart != "": // docker-compose v2
+		if p := inferRestartPolicyFromValue(svc.Restart); p != "" {
+			return p
+		}
+	case svc.Deploy != nil && svc.Deploy.RestartPolicy != nil: // docker-compose v3
+		if p := inferRestartPolicyFromValue(svc.Deploy.RestartPolicy.Condition); p != "" {
+			return p
+		}
 	}
+	return DefaultRestartPolicy
+}
 
-	if svc.Deploy != nil && svc.Deploy.RestartPolicy != nil {
-		policy = svc.Deploy.RestartPolicy.Condition
+func inferRestartPolicyFromValue(v string) RestartPolicy {
+	switch strings.ToLower(v) {
+	case "", "always", "any":
+		return RestartPolicyAlways
+	case "no", "none", "never":
+		return RestartPolicyNever
+	case "on-failure", "onfailure":
+		return RestartPolicyOnFailure
+	case "unless-stopped":
+		return RestartPolicyAlways
+	default:
+		return ""
 	}
-
-	if policy == "unless-stopped" {
-		log.WarnWithFields(log.Fields{
-			"restart-policy": policy,
-		}, "Restart policy 'unless-stopped' is not supported, converting it to 'always'")
-
-		policy = "always"
-	}
-
-	return policy
 }
 
 func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {
@@ -368,7 +417,7 @@ func LivenessProbeFromCompose(svc *composego.ServiceConfig) LivenessProbe {
 	}
 
 	if healthcheck.Retries != nil {
-		res.FailureThreashold = int(*healthcheck.Retries)
+		res.FailureThreshold = int(*healthcheck.Retries)
 	}
 
 	if healthcheck.StartPeriod != nil {
@@ -409,6 +458,10 @@ func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...K8sExtensionOpti
 			extensions.K8S.Workload.Type = DefaultWorkload
 		}
 
+		if extensions.K8S.Workload.RestartPolicy == "" {
+			extensions.K8S.Workload.RestartPolicy = DefaultRestartPolicy
+		}
+
 		if err := extensions.K8S.Validate(); err != nil {
 			return SvcK8sConfig{}, err
 		}
@@ -433,11 +486,12 @@ type Workload struct {
 	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
 	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
 	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
-	RestartPolicy         string         `yaml:"restartPolicy,omitempty"`
-	ImagePull             ImagePull      `yaml:"imagePull,omitempty"`
-	Resource              Resource       `yaml:"resource,omitempty"`
-	Autoscale             Autoscale      `yaml:"autoscale,omitempty"`
-	PodSecurity           PodSecurity    `yaml:"podSecurity,omitempty"`
+	// RestartPolicy  string         `yaml:"restartPolicy,omitempty"`
+	RestartPolicy RestartPolicy `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
+	ImagePull     ImagePull     `yaml:"imagePull,omitempty"`
+	Resource      Resource      `yaml:"resource,omitempty"`
+	Autoscale     Autoscale     `yaml:"autoscale,omitempty"`
+	PodSecurity   PodSecurity   `yaml:"podSecurity,omitempty"`
 }
 
 type Resource struct {
