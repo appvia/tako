@@ -522,7 +522,6 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				// expectedMaxUnavailable := intstr.FromInt(0)
 				expectedMaxUnavailable := intstr.FromString("25%")
 				expectedMaxSurge := intstr.FromInt(cast.ToInt(parallelism))
 
