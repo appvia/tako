@@ -449,7 +449,7 @@ var _ = Describe("ProjectService", func() {
 				It("returns an error", func() {
 					_, err := projectService.exposeService()
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Service can't have TLS secret name when it hasn't been exposed"))
+					Expect(err).To(MatchError("service can't have TLS secret name when it hasn't been exposed"))
 				})
 			})
 
@@ -486,6 +486,7 @@ var _ = Describe("ProjectService", func() {
 
 			parallelism := uint64(2)
 
+			// Pending: see implementation comments in project_service.goL:153
 			Context("with update config order set as `stop-first`", func() {
 
 				BeforeEach(func() {
@@ -497,10 +498,11 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				expectedMaxSurge := intstr.FromInt(0)
+				expectedMaxSurge := intstr.FromString("25%")
 				expectedMaxUnavailable := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
+					projectService.SvcK8sConfig.Workload.RollingUpdateMaxSurge = 0
 					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
@@ -520,10 +522,11 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				expectedMaxUnavailable := intstr.FromInt(0)
+				expectedMaxUnavailable := intstr.FromString("25%")
 				expectedMaxSurge := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
+					projectService.SvcK8sConfig.Workload.RollingUpdateMaxSurge = 0
 					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
@@ -888,21 +891,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("serviceAccountName", func() {
 
-		Context("when defined via labels", func() {
+		Context("when defined an extension", func() {
 			sa := "sa"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadServiceAccountName: sa,
-				}
+				svcK8sConfig.Workload.ServiceAccountName = sa
 			})
 
-			It("returns label value", func() {
+			It("returns the extension value", func() {
 				Expect(projectService.serviceAccountName()).To(Equal(sa))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.serviceAccountName()).To(Equal(config.DefaultServiceAccountName))
 			})
