@@ -19,12 +19,6 @@ package config
 const (
 	LabelPrefix = "kev."
 
-	// LabelWorkloadRollingUpdateMaxSurge max number of nodes updated at once
-	LabelWorkloadRollingUpdateMaxSurge = LabelPrefix + "workload.rolling-update-max-surge"
-
-	// LabelWorkloadServiceAccountName defines service account name to be used by the workload
-	LabelWorkloadServiceAccountName = LabelPrefix + "workload.service-account-name"
-
 	// LabelServiceNodePortPort defines port number for NodePort k8s service kind
 	LabelServiceNodePortPort = LabelPrefix + "service.nodeport.port"
 

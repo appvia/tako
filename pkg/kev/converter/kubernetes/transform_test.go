@@ -130,7 +130,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("with imaged pull secret specified via labels", func() {
+		Context("with imaged pull secret specified via an extension", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.ImagePull.Secret = "my-pp-secret"
@@ -152,11 +152,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("with service account name supplied via labels", func() {
+		Context("with service account name supplied via an extension", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadServiceAccountName: "my-service-account",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.ServiceAccountName = "my-service-account"
+
+				m, err := svcK8sConfig.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("uses passed image pull policy in the spec", func() {
@@ -434,6 +443,13 @@ var _ = Describe("Transform", func() {
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},
+					Strategy: v1apps.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &v1apps.RollingUpdateDeployment{
+							MaxSurge:       &intstr.IntOrString{Type: 0, IntVal: 1, StrVal: ""},
+							MaxUnavailable: &intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "25%"},
+						},
+					},
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
 							Annotations: configAnnotations(projectService),
@@ -506,6 +522,9 @@ var _ = Describe("Transform", func() {
 						Order:       "start-first",
 					},
 				}
+				svcK8sConfig, err := config.SvcK8sConfigFromCompose(&projectService.ServiceConfig)
+				Expect(err).ToNot(HaveOccurred())
+				projectService.SvcK8sConfig = svcK8sConfig
 			})
 
 			It("it includes update strategy in the deployment spec", func() {
@@ -631,7 +650,7 @@ var _ = Describe("Transform", func() {
 		var expectedJob *v1batch.Job
 
 		replicas := 1
-		expectedPrallelism := int32(replicas)
+		expectedParallelism := int32(replicas)
 		expectedCompletions := int32(replicas)
 
 		JustBeforeEach(func() {
@@ -645,7 +664,7 @@ var _ = Describe("Transform", func() {
 					Labels: configAllLabels(projectService),
 				},
 				Spec: v1batch.JobSpec{
-					Parallelism: &expectedPrallelism,
+					Parallelism: &expectedParallelism,
 					Completions: &expectedCompletions,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
@@ -1196,8 +1215,14 @@ var _ = Describe("Transform", func() {
 			}
 
 			It("sets correct access mode", func() {
+				var spec v1.PersistentVolumeClaimSpec
+
 				pvc, err := k.createPVC(volume)
-				Expect(pvc.Spec.AccessModes).To(Equal([]v1.PersistentVolumeAccessMode{v1.ReadOnlyMany}))
+				if pvc != nil {
+					spec = pvc.Spec
+				}
+
+				Expect(spec.AccessModes).To(Equal([]v1.PersistentVolumeAccessMode{v1.ReadOnlyMany}))
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})

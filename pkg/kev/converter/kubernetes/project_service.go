@@ -130,7 +130,7 @@ func (p *ProjectService) exposeService() (string, error) {
 			}, "TLS secret name specified via %s label but project service not exposed!",
 				config.LabelServiceExposeTLSSecret)
 
-			return "", fmt.Errorf("Service can't have TLS secret name when it hasn't been exposed")
+			return "", fmt.Errorf("service can't have TLS secret name when it hasn't been exposed")
 		}
 		return val, nil
 	}
@@ -149,22 +149,51 @@ func (p *ProjectService) tlsSecretName() string {
 
 // getKubernetesUpdateStrategy gets update strategy for compose project service
 // Note: it only supports `parallelism` and `order`
-// @todo add label support for update strategy!
 func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDeployment {
+	// The update strategy should only rely on settings defined in a k8s extension. As the settings have
+	// already been inferred from the compose.go Deploy.UpdateConfig block.
+	//
+	// *****For now, as we can only configure settings for RollingUpdateMaxSurge, this is the only
+	// strategy that is enabled by default.*****
+	//
+	// If we are also to enable MaxUnavailable, we need an extra extension setting and a toggle
+	// to inform which setting to use.
+	//
+	// E.g. here's a yaml sample of the proposal:
+	// strategy:  # will cover Pod replacement / Statefulset update strategies perhaps
+	//  type: RollingUpdate
+	//  rollingUpdate: # there is no additional settings for `Replace` strategy currently.
+	//    maxUnavailable: 2
+	//    maxSurge: 2
+
+	// However, the above is applicable to Deployments and we also should rethink this in
+	// context of StatefulSet update strategies.
+
+	r := v1apps.RollingUpdateDeployment{}
+
+	if p.SvcK8sConfig.Workload.RollingUpdateMaxSurge > 0 {
+		maxSurge := intstr.FromInt(p.SvcK8sConfig.Workload.RollingUpdateMaxSurge)
+		r.MaxSurge = &maxSurge
+
+		maxUnavailable := intstr.FromString("25%")
+		r.MaxUnavailable = &maxUnavailable
+
+		return &r
+	}
+
+	// TODO(es): remove this when RollingUpdateMaxUnavailable is implemented as a k8s extension config param.
 	if p.Deploy == nil || p.Deploy.UpdateConfig == nil {
 		return nil
 	}
 
 	cfg := p.Deploy.UpdateConfig
-	r := v1apps.RollingUpdateDeployment{}
-
 	if cfg.Order == "stop-first" {
 		if cfg.Parallelism != nil {
 			maxUnavailable := intstr.FromInt(cast.ToInt(*cfg.Parallelism))
 			r.MaxUnavailable = &maxUnavailable
 		}
 
-		maxSurge := intstr.FromInt(0)
+		maxSurge := intstr.FromString("25%")
 		r.MaxSurge = &maxSurge
 		return &r
 	}
@@ -174,7 +203,8 @@ func (p *ProjectService) getKubernetesUpdateStrategy() *v1apps.RollingUpdateDepl
 			maxSurge := intstr.FromInt(cast.ToInt(*cfg.Parallelism))
 			r.MaxSurge = &maxSurge
 		}
-		maxUnavailable := intstr.FromInt(0)
+
+		maxUnavailable := intstr.FromString("25%")
 		r.MaxUnavailable = &maxUnavailable
 		return &r
 	}
@@ -305,11 +335,7 @@ func (p *ProjectService) imagePullSecret() string {
 
 // serviceAccountName returns service account name to be used by the pod
 func (p *ProjectService) serviceAccountName() string {
-	if val, ok := p.Labels[config.LabelWorkloadServiceAccountName]; ok {
-		return val
-	}
-
-	return config.DefaultServiceAccountName
+	return p.SvcK8sConfig.Workload.ServiceAccountName
 }
 
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
@@ -326,7 +352,7 @@ func (p *ProjectService) restartPolicy() v1.RestartPolicy {
 			"restart-policy":  policy,
 		}, "Restart policy is not supported, defaulting to 'Always'")
 
-		return v1.RestartPolicy(config.RestartPolicyAlways)
+		return config.RestartPolicyAlways
 	}
 
 	return restartPolicy
@@ -362,7 +388,7 @@ func (p *ProjectService) environment() composego.MappingWithEquals {
 // ports returns combined list of ports from both project service `Ports` and `Expose`. Docker Expose ports are treated as TCP ports.
 // @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L185
 func (p *ProjectService) ports() []composego.ServicePortConfig {
-	prts := []composego.ServicePortConfig{}
+	var prts []composego.ServicePortConfig
 	exist := map[string]bool{}
 
 	for _, port := range p.Ports {
@@ -401,7 +427,7 @@ func (p *ProjectService) ports() []composego.ServicePortConfig {
 }
 
 func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
-	p1 := composego.ServiceConfig(p.ServiceConfig)
+	p1 := p.ServiceConfig
 	k8sconf, err := config.SvcK8sConfigFromCompose(&p1)
 	if err != nil {
 		return nil, err
@@ -411,7 +437,7 @@ func (p *ProjectService) LivenessProbe() (*v1.Probe, error) {
 }
 
 func (p *ProjectService) ReadinessProbe() (*v1.Probe, error) {
-	p1 := composego.ServiceConfig(p.ServiceConfig)
+	p1 := p.ServiceConfig
 	k8sconf, err := config.SvcK8sConfigFromCompose(&p1)
 	if err != nil {
 		return nil, err
