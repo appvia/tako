@@ -322,21 +322,6 @@ func (p *ProjectService) serviceAccountName() string {
 
 // restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
 func (p *ProjectService) restartPolicy() v1.RestartPolicy {
-	// policy := config.RestartPolicyAlways
-	// if p.SvcK8sConfig.Workload.RestartPolicy != "" {
-	// 	policy = p.SvcK8sConfig.Workload.RestartPolicy
-	// }
-
-	// restartPolicy, err := getRestartPolicy(p.Name, policy)
-	// if err != nil {
-	// 	log.WarnWithFields(log.Fields{
-	// 		"project-service": p.Name,
-	// 		"restart-policy":  policy,
-	// 	}, "Restart policy is not supported, defaulting to 'Always'")
-	//
-	// 	return v1.RestartPolicy(config.RestartPolicyAlways)
-	// }
-
 	return v1.RestartPolicy(p.SvcK8sConfig.Workload.RestartPolicy)
 }
 

@@ -83,7 +83,7 @@ var _ = Describe("Service Extension", func() {
 
 		Describe("validations", func() {
 			Context("from svc to k8s ext", func() {
-				Context("with missing workload", func() {
+				Context("with missing workload configuration", func() {
 					BeforeEach(func() {
 						svc.Extensions = map[string]interface{}{
 							"x-k8s": map[string]interface{}{
@@ -98,7 +98,7 @@ var _ = Describe("Service Extension", func() {
 					})
 				})
 
-				Context("invalid/empty workload", func() {
+				Context("with invalid/empty workload configuration", func() {
 					BeforeEach(func() {
 						svc.Extensions = map[string]interface{}{
 							"x-k8s": map[string]interface{}{
@@ -109,14 +109,12 @@ var _ = Describe("Service Extension", func() {
 						}
 					})
 
-					When("workload is invalid", func() {
-						It("it is ignored and returns defaults", func() {
-							Expect(parsedK8sCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
-						})
+					It("it is ignored and returns defaults", func() {
+						Expect(parsedK8sCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 					})
 				})
 
-				Context("missing liveness probe type", func() {
+				Context("missing liveness probe type in workload configuration", func() {
 					BeforeEach(func() {
 						svc.Extensions = map[string]interface{}{
 							config.K8SExtensionKey: map[string]interface{}{
@@ -128,10 +126,8 @@ var _ = Describe("Service Extension", func() {
 						}
 					})
 
-					When("liveness probe type not provided", func() {
-						It("return default probe", func() {
-							Expect(parsedK8sCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
-						})
+					It("returns default probe", func() {
+						Expect(parsedK8sCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
 					})
 				})
 
@@ -161,6 +157,7 @@ var _ = Describe("Service Extension", func() {
 							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
 						})
 					})
+
 					When("unless-stopped policy set in Restart Config", func() {
 						BeforeEach(func() {
 							svc.Restart = "unless-stopped"
@@ -169,6 +166,7 @@ var _ = Describe("Service Extension", func() {
 							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
 						})
 					})
+
 					When("invalid policy set in Deploy Config", func() {
 						BeforeEach(func() {
 							svc.Deploy = &composego.DeployConfig{
@@ -177,6 +175,7 @@ var _ = Describe("Service Extension", func() {
 								},
 							}
 						})
+
 						It("sets the default policy", func() {
 							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
 						})
@@ -192,10 +191,12 @@ var _ = Describe("Service Extension", func() {
 								},
 							}
 						})
+
 						It("should error", func() {
 							Expect(err).To(HaveOccurred())
 						})
 					})
+
 					When("policy is missing in extension", func() {
 						BeforeEach(func() {
 							svc.Extensions = map[string]interface{}{
@@ -206,6 +207,7 @@ var _ = Describe("Service Extension", func() {
 								},
 							}
 						})
+
 						It("sets the default policy", func() {
 							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
 						})
@@ -224,6 +226,7 @@ var _ = Describe("Service Extension", func() {
 						Expect(err.Error()).To(Equal("SvcK8sConfig.Service.Type is required"))
 					})
 				})
+
 				Context("with a missing workload type", func() {
 					It("returns error", func() {
 						svcK8sConfig := config.DefaultSvcK8sConfig()

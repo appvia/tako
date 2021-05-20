@@ -76,6 +76,6 @@ func inferRestartPolicyFromComposeValue(v string) RestartPolicy {
 	case "unless-stopped":
 		return RestartPolicyAlways
 	default:
-		return ""
+		return RestartPolicyAlways
 	}
 }
