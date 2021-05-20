@@ -434,12 +434,11 @@ type Workload struct {
 	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
 	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
 	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
-	// RestartPolicy  string         `yaml:"restartPolicy,omitempty"`
-	RestartPolicy RestartPolicy `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
-	ImagePull     ImagePull     `yaml:"imagePull,omitempty"`
-	Resource      Resource      `yaml:"resource,omitempty"`
-	Autoscale     Autoscale     `yaml:"autoscale,omitempty"`
-	PodSecurity   PodSecurity   `yaml:"podSecurity,omitempty"`
+	RestartPolicy         RestartPolicy  `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
+	ImagePull             ImagePull      `yaml:"imagePull,omitempty"`
+	Resource              Resource       `yaml:"resource,omitempty"`
+	Autoscale             Autoscale      `yaml:"autoscale,omitempty"`
+	PodSecurity           PodSecurity    `yaml:"podSecurity,omitempty"`
 }
 
 type Resource struct {

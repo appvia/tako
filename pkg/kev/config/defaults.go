@@ -59,15 +59,6 @@ const (
 	// HeadlessService svc type
 	HeadlessService = "Headless"
 
-	// // RestartPolicyAlways default value
-	// RestartPolicyAlways = "Always"
-	//
-	// // RestartPolicyOnFailure restart policy
-	// RestartPolicyOnFailure = "OnFailure"
-	//
-	// // RestartPolicyNever restart policy
-	// RestartPolicyNever = "Never"
-
 	// DeploymentWorkload workload type
 	DeploymentWorkload = "Deployment"
 
