@@ -40,38 +40,6 @@ const (
 
 var dnsSubdomainNameRegex = regexp.MustCompile(dnsSubdomainNamePattern)
 
-type RestartPolicy string
-
-const (
-	// RestartPolicyAlways default value
-	RestartPolicyAlways RestartPolicy = "Always"
-
-	// RestartPolicyOnFailure restart policy
-	RestartPolicyOnFailure RestartPolicy = "OnFailure"
-
-	// RestartPolicyNever restart policy
-	RestartPolicyNever RestartPolicy = "Never"
-)
-
-func (p RestartPolicy) String() string {
-	return string(p)
-}
-
-var restartPolicies = map[RestartPolicy]bool{
-	RestartPolicyAlways:    true,
-	RestartPolicyOnFailure: true,
-	RestartPolicyNever:     true,
-}
-
-func RestartPoliciesFromValue(s string) (RestartPolicy, bool) {
-	for k, v := range restartPolicies {
-		if strings.ToLower(k.String()) == strings.ToLower(s) {
-			return k, v
-		}
-	}
-	return "", false
-}
-
 // ServiceExtension represents the root of the docker-compose extensions for a service
 type ServiceExtension struct {
 	K8S SvcK8sConfig `yaml:"x-k8s"`
@@ -133,11 +101,6 @@ func (skc SvcK8sConfig) Validate() error {
 	}
 
 	return nil
-}
-
-func validateRestartPolicy(fl validator.FieldLevel) bool {
-	_, valid := RestartPoliciesFromValue(fl.Field().String())
-	return valid
 }
 
 // DefaultSvcK8sConfig returns a service's K8S Config with set defaults.
@@ -344,30 +307,15 @@ func getServiceType(serviceType string) (string, error) {
 func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) RestartPolicy {
 	switch {
 	case svc.Restart != "": // docker-compose v2
-		if p := inferRestartPolicyFromValue(svc.Restart); p != "" {
+		if p := inferRestartPolicyFromComposeValue(svc.Restart); p != "" {
 			return p
 		}
 	case svc.Deploy != nil && svc.Deploy.RestartPolicy != nil: // docker-compose v3
-		if p := inferRestartPolicyFromValue(svc.Deploy.RestartPolicy.Condition); p != "" {
+		if p := inferRestartPolicyFromComposeValue(svc.Deploy.RestartPolicy.Condition); p != "" {
 			return p
 		}
 	}
 	return DefaultRestartPolicy
-}
-
-func inferRestartPolicyFromValue(v string) RestartPolicy {
-	switch strings.ToLower(v) {
-	case "", "always", "any":
-		return RestartPolicyAlways
-	case "no", "none", "never":
-		return RestartPolicyNever
-	case "on-failure", "onfailure":
-		return RestartPolicyOnFailure
-	case "unless-stopped":
-		return RestartPolicyAlways
-	default:
-		return ""
-	}
 }
 
 func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {
