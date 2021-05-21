@@ -70,13 +70,13 @@ func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
 }
 
 // workloadType returns workload type for the project service
-func (p *ProjectService) workloadType() string {
+func (p *ProjectService) workloadType() config.WorkloadType {
 	workloadType := p.SvcK8sConfig.Workload.Type
 
-	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
+	if p.Deploy != nil && p.Deploy.Mode == "global" && !config.WorkloadTypesEqual(workloadType, config.DaemonSetWorkload) {
 		log.WarnfWithFields(log.Fields{
 			"project-service": p.Name,
-			"workload-type":   workloadType,
+			"workload-type":   workloadType.String(),
 		}, "Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s",
 			workloadType)
 	}

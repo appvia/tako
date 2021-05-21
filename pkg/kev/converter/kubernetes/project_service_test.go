@@ -237,8 +237,7 @@ var _ = Describe("ProjectService", func() {
 	Describe("workloadType", func() {
 
 		Context("when provided via extension", func() {
-
-			workloadType := "StatefulSet"
+			workloadType := config.StatefulSetWorkload
 
 			JustBeforeEach(func() {
 				projectService.SvcK8sConfig.Workload.Type = workloadType
@@ -256,7 +255,7 @@ var _ = Describe("ProjectService", func() {
 		})
 
 		Context("when deploy block `mode` defined as `global` and workload type is different than DaemonSet", func() {
-			projectWorkloadType := config.StatefulsetWorkload
+			projectWorkloadType := config.StatefulSetWorkload
 
 			JustBeforeEach(func() {
 				projectService.SvcK8sConfig.Workload.Type = projectWorkloadType
@@ -283,7 +282,7 @@ var _ = Describe("ProjectService", func() {
 				assertLog(logrus.WarnLevel,
 					"Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to StatefulSet",
 					map[string]string{
-						"workload-type":   projectWorkloadType,
+						"workload-type":   projectWorkloadType.String(),
 						"project-service": projectServiceName,
 					},
 				)

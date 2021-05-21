@@ -32,7 +32,7 @@ const (
 	// DefaultRestartPolicy is a default restart policy
 	DefaultRestartPolicy = RestartPolicyAlways
 
-	// DefaultWorkload is a defauld workload type
+	// DefaultWorkload is a default workload type
 	DefaultWorkload = DeploymentWorkload
 
 	// DefaultServiceAccountName is a default SA to be used
@@ -58,15 +58,6 @@ const (
 
 	// HeadlessService svc type
 	HeadlessService = "Headless"
-
-	// DeploymentWorkload workload type
-	DeploymentWorkload = "Deployment"
-
-	// DaemonsetWorkload workload type
-	DaemonsetWorkload = "DaemonSet"
-
-	// StatefulsetWorkload workload type
-	StatefulsetWorkload = "StatefulSet"
 
 	// JobWorkload workload type
 	JobWorkload = "Job"

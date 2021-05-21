@@ -1240,10 +1240,16 @@ func (k *Kubernetes) configConfigMapVolumeSource(cmName string, targetPath strin
 
 	if useSubPathMount(cm) {
 		var keys []string
+		var key string
+
 		for k := range cm.Data {
 			keys = append(keys, k)
 		}
-		key := keys[0]
+
+		if len(keys) > 0 {
+			key = keys[0]
+		}
+
 		_, p := path.Split(targetPath)
 		s.Items = []v1.KeyToPath{
 			{
@@ -1344,14 +1350,14 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
 			}
 
-			path := strings.Join(parts[1:], ".")
+			thePath := strings.Join(parts[1:], ".")
 
-			if contains(paths, path) {
+			if contains(paths, thePath) {
 				envs = append(envs, v1.EnvVar{
 					Name: k,
 					ValueFrom: &v1.EnvVarSource{
 						FieldRef: &v1.ObjectFieldSelector{
-							FieldPath: path,
+							FieldPath: thePath,
 						},
 					},
 				})
@@ -1359,8 +1365,8 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				log.WarnfWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"env-var":         k,
-					"path":            path,
-				}, "Unsupported Pod field reference: %s", path)
+					"path":            thePath,
+				}, "Unsupported Pod field reference: %s", thePath)
 			}
 		case "container":
 			// Selects a resource of the container. Only resources limits and requests are currently supported:
@@ -1370,15 +1376,15 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				"limits.cpu", "limits.memory", "limits.ephemeral-storage",
 				"requests.cpu", "requests.memory", "requests.ephemeral-storage",
 			}
-			resource := strings.Join(parts[2:], ".")
+			theResource := strings.Join(parts[2:], ".")
 
-			if contains(resources, resource) {
+			if contains(resources, theResource) {
 				envs = append(envs, v1.EnvVar{
 					Name: k,
 					ValueFrom: &v1.EnvVarSource{
 						ResourceFieldRef: &v1.ResourceFieldSelector{
 							ContainerName: parts[1],
-							Resource:      resource,
+							Resource:      theResource,
 						},
 					},
 				})
@@ -1387,8 +1393,8 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 					"project-service": projectService.Name,
 					"env-var":         k,
 					"container":       parts[1],
-					"resource":        resource,
-				}, "Unsupported Container resource reference: %s", resource)
+					"resource":        theResource,
+				}, "Unsupported Container resource reference: %s", theResource)
 			}
 		default:
 			if strings.Contains(*v, "{{") && strings.Contains(*v, "}}") {
@@ -1435,22 +1441,22 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	}
 
 	// @step create object based on inferred / manually configured workload controller type
-	switch strings.ToLower(workloadType) {
-	case strings.ToLower(config.DeploymentWorkload):
+	switch {
+	case config.WorkloadTypesEqual(workloadType, config.DeploymentWorkload):
 		o := k.initDeployment(projectService)
 		objects = append(objects, o)
 		hpa := k.initHpa(projectService, o)
 		if hpa != nil {
 			objects = append(objects, hpa)
 		}
-	case strings.ToLower(config.StatefulsetWorkload):
+	case config.WorkloadTypesEqual(workloadType, config.StatefulSetWorkload):
 		o := k.initStatefulSet(projectService)
 		objects = append(objects, o)
 		hpa := k.initHpa(projectService, o)
 		if hpa != nil {
 			objects = append(objects, hpa)
 		}
-	case strings.ToLower(config.DaemonsetWorkload):
+	case config.WorkloadTypesEqual(workloadType, config.DaemonSetWorkload):
 		objects = append(objects, k.initDaemonSet(projectService))
 	}
 
@@ -1460,8 +1466,8 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 // createConfigMapFromComposeConfig will create ConfigMap objects for each non-external config
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1078
 func (k *Kubernetes) createConfigMapFromComposeConfig(projectService ProjectService, objects []runtime.Object) []runtime.Object {
-	for _, config := range projectService.Configs {
-		currentConfigName := config.Source
+	for _, cfg := range projectService.Configs {
+		currentConfigName := cfg.Source
 		currentConfigObj := k.Project.Configs[currentConfigName]
 
 		if currentConfigObj.External.External {

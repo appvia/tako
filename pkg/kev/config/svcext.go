@@ -84,6 +84,10 @@ func (skc SvcK8sConfig) Validate() error {
 		return err
 	}
 
+	if err := validate.RegisterValidation("workloadType", validateWorkloadType); err != nil {
+		return err
+	}
+
 	if err := validate.RegisterValidation("restartPolicy", validateRestartPolicy); err != nil {
 		return err
 	}
@@ -326,14 +330,13 @@ func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {
 	return int(*svc.Deploy.Replicas)
 }
 
-func WorkloadTypeFromCompose(svc *composego.ServiceConfig) string {
-	// TODO: Turn these strings into enums
+func WorkloadTypeFromCompose(svc *composego.ServiceConfig) WorkloadType {
 	if svc.Deploy != nil && svc.Deploy.Mode == "global" {
-		return DaemonsetWorkload
+		return DaemonSetWorkload
 	}
 
 	if len(svc.Volumes) != 0 {
-		return StatefulsetWorkload
+		return StatefulSetWorkload
 	}
 
 	return DeploymentWorkload
@@ -428,7 +431,7 @@ func validateDNSSubdomainNameIfAny(fl validator.FieldLevel) bool {
 
 // Workload holds all the workload-related k8s configurations.
 type Workload struct {
-	Type                  string         `yaml:"type,omitempty" validate:"required,oneof=DaemonSet StatefulSet Deployment"`
+	Type                  WorkloadType   `yaml:"type,omitempty" validate:"workloadType"`
 	Replicas              int            `yaml:"replicas" validate:""`
 	ServiceAccountName    string         `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
 	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
