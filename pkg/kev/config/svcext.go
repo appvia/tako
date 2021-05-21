@@ -305,17 +305,17 @@ func getServiceType(serviceType string) (string, error) {
 
 // WorkloadRestartPolicyFromCompose infers a kev-valid restart policy from compose data.
 func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) RestartPolicy {
-	switch {
-	case svc.Restart != "": // docker-compose v2
-		if p := inferRestartPolicyFromComposeValue(svc.Restart); p != "" {
-			return p
-		}
-	case svc.Deploy != nil && svc.Deploy.RestartPolicy != nil: // docker-compose v3
-		if p := inferRestartPolicyFromComposeValue(svc.Deploy.RestartPolicy.Condition); p != "" {
-			return p
-		}
+	policy := DefaultRestartPolicy
+
+	if svc.Restart != "" {
+		policy = inferRestartPolicyFromComposeValue(svc.Restart)
 	}
-	return DefaultRestartPolicy
+
+	if svc.Deploy != nil && svc.Deploy.RestartPolicy != nil {
+		policy = inferRestartPolicyFromComposeValue(svc.Deploy.RestartPolicy.Condition)
+	}
+
+	return policy
 }
 
 func WorkloadReplicasFromCompose(svc *composego.ServiceConfig) int {

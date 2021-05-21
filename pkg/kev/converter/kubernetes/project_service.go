@@ -24,6 +24,7 @@ import (
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -320,9 +321,18 @@ func (p *ProjectService) serviceAccountName() string {
 	return p.SvcK8sConfig.Workload.ServiceAccountName
 }
 
-// restartPolicy return workload restart policy. Supports both docker-compose and Kubernetes notations.
-func (p *ProjectService) restartPolicy() v1.RestartPolicy {
-	return v1.RestartPolicy(p.SvcK8sConfig.Workload.RestartPolicy)
+// restartPolicy returns workload restart policy
+func (p *ProjectService) restartPolicy() (v1.RestartPolicy, error) {
+	return toV1RestartPolicy(p.SvcK8sConfig.Workload.RestartPolicy)
+}
+
+// toV1RestartPolicy maps to a case-sensitive v1 restart policy
+func toV1RestartPolicy(rp config.RestartPolicy) (v1.RestartPolicy, error) {
+	caseSensitivePolicy, ok := config.RestartPoliciesFromValue(rp.String())
+	if !ok {
+		return "", errors.New("invalid restart policy")
+	}
+	return v1.RestartPolicy(caseSensitivePolicy), nil
 }
 
 // environment returns composego project service environment variables, and evaluates ENV from OS
