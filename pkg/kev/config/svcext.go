@@ -79,7 +79,12 @@ func (skc SvcK8sConfig) Merge(other SvcK8sConfig) (SvcK8sConfig, error) {
 
 func (skc SvcK8sConfig) Validate() error {
 	validate := validator.New()
+
 	if err := validate.RegisterValidation("subdomainIfAny", validateDNSSubdomainNameIfAny); err != nil {
+		return err
+	}
+
+	if err := validate.RegisterValidation("restartPolicy", validateRestartPolicy); err != nil {
 		return err
 	}
 
@@ -109,7 +114,7 @@ func DefaultSvcK8sConfig() SvcK8sConfig {
 			ReadinessProbe:        DefaultReadinessProbe(),
 			Replicas:              1,
 			RollingUpdateMaxSurge: DefaultRollingUpdateMaxSurge,
-			RestartPolicy:         RestartPolicyAlways,
+			RestartPolicy:         DefaultRestartPolicy,
 			ImagePull: ImagePull{
 				Policy: DefaultImagePullPolicy,
 			},
@@ -299,23 +304,15 @@ func getServiceType(serviceType string) (string, error) {
 }
 
 // WorkloadRestartPolicyFromCompose infers a kev-valid restart policy from compose data.
-func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) string {
-	policy := RestartPolicyAlways
+func WorkloadRestartPolicyFromCompose(svc *composego.ServiceConfig) RestartPolicy {
+	policy := DefaultRestartPolicy
 
 	if svc.Restart != "" {
-		policy = svc.Restart
+		policy = inferRestartPolicyFromComposeValue(svc.Restart)
 	}
 
 	if svc.Deploy != nil && svc.Deploy.RestartPolicy != nil {
-		policy = svc.Deploy.RestartPolicy.Condition
-	}
-
-	if policy == "unless-stopped" {
-		log.WarnWithFields(log.Fields{
-			"restart-policy": policy,
-		}, "Restart policy 'unless-stopped' is not supported, converting it to 'always'")
-
-		policy = "always"
+		policy = inferRestartPolicyFromComposeValue(svc.Deploy.RestartPolicy.Condition)
 	}
 
 	return policy
@@ -368,7 +365,7 @@ func LivenessProbeFromCompose(svc *composego.ServiceConfig) LivenessProbe {
 	}
 
 	if healthcheck.Retries != nil {
-		res.FailureThreashold = int(*healthcheck.Retries)
+		res.FailureThreshold = int(*healthcheck.Retries)
 	}
 
 	if healthcheck.StartPeriod != nil {
@@ -409,6 +406,10 @@ func ParseSvcK8sConfigFromMap(m map[string]interface{}, opts ...K8sExtensionOpti
 			extensions.K8S.Workload.Type = DefaultWorkload
 		}
 
+		if extensions.K8S.Workload.RestartPolicy == "" {
+			extensions.K8S.Workload.RestartPolicy = DefaultRestartPolicy
+		}
+
 		if err := extensions.K8S.Validate(); err != nil {
 			return SvcK8sConfig{}, err
 		}
@@ -433,7 +434,7 @@ type Workload struct {
 	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
 	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
 	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
-	RestartPolicy         string         `yaml:"restartPolicy,omitempty"`
+	RestartPolicy         RestartPolicy  `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
 	ImagePull             ImagePull      `yaml:"imagePull,omitempty"`
 	Resource              Resource       `yaml:"resource,omitempty"`
 	Autoscale             Autoscale      `yaml:"autoscale,omitempty"`

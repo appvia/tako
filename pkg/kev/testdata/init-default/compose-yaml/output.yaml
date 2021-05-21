@@ -16,13 +16,13 @@ services:
             command:
             - echo
             - Define healthcheck command for service
-          failureThreashold: 3
+          failureThreshold: 3
           initialDelay: 1m0s
           period: 1m0s
           timeout: 10s
           type: exec
         readinessProbe:
-          failureThreashold: 3
+          failureThreshold: 3
           initialDelay: 1m0s
           period: 1m0s
           timeout: 10s
@@ -33,7 +33,7 @@ services:
           maxCpu: "0.5"
           maxMemory: 500Mi
           memory: 10Mi
-        restartPolicy: always
+        restartPolicy: Always
         rollingUpdateMaxSurge: 1
         serviceAccountName: default
         type: StatefulSet
