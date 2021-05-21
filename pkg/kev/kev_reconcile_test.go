@@ -301,8 +301,7 @@ var _ = Describe("Reconcile", func() {
 				It("should configure parse config into extensions", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
 						Workload: config.Workload{
-							Replicas:      3,
-							RestartPolicy: "always",
+							Replicas: 3,
 							Resource: config.Resource{
 								CPU:       "0.25",
 								MaxCPU:    "0.25",
@@ -332,7 +331,6 @@ var _ = Describe("Reconcile", func() {
 				It("should configure the added service extensions from healthcheck config", func() {
 					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
 						Workload: config.Workload{
-							RestartPolicy: "always",
 							Resource: config.Resource{
 								Memory:    "10Mi",
 								MaxMemory: "500Mi",
@@ -583,7 +581,7 @@ func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig)
 			Type:                  config.DefaultWorkload,
 			Replicas:              config.DefaultReplicaNumber,
 			RollingUpdateMaxSurge: config.DefaultRollingUpdateMaxSurge,
-			RestartPolicy:         "always",
+			RestartPolicy:         config.DefaultRestartPolicy,
 			ImagePull: config.ImagePull{
 				Policy: config.DefaultImagePullPolicy,
 			},
