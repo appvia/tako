@@ -320,7 +320,7 @@ var _ = Describe("ProjectService", func() {
 				JustBeforeEach(func() {
 					var err error
 					svcK8sConfig := config.SvcK8sConfig{}
-					svcK8sConfig.Service.Type = invalidType
+					svcK8sConfig.Service.Type = config.ServiceType(invalidType)
 
 					m, err = svcK8sConfig.ToMap()
 					Expect(err).NotTo(HaveOccurred())

@@ -85,11 +85,11 @@ func (p *ProjectService) workloadType() config.WorkloadType {
 }
 
 // serviceType returns service type for project service workload
-func (p *ProjectService) serviceType() (string, error) {
+func (p *ProjectService) serviceType() (config.ServiceType, error) {
 	serviceType := p.SvcK8sConfig.Service.Type
 
 	// @step validate whether service type is set properly when node port is specified
-	if !strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
+	if !config.ServiceTypesEqual(serviceType, config.NodePortService) && p.nodePort() != 0 {
 		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assigning node port value", p.Name)
 	}
 
@@ -98,6 +98,15 @@ func (p *ProjectService) serviceType() (string, error) {
 	}
 
 	return serviceType, nil
+}
+
+// toV1ServiceType maps to a case-sensitive v1 service type
+func toV1ServiceType(st config.ServiceType) (v1.ServiceType, error) {
+	caseSensitiveSvcType, ok := config.ServiceTypeFromValue(st.String())
+	if !ok {
+		return "", errors.New("invalid service type")
+	}
+	return v1.ServiceType(caseSensitiveSvcType), nil
 }
 
 // nodePort returns the port for NodePort service type

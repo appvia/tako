@@ -44,21 +44,6 @@ const (
 	// DefaultImagePullSecret default image pull credentials secret name
 	DefaultImagePullSecret = ""
 
-	// NoService default value
-	NoService = "None"
-
-	// NodePortService svc type
-	NodePortService = "NodePort"
-
-	// LoadBalancerService svc type
-	LoadBalancerService = "LoadBalancer"
-
-	// ClusterIPService svc type
-	ClusterIPService = "ClusterIP"
-
-	// HeadlessService svc type
-	HeadlessService = "Headless"
-
 	// JobWorkload workload type
 	JobWorkload = "Job"
 

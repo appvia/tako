@@ -91,6 +91,10 @@ func (skc SvcK8sConfig) Validate() error {
 		return err
 	}
 
+	if err := validate.RegisterValidation("serviceType", validateServiceType); err != nil {
+		return err
+	}
+
 	err := validate.Struct(skc)
 	if err != nil {
 		validationErrors := err.(validator.ValidationErrors)
@@ -263,18 +267,18 @@ func PodSecurityWithDefaults() PodSecurity {
 	}
 }
 
-func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
-	serviceType := NoService
+func ServiceTypeFromCompose(svc *composego.ServiceConfig) (ServiceType, error) {
+	var candidate = "none"
 
 	if len(svc.Ports) > 0 {
-		serviceType = ClusterIPService
+		candidate = "clusterip"
 	}
 
 	if svc.Deploy != nil && svc.Deploy.EndpointMode == "vip" {
-		serviceType = NodePortService
+		candidate = "nodeport"
 	}
 
-	serviceType, err := getServiceType(serviceType)
+	serviceType, err := inferServiceTypeFromComposeValue(candidate)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"service-name": svc.Name,
@@ -285,25 +289,6 @@ func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
 	}
 
 	return serviceType, nil
-}
-
-// getServiceType returns service type based on passed string value
-// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L108
-func getServiceType(serviceType string) (string, error) {
-	switch strings.ToLower(serviceType) {
-	case "", "clusterip":
-		return ClusterIPService, nil
-	case "nodeport":
-		return NodePortService, nil
-	case "loadbalancer":
-		return NodePortService, nil
-	case "headless":
-		return HeadlessService, nil
-	case "none":
-		return NoService, nil
-	default:
-		return "", fmt.Errorf("unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
-	}
 }
 
 // WorkloadRestartPolicyFromCompose infers a kev-valid restart policy from compose data.
@@ -469,9 +454,9 @@ type PodSecurity struct {
 
 // Service will hold the service specific extensions in the future.
 type Service struct {
-	Type     string `yaml:"type" validate:"required,oneof=None NodePort ClusterIP Headless LoadBalancer"`
-	NodePort int    `yaml:"nodeport,omitempty"`
-	Expose   Expose `yaml:"expose,omitempty"`
+	Type     ServiceType `yaml:"type" validate:"serviceType"`
+	NodePort int         `yaml:"nodeport,omitempty"`
+	Expose   Expose      `yaml:"expose,omitempty"`
 }
 
 type Expose struct {
