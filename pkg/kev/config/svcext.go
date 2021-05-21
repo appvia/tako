@@ -29,7 +29,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -293,11 +292,11 @@ func ServiceTypeFromCompose(svc *composego.ServiceConfig) (string, error) {
 func getServiceType(serviceType string) (string, error) {
 	switch strings.ToLower(serviceType) {
 	case "", "clusterip":
-		return string(v1.ServiceTypeClusterIP), nil
+		return ClusterIPService, nil
 	case "nodeport":
-		return string(v1.ServiceTypeNodePort), nil
+		return NodePortService, nil
 	case "loadbalancer":
-		return string(v1.ServiceTypeLoadBalancer), nil
+		return NodePortService, nil
 	case "headless":
 		return HeadlessService, nil
 	case "none":
