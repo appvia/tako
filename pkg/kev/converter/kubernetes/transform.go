@@ -1768,7 +1768,11 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 		template.Spec.Containers[0].ImagePullPolicy = projectService.imagePullPolicy()
 
 		// @step configure the container restart policy.
-		template.Spec.RestartPolicy = projectService.restartPolicy()
+		restartPolicy, err := projectService.restartPolicy()
+		if err != nil {
+			return err
+		}
+		template.Spec.RestartPolicy = restartPolicy
 
 		// @step configure hostname/domain_name settings
 		if projectService.Hostname != "" {

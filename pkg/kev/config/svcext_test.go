@@ -27,37 +27,36 @@ import (
 )
 
 var _ = Describe("Service Extension", func() {
+	var (
+		err          error
+		parsedK8sCfg config.SvcK8sConfig
+		svc          composego.ServiceConfig
+	)
+
+	JustBeforeEach(func() {
+		parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
+	})
+
+	AfterEach(func() {
+		svc.Extensions = nil
+		svc.Restart = ""
+		svc.Deploy = nil
+	})
 
 	Describe("parsing", func() {
-		var (
-			k8sCfg config.SvcK8sConfig
-			err    error
-
-			parsedK8sCfg config.SvcK8sConfig
-			svc          composego.ServiceConfig
-		)
-
-		BeforeEach(func() {
-			k8sCfg = config.SvcK8sConfig{}
-		})
-
-		JustBeforeEach(func() {
-			m, err := k8sCfg.ToMap()
-			Expect(err).NotTo(HaveOccurred())
-			svc.Extensions = map[string]interface{}{
-				config.K8SExtensionKey: m,
-			}
-
-			parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
-			Expect(err).NotTo(HaveOccurred())
-
-		})
-
 		Context("works with defaults", func() {
 			BeforeEach(func() {
-				k8sCfg.Workload.Type = "Deployment"
-				k8sCfg.Workload.Replicas = 10
-				k8sCfg.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+				svc.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: map[string]interface{}{
+						"workload": map[string]interface{}{
+							"type":     "Deployment",
+							"replicas": 10,
+							"livenessProbe": map[string]interface{}{
+								"type": "none",
+							},
+						},
+					},
+				}
 			})
 
 			It("creates the config using defaults when the mandatory properties are present", func() {
@@ -73,8 +72,6 @@ var _ = Describe("Service Extension", func() {
 		When("there is no k8s extension present", func() {
 			Context("Without RequirePresent configuration", func() {
 				It("does not fail validations", func() {
-					parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
-					Expect(err).ToNot(HaveOccurred())
 					Expect(parsedK8sCfg).NotTo(BeNil())
 
 					Expect(parsedK8sCfg.Workload.Replicas).To(Equal(config.DefaultReplicaNumber))
@@ -85,88 +82,160 @@ var _ = Describe("Service Extension", func() {
 		})
 
 		Describe("validations", func() {
-			Context("with missing workload", func() {
-				JustBeforeEach(func() {
-					svc.Extensions = map[string]interface{}{
-						"x-k8s": map[string]interface{}{
-							"bananas": 1,
-						},
-					}
-
-					parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("returns defaults", func() {
-					defaultWorkload := config.DefaultSvcK8sConfig().Workload
-					Expect(parsedK8sCfg.Workload).To(BeEquivalentTo(defaultWorkload))
-				})
-			})
-
-			Context("invalid/empty workload", func() {
-				JustBeforeEach(func() {
-					svc.Extensions = map[string]interface{}{
-						"x-k8s": map[string]interface{}{
-							"workload": map[string]interface{}{
+			Context("from svc to k8s ext", func() {
+				Context("with missing workload configuration", func() {
+					BeforeEach(func() {
+						svc.Extensions = map[string]interface{}{
+							"x-k8s": map[string]interface{}{
 								"bananas": 1,
 							},
-						},
-					}
+						}
+					})
 
-					parsedK8sCfg, err = config.SvcK8sConfigFromCompose(&svc)
-					Expect(err).NotTo(HaveOccurred())
+					It("returns defaults", func() {
+						defaultWorkload := config.DefaultSvcK8sConfig().Workload
+						Expect(parsedK8sCfg.Workload).To(BeEquivalentTo(defaultWorkload))
+					})
 				})
 
-				When("workload is invalid", func() {
+				Context("with invalid/empty workload configuration", func() {
+					BeforeEach(func() {
+						svc.Extensions = map[string]interface{}{
+							"x-k8s": map[string]interface{}{
+								"workload": map[string]interface{}{
+									"bananas": 1,
+								},
+							},
+						}
+					})
+
 					It("it is ignored and returns defaults", func() {
 						Expect(parsedK8sCfg).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 					})
 				})
-			})
 
-			Context("missing liveness probe type", func() {
-				BeforeEach(func() {
-					k8sCfg.Workload.Type = config.DefaultWorkload
-					k8sCfg.Workload.Replicas = 10
+				Context("missing liveness probe type in workload configuration", func() {
+					BeforeEach(func() {
+						svc.Extensions = map[string]interface{}{
+							config.K8SExtensionKey: map[string]interface{}{
+								"workload": map[string]interface{}{
+									"type":     "Deployment",
+									"replicas": 10,
+								},
+							},
+						}
+					})
+
+					It("returns default probe", func() {
+						Expect(parsedK8sCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
+					})
 				})
 
-				When("liveness probe type not provided", func() {
-					It("return default probe", func() {
-						Expect(parsedK8sCfg.Workload.LivenessProbe).To(Equal(config.DefaultLivenessProbe()))
+				Context("missing replicas", func() {
+					BeforeEach(func() {
+						svc.Extensions = map[string]interface{}{
+							config.K8SExtensionKey: map[string]interface{}{
+								"workload": map[string]interface{}{
+									"replicas": 0,
+								},
+							},
+						}
+					})
+
+					It("returns in defaults", func() {
+						defaultReplicas := config.DefaultSvcK8sConfig().Workload.Replicas
+						Expect(parsedK8sCfg.Workload.Replicas).To(BeEquivalentTo(defaultReplicas))
+					})
+				})
+
+				Context("restart policy", func() {
+					When("invalid policy set in Restart Config", func() {
+						BeforeEach(func() {
+							svc.Restart = "invalid"
+						})
+						It("sets the default policy", func() {
+							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
+						})
+					})
+
+					When("unless-stopped policy set in Restart Config", func() {
+						BeforeEach(func() {
+							svc.Restart = "unless-stopped"
+						})
+						It("sets the default policy", func() {
+							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
+						})
+					})
+
+					When("invalid policy set in Deploy Config", func() {
+						BeforeEach(func() {
+							svc.Deploy = &composego.DeployConfig{
+								RestartPolicy: &composego.RestartPolicy{
+									Condition: "invalid",
+								},
+							}
+						})
+
+						It("sets the default policy", func() {
+							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
+						})
+					})
+
+					When("invalid policy set in extension", func() {
+						BeforeEach(func() {
+							svc.Extensions = map[string]interface{}{
+								config.K8SExtensionKey: map[string]interface{}{
+									"workload": map[string]interface{}{
+										"restartPolicy": "invalid",
+									},
+								},
+							}
+						})
+
+						It("should error", func() {
+							Expect(err).To(HaveOccurred())
+						})
+					})
+
+					When("policy is missing in extension", func() {
+						BeforeEach(func() {
+							svc.Extensions = map[string]interface{}{
+								config.K8SExtensionKey: map[string]interface{}{
+									"workload": map[string]interface{}{
+										"restartPolicy": "",
+									},
+								},
+							}
+						})
+
+						It("sets the default policy", func() {
+							Expect(parsedK8sCfg.Workload.RestartPolicy).To(Equal(config.RestartPolicyAlways))
+						})
 					})
 				})
 			})
 
-			Context("missing replicas", func() {
-				BeforeEach(func() {
-					k8sCfg.Workload.Replicas = 0
+			Context("when running validate", func() {
+				Context("with a missing service type", func() {
+					It("returns error", func() {
+						svcK8sConfig := config.DefaultSvcK8sConfig()
+						svcK8sConfig.Service.Type = ""
+
+						err = svcK8sConfig.Validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("SvcK8sConfig.Service.Type is required"))
+					})
 				})
 
-				It("returns in defaults", func() {
-					defaultReplicas := config.DefaultSvcK8sConfig().Workload.Replicas
-					Expect(parsedK8sCfg.Workload.Replicas).To(BeEquivalentTo(defaultReplicas))
-				})
-			})
+				Context("with a missing workload type", func() {
+					It("returns error", func() {
+						svcK8sConfig := config.DefaultSvcK8sConfig()
+						svcK8sConfig.Workload.Type = ""
 
-			Context("missing service type", func() {
-				It("returns error", func() {
-					k8sconf := config.DefaultSvcK8sConfig()
-					k8sconf.Service.Type = ""
-
-					err = k8sconf.Validate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("SvcK8sConfig.Service.Type is required"))
-				})
-			})
-
-			Context("missing workload type", func() {
-				It("returns error", func() {
-					k8sconf := config.DefaultSvcK8sConfig()
-					k8sconf.Workload.Type = ""
-
-					err = k8sconf.Validate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("SvcK8sConfig.Workload.Type is required"))
+						err = svcK8sConfig.Validate()
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("SvcK8sConfig.Workload.Type is required"))
+					})
 				})
 			})
 		})
@@ -220,42 +289,25 @@ var _ = Describe("Service Extension", func() {
 		})
 
 		Context("Fallback", func() {
-			var extensions map[string]interface{}
-			var svc composego.ServiceConfig
-
-			var parsedConf config.SvcK8sConfig
-			var err error
-
-			JustBeforeEach(func() {
-				svc.Extensions = extensions
-				parsedConf, err = config.SvcK8sConfigFromCompose(&svc)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
 			Context("configs are empty", func() {
 				BeforeEach(func() {
-					extensions = make(map[string]interface{})
+					svc.Extensions = make(map[string]interface{})
 				})
 
 				It("returns default when map is empty", func() {
-					result, err := config.DefaultSvcK8sConfig().Merge(parsedConf)
+					result, err := config.DefaultSvcK8sConfig().Merge(parsedK8sCfg)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 				})
 			})
 
 			Context("configs are invalid", func() {
-				BeforeEach(func() {
-					extensions = nil
-				})
-
 				It("returns default when map is nil", func() {
-					result, err := config.DefaultSvcK8sConfig().Merge(parsedConf)
+					result, err := config.DefaultSvcK8sConfig().Merge(parsedK8sCfg)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeEquivalentTo(config.DefaultSvcK8sConfig()))
 				})
 			})
 		})
 	})
-
 })

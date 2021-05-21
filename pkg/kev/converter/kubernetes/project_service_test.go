@@ -921,7 +921,7 @@ var _ = Describe("ProjectService", func() {
 		Context("when not defined via extension", func() {
 
 			Context("and defined in the project service deploy block", func() {
-				policy := config.DefaultRestartPolicy
+				policy := config.DefaultRestartPolicy.String()
 
 				BeforeEach(func() {
 					deploy = &composego.DeployConfig{
@@ -937,7 +937,7 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			Context("and defined on the project service directly with no deploy block", func() {
-				policy := config.RestartPolicyNever
+				policy := config.RestartPolicyNever.String()
 
 				JustBeforeEach(func() {
 					projectService.Restart = policy
@@ -956,64 +956,6 @@ var _ = Describe("ProjectService", func() {
 		Context("when not defined anywhere", func() {
 			It("returns default value", func() {
 				Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.DefaultRestartPolicy)))
-			})
-		})
-
-		Describe("validations", func() {
-
-			Context("and restart policy was specified as `unless-stopped`", func() {
-				policy := "unless-stopped"
-
-				BeforeEach(func() {
-					deploy = &composego.DeployConfig{
-						RestartPolicy: &composego.RestartPolicy{
-							Condition: policy,
-						},
-					}
-				})
-
-				It("warns the user and defaults restart policy to `Always`", func() {
-					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.RestartPolicyAlways)))
-
-					assertLog(logrus.WarnLevel,
-						"Restart policy 'unless-stopped' is not supported, converting it to 'always'",
-						map[string]string{
-							"restart-policy": policy,
-						},
-					)
-				})
-
-			})
-
-			Context("when invalid policy has been provided", func() {
-				policy := "invalid-policy"
-
-				JustBeforeEach(func() {
-					projectService.SvcK8sConfig.Workload.RestartPolicy = policy
-					m, err := projectService.SvcK8sConfig.ToMap()
-					Expect(err).NotTo(HaveOccurred())
-
-					svc := projectService.ServiceConfig
-					svc.Extensions = map[string]interface{}{
-						config.K8SExtensionKey: m,
-					}
-
-					projectService, err = NewProjectService(svc)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(projectService.SvcK8sConfig.Workload.RestartPolicy).To(Equal(policy))
-				})
-
-				It("warns the user and defaults restart policy to `Always`", func() {
-					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.RestartPolicyAlways)))
-
-					assertLog(logrus.WarnLevel,
-						"Restart policy is not supported, defaulting to 'Always'",
-						map[string]string{
-							"project-service": projectServiceName,
-							"restart-policy":  policy,
-						},
-					)
-				})
 			})
 		})
 	})
