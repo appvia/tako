@@ -35,7 +35,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
@@ -479,25 +478,6 @@ func getRestartPolicy(projectServiceName, restart string) (v1.RestartPolicy, err
 		return v1.RestartPolicyOnFailure, nil
 	default:
 		return "", fmt.Errorf("Unknown restart policy %s for service %s", restart, projectServiceName)
-	}
-}
-
-// getServiceType returns service type based on passed string value
-// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L108
-func getServiceType(serviceType string) (string, error) {
-	switch strings.ToLower(serviceType) {
-	case "", "clusterip":
-		return string(v1.ServiceTypeClusterIP), nil
-	case "nodeport":
-		return string(v1.ServiceTypeNodePort), nil
-	case "loadbalancer":
-		return string(v1.ServiceTypeLoadBalancer), nil
-	case "headless":
-		return config.HeadlessService, nil
-	case "none":
-		return config.NoService, nil
-	default:
-		return "", fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
 	}
 }
 

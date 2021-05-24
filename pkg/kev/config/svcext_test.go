@@ -223,7 +223,7 @@ var _ = Describe("Service Extension", func() {
 
 						err = svcK8sConfig.Validate()
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("SvcK8sConfig.Service.Type is required"))
+						Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Service.Type"))
 					})
 				})
 
@@ -234,7 +234,7 @@ var _ = Describe("Service Extension", func() {
 
 						err = svcK8sConfig.Validate()
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("SvcK8sConfig.Workload.Type is required"))
+						Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Workload.Type"))
 					})
 				})
 			})

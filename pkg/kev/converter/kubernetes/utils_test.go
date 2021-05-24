@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -160,35 +159,6 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	Describe("getServiceType", func() {
-
-		Context("for valid service type string", func() {
-			It("returns corresponding v1.ServiceType string", func() {
-				Expect(getServiceType("")).To(Equal(string(v1.ServiceTypeClusterIP)))
-				Expect(getServiceType("ClusterIP")).To(Equal(string(v1.ServiceTypeClusterIP)))
-				Expect(getServiceType("NodePort")).To(Equal(string(v1.ServiceTypeNodePort)))
-				Expect(getServiceType("LoadBalancer")).To(Equal(string(v1.ServiceTypeLoadBalancer)))
-				Expect(getServiceType("Headless")).To(Equal(config.HeadlessService))
-				Expect(getServiceType("None")).To(Equal(config.NoService))
-			})
-
-			It("restart service type string is case insensitive", func() {
-				Expect(getServiceType("clusterip")).To(Equal(string(v1.ServiceTypeClusterIP)))
-				Expect(getServiceType("CLUSTERIP")).To(Equal(string(v1.ServiceTypeClusterIP)))
-			})
-		})
-
-		Context("for service type string", func() {
-			sType := "INVALID"
-
-			It("returns an error", func() {
-				_, err := getServiceType(sType)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", sType)))
-			})
-		})
-	})
-
 	Describe("sortServices", func() {
 		s1, err := NewProjectService(composego.ServiceConfig{Name: "z"})
 		Expect(err).NotTo(HaveOccurred())
@@ -201,9 +171,9 @@ var _ = Describe("Utils", func() {
 
 		p := composego.Project{
 			Services: append(services,
-				composego.ServiceConfig(s1.ServiceConfig),
-				composego.ServiceConfig(s2.ServiceConfig),
-				composego.ServiceConfig(s3.ServiceConfig),
+				s1.ServiceConfig,
+				s2.ServiceConfig,
+				s3.ServiceConfig,
 			),
 		}
 

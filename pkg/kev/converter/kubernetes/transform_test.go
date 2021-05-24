@@ -1778,7 +1778,8 @@ var _ = Describe("Transform", func() {
 
 		Context("for headless service type", func() {
 			It("creates headless service", func() {
-				svc := k.createService(config.HeadlessService, projectService)
+				svc, err := k.createService(config.HeadlessService, projectService)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeClusterIP))
 				Expect(svc.Spec.ClusterIP).To(Equal("None"))
 				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
@@ -1788,7 +1789,8 @@ var _ = Describe("Transform", func() {
 
 		Context("for any other service type", func() {
 			It("creates a service", func() {
-				svc := k.createService(config.NodePortService, projectService)
+				svc, err := k.createService(config.NodePortService, projectService)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeNodePort))
 				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
 				Expect(svc.Spec.Ports).To(Equal(expectedPorts))
