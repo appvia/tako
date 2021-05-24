@@ -215,7 +215,7 @@ var _ = Describe("Reconcile", func() {
 					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(svcK8sConfig.Service.Type).To(Equal("LoadBalancer"))
+					Expect(svcK8sConfig.Service.Type).To(Equal(config.LoadBalancerService))
 				})
 
 				It("should not update any of the environments", func() {
@@ -224,7 +224,7 @@ var _ = Describe("Reconcile", func() {
 					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(svcK8sConfig.Service.Type).To(Equal("LoadBalancer"))
+					Expect(svcK8sConfig.Service.Type).To(Equal(config.LoadBalancerService))
 				})
 
 				It("should log the change summary using the debug level", func() {

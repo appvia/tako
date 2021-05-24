@@ -32,7 +32,7 @@ const (
 	// DefaultRestartPolicy is a default restart policy
 	DefaultRestartPolicy = RestartPolicyAlways
 
-	// DefaultWorkload is a defauld workload type
+	// DefaultWorkload is a default workload type
 	DefaultWorkload = DeploymentWorkload
 
 	// DefaultServiceAccountName is a default SA to be used
@@ -43,30 +43,6 @@ const (
 
 	// DefaultImagePullSecret default image pull credentials secret name
 	DefaultImagePullSecret = ""
-
-	// NoService default value
-	NoService = "None"
-
-	// NodePortService svc type
-	NodePortService = "NodePort"
-
-	// LoadBalancerService svc type
-	LoadBalancerService = "LoadBalancer"
-
-	// ClusterIPService svc type
-	ClusterIPService = "ClusterIP"
-
-	// HeadlessService svc type
-	HeadlessService = "Headless"
-
-	// DeploymentWorkload workload type
-	DeploymentWorkload = "Deployment"
-
-	// DaemonsetWorkload workload type
-	DaemonsetWorkload = "DaemonSet"
-
-	// StatefulsetWorkload workload type
-	StatefulsetWorkload = "StatefulSet"
 
 	// JobWorkload workload type
 	JobWorkload = "Job"

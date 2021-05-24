@@ -142,10 +142,15 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			return nil, errors.Wrapf(err, "%s", msg)
 		}
 
-		if k.portsExist(projectService) && serviceType != config.NoService {
+		if k.portsExist(projectService) && !config.ServiceTypesEqual(serviceType, config.NoService) {
 			// Create a k8s service of a type specified by the compose service config,
 			// only if ports are defined and service type is different than NoService
-			svc := k.createService(serviceType, projectService)
+			svc, err := k.createService(serviceType, projectService)
+			if err != nil {
+				msg := fmt.Sprintf("Could not create the service %s.", serviceType.String())
+				stepSvc.Error()
+				return nil, errors.Wrapf(err, "%s", msg)
+			}
 			objects = append(objects, svc)
 
 			// For exposed service also create an ingress (Note only the first port is used for ingress!)
@@ -158,7 +163,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			if expose != "" {
 				objects = append(objects, k.initIngress(projectService, svc.Spec.Ports[0].Port))
 			}
-		} else if serviceType == config.HeadlessService {
+		} else if config.ServiceTypesEqual(serviceType, config.HeadlessService) {
 			// No ports defined - creating headless service instead
 			svc := k.createHeadlessService(projectService)
 			objects = append(objects, svc)
@@ -896,7 +901,7 @@ func (k *Kubernetes) configPorts(projectService ProjectService) []v1.ContainerPo
 
 // configServicePorts configure the container service ports.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L602
-func (k *Kubernetes) configServicePorts(serviceType string, projectService ProjectService) []v1.ServicePort {
+func (k *Kubernetes) configServicePorts(serviceType config.ServiceType, projectService ProjectService) []v1.ServicePort {
 	servicePorts := []v1.ServicePort{}
 	seenPorts := make(map[int]struct{}, len(projectService.ports()))
 
@@ -914,7 +919,7 @@ func (k *Kubernetes) configServicePorts(serviceType string, projectService Proje
 		name := strconv.Itoa(int(port.Published))
 		if _, ok := seenPorts[int(port.Published)]; ok {
 			// https://github.com/kubernetes/kubernetes/issues/2995
-			if strings.EqualFold(serviceType, string(v1.ServiceTypeLoadBalancer)) {
+			if config.ServiceTypesEqual(serviceType, config.LoadBalancerService) {
 				log.WarnWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"port":            port.Published,
@@ -932,7 +937,7 @@ func (k *Kubernetes) configServicePorts(serviceType string, projectService Proje
 
 		// For NodePort service type specify port value
 		np := projectService.nodePort()
-		if strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && np != 0 {
+		if config.ServiceTypesEqual(serviceType, config.NodePortService) && np != 0 {
 			servicePort.NodePort = np
 		}
 
@@ -1239,10 +1244,16 @@ func (k *Kubernetes) configConfigMapVolumeSource(cmName string, targetPath strin
 
 	if useSubPathMount(cm) {
 		var keys []string
+		var key string
+
 		for k := range cm.Data {
 			keys = append(keys, k)
 		}
-		key := keys[0]
+
+		if len(keys) > 0 {
+			key = keys[0]
+		}
+
 		_, p := path.Split(targetPath)
 		s.Items = []v1.KeyToPath{
 			{
@@ -1343,14 +1354,14 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
 			}
 
-			path := strings.Join(parts[1:], ".")
+			thePath := strings.Join(parts[1:], ".")
 
-			if contains(paths, path) {
+			if contains(paths, thePath) {
 				envs = append(envs, v1.EnvVar{
 					Name: k,
 					ValueFrom: &v1.EnvVarSource{
 						FieldRef: &v1.ObjectFieldSelector{
-							FieldPath: path,
+							FieldPath: thePath,
 						},
 					},
 				})
@@ -1358,8 +1369,8 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				log.WarnfWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"env-var":         k,
-					"path":            path,
-				}, "Unsupported Pod field reference: %s", path)
+					"path":            thePath,
+				}, "Unsupported Pod field reference: %s", thePath)
 			}
 		case "container":
 			// Selects a resource of the container. Only resources limits and requests are currently supported:
@@ -1369,15 +1380,15 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				"limits.cpu", "limits.memory", "limits.ephemeral-storage",
 				"requests.cpu", "requests.memory", "requests.ephemeral-storage",
 			}
-			resource := strings.Join(parts[2:], ".")
+			theResource := strings.Join(parts[2:], ".")
 
-			if contains(resources, resource) {
+			if contains(resources, theResource) {
 				envs = append(envs, v1.EnvVar{
 					Name: k,
 					ValueFrom: &v1.EnvVarSource{
 						ResourceFieldRef: &v1.ResourceFieldSelector{
 							ContainerName: parts[1],
-							Resource:      resource,
+							Resource:      theResource,
 						},
 					},
 				})
@@ -1386,8 +1397,8 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 					"project-service": projectService.Name,
 					"env-var":         k,
 					"container":       parts[1],
-					"resource":        resource,
-				}, "Unsupported Container resource reference: %s", resource)
+					"resource":        theResource,
+				}, "Unsupported Container resource reference: %s", theResource)
 			}
 		default:
 			if strings.Contains(*v, "{{") && strings.Contains(*v, "}}") {
@@ -1434,22 +1445,22 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	}
 
 	// @step create object based on inferred / manually configured workload controller type
-	switch strings.ToLower(workloadType) {
-	case strings.ToLower(config.DeploymentWorkload):
+	switch {
+	case config.WorkloadTypesEqual(workloadType, config.DeploymentWorkload):
 		o := k.initDeployment(projectService)
 		objects = append(objects, o)
 		hpa := k.initHpa(projectService, o)
 		if hpa != nil {
 			objects = append(objects, hpa)
 		}
-	case strings.ToLower(config.StatefulsetWorkload):
+	case config.WorkloadTypesEqual(workloadType, config.StatefulSetWorkload):
 		o := k.initStatefulSet(projectService)
 		objects = append(objects, o)
 		hpa := k.initHpa(projectService, o)
 		if hpa != nil {
 			objects = append(objects, hpa)
 		}
-	case strings.ToLower(config.DaemonsetWorkload):
+	case config.WorkloadTypesEqual(workloadType, config.DaemonSetWorkload):
 		objects = append(objects, k.initDaemonSet(projectService))
 	}
 
@@ -1459,8 +1470,8 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 // createConfigMapFromComposeConfig will create ConfigMap objects for each non-external config
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L1078
 func (k *Kubernetes) createConfigMapFromComposeConfig(projectService ProjectService, objects []runtime.Object) []runtime.Object {
-	for _, config := range projectService.Configs {
-		currentConfigName := config.Source
+	for _, cfg := range projectService.Configs {
+		currentConfigName := cfg.Source
 		currentConfigObj := k.Project.Configs[currentConfigName]
 
 		if currentConfigObj.External.External {
@@ -1591,23 +1602,27 @@ func (k *Kubernetes) portsExist(projectService ProjectService) bool {
 
 // createService creates a k8s service
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L352
-func (k *Kubernetes) createService(serviceType string, projectService ProjectService) *v1.Service {
+func (k *Kubernetes) createService(serviceType config.ServiceType, projectService ProjectService) (*v1.Service, error) {
 	svc := k.initSvc(projectService)
 
 	// @step configure the service ports.
 	servicePorts := k.configServicePorts(serviceType, projectService)
 	svc.Spec.Ports = servicePorts
 
-	if strings.EqualFold(serviceType, config.HeadlessService) {
+	if config.ServiceTypesEqual(serviceType, config.HeadlessService) {
 		svc.Spec.Type = v1.ServiceTypeClusterIP
 		svc.Spec.ClusterIP = "None"
 	} else {
-		svc.Spec.Type = v1.ServiceType(serviceType)
+		v1SvcType, err := toV1ServiceType(serviceType)
+		if err != nil {
+			return nil, err
+		}
+		svc.Spec.Type = v1SvcType
 	}
 
 	svc.ObjectMeta.Annotations = configAnnotations(projectService)
 
-	return svc
+	return svc, nil
 }
 
 // createHeadlessService creates a k8s headless service.

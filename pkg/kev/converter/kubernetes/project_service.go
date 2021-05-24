@@ -70,13 +70,13 @@ func (p *ProjectService) autoscaleTargetMemoryUtilization() int32 {
 }
 
 // workloadType returns workload type for the project service
-func (p *ProjectService) workloadType() string {
+func (p *ProjectService) workloadType() config.WorkloadType {
 	workloadType := p.SvcK8sConfig.Workload.Type
 
-	if p.Deploy != nil && p.Deploy.Mode == "global" && !strings.EqualFold(workloadType, config.DaemonsetWorkload) {
+	if p.Deploy != nil && p.Deploy.Mode == "global" && !config.WorkloadTypesEqual(workloadType, config.DaemonSetWorkload) {
 		log.WarnfWithFields(log.Fields{
 			"project-service": p.Name,
-			"workload-type":   workloadType,
+			"workload-type":   workloadType.String(),
 		}, "Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to %s",
 			workloadType)
 	}
@@ -85,11 +85,11 @@ func (p *ProjectService) workloadType() string {
 }
 
 // serviceType returns service type for project service workload
-func (p *ProjectService) serviceType() (string, error) {
+func (p *ProjectService) serviceType() (config.ServiceType, error) {
 	serviceType := p.SvcK8sConfig.Service.Type
 
 	// @step validate whether service type is set properly when node port is specified
-	if !strings.EqualFold(serviceType, string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
+	if !strings.EqualFold(string(serviceType), string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
 		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assigning node port value", p.Name)
 	}
 
@@ -98,6 +98,15 @@ func (p *ProjectService) serviceType() (string, error) {
 	}
 
 	return serviceType, nil
+}
+
+// toV1ServiceType maps to a case-sensitive v1 service type
+func toV1ServiceType(st config.ServiceType) (v1.ServiceType, error) {
+	caseSensitiveSvcType, ok := config.ServiceTypeFromValue(st.String())
+	if !ok {
+		return "", errors.New("invalid service type")
+	}
+	return v1.ServiceType(caseSensitiveSvcType), nil
 }
 
 // nodePort returns the port for NodePort service type
