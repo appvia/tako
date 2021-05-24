@@ -89,7 +89,7 @@ func (p *ProjectService) serviceType() (config.ServiceType, error) {
 	serviceType := p.SvcK8sConfig.Service.Type
 
 	// @step validate whether service type is set properly when node port is specified
-	if !config.ServiceTypesEqual(serviceType, config.NodePortService) && p.nodePort() != 0 {
+	if !strings.EqualFold(string(serviceType), string(v1.ServiceTypeNodePort)) && p.nodePort() != 0 {
 		return "", fmt.Errorf("`%s` workload service type must be set as `NodePort` when assigning node port value", p.Name)
 	}
 
