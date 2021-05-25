@@ -39,7 +39,7 @@ type VolumeExtension struct {
 
 // VolK8sConfig represents the root of the k8s specific fields supported by kev.
 type VolK8sConfig struct {
-	Size         string `yaml:"size,omitempty" validate:"required,quantity"`
+	Size         string `yaml:"size" validate:"required,quantity"`
 	StorageClass string `yaml:"storageClass,omitempty"`
 	Selector     string `yaml:"selector,omitempty"`
 }
@@ -94,8 +94,7 @@ func (vkc VolK8sConfig) Validate() error {
 // DefaultVolK8sConfig returns a volume's K8s config with set defaults.
 func DefaultVolK8sConfig() VolK8sConfig {
 	return VolK8sConfig{
-		Size:         DefaultVolumeSize,
-		StorageClass: DefaultVolumeStorageClass,
+		Size: DefaultVolumeSize,
 	}
 }
 

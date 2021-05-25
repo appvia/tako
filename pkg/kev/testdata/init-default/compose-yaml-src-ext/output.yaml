@@ -9,8 +9,8 @@ services:
             - echo
             - Define healthcheck command for service
           type: exec
-        replicas: 1
+        replicas: 10
 volumes:
   db_data:
     x-k8s:
-      size: 100Mi
+      size: 30Gi

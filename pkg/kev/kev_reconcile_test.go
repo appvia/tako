@@ -598,7 +598,7 @@ func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig)
 		k8s = c
 	}
 
-	m, err := k8s.ToMap()
+	m, err := k8s.Map()
 	if err != nil {
 		return nil, err
 	}

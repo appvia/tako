@@ -135,7 +135,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.ImagePull.Secret = "my-pp-secret"
 
-				m, err := svcK8sConfig.ToMap()
+				m, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				projectService.Extensions = map[string]interface{}{
@@ -157,7 +157,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.ServiceAccountName = "my-service-account"
 
-				m, err := svcK8sConfig.ToMap()
+				m, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				projectService.Extensions = map[string]interface{}{
@@ -1857,7 +1857,7 @@ var _ = Describe("Transform", func() {
 					svcK8sConfig.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
 					svcK8sConfig.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
 
-					ext, err := svcK8sConfig.ToMap()
+					ext, err := svcK8sConfig.Map()
 					Expect(err).NotTo(HaveOccurred())
 					projectService.Extensions = map[string]interface{}{
 						config.K8SExtensionKey: ext,
@@ -1876,7 +1876,7 @@ var _ = Describe("Transform", func() {
 				JustBeforeEach(func() {
 					svcK8sConfig := config.SvcK8sConfig{}
 					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
-					m, err := svcK8sConfig.ToMap()
+					m, err := svcK8sConfig.Map()
 
 					Expect(err).NotTo(HaveOccurred())
 
@@ -1975,7 +1975,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Resource.Memory = "10Mi"
 
-				ext, err := svcK8sConfig.ToMap()
+				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -1995,7 +1995,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Resource.MaxMemory = "10M"
 
-				ext, err := svcK8sConfig.ToMap()
+				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -2015,7 +2015,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Resource.CPU = "0.1"
 
-				ext, err := svcK8sConfig.ToMap()
+				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -2035,7 +2035,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Resource.MaxCPU = "0.5"
 
-				ext, err := svcK8sConfig.ToMap()
+				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 				projectService.Extensions = map[string]interface{}{
 					config.K8SExtensionKey: ext,
@@ -2061,7 +2061,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.PodSecurity.RunAsUser = &runAsUser
 
-				m, err := svcK8sConfig.ToMap()
+				m, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
@@ -2083,7 +2083,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.PodSecurity.RunAsGroup = &runAsGroup
 
-				m, err := svcK8sConfig.ToMap()
+				m, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
@@ -2105,7 +2105,7 @@ var _ = Describe("Transform", func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.PodSecurity.FsGroup = &fsGroup
 
-				m, err := svcK8sConfig.ToMap()
+				m, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
