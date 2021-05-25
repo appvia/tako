@@ -16,6 +16,7 @@
 
 package config
 
+// MinifySvcExtension creates a minimal service extension configuration using the supplied src.
 func MinifySvcExtension(src map[string]interface{}) (map[string]interface{}, error) {
 	srcCfg, err := ParseSvcK8sConfigFromMap(src)
 	if err != nil {
@@ -49,6 +50,7 @@ func MinifySvcExtension(src map[string]interface{}) (map[string]interface{}, err
 	}.Map()
 }
 
+// MinifyVolExtension creates a minimal volume extension configuration using the supplied src.
 func MinifyVolExtension(src map[string]interface{}) (map[string]interface{}, error) {
 	srcCfg, err := ParseVolK8sConfigFromMap(src)
 	if err != nil {
