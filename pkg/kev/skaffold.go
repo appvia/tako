@@ -81,11 +81,8 @@ var (
 // NewSkaffoldManifest returns a new SkaffoldManifest struct.
 func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManifest, error) {
 
-	analysis, err := analyzeProject()
-	if err != nil {
-		// just warn for now - potentially put project analysis behind a flag?
-		log.Warn(err.Error())
-	}
+	// it's OK to pass nil analysis so no error handling necessary here
+	analysis, _ := analyzeProject()
 
 	manifest := BaseSkaffoldManifest()
 	manifest.SetBuildArtifacts(analysis, project)
@@ -134,10 +131,8 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 		return err
 	}
 
-	analysis, err := analyzeProject()
-	if err != nil {
-		return err
-	}
+	// ignore analysis errors as it's OK to pass nil analysis
+	analysis, _ := analyzeProject()
 
 	changed, err := skaffold.UpdateBuildArtifacts(analysis, project)
 	if err != nil {
@@ -347,18 +342,32 @@ func (s *SkaffoldManifest) AddProfileIfNotPresent(p latest.Profile) {
 // SetBuildArtifacts detects build artifacts from the current project and adds `build` section to the manifest
 func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) error {
 
-	// don't set build artefacts if no analysis available
-	if analysis == nil {
-		return nil
-	}
+	// There are at least 3 cases we should handle:
+	//
+	// 1) Dockerfile present and (optionally) docker images referenced in docker-compose file and/or detected by skaffold analysis (in existing k8s manifests if any)
+	// 	->  we set artifact as docker image with context (i.e. local docker build)
+	// 2) No Dockerfile detected in analysis and docker-compose references image (without context!)
+	//  - we shouldn't attempt to build as referenced image looks like pre-built image
+	// 3) No Dockerfile detected in analysis and docker-compose references image (with context!)
+	//  - we should build (as context is present) with `buildpacks` (as there is no Dockerfile)
 
 	artifacts := []*latest.Artifact{}
 
 	for context, image := range collectBuildArtifacts(analysis, project) {
-		artifacts = append(artifacts, &latest.Artifact{
+		artifact := &latest.Artifact{
 			ImageName: image,
 			Workspace: context,
-		})
+		}
+
+		if analysis == nil || analysis.Dockerfiles == nil || len(analysis.Dockerfiles) == 0 {
+			// no Dockerfiles detected, set `buildpacks` as build strategy for the artifact
+			artifact.ArtifactType = latest.ArtifactType{
+				BuildpackArtifact: &latest.BuildpackArtifact{
+					Builder: "paketobuildpacks/builder:base",
+				},
+			}
+		}
+		artifacts = append(artifacts, artifact)
 	}
 
 	s.Build.Artifacts = artifacts
@@ -370,44 +379,50 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[string]string {
 	buildArtifacts := map[string]string{}
 
-	for _, d := range analysis.Dockerfiles {
+	// @step Skaffold analysis is present and Dockerfiles have been detected
+	if analysis != nil && analysis.Dockerfiles != nil {
+		for _, d := range analysis.Dockerfiles {
 
-		var context, svcImageNameFromContext string
+			var context, svcImageNameFromContext string
 
-		if d == "Dockerfile" {
-			// Dockerfile detected in the root directory, use local dir as context
-			// and current working directory name as service image name
-			context = "."
-			wd, _ := os.Getwd()
-			svcImageNameFromContext = filepath.Base(wd)
-		} else {
-			// Dockerfile detected in subdirectory, use subdirectory as context
-			// and immediate parent directory name in which Dockerfile reside as service image name
-			context = strings.ReplaceAll(d, "/Dockerfile", "")
-			contextParts := strings.Split(context, "/")
-			svcImageNameFromContext = contextParts[len(contextParts)-1]
-		}
+			if d == "Dockerfile" {
+				// Dockerfile detected in the root directory (i.e. no prefix path), use local dir
+				// as context and current working directory name as service image name
+				context = "."
+				wd, _ := os.Getwd()
+				svcImageNameFromContext = filepath.Base(wd)
+			} else {
+				// Dockerfile detected in subdirectory, use subdirectory as context
+				// and immediate parent directory name in which Dockerfile reside as service image name
+				context = strings.ReplaceAll(d, "/Dockerfile", "")
+				contextParts := strings.Split(context, "/")
+				svcImageNameFromContext = contextParts[len(contextParts)-1]
+			}
 
-		// NOTE: This may not be always accurate!
-		buildArtifacts[context] = svcImageNameFromContext
+			// NOTE: This may not be always accurate!
+			buildArtifacts[context] = svcImageNameFromContext
 
-		// Check whether images detected by Analysis contain service image name derived from the
-		// context as that's the best we can do in order to match a service to a corresponding
-		// docker registry image.
-		//
-		// NOTE: When *NO* Images are detected by analysis this is usually due to the absence of K8s
-		// manifests which Analysis uses to determine which images are in use.
-		for _, image := range analysis.Images {
-			if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
-				buildArtifacts[context] = image
-				break
+			// Check whether images detected by Analysis contain service image name derived from the
+			// context as that's the best we can do in order to match a service to a corresponding
+			// docker registry image.
+			//
+			// NOTE: When *NO* Images are detected by analysis this is usually due to the absence of K8s
+			// manifests which Analysis uses to determine which images are in use.
+			if analysis != nil && analysis.Images != nil {
+				for _, image := range analysis.Images {
+					if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
+						buildArtifacts[context] = image
+						break
+					}
+				}
 			}
 		}
 	}
 
 	// Extract images referenced by a Docker Compose project and map them to their respective build contexts (if present)
-	// Note: Images that don't specify build "context" will be ignored!
-	if project.Project != nil && project.Project.Services != nil {
+	// Note: Images that don't specify build "context" will be ignored! Such images are deemed pre-built / external and not
+	// requiring to be built. `docker-compose build` itself skips images that don't specify `build.context`!
+	if project != nil && project.Project != nil && project.Project.Services != nil {
 		for _, s := range project.Project.Services {
 			if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
 				buildArtifacts[s.Build.Context] = s.Image

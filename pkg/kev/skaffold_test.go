@@ -408,16 +408,15 @@ var _ = Describe("Skaffold", func() {
 			analysis         *kev.Analysis
 		)
 
+		BeforeEach(func() {
+			skaffoldManifest = &kev.SkaffoldManifest{}
+		})
+
+		JustBeforeEach(func() {
+			skaffoldManifest.SetBuildArtifacts(analysis, project)
+		})
+
 		Context("with detected service Dockerfiles", func() {
-
-			BeforeEach(func() {
-				skaffoldManifest = &kev.SkaffoldManifest{}
-			})
-
-			JustBeforeEach(func() {
-				skaffoldManifest.SetBuildArtifacts(analysis, project)
-			})
-
 			// Note, service image name is derived from the Dockerfile location path
 			// example: src/myservice/Dockerfile will result in `myservice` service image name
 
@@ -485,19 +484,12 @@ var _ = Describe("Skaffold", func() {
 
 		Context("with or without images detected by Skaffold analysis", func() {
 			BeforeEach(func() {
-				skaffoldManifest = &kev.SkaffoldManifest{}
+				analysis = &kev.Analysis{
+					Images: []string{}, // this can be either empty slice or a list of images
+				}
 			})
 
-			JustBeforeEach(func() {
-				skaffoldManifest.SetBuildArtifacts(analysis, project)
-			})
-
-			Context("It falls back to Docker Compose source files for extraction of images and build contexts", func() {
-				BeforeEach(func() {
-					analysis = &kev.Analysis{
-						Images: []string{},
-					}
-				})
+			Context("fallback to Docker Compose source files for extraction of images and build contexts", func() {
 
 				When("Docker Compose project has services referencing images with build contexts", func() {
 					image := "quay.io/org/myimage:latest"
@@ -521,11 +513,70 @@ var _ = Describe("Skaffold", func() {
 						}
 					})
 
-					It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
-						Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
-						Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(image))
-						Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal(context))
+					Context("and Dockerfiles detected by Skaffold analysis", func() {
+						BeforeEach(func() {
+							analysis.Dockerfiles = []string{"src/myservice/Dockerfile"}
+						})
+
+						It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
+							// Note: there are two build artifacts: 1) from Skaffold analysis, 2) from Docker Compose
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
+							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal("myservice"))
+							Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
+							Expect(skaffoldManifest.Build.Artifacts[1].ImageName).To(Equal(image))
+							Expect(skaffoldManifest.Build.Artifacts[1].Workspace).To(Equal(context))
+						})
+
+						It("uses default `docker` build strategy for artifact", func() {
+							// ensure artifact type is not set to `buildpack`
+							Expect(skaffoldManifest.Build.Artifacts[0].ArtifactType.BuildpackArtifact).To(BeNil())
+						})
 					})
+
+					Context("and Dockerfiles NOT detected by Skaffold analysis", func() {
+						BeforeEach(func() {
+							analysis.Dockerfiles = []string{}
+						})
+
+						It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
+							// Note: there is one build artifact: 1) from Docker Compose (no Skaffold analysis dockefiles detected!)
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
+							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(image))
+							Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal(context))
+						})
+
+						It("uses `buildpack` build strategy for artifact as Skaffold analysis didn't detect any Dockerfiles", func() {
+							// ensure artifact type is set to `buildpack`
+							Expect(skaffoldManifest.Build.Artifacts[0].ArtifactType).To(Equal(latest.ArtifactType{
+								BuildpackArtifact: &latest.BuildpackArtifact{
+									Builder: "paketobuildpacks/builder:base",
+								},
+							}))
+						})
+					})
+
+					Context("with nil analysis", func() {
+						BeforeEach(func() {
+							analysis = nil
+						})
+
+						It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
+							// Note: there is one build artifact: 1) from Docker Compose (no Skaffold analysis dockefiles detected!)
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
+							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(image))
+							Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal(context))
+						})
+
+						It("uses `buildpack` build strategy for artifact as Skaffold analysis didn't detect any Dockerfiles", func() {
+							// ensure artifact type is set to `buildpack`
+							Expect(skaffoldManifest.Build.Artifacts[0].ArtifactType).To(Equal(latest.ArtifactType{
+								BuildpackArtifact: &latest.BuildpackArtifact{
+									Builder: "paketobuildpacks/builder:base",
+								},
+							}))
+						})
+					})
+
 				})
 
 				When("Docker Compose project doens't have services referencing images with build contexts", func() {
@@ -546,8 +597,38 @@ var _ = Describe("Skaffold", func() {
 						}
 					})
 
-					It("skips Docker Compose images without build context defined", func() {
-						Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+					Context("and Dockerfiles detected by Skaffold analysis", func() {
+						BeforeEach(func() {
+							analysis.Dockerfiles = []string{"src/myservice/Dockerfile"}
+						})
+
+						It("skips Docker Compose images without build context defined", func() {
+							// NOTE: Skaffold analysis detected Dockerfile so there will be only one build artifact
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
+						})
+					})
+
+					Context("and Dockerfiles NOT detected by Skaffold analysis", func() {
+						BeforeEach(func() {
+							analysis.Dockerfiles = []string{}
+						})
+
+						It("skips Docker Compose images without build context defined", func() {
+							// NOTE: Skaffold analysis didn't detect Dockerfile and Docker Compose service didn't have build.context
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+						})
+
+					})
+
+					Context("with nil analysis", func() {
+						BeforeEach(func() {
+							analysis = nil
+						})
+
+						It("skips Docker Compose images without build context defined", func() {
+							// NOTE: Skaffold analysis didn't detect Dockerfile and Docker Compose service didn't have build.context
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+						})
 					})
 				})
 
@@ -560,8 +641,37 @@ var _ = Describe("Skaffold", func() {
 						}
 					})
 
-					It("doesn't add skaffold build artefacts for project without services specified", func() {
-						Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+					Context("and Dockerfiles detected by Skaffold analysis", func() {
+						BeforeEach(func() {
+							analysis.Dockerfiles = []string{"src/myservice/Dockerfile"}
+						})
+
+						It("doesn't add additional build artefacts", func() {
+							// NOTE: Skaffold analysis detected Dockerfile so there will be only one build artifact
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
+						})
+					})
+
+					Context("and Dockerfiles NOT detected by Skaffold analysis", func() {
+						BeforeEach(func() {
+							analysis.Dockerfiles = []string{}
+						})
+
+						It("doesn't add additional build artefacts", func() {
+							// NOTE: Skaffold analysis didn't detect Dockerfile and Docker Compose doesn't have services
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+						})
+					})
+
+					Context("with nil analysis", func() {
+						BeforeEach(func() {
+							analysis = nil
+						})
+
+						It("doesn't add additional build artefacts", func() {
+							// NOTE: Skaffold analysis didn't detect Dockerfile and Docker Compose doesn't have services
+							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(0))
+						})
 					})
 				})
 			})
