@@ -378,7 +378,7 @@ func (m *Manifest) getSourcesOverride() *composeOverride {
 // most useful for users to configure immediately.
 func minifyK8sExtensionsToBaseAttributes(override *composeOverride) error {
 	for _, svc := range override.Services {
-		minifiedSvcExt, err := config.MinifySvcExtension(svc.Extensions)
+		minifiedSvcExt, err := config.MinifySvcK8sExtension(svc.Extensions)
 		if err != nil {
 			return err
 		}
@@ -386,7 +386,7 @@ func minifyK8sExtensionsToBaseAttributes(override *composeOverride) error {
 	}
 
 	for _, vol := range override.Volumes {
-		minifiedVolExt, err := config.MinifyVolExtension(vol.Extensions)
+		minifiedVolExt, err := config.MinifyVolK8sExtension(vol.Extensions)
 		if err != nil {
 			return err
 		}

@@ -96,7 +96,7 @@ func (chg change) patchService(override *composeOverride) (string, error) {
 	case CREATE:
 		newValue := chg.Value.(ServiceConfig)
 
-		minified, err := config.MinifySvcExtension(newValue.Extensions)
+		minified, err := config.MinifySvcK8sExtension(newValue.Extensions)
 		if err != nil {
 			return "", err
 		}
@@ -149,7 +149,7 @@ func (chg change) patchVolume(override *composeOverride) (string, error) {
 	case CREATE:
 		newValue := chg.Value.(VolumeConfig)
 
-		minified, err := config.MinifyVolExtension(newValue.Extensions)
+		minified, err := config.MinifyVolK8sExtension(newValue.Extensions)
 		if err != nil {
 			return "", err
 		}
