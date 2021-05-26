@@ -21,7 +21,6 @@ require (
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.1.3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d // indirect
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
