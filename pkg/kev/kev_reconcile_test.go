@@ -30,15 +30,15 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		hook          *test.Hook
-		loggedMsgs    string
-		workingDir    string
-		source        *kev.ComposeProject
-		overrideFiles []string
-		override      *kev.ComposeProject
-		manifest      *kev.Manifest
-		env           *kev.Environment
-		mErr          error
+		hook           *test.Hook
+		loggedMessages string
+		workingDir     string
+		source         *kev.ComposeProject
+		overrideFiles  []string
+		override       *kev.ComposeProject
+		manifest       *kev.Manifest
+		env            *kev.Environment
+		mErr           error
 	)
 
 	JustBeforeEach(func() {
@@ -59,7 +59,7 @@ var _ = Describe("Reconcile", func() {
 		env, err = manifest.GetEnvironment("dev")
 		Expect(err).NotTo(HaveOccurred())
 
-		loggedMsgs = testutil.GetLoggedMsgs(hook)
+		loggedMessages = testutil.GetLoggedMsgs(hook)
 	})
 
 	JustAfterEach(func() {
@@ -160,10 +160,10 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should create a change summary", func() {
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("3.7"))
-				Expect(loggedMsgs).To(ContainSubstring(env.GetVersion()))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring("3.7"))
+				Expect(loggedMessages).To(ContainSubstring(env.GetVersion()))
 			})
 
 			It("should not error", func() {
@@ -192,9 +192,9 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should create a change summary", func() {
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("wordpress"))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring("wordpress"))
+				Expect(loggedMessages).To(ContainSubstring("removed"))
 			})
 
 			It("should not error", func() {
@@ -256,21 +256,8 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service extension value defaults", func() {
-					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
-						Service: config.Service{
-							Type: config.ClusterIPService,
-						},
-						Workload: config.Workload{
-							Resource: config.Resource{
-								CPU:       "0.1",
-								MaxCPU:    "0.5",
-								Memory:    "10Mi",
-								MaxMemory: "500Mi",
-							},
-						},
-					})
+					expected, err := newMinifiedServiceExtensions("wordpress")
 					Expect(err).NotTo(HaveOccurred())
-
 					Expect(env.GetServices()[1].Extensions).To(Equal(expected))
 				})
 
@@ -283,9 +270,9 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should create a change summary", func() {
-					Expect(loggedMsgs).To(ContainSubstring(env.Name))
-					Expect(loggedMsgs).To(ContainSubstring("added"))
-					Expect(loggedMsgs).To(ContainSubstring("wordpress"))
+					Expect(loggedMessages).To(ContainSubstring(env.Name))
+					Expect(loggedMessages).To(ContainSubstring("added"))
+					Expect(loggedMessages).To(ContainSubstring("wordpress"))
 				})
 
 				It("should not error", func() {
@@ -299,23 +286,14 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure parse config into extensions", func() {
-					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
+					expected, err := newMinifiedServiceExtensions("wordpress", config.SvcK8sConfig{
 						Workload: config.Workload{
 							Replicas: 3,
-							Resource: config.Resource{
-								CPU:       "0.25",
-								MaxCPU:    "0.25",
-								Memory:    "20Mi",
-								MaxMemory: "50Mi",
-							},
-						},
-						Service: config.Service{
-							Type: config.ClusterIPService,
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					k8s, err := config.ParseSvcK8sConfigFromMap(env.GetServices()[1].Extensions)
+					k8s, err := config.ParseSvcK8sConfigFromMap(env.GetServices()[1].Extensions, config.SkipValidation())
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8s.Workload.Replicas).To(Equal(3))
@@ -329,19 +307,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service extensions from healthcheck config", func() {
-					expected, err := newDefaultServiceExtensions("wordpress", config.SvcK8sConfig{
-						Workload: config.Workload{
-							Resource: config.Resource{
-								Memory:    "10Mi",
-								MaxMemory: "500Mi",
-								CPU:       "0.1",
-								MaxCPU:    "0.5",
-							},
-						},
-						Service: config.Service{
-							Type: config.ClusterIPService,
-						},
-					})
+					expected, err := newMinifiedServiceExtensions("wordpress")
 					Expect(err).NotTo(HaveOccurred())
 					expected["x-k8s"].(map[string]interface{})["workload"].(map[string]interface{})["livenessProbe"] = map[string]interface{}{
 						"type": config.ProbeTypeNone.String(),
@@ -377,9 +343,9 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should create a change summary", func() {
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("added"))
-				Expect(loggedMsgs).To(ContainSubstring("db_data"))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring("added"))
+				Expect(loggedMessages).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -406,9 +372,9 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should create a change summary", func() {
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
-				Expect(loggedMsgs).To(ContainSubstring("db_data"))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring("removed"))
+				Expect(loggedMessages).To(ContainSubstring("db_data"))
 			})
 
 			It("should not error", func() {
@@ -437,11 +403,11 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should create a change summary", func() {
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
-				Expect(loggedMsgs).To(ContainSubstring("db_data"))
-				Expect(loggedMsgs).To(ContainSubstring("added"))
-				Expect(loggedMsgs).To(ContainSubstring("mysql_data"))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring("removed"))
+				Expect(loggedMessages).To(ContainSubstring("db_data"))
+				Expect(loggedMessages).To(ContainSubstring("added"))
+				Expect(loggedMessages).To(ContainSubstring("mysql_data"))
 			})
 
 			It("should not error", func() {
@@ -472,10 +438,10 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should create a change summary", func() {
-				Expect(loggedMsgs).To(ContainSubstring(env.Name))
-				Expect(loggedMsgs).To(ContainSubstring("removed"))
-				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_USER"))
-				Expect(loggedMsgs).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
+				Expect(loggedMessages).To(ContainSubstring(env.Name))
+				Expect(loggedMessages).To(ContainSubstring("removed"))
+				Expect(loggedMessages).To(ContainSubstring("WORDPRESS_CACHE_USER"))
+				Expect(loggedMessages).To(ContainSubstring("WORDPRESS_CACHE_PASSWORD"))
 			})
 
 			It("should not error", func() {
@@ -571,21 +537,19 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig) (map[string]interface{}, error) {
+func newMinifiedServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig) (map[string]interface{}, error) {
+	livenessProbe := config.DefaultLivenessProbe()
 	k8s := config.SvcK8sConfig{
-		Disabled: false,
 		Workload: config.Workload{
-			LivenessProbe:         config.DefaultLivenessProbe(),
-			ReadinessProbe:        config.DefaultReadinessProbe(),
-			ServiceAccountName:    config.DefaultServiceAccountName,
-			Type:                  config.DefaultWorkload,
-			Replicas:              config.DefaultReplicaNumber,
-			RollingUpdateMaxSurge: config.DefaultRollingUpdateMaxSurge,
-			RestartPolicy:         config.DefaultRestartPolicy,
-			ImagePull: config.ImagePull{
-				Policy: config.DefaultImagePullPolicy,
+			LivenessProbe: config.LivenessProbe{
+				Type: livenessProbe.Type,
+				ProbeConfig: config.ProbeConfig{
+					Exec: config.ExecProbe{
+						Command: livenessProbe.Exec.Command,
+					},
+				},
 			},
-			Autoscale: config.AutoscaleWithDefaults(),
+			Replicas: config.DefaultReplicaNumber,
 		},
 	}
 
@@ -603,7 +567,5 @@ func newDefaultServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig)
 		return nil, err
 	}
 
-	return map[string]interface{}{
-		config.K8SExtensionKey: m,
-	}, nil
+	return map[string]interface{}{config.K8SExtensionKey: m}, nil
 }

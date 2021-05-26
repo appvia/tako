@@ -179,7 +179,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		sg := m.UI.StepGroup()
 		defer sg.Done()
-		renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+		renderStepError(m.UI, sg.Add(""), renderStepReconcileDetect, err)
 		return nil, err
 	}
 
@@ -188,15 +188,15 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	if err != nil {
 		sg := m.UI.StepGroup()
 		defer sg.Done()
-		renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+		renderStepError(m.UI, sg.Add(""), renderStepReconcileDetect, err)
 		return nil, err
 	}
 
 	for _, e := range filteredEnvs {
 		if err := validateEnvExtensions(e, sourcesOverride); err != nil {
 			sg := m.UI.StepGroup()
-			defer sg.Done()
-			renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+			renderStepError(m.UI, sg.Add(""), renderStepReconcileDetect, err)
+			sg.Done()
 			return nil, err
 		}
 
@@ -204,7 +204,12 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 
 		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
 
-		sourcesOverride.diffAndPatch(e.override)
+		if err := sourcesOverride.diffAndPatch(e.override); err != nil {
+			sg := m.UI.StepGroup()
+			renderStepError(m.UI, sg.Add(""), renderStepReconcileApply, err)
+			sg.Done()
+			return nil, err
+		}
 	}
 
 	return m, nil
