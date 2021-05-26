@@ -152,6 +152,7 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 	wd := "."
 
 	return kev.DevWithOptions(wd,
+		kev.WithAppName(rootCmd.Use),
 		kev.WithEventHandler(eventHandler),
 		kev.WithSkaffold(skaffold),
 		kev.WithK8sNamespace(namespace),

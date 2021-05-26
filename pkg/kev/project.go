@@ -19,6 +19,7 @@ package kev
 import (
 	"fmt"
 
+	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	"github.com/pkg/errors"
 )
@@ -26,6 +27,11 @@ import (
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
 	p.SetConfig(opts...)
+
+	if len(p.AppName) == 0 {
+		p.AppName = config.AppName
+	}
+
 	if p.UI == nil {
 		p.UI = kmd.ConsoleUI()
 	}
@@ -47,13 +53,13 @@ func (p *Project) ValidateSources(sources *Sources, matchers []map[string]string
 	}
 
 	p.UI.Output("")
-	p.UI.Output("Validation successful!")
 
 	if secretsDetected {
 		if err := p.eventHandler(SecretsDetected, p); err != nil {
 			return newEventError(err, SecretsDetected)
 		}
-		p.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page: %s`, SecretsReferenceUrl))
+		p.UI.Output(fmt.Sprintf(`To prevent secrets leaking, see help page:
+%s`, SecretsReferenceUrl))
 	}
 
 	if err := p.eventHandler(PostValidateSources, p); err != nil {
@@ -82,7 +88,7 @@ func (p *Project) detectSecretsInSources(sources *Sources, matchers []map[string
 
 			hits := serviceConfig.detectSecretsInEnvVars(matchers)
 			if len(hits) == 0 {
-				step.Success("Non detected in service: ", s.Name)
+				step.Success("None detected in service: ", s.Name)
 				continue
 			}
 
@@ -127,6 +133,13 @@ func (p *Project) SetConfig(opts ...Options) {
 		o(p, cfg)
 	}
 	p.config = cfg
+}
+
+// WithAppName configures a project app name
+func WithAppName(name string) Options {
+	return func(project *Project, cfg *runConfig) {
+		project.AppName = name
+	}
 }
 
 // WithUI configures a project with a terminal UI implementation

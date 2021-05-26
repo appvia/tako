@@ -154,12 +154,11 @@ func (r *RenderRunner) ValidateEnvSources(matchers []map[string]string) error {
 	}
 
 	r.UI.Output("")
-	r.UI.Output("Validation successful!")
 	if detectHit {
 		if err := r.eventHandler(SecretsDetected, r); err != nil {
 			return newEventError(err, SecretsDetected)
 		}
-		r.UI.Output(fmt.Sprintf(`However, to prevent secrets leaking, see help page:
+		r.UI.Output(fmt.Sprintf(`To prevent secrets leaking, see help page:
 %s`, SecretsReferenceUrl))
 	}
 
@@ -223,30 +222,41 @@ func (r *RenderRunner) RenderFromComposeToK8sManifests() (map[string]string, err
 	return results, err
 }
 
-func printRenderProjectWithOptionsError(ui kmd.UI) {
+func printRenderProjectWithOptionsError(appName string, ui kmd.UI) {
 	ui.Output("")
 	ui.Output("Project had errors during render.\n"+
-		fmt.Sprintf("'%s' experienced some errors during project render. The output\n", GetManifestName())+
+		fmt.Sprintf("'%s' experienced some errors during project render. The output\n", appName)+
 		"above should contain the failure messages. Please correct these errors and\n"+
-		fmt.Sprintf("run '%s render' again.", GetManifestName()),
+		fmt.Sprintf("run '%s render' again.", appName),
 		kmd.WithErrorBoldStyle(),
 		kmd.WithIndentChar(kmd.ErrorIndentChar),
 	)
 }
 
-func printRenderProjectWithOptionsSuccess(ui kmd.UI, results map[string]string, envs Environments, manifestFormat string) {
+func printRenderProjectWithOptionsSuccess(r *RenderRunner, results map[string]string, envs Environments, manifestFormat string) error {
 	var namedValues []kmd.NamedValue
 	for _, env := range envs {
 		namedValues = append(namedValues, kmd.NamedValue{Name: env.Name, Value: results[env.Name]})
 	}
 
+	ui := r.GetUI()
 	ui.Output("")
 	ui.Output("Project manifests rendered!", kmd.WithStyle(kmd.SuccessBoldStyle))
+
+	if err := r.eventHandler(PrePrintSummary, r); err != nil {
+		return newEventError(err, PrePrintSummary)
+	}
+
 	ui.Output(
 		fmt.Sprintf("A set of '%s' manifests have been generated:", manifestFormat),
 		kmd.WithStyle(kmd.SuccessStyle),
 	)
 	ui.NamedValues(namedValues, kmd.WithStyle(kmd.SuccessStyle))
+
+	if err := r.eventHandler(PostPrintSummary, r); err != nil {
+		return newEventError(err, PostPrintSummary)
+	}
+
 	ui.Output("")
 	ui.Output("The project can now be deployed to a Kubernetes cluster.", kmd.WithStyle(kmd.SuccessStyle))
 	ui.Output("")
@@ -256,4 +266,6 @@ func printRenderProjectWithOptionsSuccess(ui kmd.UI, results map[string]string, 
 	ui.Output("Apply the manifests to the cluster: `kubectl apply -f <manifests-dir>/<env> -n ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
 	ui.Output("Discover the main service: `kubectl get svc -n ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
 	ui.Output("Port forward to the main service: `kubectl port-forward service/<service_name> <service_port>:<destination_port> -n ns-example`.", kmd.WithIndentChar("-"), kmd.WithIndent(1))
+
+	return nil
 }

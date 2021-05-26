@@ -35,17 +35,16 @@ func InitProjectWithOptions(workingDir string, opts ...Options) error {
 
 	results, err := runner.Run()
 	if err != nil {
-		printInitProjectWithOptionsError(ui)
+		printInitProjectWithOptionsError(runner.AppName, ui)
 		return err
 	}
 
 	if err := results.Write(); err != nil {
-		printInitProjectWithOptionsError(ui)
+		printInitProjectWithOptionsError(runner.AppName, ui)
 		return err
 	}
 
-	printInitProjectWithOptionsSuccess(ui, runner.manifest.Environments)
-	return nil
+	return printInitProjectWithOptionsSuccess(runner, runner.manifest.Environments)
 }
 
 // RenderProjectWithOptions renders a kev project's compose files into Kubernetes manifests
@@ -56,7 +55,7 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 
 	results, err := runner.Run()
 	if err != nil {
-		printRenderProjectWithOptionsError(ui)
+		printRenderProjectWithOptionsError(runner.AppName, ui)
 		return err
 	}
 
@@ -65,9 +64,7 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 		return err
 	}
 
-	printRenderProjectWithOptionsSuccess(ui, results, envs, runner.config.ManifestFormat)
-
-	return nil
+	return printRenderProjectWithOptionsSuccess(runner, results, envs, runner.config.ManifestFormat)
 }
 
 // DevWithOptions runs a continuous development cycle detecting project updates and
@@ -77,7 +74,7 @@ func DevWithOptions(workingDir string, opts ...Options) error {
 	err := runner.Run()
 
 	if err != nil {
-		printDevProjectWithOptionsError(runner.UI)
+		printDevProjectWithOptionsError(runner.AppName, runner.UI)
 		return err
 	}
 

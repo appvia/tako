@@ -92,7 +92,7 @@ func (r *DevRunner) Run() error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		catchCtrlC(cancel, r.UI)
+		catchCtrlC(cancel, r.AppName, r.UI)
 
 		skaffoldConfigPath, skaffoldConfig, err := ActivateSkaffoldDevLoop(r.WorkingDir)
 		if err != nil {
@@ -333,7 +333,7 @@ func (r *DevRunner) DisplayLogs(reader io.Reader, ctx context.Context) {
 }
 
 // catchCtrlC catches ctrl+c in dev loop when running Skaffold
-func catchCtrlC(cancel context.CancelFunc, ui kmd.UI) {
+func catchCtrlC(cancel context.CancelFunc, appName string, ui kmd.UI) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals,
 		os.Interrupt,
@@ -354,7 +354,7 @@ func catchCtrlC(cancel context.CancelFunc, ui kmd.UI) {
 			kmd.WithStyle(kmd.LogStyle),
 		)
 		ui.Output(
-			fmt.Sprintf("'%s' will continue to reconcile and re-render K8s manifests for your project.", GetManifestName()),
+			fmt.Sprintf("'%s' will continue to reconcile and re-render K8s manifests for your project.", appName),
 			kmd.WithIndent(1),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithStyle(kmd.LogStyle),
@@ -368,12 +368,12 @@ func catchCtrlC(cancel context.CancelFunc, ui kmd.UI) {
 	}()
 }
 
-func printDevProjectWithOptionsError(ui kmd.UI) {
+func printDevProjectWithOptionsError(appName string, ui kmd.UI) {
 	ui.Output("")
 	ui.Output("Project had errors during dev.\n"+
-		fmt.Sprintf("'%s' experienced some errors while running dev. The output\n", GetManifestName())+
+		fmt.Sprintf("'%s' experienced some errors while running dev. The output\n", appName)+
 		"above should contain the failure messages. Please correct these errors and\n"+
-		fmt.Sprintf("run '%s dev' again.", GetManifestName()),
+		fmt.Sprintf("run '%s dev' again.", appName),
 		kmd.WithErrorBoldStyle(),
 		kmd.WithIndentChar(kmd.ErrorIndentChar),
 	)

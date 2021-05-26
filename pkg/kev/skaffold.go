@@ -512,6 +512,10 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 
 	logrus.SetLevel(logrus.WarnLevel)
 
+	// Port-forward options
+	pfopts := config.PortForwardOptions{}
+	pfopts.Set("user,debug,pods,services")
+
 	skaffoldOpts := config.SkaffoldOptions{
 		ConfigurationFile:     skaffoldFile,
 		ProfileAutoActivation: true,
@@ -529,10 +533,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		CacheArtifacts:        false,
 		StatusCheck:           true,
 		Tail:                  runCfg.SkaffoldTail,
-		PortForward: config.PortForwardOptions{
-			Enabled:     true,
-			ForwardPods: true,
-		},
+		PortForward:           pfopts,
 		Muted: config.Muted{
 			Phases: mutedPhases,
 		},
