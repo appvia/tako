@@ -46,12 +46,12 @@ type ServiceExtension struct {
 
 // SvcK8sConfig represents the root of the k8s specific fields supported by kev.
 type SvcK8sConfig struct {
-	Disabled bool     `yaml:"disabled"`
+	Disabled bool     `yaml:"disabled,omitempty"`
 	Workload Workload `yaml:"workload" validate:"required,dive"`
 	Service  Service  `yaml:"service,omitempty"`
 }
 
-func (skc SvcK8sConfig) ToMap() (map[string]interface{}, error) {
+func (skc SvcK8sConfig) Map() (map[string]interface{}, error) {
 	bs, err := yaml.Marshal(skc)
 	if err != nil {
 		return nil, err
@@ -418,7 +418,7 @@ type Workload struct {
 	Type                  WorkloadType   `yaml:"type,omitempty" validate:"workloadType"`
 	Replicas              int            `yaml:"replicas" validate:""`
 	ServiceAccountName    string         `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
-	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge" validate:""`
+	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge,omitempty" validate:""`
 	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
 	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
 	RestartPolicy         RestartPolicy  `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
