@@ -31,6 +31,7 @@ const (
 	initStepComposeSource
 	initStepParsingComposeConfig
 	initStepGenerateManifest
+	initStepCreateDeploymentEnvs
 	initStepValidatingSources
 	initStepUpdateSkaffold
 	initStepCreateSkaffold
@@ -66,6 +67,10 @@ to double check your compose source(s) are valid.
 
 	initStepGenerateManifest: {
 		Error: "Cannot create manifest using compose source files!",
+	},
+
+	initStepCreateDeploymentEnvs: {
+		Error: "Cannot create the compose files for the requested deployment environments!",
 	},
 
 	initStepValidatingSources: {

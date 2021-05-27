@@ -55,7 +55,7 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 			return err
 		}
 
-		m, err := k8sConf.ToMap()
+		m, err := k8sConf.Map()
 		if err != nil {
 			return err
 		}

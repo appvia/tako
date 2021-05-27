@@ -65,7 +65,7 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	JustBeforeEach(func() {
-		ext, err := svcK8sConfig.ToMap()
+		ext, err := svcK8sConfig.Map()
 		Expect(err).NotTo(HaveOccurred())
 		extensions = map[string]interface{}{
 			config.K8SExtensionKey: ext,
@@ -259,7 +259,7 @@ var _ = Describe("ProjectService", func() {
 
 			JustBeforeEach(func() {
 				projectService.SvcK8sConfig.Workload.Type = projectWorkloadType
-				m, err := projectService.SvcK8sConfig.ToMap()
+				m, err := projectService.SvcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				svc := projectService.ServiceConfig
@@ -322,7 +322,7 @@ var _ = Describe("ProjectService", func() {
 					svcK8sConfig := config.SvcK8sConfig{}
 					svcK8sConfig.Service.Type = config.ServiceType(invalidType)
 
-					m, err = svcK8sConfig.ToMap()
+					m, err = svcK8sConfig.Map()
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -834,7 +834,7 @@ var _ = Describe("ProjectService", func() {
 
 			JustBeforeEach(func() {
 				svcK8sConfig.Workload.ImagePull.Policy = policy
-				m, err := svcK8sConfig.ToMap()
+				m, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				extensions[config.K8SExtensionKey] = m
@@ -899,7 +899,7 @@ var _ = Describe("ProjectService", func() {
 
 			JustBeforeEach(func() {
 				projectService.SvcK8sConfig.Workload.RestartPolicy = policy
-				m, err := projectService.SvcK8sConfig.ToMap()
+				m, err := projectService.SvcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
 				svc := projectService.ServiceConfig

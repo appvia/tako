@@ -126,7 +126,7 @@ func (m *Manifest) CalculateSourcesBaseOverride(opts ...BaseOverrideOpts) (*Mani
 
 // MintEnvironments create new environments based on candidate environments.
 // This includes an implicit sandbox environment that will always be created.
-func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
+func (m *Manifest) MintEnvironments(candidates []string) error {
 	m.UI.Header("Creating deployment environments...")
 	sg := m.UI.StepGroup()
 	defer sg.Done()
@@ -138,7 +138,11 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 		candidates = append([]string{SandboxEnv}, candidates...)
 	}
 
-	override := m.getSourcesOverride()
+	overrideTemplate := m.getSourcesOverride()
+	if err := minifyK8sExtensionsToBaseAttributes(overrideTemplate); err != nil {
+		return err
+	}
+
 	for _, env := range candidates {
 		envFilename := path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
 		var step kmd.Step
@@ -148,14 +152,17 @@ func (m *Manifest) MintEnvironments(candidates []string) *Manifest {
 			step = sg.Add(fmt.Sprintf("Creating the %s env file: %s", env, envFilename))
 		}
 
-		m.Environments = append(m.Environments, &Environment{
+		candidate := &Environment{
 			Name:     env,
-			override: override,
+			override: overrideTemplate,
 			File:     envFilename,
-		})
+		}
+
+		m.Environments = append(m.Environments, candidate)
 		step.Success()
 	}
-	return m
+
+	return nil
 }
 
 // GetEnvironmentFileNameTemplate returns environment file name template to match
@@ -172,7 +179,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	if _, err := m.CalculateSourcesBaseOverride(withEnvVars); err != nil {
 		sg := m.UI.StepGroup()
 		defer sg.Done()
-		renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+		renderStepError(m.UI, sg.Add(""), renderStepReconcileDetect, err)
 		return nil, err
 	}
 
@@ -181,15 +188,15 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 	if err != nil {
 		sg := m.UI.StepGroup()
 		defer sg.Done()
-		renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+		renderStepError(m.UI, sg.Add(""), renderStepReconcileDetect, err)
 		return nil, err
 	}
 
 	for _, e := range filteredEnvs {
-		if err := validateExtensions(e.override); err != nil {
+		if err := validateEnvExtensions(e, sourcesOverride); err != nil {
 			sg := m.UI.StepGroup()
-			defer sg.Done()
-			renderStepError(m.UI, sg.Add(""), renderStepReconcile, err)
+			renderStepError(m.UI, sg.Add(""), renderStepReconcileDetect, err)
+			sg.Done()
 			return nil, err
 		}
 
@@ -197,23 +204,67 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 
 		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
 
-		sourcesOverride.diffAndPatch(e.override)
+		if err := sourcesOverride.diffAndPatch(e.override); err != nil {
+			sg := m.UI.StepGroup()
+			renderStepError(m.UI, sg.Add(""), renderStepReconcileApply, err)
+			sg.Done()
+			return nil, err
+		}
 	}
 
 	return m, nil
 }
 
-func validateExtensions(override *composeOverride) error {
-	for _, s := range override.Services {
-		_, err := config.ParseSvcK8sConfigFromMap(s.Extensions)
+func validateEnvExtensions(e *Environment, base *composeOverride) error {
+	for _, s := range e.GetServices() {
+		baseSvc, missingSvcErr := base.getService(s.Name)
+		if missingSvcErr != nil {
+			continue
+		}
+
+		baseSvcK8sCfg, err := config.ParseSvcK8sConfigFromMap(baseSvc.Extensions, config.SkipValidation())
 		if err != nil {
-			return errors.Wrapf(err, "when parsing service %s extensions", s.Name)
+			return errors.Wrapf(missingSvcErr, "when parsing service %s extensions in base compose file", baseSvc.Name)
+		}
+
+		envSvcK8sCfg, err := config.ParseSvcK8sConfigFromMap(s.Extensions, config.SkipValidation())
+		if err != nil {
+			return errors.Wrapf(missingSvcErr, "when parsing service %s extensions", s.Name)
+		}
+
+		mergedK8sSvcCfg, err := baseSvcK8sCfg.Merge(envSvcK8sCfg)
+		if err != nil {
+			return missingSvcErr
+		}
+
+		if err := mergedK8sSvcCfg.Validate(); err != nil {
+			return err
 		}
 	}
-	for name, vol := range override.Volumes {
-		_, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
+
+	for name, vol := range e.GetVolumes() {
+		baseVol, missingVolError := base.getVolume(name)
+		if missingVolError != nil {
+			continue
+		}
+
+		baseVolK8sCfg, err := config.ParseVolK8sConfigFromMap(baseVol.Extensions)
 		if err != nil {
-			return errors.Wrapf(err, "when parsing vol %s extensions", name)
+			return errors.Wrapf(missingVolError, "when parsing vol %s extensions in base compose file", name)
+		}
+
+		envVolK8sCfg, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
+		if err != nil {
+			return errors.Wrapf(missingVolError, "when parsing vol %s extensions", name)
+		}
+
+		mergedVolK8sCfg, err := baseVolK8sCfg.Merge(envVolK8sCfg)
+		if err != nil {
+			return missingVolError
+		}
+
+		if err := mergedVolK8sCfg.Validate(); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -301,6 +352,16 @@ func (m *Manifest) GetSourcesFiles() []string {
 	return m.Sources.Files
 }
 
+// SourcesToComposeProject returns the manifests compose sources as a ComposeProject.
+func (m *Manifest) SourcesToComposeProject() (*ComposeProject, error) {
+	return m.Sources.toComposeProject()
+}
+
+func ManifestExistsForPath(manifestPath string) bool {
+	_, err := os.Stat(manifestPath)
+	return err == nil
+}
+
 // getWorkingDir gets the sources working directory.
 func (m *Manifest) getWorkingDir() string {
 	return m.Sources.getWorkingDir()
@@ -313,12 +374,24 @@ func (m *Manifest) getSourcesOverride() *composeOverride {
 	return override
 }
 
-// SourcesToComposeProject returns the manifests compose sources as a ComposeProject.
-func (m *Manifest) SourcesToComposeProject() (*ComposeProject, error) {
-	return m.Sources.toComposeProject()
-}
+// minifyK8sExtensionsToBaseAttributes removes all attributes except a selected few deemed
+// most useful for users to configure immediately.
+func minifyK8sExtensionsToBaseAttributes(override *composeOverride) error {
+	for _, svc := range override.Services {
+		minifiedSvcExt, err := config.MinifySvcK8sExtension(svc.Extensions)
+		if err != nil {
+			return err
+		}
+		svc.Extensions[config.K8SExtensionKey] = minifiedSvcExt
+	}
 
-func ManifestExistsForPath(manifestPath string) bool {
-	_, err := os.Stat(manifestPath)
-	return err == nil
+	for _, vol := range override.Volumes {
+		minifiedVolExt, err := config.MinifyVolK8sExtension(vol.Extensions)
+		if err != nil {
+			return err
+		}
+		vol.Extensions[config.K8SExtensionKey] = minifiedVolExt
+	}
+
+	return nil
 }

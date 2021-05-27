@@ -167,7 +167,10 @@ func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) err
 		return err
 	}
 
-	r.manifest.MintEnvironments(r.config.Envs)
+	if err := r.manifest.MintEnvironments(r.config.Envs); err != nil {
+		initStepError(r.UI, sg.Add(""), initStepCreateDeploymentEnvs, err)
+		return err
+	}
 
 	if err := r.eventHandler(PostCreateManifest, r); err != nil {
 		return newEventError(err, PostCreateManifest)
@@ -231,6 +234,7 @@ func createInitWritableResults(workingDir string, manifest *Manifest, skManifest
 		WriterTo: manifest,
 		FilePath: path.Join(workingDir, ManifestFilename),
 	})
+
 	out = append(out, manifest.Environments.toWritableResults()...)
 
 	if skManifest != nil {
