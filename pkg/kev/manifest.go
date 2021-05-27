@@ -224,7 +224,7 @@ func validateEnvExtensions(e *Environment, base *composeOverride) error {
 
 		baseSvcK8sCfg, err := config.ParseSvcK8sConfigFromMap(baseSvc.Extensions, config.SkipValidation())
 		if err != nil {
-			return errors.Wrapf(missingSvcErr, "when parsing service %s extensions in base override", baseSvc.Name)
+			return errors.Wrapf(missingSvcErr, "when parsing service %s extensions in base compose file", baseSvc.Name)
 		}
 
 		envSvcK8sCfg, err := config.ParseSvcK8sConfigFromMap(s.Extensions, config.SkipValidation())
@@ -250,7 +250,7 @@ func validateEnvExtensions(e *Environment, base *composeOverride) error {
 
 		baseVolK8sCfg, err := config.ParseVolK8sConfigFromMap(baseVol.Extensions)
 		if err != nil {
-			return errors.Wrapf(missingVolError, "when parsing vol %s extensions in base override", name)
+			return errors.Wrapf(missingVolError, "when parsing vol %s extensions in base compose file", name)
 		}
 
 		envVolK8sCfg, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
