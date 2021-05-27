@@ -29,7 +29,8 @@ type renderStepType uint
 const (
 	renderStepLoad renderStepType = iota
 	renderStepLoadSkaffold
-	renderStepReconcile
+	renderStepReconcileDetect
+	renderStepReconcileApply
 	renderStepReconcileWrite
 	renderStepRenderGeneral
 	renderStepValidatingSources
@@ -58,8 +59,12 @@ run the 'init' command with the '--skaffold' flag.
 		Error: "Encountered an error while validating sources!",
 	},
 
-	renderStepReconcile: {
+	renderStepReconcileDetect: {
 		Error: "Cannot detect project updates!",
+	},
+
+	renderStepReconcileApply: {
+		Error: "Cannot apply project updates!",
 	},
 
 	renderStepReconcileWrite: {

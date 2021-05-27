@@ -17,9 +17,6 @@
 package config
 
 const (
-	// DefaultServiceEnabled default value for x-k8s.enabled
-	DefaultServiceEnabled = true
-
 	// DefaultVolumeSize default value PV class
 	DefaultVolumeSize = "100Mi"
 

@@ -59,13 +59,30 @@ func (o *composeOverride) getVolume(name string) (VolumeConfig, error) {
 // - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
 // - A changeset will NOT update or create env vars in an environment specific docker compose override file.
 // - To create useful diffs the project's base docker-compose env vars will be taken into account.
-func (o *composeOverride) diffAndPatch(dst *composeOverride) {
+func (o *composeOverride) diffAndPatch(dst *composeOverride) error {
 	o.detectAndPatchVersionUpdate(dst)
-	o.detectAndPatchServicesCreate(dst)
-	o.detectAndPatchServicesDelete(dst)
-	o.detectAndPatchServicesEnvironmentDelete(dst)
-	o.detectAndPatchVolumesCreate(dst)
-	o.detectAndPatchVolumesDelete(dst)
+
+	if err := o.detectAndPatchServicesCreate(dst); err != nil {
+		return nil
+	}
+
+	if err := o.detectAndPatchServicesDelete(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchServicesEnvironmentDelete(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchVolumesCreate(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchVolumesDelete(dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
@@ -89,7 +106,7 @@ func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
 		kmd.WithIndent(3))
 }
 
-func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting service additions")
@@ -106,19 +123,23 @@ func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) {
 	}
 	if cset.HasNoPatches() {
 		step.Success("No service additions detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyServicesPatchesIfAny(dst)
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
 	step.Success("Applied service additions")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting service removals")
@@ -136,19 +157,24 @@ func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) {
 
 	if cset.HasNoPatches() {
 		step.Success("No service removals detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyServicesPatchesIfAny(dst)
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied service removals")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting env var removals")
@@ -174,19 +200,24 @@ func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOv
 
 	if cset.HasNoPatches() {
 		step.Success("No env var removals detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyServicesPatchesIfAny(dst)
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied env var removals")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting volume additions")
@@ -204,19 +235,24 @@ func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) {
 
 	if cset.HasNoPatches() {
 		step.Success("No volume additions detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyVolumesPatchesIfAny(dst)
+	msgs, err := cset.applyVolumesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied volume additions")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting volume removals")
@@ -233,16 +269,21 @@ func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) {
 
 	if cset.HasNoPatches() {
 		step.Success("No volume removals detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyVolumesPatchesIfAny(dst)
+	msgs, err := cset.applyVolumesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied volume removals")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
 // mergeInto merges an override onto a compose project.

@@ -54,20 +54,28 @@ func (cset changeset) applyVersionPatchesIfAny(o *composeOverride) string {
 	return chg.patchVersion(o)
 }
 
-func (cset changeset) applyServicesPatchesIfAny(o *composeOverride) []string {
+func (cset changeset) applyServicesPatchesIfAny(o *composeOverride) ([]string, error) {
 	var out []string
 	for _, change := range cset.services {
-		out = append(out, change.patchService(o))
+		patchDetails, err := change.patchService(o)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, patchDetails)
 	}
-	return out
+	return out, nil
 }
 
-func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride) []string {
+func (cset changeset) applyVolumesPatchesIfAny(o *composeOverride) ([]string, error) {
 	var out []string
 	for _, change := range cset.volumes {
-		out = append(out, change.patchVolume(o))
+		patchDetails, err := change.patchVolume(o)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, patchDetails)
 	}
-	return out
+	return out, nil
 }
 
 func (chg change) patchVersion(override *composeOverride) string {
@@ -83,27 +91,35 @@ func (chg change) patchVersion(override *composeOverride) string {
 	return msg
 }
 
-func (chg change) patchService(override *composeOverride) string {
+func (chg change) patchService(override *composeOverride) (string, error) {
 	switch chg.Type {
 	case CREATE:
 		newValue := chg.Value.(ServiceConfig)
+
+		minified, err := config.MinifySvcK8sExtension(newValue.Extensions)
+		if err != nil {
+			return "", err
+		}
+
+		newValue.Extensions[config.K8SExtensionKey] = minified
 		override.Services = append(override.Services, newValue)
+
 		msg := fmt.Sprintf("added service: %s", newValue.Name)
 		log.Debugf(msg)
-		return msg
+		return msg, nil
 	case DELETE:
 		switch {
 		case chg.Parent == "environment":
 			delete(override.Services[chg.Index.(int)].Environment, chg.Target)
 			msg := fmt.Sprintf("removed env var: %s from service %s", chg.Target, override.Services[chg.Index.(int)].Name)
 			log.Debugf(msg)
-			return msg
+			return msg, nil
 		default:
 			deletedSvcName := override.Services[chg.Index.(int)].Name
 			override.Services = append(override.Services[:chg.Index.(int)], override.Services[chg.Index.(int)+1:]...)
 			msg := fmt.Sprintf("removed service: %s", deletedSvcName)
 			log.Debugf(msg)
-			return msg
+			return msg, nil
 		}
 	case UPDATE:
 		switch chg.Parent {
@@ -114,7 +130,7 @@ func (chg change) patchService(override *composeOverride) string {
 			newValue, ok := chg.Value.(map[string]interface{})
 			if !ok {
 				log.Debugf("unable to update service [%s], invalid value %+v", svcName, newValue)
-				return ""
+				return "", nil
 			}
 
 			if svc.Extensions == nil {
@@ -125,22 +141,30 @@ func (chg change) patchService(override *composeOverride) string {
 			log.Debugf("service [%s] extensions updated to %+v", svcName, newValue)
 		}
 	}
-	return ""
+	return "", nil
 }
 
-func (chg change) patchVolume(override *composeOverride) string {
+func (chg change) patchVolume(override *composeOverride) (string, error) {
 	switch chg.Type {
 	case CREATE:
 		newValue := chg.Value.(VolumeConfig)
+
+		minified, err := config.MinifyVolK8sExtension(newValue.Extensions)
+		if err != nil {
+			return "", err
+		}
+
+		newValue.Extensions[config.K8SExtensionKey] = minified
 		override.Volumes[chg.Index.(string)] = newValue
+
 		msg := fmt.Sprintf("added volume: %s", chg.Index.(string))
 		log.Debugf(msg)
-		return msg
+		return msg, nil
 	case DELETE:
 		delete(override.Volumes, chg.Index.(string))
 		msg := fmt.Sprintf("removed volume: %s", chg.Index.(string))
 		log.Debugf(msg)
-		return msg
+		return msg, nil
 	}
-	return ""
+	return "", nil
 }
