@@ -107,7 +107,7 @@ You will notice the staging environment configuration file has been created:
 |- docker-compose.kev.staging.yaml      # staging env
 ```
 
-Adjust your Kubernetes `staging` application parameters for each of the components as needed. This is done via Compose [labels](../../docs/reference/config-params.md).
+Adjust your Kubernetes `staging` application parameters for each of the components as needed. This is done via Compose [extensions](../../docs/reference/config-params.md).
 
 Also, you'll find that Kev has bootstrapped a Skaffold config file (`skaffold.yaml`). If a `skaffold.yaml` file previously existed, then the additional profiles will be added there.
 

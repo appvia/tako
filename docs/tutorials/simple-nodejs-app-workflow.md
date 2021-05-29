@@ -28,7 +28,7 @@ You will notice that 3 separate environment specific configuration files have be
 |- docker-compose.kev.prod.yaml
 ```
 
-Adjust Kubernetes specific application parameters for each of the components as and when necessary. This is done via Compose [labels](../../docs/reference/config-params.md).
+Adjust Kubernetes specific application parameters for each of the components as and when necessary. This is done via Compose [extensions](../../docs/reference/config-params.md).
 
 It'll also bootstrap the Skaffold config file (`skaffold.yaml`). If skaffold.yaml previously existed then it'll add additional profiles to it.
 
@@ -86,7 +86,7 @@ NAME                   READY   STATUS    RESTARTS   AGE
 app-69d87ffbc8-pq4bs   1/1     Running   0          9s
 ```
 
-Now, try to adjust number of replicas for the app by modifying `kev.workload.replicas` label value to "2". You should observe `dev` loop pick up all the changes and do the hard work of generating K8s manifests, building, pushing and deploying your application automatically.
+Now, try to adjust number of replicas for the app by modifying `x-k8s.workload.replicas` value to `2`. You should observe `dev` loop pick up all the changes and do the hard work of generating K8s manifests, building, pushing and deploying your application automatically.
 
 > List Kubernetes application pods for the Node.js app after change to desired replicas number:
 ```sh
