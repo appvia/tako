@@ -18,7 +18,7 @@ Configuration is divided into the following groups of parameters:
 
 # → Component
 
-This configuration group contains application composition related settings. Configuration parameters can be individually defined via set of labels (listed below) for each application stack component.
+This configuration group contains application composition related settings. Configuration parameters can be individually defined for each application stack component.
 
 ## x-k8s.disabled
 
@@ -941,103 +941,135 @@ services:
 ...
 ```
 
-## kev.service.expose
+## x-k8s.service.expose
 
-Defines whether to expose the service to external world. This detail can't be easily derived from the compose file and so in order to expose a service to external world user must explicitly instruct Kev to do so. By default all component services aren't exposed i.e. have no ingress attached to them.
+Defines how to expose the service externally. This detail can't be easily derived from the compose file and so in order to expose a service the user must explicitly instruct Kev to do so. By default, all component services aren't exposed i.e. have no ingress attached to them.
 
-### Default: `""` - No ingress will be created!
+### x-k8s.service.expose.domain
 
-### Possible options:
-* `"true"` - ingress will be created with Kubernetes cluster defaults
-* `"domain.com,otherdomain.com..."` - comma separated list of domains for the ingress.
+This setting accepts a comma separated list of domains for the ingress.
 
-> kev.service.expose:
+E.g. `"domain.com,otherdomain.com..."`
+
+#### Default: `""` - No ingress will be created!
+
+> x-k8s.service.expose.domain:
 ```yaml
 version: 3.7
 services:
   my-service:
-    labels:
-      kev.service.expose: "my-awesome-service.com"
+    x-k8s:
+      service:
+        type: LoadBalancer
+        expose:
+          domain: "my-awesome-service.com"
 ...
 ```
 
-## kev.service.expose.tls-secret
+### x-k8s.service.expose.tlsSecret
 
 Defines whether to use TLS for the exposed service and which secret name contains certificates for the service. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls).
 
-NOTE: This option is only relevant when service is exposed, see: [kev.service.expose](#kev-service-expose) above.
+NOTE: This option is only relevant when service is exposed, see: [x-k8s.service.expose.domain](#x-k8s.service.expose.domain) above.
 
-### Default: `nil` - No TLS secret name specified by default!
+#### Default: `""` - No TLS secret name specified by default!
 
-### Possible options: Arbitrary string.
+#### Possible options: Arbitrary string.
 
-> kev.service.expose.tls-secret:
+> x-k8s.service.expose.tlsSecret:
 ```yaml
 version: 3.7
 services:
   my-service:
-    labels:
-      kev.service.expose: "my-domain.com"
-      kev.service.expose.tls-secret: "my-service-tls-secret-name"
+    x-k8s:
+      service:
+        type: LoadBalancer
+        expose:
+          domain: "my-domain.com"
+          tlsSecret: "my-service-tls-secret-name"
+...
+```
+
+### x-k8s.service.expose.ingressAnnotations
+
+Ingress annotations are used to configure some options depending on the Ingress controller. Different Ingress controller support different annotations. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource) 
+
+NOTE: This option is only relevant when service is exposed, see: [x-k8s.service.expose.domain](#x-k8s.service.expose.domain) above.
+
+#### Possible options: map with a string and string value.
+
+> x-k8s.service.expose.tlsSecret:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      service:
+        type: LoadBalancer
+        expose:
+          domain: "my-domain.com"
+          tlsSecret: "my-service-tls-secret-name"
+          ingressAnnotations:
+            kubernetes.io/ingress.class: external
+            cert-manager.io/cluster-issuer: prod-le-dns01
 ...
 ```
 
 # → Volumes
 
-This configuration group contains Kubernetes persistent `volume` claim specific settings. Configuration parameters can be individually defined via a set of labels (see below), for each volume referenced in the project compose file(s).
+This configuration group contains Kubernetes persistent `volume` claim specific settings. Configuration parameters can be individually defined for each volume referenced in the project compose file(s).
 
+## x-k8s.volume.storageClass
 
-## kev.volume.storage-class
+Defines the class of persistent volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
-Defines the class of persitant volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
-
-### Default: `standard`
+### Default: `""`
 
 ### Possible options: Arbitrary string.
 
-> kev.volume.storage-class:
+> x-k8s.volume.storageClass:
 ```yaml
 version: 3.7
 volumes:
   vol1:
-    labels:
-      kev.volume.storage-class: my-custom-storage-class
+    x-k8s:
+      storageClass: my-custom-storage-class
 ...
 ```
 
-## kev.volume.size
+## x-k8s.volume.size
 
-Defines the size of persitant volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+Defines the size of persistent volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 ### Default: `1Gi`
 
 ### Possible options: Arbitrary size string. Example: `10Gi`.
 
-> kev.volume.size:
+> x-k8s.volume.size:
 ```yaml
 version: 3.7
 volumes:
   vol1:
-    labels:
-      kev.volume.size: 10Gi
+    x-k8s:
+      size: 10Gi
 ...
 ```
 
-## kev.volume.selector
+## x-k8s.volume.selector
 
 Defines a label selector to further filter the set of volumes. Only the volumes whose labels match the selector can be bound to the PVC claim. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
-### Default: ``
+### Default: `""`
 
 ### Possible options: Arbitrary string. Example: `data`.
 
-> kev.volume.selector:
+> x-k8s.volume.selector:
 ```yaml
 version: 3.7
 volumes:
   vol1:
-    labels:
-      kev.volume.selector: my-volume-selector-label
+    x-k8s:
+      selector: my-volume-selector
 ...
 ```
 
@@ -1054,7 +1086,7 @@ To set an environment variable with explicit string value
 version: 3.7
 services:
   my-service:
-    labels:
+    x-k8s:
       ...
     environment:
       ENV_VAR_A: some-literal-value  # Literal value
@@ -1067,7 +1099,7 @@ When there is a need to reference any dependent environment variables it can be 
 version: 3.7
 services:
   my-service:
-    labels:
+    x-k8s:
       ...
     environment:
       ENV_VAR_A: foo
@@ -1083,7 +1115,7 @@ To set an environment variable with a value taken from Kubernetes secret, use th
 version: 3.7
 services:
   my-service:
-    labels:
+    x-k8s:
       ...
     environment:
       ENV_VAR_B: secret.{secret-name}.{secret-key}  # Refer to a value stored in a secret key
@@ -1097,7 +1129,7 @@ To set an environment variable with a value taken from Kubernetes config map, us
 version: 3.7
 services:
   my-service:
-    labels:
+    x-k8s:
       ...
     environment:
       ENV_VAR_C: config.{config-name}.{config-key}  # Refer to a value stored in a configmap key
@@ -1111,7 +1143,7 @@ To set an environment variable with a value referencing K8s Pod field value, use
 version: 3.7
 services:
   my-service:
-    labels:
+    x-k8s:
       ...
     environment:
       ENV_VAR_D: pod.{field-path} # Refer to the a value of the K8s workload Pod field path
@@ -1138,7 +1170,7 @@ To set an environment variable with a value referencing K8s Container resource f
 version: 3.7
 services:
   my-service:
-    labels:
+    x-k8s:
       ...
     environment:
       ENV_VAR_E: container.{container-name}.{resource-field} # Refer to the a value of the K8s workload Container resource field
