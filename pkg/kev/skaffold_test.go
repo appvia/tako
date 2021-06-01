@@ -579,7 +579,7 @@ var _ = Describe("Skaffold", func() {
 
 				})
 
-				When("Docker Compose project doens't have services referencing images with build contexts", func() {
+				When("Docker Compose project doesn't have services referencing images with build contexts", func() {
 					image := "quay.io/org/myimage:latest"
 
 					BeforeEach(func() {
