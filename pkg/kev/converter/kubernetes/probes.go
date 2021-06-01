@@ -10,7 +10,7 @@ import (
 )
 
 func LivenessProbeToV1Probe(lp config.LivenessProbe) (*v1.Probe, error) {
-	lp.SuccessThreshold = config.DefaultSuccessThreshold
+	lp.SuccessThreshold = config.DefaultProbeSuccessThreshold
 	return v1probe(lp.Type, lp.ProbeConfig)
 }
 

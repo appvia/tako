@@ -73,8 +73,8 @@ func DefaultLivenessProbe() LivenessProbe {
 			},
 			InitialDelay:     delay,
 			Period:           interval,
-			FailureThreshold: DefaultProbeRetries,
-			SuccessThreshold: DefaultSuccessThreshold,
+			FailureThreshold: DefaultProbeFailureThreshold,
+			SuccessThreshold: DefaultProbeSuccessThreshold,
 			Timeout:          timeout,
 		},
 	}
@@ -98,8 +98,8 @@ func DefaultReadinessProbe() ReadinessProbe {
 		ProbeConfig: ProbeConfig{
 			InitialDelay:     delay,
 			Period:           interval,
-			FailureThreshold: DefaultProbeRetries,
-			SuccessThreshold: DefaultSuccessThreshold,
+			FailureThreshold: DefaultProbeFailureThreshold,
+			SuccessThreshold: DefaultProbeSuccessThreshold,
 			Timeout:          timeout,
 		},
 	}
