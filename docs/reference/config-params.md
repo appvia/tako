@@ -359,7 +359,7 @@ Kev uses the following heuristics to derive that information for each service:
 If compose file(s) specifies the `deploy.resources.limits.cpus` attribute key in a service config it will use its value.
 Otherwise it'll default to a sensible default of `0.2` (equivalent of 200m in Kubernetes).
 
-#### Default: `0.2`
+#### Default: `0.5`
 
 #### Possible options: Arbitrary [CPU units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu). Examples: `0.2` == `200m`.
 
@@ -527,8 +527,8 @@ services:
 
 ### x-k8s.workload.livenessProbe.tcp.port
 
-Defines the liveness probe port to be used for the workload when the type is `tcp`. 
-See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-tcp-liveness-probe). 
+Defines the liveness probe port to be used for the workload when the type is `tcp`.
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-tcp-liveness-probe).
 
 #### Possible options: Integer
 
@@ -546,20 +546,15 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.period
+### x-k8s.workload.livenessProbe.failureThreshold
 
-Defines how often liveness probe should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the interval from the information specified in the compose file.
+Defines the liveness probe's failure threshold (retries) for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
 
-Kev uses the following heuristics to derive that information for each service:
+#### Default: `3`
 
-If compose file(s) specifies the `healthcheck.interval` attribute key in a service config it will use its value.
-Otherwise, it'll default to `1m` (1 minute).
+#### Possible options: Arbitrary time duration. Example: `5`
 
-#### Default: `1m`
-
-#### Possible options: Time duration
-
-> x-k8s.workload.livenessProbe.period:
+> x-k8s.workload.livenessProbe.failureThreshold:
 ```yaml
 version: 3.7
 services:
@@ -568,7 +563,7 @@ services:
       workload:
         livenessProbe:
           ...
-          period: 1m0s
+          failureThreshold: 3
 ...
 ```
 
@@ -598,6 +593,32 @@ services:
 ...
 ```
 
+### x-k8s.workload.livenessProbe.period
+
+Defines how often liveness probe should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the interval from the information specified in the compose file.
+
+Kev uses the following heuristics to derive that information for each service:
+
+If compose file(s) specifies the `healthcheck.interval` attribute key in a service config it will use its value.
+Otherwise, it'll default to `1m` (1 minute).
+
+#### Default: `1m`
+
+#### Possible options: Time duration
+
+> x-k8s.workload.livenessProbe.period:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        livenessProbe:
+          ...
+          period: 1m0s
+...
+```
+
 ### x-k8s.workload.livenessProbe.timeout
 
 Defines the timeout for the liveness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
@@ -621,27 +642,6 @@ services:
         livenessProbe:
           ...
           timeout: 30s
-...
-```
-
-### x-k8s.workload.livenessProbe.failureThreshold
-
-Defines the liveness probe's failure threshold (retries) for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
-
-#### Default: `3`
-
-#### Possible options: Arbitrary time duration. Example: `5`
-
-> x-k8s.workload.livenessProbe.failureThreshold:
-```yaml
-version: 3.7
-services:
-  my-service:
-    x-k8s:
-      workload:
-        livenessProbe:
-          ...
-          failureThreshold: 3
 ...
 ```
 
