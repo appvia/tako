@@ -5,16 +5,29 @@ title: Kev configuration reference
 
 # Configuration
 
-Kev leverages Docker Compose specification to configure and prepare an application for deployment in Kubernetes. Environment configuration lives in a dedicated docker compose override file, which automatically gets applied to the project's source docker compose files at the `render` phase.
+Kev leverages the Docker Compose specification to configure and prepare an application for deployment in Kubernetes.
+
+## Project wide configuration
+
+This is optional, but if provided, lives in the base docker compose files (or at least one of the files) used to initialise the project.
+
+Project wide configuration will be applied against all environments unless a specific environment overrides a setting with its own value. 
+
+## Environment configuration
+
+Environment configuration lives in a dedicated docker compose override file. This automatically gets applied to the project's source docker compose files at the `render` phase.
+
+Any project wide configuration found will be overridden by environment specific values.  
 
 ### Component level configuration
 
 Configuration is divided into the following groups of parameters:
-* [Component](#-component)
-* [Workload](#-workload)
-* [Service](#-service)
-* [Volumes](#-volumes)
-* [Environment](#-environment)
+
+* [Component](#-component), part of the `x-k8s` docker compose service extension.
+* [Workload](#-workload),  part of the `x-k8s` docker compose service extension.
+* [Service](#-service),  part of the `x-k8s` docker compose service extension.
+* [Volumes](#-volumes),  part of the `x-k8s` docker compose volume extension.
+* [Environment](#-environment),  part of the docker compose environment service attributes.
 
 # → Component
 
