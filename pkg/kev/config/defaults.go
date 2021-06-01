@@ -91,8 +91,11 @@ const (
 	// DefaultProbeInitialDelay default 1m (1 minute)
 	DefaultProbeInitialDelay = "1m"
 
-	// DefaultProbeRetries default 3. Number of retries for liveness probe command
+	// DefaultProbeRetries default 3. Number of retries for probe command
 	DefaultProbeRetries = 3
+
+	// DefaultSuccessThreshold default 1. Minimum consecutive successes for the probe to be considered successful
+	DefaultSuccessThreshold = 1
 
 	// DefaultProbeDisable default false. Enabled by default
 	DefaultProbeDisable = false

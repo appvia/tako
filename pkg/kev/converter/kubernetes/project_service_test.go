@@ -1099,7 +1099,7 @@ var _ = Describe("ProjectService", func() {
 					PeriodSeconds:       10,
 					InitialDelaySeconds: 10,
 					FailureThreshold:    3,
-					SuccessThreshold:    3,
+					SuccessThreshold:    1,
 				})).To(BeEmpty())
 			})
 		})
