@@ -9,9 +9,9 @@ Kev leverages the Docker Compose specification to configure and prepare an appli
 
 ## Project wide configuration
 
-This is optional, but if provided, lives in the base docker compose files (or at least one of the files) used to initialise the project.
+Project wide configuration is OPTIONAL and can be defined in one (or more) of the source compose files used to initialise the project.
 
-Project wide configuration will be applied against all environments unless a specific environment overrides a setting with its own value. 
+It will be applied against all environments unless a specific environment overrides a setting with its own value. 
 
 ## Environment configuration
 
@@ -23,17 +23,17 @@ Any project wide configuration found will be overridden by environment specific 
 
 Configuration is divided into the following groups of parameters:
 
-* [Component](#-component), part of the `x-k8s` docker compose service extension.
-* [Workload](#-workload),  part of the `x-k8s` docker compose service extension.
-* [Service](#-service),  part of the `x-k8s` docker compose service extension.
-* [Volumes](#-volumes),  part of the `x-k8s` docker compose volume extension.
-* [Environment](#-environment),  part of the docker compose environment service attributes.
+* [Component](#-component)
+* [Workload](#-workload)
+* [Service](#-service)
+* [Volumes](#-volumes)
+* [Environment](#-environment)
 
 # → Component
 
 This configuration group contains application composition related settings. Configuration parameters can be individually defined for each application stack component.
 
-## x-k8s.disabled
+## disabled
 
 Defines whether a component is disabled. All application components are enabled by default.
 
@@ -41,7 +41,7 @@ Defines whether a component is disabled. All application components are enabled 
 
 ### Possible options: `true`, `false`.
 
-> x-k8s.disabled
+> disabled
 ```yaml
 version: 3.7
 services:
@@ -55,11 +55,11 @@ services:
 
 This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined for each application stack component.
 
-## x-k8s.workload.imagePull
+## workload.imagePull
 
 Defines the docker image pull policy, and if applicable, the secret required to access the container registry.
 
-### x-k8s.workload.imagePull.policy
+### workload.imagePull.policy
 
 Defines docker image pull policy from the container registry. See official K8s [documentation](https://kubernetes.io/docs/concepts/containers/images/#updating-images).
 
@@ -67,7 +67,7 @@ Defines docker image pull policy from the container registry. See official K8s [
 
 #### Possible options: `IfNotPresent`, `Always`, `Never`.
 
-> kev.workload.image-pull-policy:
+> workload.image-pull-policy:
 ```yaml
 version: 3.7
 services:
@@ -79,7 +79,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.imagePull.secret
+### workload.imagePull.secret
 
 Defines docker image pull secret which should be used to pull images from the container registry. See official K8s [documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod).
 
@@ -87,7 +87,7 @@ Defines docker image pull secret which should be used to pull images from the co
 
 #### Possible options: arbitrary string.
 
-> x-k8s.workload.imagePull.secret:
+> workload.imagePull.secret:
 ```yaml
 version: 3.7
 services:
@@ -99,7 +99,7 @@ services:
 ...
 ```
 
-## x-k8s.workload.restartPolicy
+## workload.restartPolicy
 
 Defines the restart policy for individual application component in the event of a container crash. Kev will attempt to infer that setting for each compose service defined, however in some cases manual override might be necessary. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy).
 
@@ -107,7 +107,7 @@ Defines the restart policy for individual application component in the event of 
 
 ### Possible options: `Always`, `OnFailure`, `Never`.
 
-> x-k8s.workload.restartPolicy:
+> workload.restartPolicy:
 ```yaml
 version: 3.7
 services:
@@ -118,7 +118,7 @@ services:
 ...
 ```
 
-## x-k8s.workload.serviceAccountName
+## workload.serviceAccountName
 
 Defines the kubernetes Service Account name to run a workload with. Useful when specific access level associated with a Service Account is required for a given workload type. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/).
 
@@ -126,22 +126,22 @@ Defines the kubernetes Service Account name to run a workload with. Useful when 
 
 ### Possible options: Arbitrary string.
 
-> x-k8s.workload.serviceAccountName:
+> workload.serviceAccountName:
 ```yaml
 version: 3.7
 services:
   my-service:
     x-k8s:
-    workload:
-      serviceAccountName: my-special-service-account-name
+      workload:
+        serviceAccountName: my-special-service-account-name
 ...
 ```
 
-## x-k8s.workload.podSecurity
+## workload.podSecurity
 
 Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload
 
-### x-k8s.workload.podSecurity.runAsUser
+### workload.podSecurity.runAsUser
 
 This option sets up an appropriate User ID (`runAsUser` field) which specifies that for any Containers in the Pod, all processes will run with user ID as specified by the value.
 
@@ -149,7 +149,7 @@ This option sets up an appropriate User ID (`runAsUser` field) which specifies t
 
 #### Possible options: arbitrary numeric UID, example `1000`.
 
-> x-k8s.workload.podSecurity.runAsUser:
+> workload.podSecurity.runAsUser:
 ```yaml
 version: 3.7
 services:
@@ -160,7 +160,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.podSecurity.runAsGroup
+### workload.podSecurity.runAsGroup
 
 This option sets up an appropriate Group ID (`runAsGroup` field) which specifies the primary group ID for all processes within any containers of the Pod. If this field is omitted (currently a default), the primary group ID of the container will be root(0). Any files created will also be owned by user with specified user ID (`runAsUser` field) and group ID (`runAsGroup` field) when runAsGroup is specified.
 
@@ -168,7 +168,7 @@ This option sets up an appropriate Group ID (`runAsGroup` field) which specifies
 
 #### Possible options: Arbitrary numeric GID. Example `2000`.
 
-> x-k8s.workload.podSecurity.runAsGroup:
+> workload.podSecurity.runAsGroup:
 ```yaml
 version: 3.7
 services:
@@ -179,15 +179,15 @@ services:
 ...
 ```
 
-### x-k8s.workload.podSecurity.fsGroup
+### workload.podSecurity.fsGroup
 
-Defines the [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the kubernetes workload. This option is concerned with setting up a supplementary group `fsGroup` field. If specified, all processes of the container are also part of this supplementary group ID. The owner for attached volumes and any files created in those volume will be Group ID as specified by the value of this configuration option.
+This option is concerned with setting up a supplementary group `fsGroup` field. If specified, all processes of the container are also part of this supplementary group ID. The owner for attached volumes and any files created in those volume will be Group ID as specified by the value of this configuration option.
 
 #### Default: nil (not specified)
 
 #### Possible options: Arbitrary numeric GID. Example `1000`.
 
-> x-k8s.workload.podSecurity.fsGroup:
+> workload.podSecurity.fsGroup:
 ```yaml
 version: 3.7
 services:
@@ -198,7 +198,7 @@ services:
 ...
 ```
 
-## x-k8s.workload.type
+## workload.type
 
 Defines the Kubernetes workload type controller. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/). Kev will attempt to infer workload type from the information specified in the compose file.
 
@@ -210,7 +210,7 @@ If compose file(s) specifies the `deploy.mode` attribute key in a compose projec
 
 ### Possible options: `Pod`, `Deployment`, `StatefulSet`, `Daemonset`, `Job`.
 
-> x-k8s.workload.type:
+> workload.type:
 ```yaml
 version: 3.7
 services:
@@ -221,7 +221,7 @@ services:
 ...
 ```
 
-## x-k8s.workload.replicas
+## workload.replicas
 
 Defines the number of instances (replicas) for each application component. See K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas). Kev will attempt to infer number of replicas type from the information specified in the compose file.
 
@@ -234,7 +234,7 @@ Otherwise, number of replicas will default to `1`.
 
 ### Possible options: Arbitrary integer value. Example: `10`.
 
-> x-k8s.workload.replicas:
+> workload.replicas:
 ```yaml
 version: 3.7
 services:
@@ -245,11 +245,11 @@ services:
 ...
 ```
 
-## x-k8s.workload.autoscale
+## workload.autoscale
 
 Configures an application for auto-scaling. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
 
-### x-k8s.workload.autoscale.maxReplicas
+### workload.autoscale.maxReplicas
 
 Defines the maximum number of instances (replicas) the application component should automatically scale up to. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account when initial number of replicas is lower than this parameter.
 
@@ -257,7 +257,7 @@ Defines the maximum number of instances (replicas) the application component sho
 
 #### Possible options: Arbitrary integer value. Example: `10`.
 
-> x-k8s.workload.autoscale.maxReplicas:
+> workload.autoscale.maxReplicas:
 ```yaml
 version: 3.7
 services:
@@ -269,7 +269,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.autoscale.cpuThreshold
+### workload.autoscale.cpuThreshold
 
 Defines the CPU utilisation threshold for the horizontal pod autoscaler for the application component. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account maximum number of replicas for the application component is defined.
 
@@ -277,7 +277,7 @@ Defines the CPU utilisation threshold for the horizontal pod autoscaler for the 
 
 #### Possible options: Arbitrary integer value. Example: `80`.
 
-> x-k8s.workload.autoscale.cpuThreshold:
+> workload.autoscale.cpuThreshold:
 ```yaml
 version: 3.7
 services:
@@ -287,10 +287,11 @@ services:
         autoscale:
           maxReplicas: 10
           cpuThreshold: 70
+        replicas: 2
 ...
 ```
 
-### x-k8s.workload.autoscale.memThreshold
+### workload.autoscale.memThreshold
 
 Defines the Memory utilization threshold for the horizontal pod autoscaler for the application component. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/). This setting is only taken into account maximum number of replicas for the application component is defined.
 
@@ -298,7 +299,7 @@ Defines the Memory utilization threshold for the horizontal pod autoscaler for t
 
 #### Possible options: Arbitrary integer value. Example: `80`.
 
-> x-k8s.workload.autoscale.memThreshold:
+> workload.autoscale.memThreshold:
 ```yaml
 version: 3.7
 services:
@@ -311,7 +312,7 @@ services:
 ...
 ```
 
-## x-k8s.workload.rollingUpdateMaxSurge
+## workload.rollingUpdateMaxSurge
 
 Defines the number of pods that can be created above the desired amount of pods during an update. See official K8s [documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#proportional-scaling). Kev will attempt to infer this number from the information specified in the compose file.
 
@@ -324,7 +325,7 @@ Otherwise it will default to `1`.
 
 ### Possible options: Arbitrary integer value. Example: `10`.
 
-> x-k8s.workload.rollingUpdateMaxSurge:
+> workload.rollingUpdateMaxSurge:
 ```yaml
 version: 3.7
 services:
@@ -335,11 +336,11 @@ services:
 ...
 ```
 
-## x-k8s.workload.resource
+## workload.resource
 
-Defines the resource share request for a given workload using different parameters.
+Defines the resource share request and limits for a given workload using different parameters.
 
-### x-k8s.workload.resource.cpu
+### workload.resource.cpu
 
 Defines the CPU share request for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer CPU request from the information specified in the compose file.
 
@@ -351,7 +352,7 @@ If compose file(s) specifies the `deploy.resources.reservations.cpus` attribute 
 
 #### Possible options: Arbitrary [CPU units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu). Examples: `0.2` == `200m`.
 
-> x-k8s.workload.resource.cpu:
+> workload.resource.cpu:
 ```yaml
 version: 3.7
 services:
@@ -363,14 +364,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.resource.maxCpu
+### workload.resource.maxCpu
 
-Defines the max CPU share limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer CPU request from the information specified in the compose file.
+Defines the CPU share limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer CPU request from the information specified in the compose file.
 
 Kev uses the following heuristics to derive that information for each service:
 
 If compose file(s) specifies the `deploy.resources.limits.cpus` attribute key in a service config it will use its value.
-Otherwise it'll default to a sensible default of `0.2` (equivalent of 200m in Kubernetes).
+Otherwise, it'll default to a sensible default of `0.5` (equivalent of 500m in Kubernetes).
 
 #### Default: `0.5`
 
@@ -388,7 +389,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.resource.memory
+### workload.resource.memory
 
 Defines the Memory request for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer Memory request from the information specified in the compose file.
 
@@ -400,7 +401,7 @@ If compose file(s) specifies the `deploy.resources.reservations.memory` attribut
 
 #### Possible options: Arbitrary [Memory units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory). Examples: `64Mi`, `1Gi`...
 
-> x-k8s.workload.resource.memory:
+> workload.resource.memory:
 ```yaml
 version: 3.7
 services:
@@ -412,9 +413,9 @@ services:
 ...
 ```
 
-### x-k8s.workload.resource.maxMemory
+### workload.resource.maxMemory
 
-Defines the max Memory limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer Memory limit from the information specified in the compose file.
+Defines the Memory limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Kev will attempt to infer Memory limit from the information specified in the compose file.
 
 Kev uses the following heuristics to derive that information for each service:
 
@@ -425,7 +426,7 @@ Otherwise it'll default to a sensible quantity of `500Mi`.
 
 #### Possible options: Arbitrary [Memory units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory). Examples: `64Mi`, `1Gi`...
 
-> x-k8s.workload.resource.maxMemory:
+> workload.resource.maxMemory:
 ```yaml
 version: 3.7
 services:
@@ -437,11 +438,11 @@ services:
 ...
 ```
 
-## x-k8s.workload.livenessProbe
+## workload.livenessProbe
 
 Defines the workload's liveness probe.
 
-### x-k8s.workload.livenessProbe.type
+### workload.livenessProbe.type
 
 This setting defines the workload's liveness probe type. Kev will attempt to infer from the information specified in the compose file.
 
@@ -454,7 +455,7 @@ Otherwise it'll default to `exec` (liveness probe active!)
 
 #### Possible options: none, exec, http, tcp.
 
-> x-k8s.workload.livenessProbe.type:
+> workload.livenessProbe.type:
 ```yaml
 version: 3.7
 services:
@@ -466,7 +467,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.exec.command
+### workload.livenessProbe.exec.command
 
 Defines the liveness probe command to be run for the workload when the type is `exec`.
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the command from the information specified in the compose file.
@@ -474,13 +475,13 @@ See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-
 Kev uses the following heuristics to derive that information for each service:
 
 If compose file(s) specifies the `healthcheck.test` attribute key in a service config it will use its value.
-If probe is not defined it will prompt the user to define one by injecting generic echo command.
+If probe is not defined, it will prompt the user to define one by injecting a generic echo command.
 
-#### Default: echo "prompt user to define the probe"
+#### Default: echo "<generic prompt text>" 
 
 #### Possible options: shell command
 
-> x-k8s.workload.livenessProbe.exec.command
+> workload.livenessProbe.exec.command
 ```yaml
 version: 3.7
 services:
@@ -495,14 +496,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.http.port 
+### workload.livenessProbe.http.port 
 
 Defines the liveness probe port to be used for the workload when the type is `http`. 
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
 
 #### Possible options: Integer
 
-> x-k8s.workload.livenessProbe.http.port:
+> workload.livenessProbe.http.port:
 ```yaml
 version: 3.7
 services:
@@ -516,14 +517,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.http.path
+### workload.livenessProbe.http.path
 
 Defines the liveness probe path to be used for the workload when the type is `http`. 
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
 
 #### Possible options: String
 
-> x-k8s.workload.livenessProbe.http.path:
+> workload.livenessProbe.http.path:
 ```yaml
 version: 3.7
 services:
@@ -538,14 +539,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.tcp.port
+### workload.livenessProbe.tcp.port
 
 Defines the liveness probe port to be used for the workload when the type is `tcp`.
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-tcp-liveness-probe).
 
 #### Possible options: Integer
 
-> x-k8s.workload.livenessProbe.tcp.port:
+> workload.livenessProbe.tcp.port:
 ```yaml
 version: 3.7
 services:
@@ -559,15 +560,15 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.failureThreshold
+### workload.livenessProbe.failureThreshold
 
-Defines the liveness probe's failure threshold (retries) for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
+Defines the failure threshold (number of retries) for the workload before giving up. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command).
 
 #### Default: `3`
 
-#### Possible options: Arbitrary time duration. Example: `5`
+#### Possible options: Arbitrary integer. Example: `5`
 
-> x-k8s.workload.livenessProbe.failureThreshold:
+> workload.livenessProbe.failureThreshold:
 ```yaml
 version: 3.7
 services:
@@ -580,7 +581,28 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.initialDelay
+### workload.livenessProbe.successThreshold
+
+Defines the minimum consecutive successes for the probe to be considered successful. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command).
+
+#### Default: `1`
+
+#### Possible options: Arbitrary integer. Example: `5`
+
+> workload.livenessProbe.successThreshold:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        livenessProbe:
+          ...
+          successThreshold: 1
+...
+```
+
+### workload.livenessProbe.initialDelay
 
 Defines how long to wait before the first liveness probe runs for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the wait time from the information specified in the compose file.
 
@@ -593,7 +615,7 @@ Otherwise, it'll default to `1m` (1 minute).
 
 #### Possible options: Arbitrary time duration. Example: `1m30s`
 
-> x-k8s.workload.livenessProbe.initialDelay:
+> workload.livenessProbe.initialDelay:
 ```yaml
 version: 3.7
 services:
@@ -606,7 +628,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.period
+### workload.livenessProbe.period
 
 Defines how often liveness probe should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the interval from the information specified in the compose file.
 
@@ -617,9 +639,9 @@ Otherwise, it'll default to `1m` (1 minute).
 
 #### Default: `1m`
 
-#### Possible options: Time duration
+#### Possible options: Arbitrary time duration. Example: `1m30s`
 
-> x-k8s.workload.livenessProbe.period:
+> workload.livenessProbe.period:
 ```yaml
 version: 3.7
 services:
@@ -632,7 +654,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.livenessProbe.timeout
+### workload.livenessProbe.timeout
 
 Defines the timeout for the liveness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command). Kev will attempt to infer the timeout value from the information specified in the compose file.
 
@@ -645,7 +667,7 @@ Otherwise, it'll default to `10s` (10 seconds).
 
 #### Possible options: Arbitrary time duration. Example: `30s`
 
-> x-k8s.workload.livenessProbe.timeout:
+> workload.livenessProbe.timeout:
 ```yaml
 version: 3.7
 services:
@@ -658,11 +680,11 @@ services:
 ...
 ```
 
-## x-k8s.workload.readinessProbe
+## workload.readinessProbe
 
 Defines the workload's readiness probe.
 
-### x-k8s.workload.readinessProbe.type
+### workload.readinessProbe.type
 
 Defines the workload's readiness probe type. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
@@ -670,7 +692,7 @@ Defines the workload's readiness probe type. See official K8s [documentation](ht
 
 #### Possible options: none, exec, http, tcp.
 
-> x-k8s.workload.readinessProbe.type:
+> workload.readinessProbe.type:
 ```yaml
 version: 3.7
 services:
@@ -682,7 +704,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.exec.command
+### workload.readinessProbe.exec.command
 
 Defines the readiness probe command to be run for the workload when the type is `exec`.
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
@@ -691,7 +713,7 @@ See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-
 
 #### Possible options: shell command
 
-> x-k8s.workload.readinessProbe.exec.command:
+> workload.readinessProbe.exec.command:
 ```yaml
 version: 3.7
 services:
@@ -706,14 +728,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.http.port
+### workload.readinessProbe.http.port
 
 Defines the readiness probe port to be used for the workload when the type is `http`. 
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
 
 #### Possible options: Integer
 
-> x-k8s.workload.readinessProbe.http.port:
+> workload.readinessProbe.http.port:
 ```yaml
 version: 3.7
 services:
@@ -727,14 +749,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.http.path
+### workload.readinessProbe.http.path
 
 Defines the readiness probe path to be used for the workload when the type is `http`. 
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
 
 #### Possible options: String
 
-> x-k8s.workload.readinessProbe.http.path:
+> workload.readinessProbe.http.path:
 ```yaml
 version: 3.7
 services:
@@ -749,14 +771,14 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.tcp.port
+### workload.readinessProbe.tcp.port
 
 Defines the readiness probe path to be used for the workload when the type is `tcp`. 
 See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
 
 #### Possible options: Integer
 
-> x-k8s.workload.readinessProbe.tcp.port:
+> workload.readinessProbe.tcp.port:
 ```yaml
 version: 3.7
 services:
@@ -770,7 +792,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.period
+### workload.readinessProbe.period
 
 Defines how often a readiness probe should run for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
@@ -778,7 +800,7 @@ Defines how often a readiness probe should run for the workload. See official K8
 
 #### Possible options: Time duration
 
-> x-k8s.workload.readinessProbe.period:
+> workload.readinessProbe.period:
 ```yaml
 version: 3.7
 services:
@@ -791,7 +813,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.initialDelay
+### workload.readinessProbe.initialDelay
 
 Defines how long to wait before the first readiness probe runs for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
@@ -799,7 +821,7 @@ Defines how long to wait before the first readiness probe runs for the workload.
 
 #### Possible options: Arbitrary time duration. Example: `1m30s`
 
-> x-k8s.workload.readinessProbe.initialDelay:
+> workload.readinessProbe.initialDelay:
 ```yaml
 version: 3.7
 services:
@@ -812,7 +834,7 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.timeout
+### workload.readinessProbe.timeout
 
 Defines the timeout for the readiness probe for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
@@ -820,7 +842,7 @@ Defines the timeout for the readiness probe for the workload. See official K8s [
 
 #### Possible options: Arbitrary time duration. Example: `30s`
 
-> x-k8s.workload.readinessProbe.timeout:
+> workload.readinessProbe.timeout:
 ```yaml
 version: 3.7
 services:
@@ -833,15 +855,15 @@ services:
 ...
 ```
 
-### x-k8s.workload.readinessProbe.failureThreshold
+### workload.readinessProbe.failureThreshold
 
-Defines the readiness probe's failure threshold (retries) for the workload. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+Defines the failure threshold (number of retries) for the workload before giving up. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 #### Default: `3`
 
-#### Possible options: Arbitrary time duration. Example: `5`
+#### Possible options: Arbitrary integer. Example: `5`
 
-> x-k8s.workload.readinessProbe.failureThreshold:
+> workload.readinessProbe.failureThreshold:
 ```yaml
 version: 3.7
 services:
@@ -854,13 +876,34 @@ services:
 ...
 ```
 
+### workload.readinessProbe.successThreshold
+
+Defines the minimum consecutive successes for the probe to be considered successful. See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+#### Default: `1`
+
+#### Possible options: Arbitrary integer. Example: `1`
+
+> workload.readinessProbe.successThreshold:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        readinessProbe:
+          ...
+          successThreshold: 1
+...
+```
+
 # → Service
 
 The `service` group contains configuration details around Kubernetes services and how they get exposed externally.
 
 **IMPORTANT: Only the first port for each service is processed and used to infer initial configuration!**
 
-## x-k8s.service.type
+## service.type
 
 Defines the type of Kubernetes service for a specific workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
 
@@ -881,7 +924,7 @@ Here is the heuristic used to extract a service type:
 
 These options are useful for exposing a Service either internally or externally onto an external IP address, that's outside of your cluster.
 
-> x-k8s.service.type:
+> service.type:
 ```yaml
 version: 3.7
 services:
@@ -932,7 +975,7 @@ Again, it is ideal for exposing a service or app to the internet under a single 
 
 Practically, in non development environments, a LoadBalancer will be used to route traffic to an Ingress to expose multiple services under the same IP address and keep your costs down.
 
-## x-k8s.service.nodeport
+## service.nodeport
 
 Defines the Node Port value for a Kubernetes service of type `NodePort`. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport).
 NOTE: `nodeport` attributes will be ignored for any other service type!
@@ -942,7 +985,7 @@ Kev will attempt to extract that information from the compose configuration.
 
 ### Possible options: Arbitrary integer. Example `10222`.
 
-> x-k8s.service.nodeport:
+> service.nodeport:
 ```yaml
 version: 3.7
 services:
@@ -954,11 +997,11 @@ services:
 ...
 ```
 
-## x-k8s.service.expose
+## service.expose
 
 Defines how to expose the service externally. This detail can't be easily derived from the compose file and so in order to expose a service the user must explicitly instruct Kev to do so. By default, all component services aren't exposed i.e. have no ingress attached to them.
 
-### x-k8s.service.expose.domain
+### service.expose.domain
 
 This setting accepts a comma separated list of domains for the ingress.
 
@@ -966,7 +1009,7 @@ E.g. `"domain.com,otherdomain.com..."`
 
 #### Default: `""` - No ingress will be created!
 
-> x-k8s.service.expose.domain:
+> service.expose.domain:
 ```yaml
 version: 3.7
 services:
@@ -979,17 +1022,17 @@ services:
 ...
 ```
 
-### x-k8s.service.expose.tlsSecret
+### service.expose.tlsSecret
 
 Defines whether to use TLS for the exposed service and which secret name contains certificates for the service. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls).
 
-NOTE: This option is only relevant when service is exposed, see: [x-k8s.service.expose.domain](#x-k8s.service.expose.domain) above.
+NOTE: This option is only relevant when service is exposed, see: [service.expose.domain](#service.expose.domain) above.
 
-#### Default: `""` - No TLS secret name specified by default!
+#### Default: `nil` - No TLS secret name specified by default!
 
 #### Possible options: Arbitrary string.
 
-> x-k8s.service.expose.tlsSecret:
+> service.expose.tlsSecret:
 ```yaml
 version: 3.7
 services:
@@ -1003,15 +1046,15 @@ services:
 ...
 ```
 
-### x-k8s.service.expose.ingressAnnotations
+### service.expose.ingressAnnotations
 
 Ingress annotations are used to configure some options depending on the Ingress controller. Different Ingress controller support different annotations. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource) 
 
-NOTE: This option is only relevant when service is exposed, see: [x-k8s.service.expose.domain](#x-k8s.service.expose.domain) above.
+NOTE: This option is only relevant when service is exposed, see: [service.expose.domain](#service.expose.domain) above.
 
 #### Possible options: map with a string and string value.
 
-> x-k8s.service.expose.tlsSecret:
+> service.expose.tlsSecret:
 ```yaml
 version: 3.7
 services:
@@ -1032,7 +1075,7 @@ services:
 
 This configuration group contains Kubernetes persistent `volume` claim specific settings. Configuration parameters can be individually defined for each volume referenced in the project compose file(s).
 
-## x-k8s.volume.storageClass
+## volume.storageClass
 
 Defines the class of persistent volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
@@ -1040,7 +1083,7 @@ Defines the class of persistent volume. See official K8s [documentation](https:/
 
 ### Possible options: Arbitrary string.
 
-> x-k8s.volume.storageClass:
+> volume.storageClass:
 ```yaml
 version: 3.7
 volumes:
@@ -1050,7 +1093,7 @@ volumes:
 ...
 ```
 
-## x-k8s.volume.size
+## volume.size
 
 Defines the size of persistent volume. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
@@ -1058,7 +1101,7 @@ Defines the size of persistent volume. See official K8s [documentation](https://
 
 ### Possible options: Arbitrary size string. Example: `10Gi`.
 
-> x-k8s.volume.size:
+> volume.size:
 ```yaml
 version: 3.7
 volumes:
@@ -1068,7 +1111,7 @@ volumes:
 ...
 ```
 
-## x-k8s.volume.selector
+## volume.selector
 
 Defines a label selector to further filter the set of volumes. Only the volumes whose labels match the selector can be bound to the PVC claim. See official K8s [documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
@@ -1076,7 +1119,7 @@ Defines a label selector to further filter the set of volumes. Only the volumes 
 
 ### Possible options: Arbitrary string. Example: `data`.
 
-> x-k8s.volume.selector:
+> volume.selector:
 ```yaml
 version: 3.7
 volumes:
