@@ -73,7 +73,8 @@ func DefaultLivenessProbe() LivenessProbe {
 			},
 			InitialDelay:     delay,
 			Period:           interval,
-			FailureThreshold: DefaultProbeRetries,
+			FailureThreshold: DefaultProbeFailureThreshold,
+			SuccessThreshold: DefaultProbeSuccessThreshold,
 			Timeout:          timeout,
 		},
 	}
@@ -97,7 +98,8 @@ func DefaultReadinessProbe() ReadinessProbe {
 		ProbeConfig: ProbeConfig{
 			InitialDelay:     delay,
 			Period:           interval,
-			FailureThreshold: DefaultProbeRetries,
+			FailureThreshold: DefaultProbeFailureThreshold,
+			SuccessThreshold: DefaultProbeSuccessThreshold,
 			Timeout:          timeout,
 		},
 	}
@@ -112,6 +114,7 @@ type ProbeConfig struct {
 	InitialDelay     time.Duration `yaml:"initialDelay,omitempty"`
 	Period           time.Duration `yaml:"period,omitempty"`
 	FailureThreshold int           `yaml:"failureThreshold,omitempty"`
+	SuccessThreshold int           `yaml:"successThreshold,omitempty"`
 	Timeout          time.Duration `yaml:"timeout,omitempty"`
 }
 

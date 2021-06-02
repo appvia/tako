@@ -79,9 +79,6 @@ const (
 	// Default: 0.1, which is equivalent to 10% of CPU
 	DefaultResourceRequestCPU = "0.1"
 
-	// DefaultLivenessProbeType default probe type.
-	DefaultLivenessProbeType = "exec"
-
 	// DefaultProbeTimeout default 10s
 	DefaultProbeTimeout = "10s"
 
@@ -91,8 +88,11 @@ const (
 	// DefaultProbeInitialDelay default 1m (1 minute)
 	DefaultProbeInitialDelay = "1m"
 
-	// DefaultProbeRetries default 3. Number of retries for liveness probe command
-	DefaultProbeRetries = 3
+	// DefaultProbeFailureThreshold default 3. Defines the failure threshold (number of retries) for the workload before giving up.
+	DefaultProbeFailureThreshold = 3
+
+	// DefaultProbeSuccessThreshold default 1. Minimum consecutive successes for the probe to be considered successful
+	DefaultProbeSuccessThreshold = 1
 
 	// DefaultProbeDisable default false. Enabled by default
 	DefaultProbeDisable = false
