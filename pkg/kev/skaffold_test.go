@@ -44,16 +44,14 @@ var _ = Describe("Skaffold", func() {
 	Describe("NewSkaffoldManifest", func() {
 		var (
 			skaffoldManifest *kev.SkaffoldManifest
-			err              error
 		)
 
 		JustBeforeEach(func() {
-			skaffoldManifest, err = kev.NewSkaffoldManifest([]string{}, &kev.ComposeProject{})
+			skaffoldManifest = kev.NewSkaffoldManifest([]string{}, &kev.ComposeProject{})
 		})
 
 		It("generates skaffold config for the project", func() {
 			Expect(skaffoldManifest).ToNot(BeNil())
-			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
@@ -279,7 +277,6 @@ var _ = Describe("Skaffold", func() {
 			project          *kev.ComposeProject
 			analysis         *kev.Analysis
 			changed          bool
-			err              error
 		)
 
 		BeforeEach(func() {
@@ -318,13 +315,12 @@ var _ = Describe("Skaffold", func() {
 		})
 
 		JustBeforeEach(func() {
-			changed, err = skaffoldManifest.UpdateBuildArtifacts(analysis, project)
+			changed = skaffoldManifest.UpdateBuildArtifacts(analysis, project)
 		})
 
 		When("list of detected build artefacts had not changed", func() {
 			It("doesn't update build artefacts in skaffold manifest", func() {
 				Expect(changed).To(BeFalse())
-				Expect(err).ToNot(HaveOccurred())
 				Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
 
 				images := []string{}
@@ -343,7 +339,6 @@ var _ = Describe("Skaffold", func() {
 
 			It("updates build artefacts in skaffold manifest", func() {
 				Expect(changed).To(BeTrue())
-				Expect(err).ToNot(HaveOccurred())
 				Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
 
 				images := []string{}

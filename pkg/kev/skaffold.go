@@ -79,7 +79,7 @@ var (
 )
 
 // NewSkaffoldManifest returns a new SkaffoldManifest struct.
-func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManifest, error) {
+func NewSkaffoldManifest(envs []string, project *ComposeProject) *SkaffoldManifest {
 
 	// it's OK to pass nil analysis so no error handling necessary here
 	analysis, _ := analyzeProject()
@@ -89,7 +89,7 @@ func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManif
 	manifest.SetProfiles(envs)
 	manifest.SetAdditionalProfiles()
 
-	return manifest, nil
+	return manifest
 }
 
 // LoadSkaffoldManifest returns skaffold manifest.
@@ -134,10 +134,7 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 	// ignore analysis errors as it's OK to pass nil analysis
 	analysis, _ := analyzeProject()
 
-	changed, err := skaffold.UpdateBuildArtifacts(analysis, project)
-	if err != nil {
-		return err
-	}
+	changed := skaffold.UpdateBuildArtifacts(analysis, project)
 
 	// only persist when the list of artifacts changed
 	if changed {
@@ -156,20 +153,12 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 
 // UpdateBuildArtifacts sets build artefacts in Skaffold manifest and returns change status
 // true - when list of artefacts was updated, false - otherwise
-func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) (bool, error) {
-	changed := false
-
+func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) bool {
 	prevArts := s.Build.Artifacts
 
-	if err := s.SetBuildArtifacts(analysis, project); err != nil {
-		return false, err
-	}
+	s.SetBuildArtifacts(analysis, project)
 
-	if !reflect.DeepEqual(s.Build.Artifacts, prevArts) {
-		return true, nil
-	}
-
-	return changed, nil
+	return !reflect.DeepEqual(s.Build.Artifacts, prevArts)
 }
 
 // UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.
@@ -340,7 +329,7 @@ func (s *SkaffoldManifest) AddProfileIfNotPresent(p latest.Profile) {
 }
 
 // SetBuildArtifacts detects build artifacts from the current project and adds `build` section to the manifest
-func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) error {
+func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) {
 	artifacts := []*latest.Artifact{}
 
 	for context, image := range collectBuildArtifacts(analysis, project) {
@@ -361,8 +350,6 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 	}
 
 	s.Build.Artifacts = artifacts
-
-	return nil
 }
 
 // collectBuildArtfacts returns a map of build contexts to corresponding image names
@@ -378,7 +365,7 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 	// 3) No Dockerfile detected in analysis and docker-compose references image (with context!)
 	//    * buildpacks -> context is present
 
-	// @step Skaffold analysis is present and Dockerfiles have been detected
+	// Skaffold analysis is present and Dockerfiles have been detected
 	if analysis != nil && analysis.Dockerfiles != nil {
 		for _, d := range analysis.Dockerfiles {
 

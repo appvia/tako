@@ -209,10 +209,7 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 		updateStep.Success()
 	case false:
 		createStep := sg.Add(fmt.Sprintf("Creating Skaffold config with deployment environment profiles at: %s", skPath))
-		if skManifest, err = NewSkaffoldManifest(envs, composeProject); err != nil {
-			initStepError(r.UI, createStep, initStepCreateSkaffold, err)
-			return nil, err
-		}
+		skManifest = NewSkaffoldManifest(envs, composeProject)
 		createStep.Success()
 	}
 
