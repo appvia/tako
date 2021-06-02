@@ -369,18 +369,14 @@ func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *Compos
 func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[string]string {
 	buildArtifacts := map[string]string{}
 
-	// There are at least 4 cases we should handle:
+	// There are at least 3 cases we should handle:
 	//
 	// 1) Dockerfile detected in analysis and/or docker images referenced in docker-compose file
-	// 	  * local docker build -> build artifact as docker image with context
+	// 	  * local docker build -> build artifact as docker image with build context
 	// 2) No Dockerfile detected in analysis and docker-compose references image (without context!)
 	//    * no build required -> referenced image looks like pre-built image
 	// 3) No Dockerfile detected in analysis and docker-compose references image (with context!)
 	//    * buildpacks -> context is present
-	// 4) [Edge case] No Dockerfile detected in analysis and docker-compose doesn't reference an image
-	//    * inject image name to be the compose service name and build context set to project directory
-	// 		in the docker-compose.yaml
-	//    * buildpacks -> image or context present
 
 	// @step Skaffold analysis is present and Dockerfiles have been detected
 	if analysis != nil && analysis.Dockerfiles != nil {
@@ -569,9 +565,11 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	}
 
 	runCtx, cfg, err := runContext(skaffoldOpts, profiles, out)
+	if err != nil {
+		return errors.Wrap(err, "Skaffold dev failed")
+	}
 
 	r, err := runner.NewForConfig(runCtx)
-
 	if err != nil {
 		return errors.Wrap(err, "Skaffold dev failed")
 	}
