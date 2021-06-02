@@ -79,20 +79,17 @@ var (
 )
 
 // NewSkaffoldManifest returns a new SkaffoldManifest struct.
-func NewSkaffoldManifest(envs []string, project *ComposeProject) (*SkaffoldManifest, error) {
+func NewSkaffoldManifest(envs []string, project *ComposeProject) *SkaffoldManifest {
 
-	analysis, err := analyzeProject()
-	if err != nil {
-		// just warn for now - potentially put project analysis behind a flag?
-		log.Warn(err.Error())
-	}
+	// it's OK to pass nil analysis so no error handling necessary here
+	analysis, _ := analyzeProject()
 
 	manifest := BaseSkaffoldManifest()
 	manifest.SetBuildArtifacts(analysis, project)
 	manifest.SetProfiles(envs)
 	manifest.SetAdditionalProfiles()
 
-	return manifest, nil
+	return manifest
 }
 
 // LoadSkaffoldManifest returns skaffold manifest.
@@ -134,15 +131,10 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 		return err
 	}
 
-	analysis, err := analyzeProject()
-	if err != nil {
-		return err
-	}
+	// ignore analysis errors as it's OK to pass nil analysis
+	analysis, _ := analyzeProject()
 
-	changed, err := skaffold.UpdateBuildArtifacts(analysis, project)
-	if err != nil {
-		return err
-	}
+	changed := skaffold.UpdateBuildArtifacts(analysis, project)
 
 	// only persist when the list of artifacts changed
 	if changed {
@@ -161,20 +153,12 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 
 // UpdateBuildArtifacts sets build artefacts in Skaffold manifest and returns change status
 // true - when list of artefacts was updated, false - otherwise
-func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) (bool, error) {
-	changed := false
-
+func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) bool {
 	prevArts := s.Build.Artifacts
 
-	if err := s.SetBuildArtifacts(analysis, project); err != nil {
-		return false, err
-	}
+	s.SetBuildArtifacts(analysis, project)
 
-	if !reflect.DeepEqual(s.Build.Artifacts, prevArts) {
-		return true, nil
-	}
-
-	return changed, nil
+	return !reflect.DeepEqual(s.Build.Artifacts, prevArts)
 }
 
 // UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.
@@ -345,69 +329,86 @@ func (s *SkaffoldManifest) AddProfileIfNotPresent(p latest.Profile) {
 }
 
 // SetBuildArtifacts detects build artifacts from the current project and adds `build` section to the manifest
-func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) error {
-
-	// don't set build artefacts if no analysis available
-	if analysis == nil {
-		return nil
-	}
-
+func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) {
 	artifacts := []*latest.Artifact{}
 
 	for context, image := range collectBuildArtifacts(analysis, project) {
-		artifacts = append(artifacts, &latest.Artifact{
+		artifact := &latest.Artifact{
 			ImageName: image,
 			Workspace: context,
-		})
+		}
+
+		if analysis == nil || analysis.Dockerfiles == nil || len(analysis.Dockerfiles) == 0 {
+			// no Dockerfiles detected, set `buildpacks` as build strategy for the artifact
+			artifact.ArtifactType = latest.ArtifactType{
+				BuildpackArtifact: &latest.BuildpackArtifact{
+					Builder: "paketobuildpacks/builder:base",
+				},
+			}
+		}
+		artifacts = append(artifacts, artifact)
 	}
 
 	s.Build.Artifacts = artifacts
-
-	return nil
 }
 
 // collectBuildArtfacts returns a map of build contexts to corresponding image names
 func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[string]string {
 	buildArtifacts := map[string]string{}
 
-	for _, d := range analysis.Dockerfiles {
+	// There are at least 3 cases we should handle:
+	//
+	// 1) Dockerfile detected in analysis and/or docker images referenced in docker-compose file
+	// 	  * local docker build -> build artifact as docker image with build context
+	// 2) No Dockerfile detected in analysis and docker-compose references image (without context!)
+	//    * no build required -> referenced image looks like pre-built image
+	// 3) No Dockerfile detected in analysis and docker-compose references image (with context!)
+	//    * buildpacks -> context is present
 
-		var context, svcImageNameFromContext string
+	// Skaffold analysis is present and Dockerfiles have been detected
+	if analysis != nil && analysis.Dockerfiles != nil {
+		for _, d := range analysis.Dockerfiles {
 
-		if d == "Dockerfile" {
-			// Dockerfile detected in the root directory, use local dir as context
-			// and current working directory name as service image name
-			context = "."
-			wd, _ := os.Getwd()
-			svcImageNameFromContext = filepath.Base(wd)
-		} else {
-			// Dockerfile detected in subdirectory, use subdirectory as context
-			// and immediate parent directory name in which Dockerfile reside as service image name
-			context = strings.ReplaceAll(d, "/Dockerfile", "")
-			contextParts := strings.Split(context, "/")
-			svcImageNameFromContext = contextParts[len(contextParts)-1]
-		}
+			var context, svcImageNameFromContext string
 
-		// NOTE: This may not be always accurate!
-		buildArtifacts[context] = svcImageNameFromContext
+			if d == "Dockerfile" {
+				// Dockerfile detected in the root directory (i.e. no prefix path), use local dir
+				// as context and current working directory name as service image name
+				context = "."
+				wd, _ := os.Getwd()
+				svcImageNameFromContext = filepath.Base(wd)
+			} else {
+				// Dockerfile detected in subdirectory, use subdirectory as context
+				// and immediate parent directory name in which Dockerfile reside as service image name
+				context = strings.ReplaceAll(d, "/Dockerfile", "")
+				contextParts := strings.Split(context, "/")
+				svcImageNameFromContext = contextParts[len(contextParts)-1]
+			}
 
-		// Check whether images detected by Analysis contain service image name derived from the
-		// context as that's the best we can do in order to match a service to a corresponding
-		// docker registry image.
-		//
-		// NOTE: When *NO* Images are detected by analysis this is usually due to the absence of K8s
-		// manifests which Analysis uses to determine which images are in use.
-		for _, image := range analysis.Images {
-			if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
-				buildArtifacts[context] = image
-				break
+			// NOTE: This may not be always accurate!
+			buildArtifacts[context] = svcImageNameFromContext
+
+			// Check whether images detected by Analysis contain service image name derived from the
+			// context as that's the best we can do in order to match a service to a corresponding
+			// docker registry image.
+			//
+			// NOTE: When *NO* Images are detected by analysis this is usually due to the absence of K8s
+			// manifests which Analysis uses to determine which images are in use.
+			if analysis != nil && analysis.Images != nil {
+				for _, image := range analysis.Images {
+					if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
+						buildArtifacts[context] = image
+						break
+					}
+				}
 			}
 		}
 	}
 
 	// Extract images referenced by a Docker Compose project and map them to their respective build contexts (if present)
-	// Note: Images that don't specify build "context" will be ignored!
-	if project.Project != nil && project.Project.Services != nil {
+	// Note: Images that don't specify build "context" will be ignored! Such images are deemed pre-built / external and not
+	// requiring to be built. `docker-compose build` itself skips images that don't specify `build.context`!
+	if project != nil && project.Project != nil && project.Project.Services != nil {
 		for _, s := range project.Project.Services {
 			if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
 				buildArtifacts[s.Build.Context] = s.Image
@@ -551,9 +552,11 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	}
 
 	runCtx, cfg, err := runContext(skaffoldOpts, profiles, out)
+	if err != nil {
+		return errors.Wrap(err, "Skaffold dev failed")
+	}
 
 	r, err := runner.NewForConfig(runCtx)
-
 	if err != nil {
 		return errors.Wrap(err, "Skaffold dev failed")
 	}
