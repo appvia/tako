@@ -51,7 +51,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const DefaultIngressBackendMarker = "default"
+const DefaultIngressBackendKeyword = "default"
 
 // Kubernetes transformer
 type Kubernetes struct {
@@ -654,7 +654,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 		Spec: networkingv1beta1.IngressSpec{},
 	}
 
-	if hasDefaultIngressBackendMarker(hosts) {
+	if hasDefaultIngressBackendKeyword(hosts) {
 		ingress.Spec.Rules = []networkingv1beta1.IngressRule{
 			createIngressRule("", "", projectService.Name, port),
 		}

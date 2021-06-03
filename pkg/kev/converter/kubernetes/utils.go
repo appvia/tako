@@ -953,10 +953,10 @@ func volumeByNameAndFormat(name string, formatter func(string) string, volumes c
 	return composego.VolumeConfig{}
 }
 
-// hasDefaultIngressBackendMarker determines whether the host value list contains the marker used to create
+// hasDefaultIngressBackendKeyword determines whether the host value list contains the keyword used to create
 // a default backend ingress.
-func hasDefaultIngressBackendMarker(v []string) bool {
-	return strings.Contains(strings.Join(v, ""), DefaultIngressBackendMarker)
+func hasDefaultIngressBackendKeyword(v []string) bool {
+	return strings.Contains(strings.Join(v, ""), DefaultIngressBackendKeyword)
 }
 
 // createIngressRule creates an ingress rule using a set of parameters.

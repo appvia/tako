@@ -852,7 +852,7 @@ var _ = Describe("Transform", func() {
 
 		When("project service extension exposing the k8s service using a default ingress backend", func() {
 			BeforeEach(func() {
-				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendMarker
+				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendKeyword
 			})
 
 			It("creates a single rule without a host in the initialised Ingress", func() {
@@ -899,7 +899,7 @@ var _ = Describe("Transform", func() {
 
 		When("TLS secret name was specified via extension for service exposed with default ingress backend", func() {
 			BeforeEach(func() {
-				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendMarker
+				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendKeyword
 				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
 			})
 
