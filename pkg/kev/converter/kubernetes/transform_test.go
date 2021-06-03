@@ -734,7 +734,7 @@ var _ = Describe("Transform", func() {
 	Describe("initIngress", func() {
 		port := int32(1234)
 
-		When("project service extension instructing to expose the k8s service is specified as empty string", func() {
+		When("project service extension exposing the k8s service using an empty string", func() {
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = ""
 			})
@@ -744,7 +744,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service", func() {
+		When("project service extension exposing the k8s service", func() {
 			domain := "domain.name"
 			ingressAnnotations := map[string]string{
 				"kubernetes.io/ingress.class":    "external",
@@ -795,7 +795,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service", func() {
+		When("project service extension exposing the k8s service using a domain name", func() {
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
 			})
@@ -813,7 +813,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service is specified as `domain.name`", func() {
+		When("project service extension exposing the k8s service using a domain with a path", func() {
 			domain := "domain.name"
 			path := "path"
 
@@ -833,7 +833,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service is specified as comma separated list of domain names", func() {
+		When("project service extension exposing the k8s service using a comma separated list of domain names", func() {
 			domains := []string{
 				"domain.name",
 				"another.domain.name",
@@ -850,7 +850,19 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service", func() {
+		When("project service extension exposing the k8s service using a default ingress backend", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendMarker
+			})
+
+			It("creates a single rule without a host in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.Spec.Rules).To(HaveLen(1))
+				Expect(ingress.Spec.Rules[0].Host).To(HaveLen(0))
+			})
+		})
+
+		When("project service extension instructing to expose the k8s service with domain and annotations", func() {
 			ingressAnnotations := map[string]string{
 				"kubernetes.io/ingress.class":    "external",
 				"cert-manager.io/cluster-issuer": "prod-le-dns01",
@@ -882,6 +894,18 @@ var _ = Describe("Transform", func() {
 						SecretName: "my-tls-secret",
 					},
 				}))
+			})
+		})
+
+		When("TLS secret name was specified via extension for service exposed with default ingress backend", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendMarker
+				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
+			})
+
+			It("does not create a TLS object it in the ingress spec", func() {
+				ing := k.initIngress(projectService, port)
+				Expect(ing.Spec.TLS).To(HaveLen(0))
 			})
 		})
 	})

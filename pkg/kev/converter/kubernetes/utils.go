@@ -40,10 +40,12 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Selector used as labels and selector
@@ -949,4 +951,32 @@ func volumeByNameAndFormat(name string, formatter func(string) string, volumes c
 		}
 	}
 	return composego.VolumeConfig{}
+}
+
+// hasDefaultIngressBackendMarker determines whether the host value list contains the marker used to create
+// a default backend ingress.
+func hasDefaultIngressBackendMarker(v []string) bool {
+	return strings.Contains(strings.Join(v, ""), DefaultIngressBackendMarker)
+}
+
+// createIngressRule creates an ingress rule using a set of parameters.
+func createIngressRule(host, path, serviceName string, port int32) networkingv1beta1.IngressRule {
+	return networkingv1beta1.IngressRule{
+		Host: host,
+		IngressRuleValue: networkingv1beta1.IngressRuleValue{
+			HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+				Paths: []networkingv1beta1.HTTPIngressPath{
+					{
+						Path: path,
+						Backend: networkingv1beta1.IngressBackend{
+							ServiceName: serviceName,
+							ServicePort: intstr.IntOrString{
+								IntVal: port,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }

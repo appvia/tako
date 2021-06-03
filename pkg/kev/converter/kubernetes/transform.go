@@ -51,6 +51,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const DefaultIngressBackendMarker = "default"
+
 // Kubernetes transformer
 type Kubernetes struct {
 	Opt      ConvertOptions     // user provided options from the command line
@@ -153,7 +155,7 @@ func (k *Kubernetes) Transform() ([]runtime.Object, error) {
 			}
 			objects = append(objects, svc)
 
-			// For exposed service also create an ingress (Note only the first port is used for ingress!)
+			// For exposed service also create an ingress (Note: only the first port is used for ingress!)
 			expose, err := projectService.exposeService()
 			if err != nil {
 				msg := "Could not expose the service. Ingress hasn't been created"
@@ -645,39 +647,26 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 			APIVersion: "networking.k8s.io/v1beta1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:   projectService.Name,
-			Labels: configLabels(projectService.Name),
-			// Annotations: configAnnotations(projectService),
+			Name:        projectService.Name,
+			Labels:      configLabels(projectService.Name),
 			Annotations: projectService.ingressAnnotations(),
 		},
-		Spec: networkingv1beta1.IngressSpec{
-			Rules: make([]networkingv1beta1.IngressRule, len(hosts)),
-		},
+		Spec: networkingv1beta1.IngressSpec{},
 	}
 
-	for i, host := range hosts {
-		host, p := parseIngressPath(host)
-		ingress.Spec.Rules[i] = networkingv1beta1.IngressRule{
-			IngressRuleValue: networkingv1beta1.IngressRuleValue{
-				HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-					Paths: []networkingv1beta1.HTTPIngressPath{
-						{
-							Path: p,
-							Backend: networkingv1beta1.IngressBackend{
-								ServiceName: projectService.Name,
-								ServicePort: intstr.IntOrString{
-									IntVal: port,
-								},
-							},
-						},
-					},
-				},
-			},
+	if hasDefaultIngressBackendMarker(hosts) {
+		ingress.Spec.Rules = []networkingv1beta1.IngressRule{
+			createIngressRule("", "", projectService.Name, port),
 		}
-		if host != "true" {
-			ingress.Spec.Rules[i].Host = host
-		}
+		return ingress
 	}
+
+	var ingressRules []networkingv1beta1.IngressRule
+	for _, host := range hosts {
+		host, p := parseIngressPath(host)
+		ingressRules = append(ingressRules, createIngressRule(host, p, projectService.Name, port))
+	}
+	ingress.Spec.Rules = ingressRules
 
 	tlsSecretName := projectService.tlsSecretName()
 	if tlsSecretName != "" {
@@ -692,7 +681,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 	return ingress
 }
 
-// initHpa intialised horizontal pod autoscaler for a project service
+// initHpa initialised horizontal pod autoscaler for a project service
 func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Object) *autoscalingv2beta2.HorizontalPodAutoscaler {
 	t := reflect.ValueOf(target).Elem()
 	typeMeta := t.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
