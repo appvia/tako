@@ -85,7 +85,7 @@ Let's instruct Kev to track our _source Compose_ file, `docker-compose.yaml`, [t
 
 Kev will introspect the Compose config and _infer the key attributes_ to enable Compose services to run on Kubernetes.
 
-Also, as we're moving beyond development, we'll instruct Kev to create two _environment overrides_ to target two different sets of parameters (annotated as service `labels`).
+Also, as we're moving beyond development, we'll instruct Kev to create two _environment overrides_ to target two different sets of parameters (annotated in a service's `x-k8s` extension).
 
 Please note, a `dev` sandbox environment is always created alongside any specified environments.
 
@@ -127,7 +127,7 @@ environments:
 
 The created `dev`, `local` and `stage` _Compose environment overrides_ are currently identical.
 
-The `labels` section for each service enables you to control how the app runs on Kubernetes. See the [configuration reference](../reference/config-params.md) to find all the available options and understand how they affect deployments.
+The `x-k8s` extension section for each service enables you to control how the app runs on Kubernetes. See the [configuration reference](../reference/config-params.md) to find all the available options and understand how they affect deployments.
 
 We'll be adjusting these values soon per target environment. For now, they look as below,
 
@@ -135,9 +135,15 @@ We'll be adjusting these values soon per target environment. For now, they look 
 version: "3.7"
 services:
   wordpress:
-    labels:
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
-      kev.workload.replicas: "1"
+    x-k8s:
+      workload:
+        livenessProbe:
+          type: exec
+          exec:
+            command:
+              - echo
+              - Define healthcheck command for service wordpress
+        replicas: 1
 ```
 
 ## Moving to Kubernetes
@@ -379,15 +385,16 @@ In this case, we need to run 5 instances of the `wordpress` service to simulate 
 
 Let's make this happen. We need to edit our `docker-compose.kev.stage.yaml` Compose environment override file.
 
-We'll change the `label`: `kev.workload.replicas`, from "1" to "5".
+We'll change the: `x-k8s.workload.replicas` value from 1 to 5.
 
 ```yaml
 version: "3.7"
 services:
   wordpress:
-    labels:
-      ...
-      kev.workload.replicas: "5"
+    x-k8s:
+      workload:
+        ...
+        replicas: 5
 ```
 
 ### Re-sync Kubernetes
