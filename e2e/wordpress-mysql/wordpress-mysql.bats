@@ -22,15 +22,15 @@ load ../helper
   echo $output
   [ "$status" -eq 0 ]
 
-  run wait-on-deployment "$E2E_NS" "io.kev.service=db"
+  run wait-on-deployment "$E2E_NS" "service=db"
   echo $output
   [ "$status" -eq 0 ]
 
-  run ensure-deployment-type "$E2E_NS" "io.kev.service=db" "statefulset"
+  run ensure-deployment-type "$E2E_NS" "service=db" "statefulset"
   echo $output
   [ "$status" -eq 0 ]
 
-  run wait-on-deployment "$E2E_NS" "io.kev.service=wordpress"
+  run wait-on-deployment "$E2E_NS" "service=wordpress"
   echo $output
   [ "$status" -eq 0 ]
 
@@ -38,23 +38,23 @@ load ../helper
   echo $output
   [ "$status" -eq 0 ]
 
-  run ensure-service "$E2E_NS" "io.kev.service=db"
+  run ensure-service "$E2E_NS" "service=db"
   echo $output
   [ "$status" -eq 0 ]
 
-  run ensure-service-type "$E2E_NS" "io.kev.service=db" "clusterip"
+  run ensure-service-type "$E2E_NS" "service=db" "clusterip"
   echo $output
   [ "$status" -eq 0 ]
 
-  run ensure-service "$E2E_NS" "io.kev.service=wordpress"
+  run ensure-service "$E2E_NS" "service=wordpress"
   echo $output
   [ "$status" -eq 0 ]
 
-  run ensure-service-type "$E2E_NS" "io.kev.service=wordpress" "clusterip"
+  run ensure-service-type "$E2E_NS" "service=wordpress" "clusterip"
   echo $output
   [ "$status" -eq 0 ]
 
-  run check-app-is-running "$E2E_NS" "io.kev.service=wordpress" 80
+  run check-app-is-running "$E2E_NS" "service=wordpress" 80
   echo $output
   [ "$status" -eq 0 ]
   [[ "$output" =~ "200 OK" ]]
