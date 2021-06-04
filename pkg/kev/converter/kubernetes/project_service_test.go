@@ -19,11 +19,11 @@ package kubernetes
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	composego "github.com/compose-spec/compose-go/types"
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -39,7 +39,7 @@ var _ = Describe("ProjectService", func() {
 		project            composego.Project
 		projectService     ProjectService
 		projectServiceName string
-		labels             composego.Labels
+		extensions         map[string]interface{}
 		deploy             *composego.DeployConfig
 		ports              []composego.ServicePortConfig
 		expose             composego.StringOrNumberList
@@ -47,11 +47,12 @@ var _ = Describe("ProjectService", func() {
 		environment        composego.MappingWithEquals
 		healthcheck        composego.HealthCheckConfig
 		projectVolumes     composego.Volumes
+		svcK8sConfig       config.SvcK8sConfig
 	)
 
 	BeforeEach(func() {
 		projectServiceName = "db"
-		labels = composego.Labels{}
+		extensions = make(map[string]interface{})
 		deploy = &composego.DeployConfig{}
 		ports = []composego.ServicePortConfig{}
 		expose = composego.StringOrNumberList{}
@@ -59,69 +60,62 @@ var _ = Describe("ProjectService", func() {
 		environment = composego.MappingWithEquals{}
 		healthcheck = composego.HealthCheckConfig{}
 		projectVolumes = composego.Volumes{}
+
+		svcK8sConfig = config.SvcK8sConfig{}
 	})
 
 	JustBeforeEach(func() {
-		projectService = ProjectService{
+		ext, err := svcK8sConfig.Map()
+		Expect(err).NotTo(HaveOccurred())
+		extensions = map[string]interface{}{
+			config.K8SExtensionKey: ext,
+		}
+
+		projectService, err = NewProjectService(composego.ServiceConfig{
 			Name:        projectServiceName,
-			Labels:      labels,
 			Deploy:      deploy,
 			Ports:       ports,
 			Expose:      expose,
 			Environment: environment,
 			HealthCheck: &healthcheck,
 			Volumes:     volumes,
-		}
+			Extensions:  extensions,
+		})
+		Expect(err).NotTo(HaveOccurred())
 
 		services := composego.Services{}
-		services = append(services, composego.ServiceConfig(projectService))
+		services = append(services, projectService.ServiceConfig)
 
 		project = composego.Project{
-			Volumes:  projectVolumes,
-			Services: services,
+			Volumes:    projectVolumes,
+			Services:   services,
+			Extensions: extensions,
 		}
 	})
 
 	Describe("enabled", func() {
-
-		When("component toggle label is set to Truthy value", func() {
+		When("component toggle extension is set to disable=true", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelComponentEnabled: "true",
-				}
+				svcK8sConfig.Disabled = true
 			})
 
 			It("returns true", func() {
-				Expect(projectService.enabled()).To(BeTrue())
-			})
-		})
-
-		When("component toggle label is set to Falsy value", func() {
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelComponentEnabled: "false",
-				}
-			})
-
-			It("returns false", func() {
 				Expect(projectService.enabled()).To(BeFalse())
 			})
 		})
 
-		When("component toggle label is set to any string value not representing a boolean value (one of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False.)", func() {
+		When("component toggle extension to set disable=false", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelComponentEnabled: "anyrandomstring",
-				}
+				svcK8sConfig.Disabled = false
 			})
 
-			It("returns true", func() {
+			It("returns false", func() {
 				Expect(projectService.enabled()).To(BeTrue())
 			})
 		})
 
-		When("component toggle label is not specified", func() {
-			It("defaults to true if no label", func() {
+		When("component toggle extension is not specified", func() {
+			It("defaults to true", func() {
 				Expect(projectService.enabled()).To(BeTrue())
 			})
 		})
@@ -131,25 +125,21 @@ var _ = Describe("ProjectService", func() {
 
 		replicas := 10
 
-		Context("when provided via label", func() {
+		Context("when provided via extension", func() {
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReplicas: strconv.Itoa(replicas),
-				}
+				svcK8sConfig.Workload.Replicas = replicas
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
-		Context("when provided via both the label and as part of the project service spec", func() {
+		Context("when provided via both the extension and as part of the project service spec", func() {
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReplicas: strconv.Itoa(replicas),
-				}
+				svcK8sConfig.Workload.Replicas = replicas
 
 				deployBlockReplicas := uint64(2)
 				deploy = &composego.DeployConfig{
@@ -157,13 +147,12 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
-		Context("when replicas label not present but specified as part of the project service spec", func() {
-
+		Context("when replicas extension not present but specified as part of the project service spec", func() {
 			replicas := uint64(2)
 
 			BeforeEach(func() {
@@ -173,11 +162,12 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("will use a replica number as specified in deploy block", func() {
+				Expect(projectService.Deploy.Replicas).NotTo(BeNil())
 				Expect(projectService.replicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
-		Context("when there is no replicas label supplied nor deploy block contains number of replicas", func() {
+		Context("when there is no replicas extensions supplied nor deploy block contains number of replicas", func() {
 			It("will use default number of replicas", func() {
 				Expect(projectService.replicas()).To(BeEquivalentTo(config.DefaultReplicaNumber))
 			})
@@ -187,20 +177,17 @@ var _ = Describe("ProjectService", func() {
 	Describe("autoscaleMaxReplicas", func() {
 		replicas := 10
 
-		Context("when provided via label", func() {
-
+		Context("when provided via extension", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadAutoscaleMaxReplicas: strconv.Itoa(replicas),
-				}
+				svcK8sConfig.Workload.Autoscale.MaxReplicas = replicas
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.autoscaleMaxReplicas()).To(BeEquivalentTo(replicas))
 			})
 		})
 
-		Context("when there is no autoscale max replicas label supplied", func() {
+		Context("when autoscale max replicas is not supplied in the extension", func() {
 			It("will use default max number of replicas for autoscaling purposes ", func() {
 				Expect(projectService.autoscaleMaxReplicas()).To(BeEquivalentTo(config.DefaultAutoscaleMaxReplicaNumber))
 			})
@@ -208,22 +195,19 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("autoscaleTargetCPUUtilization", func() {
-		cpuThreshold := 70 // 70% utilization should kick off the autoscaling
+		cpuThreshold := 80 // 80% utilization should kick off the autoscaling
 
-		Context("when provided via label", func() {
-
+		Context("when provided via an extension", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadAutoscaleCPUUtilizationThreshold: strconv.Itoa(cpuThreshold),
-				}
+				svcK8sConfig.Workload.Autoscale.CPUThreshold = cpuThreshold
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.autoscaleTargetCPUUtilization()).To(BeEquivalentTo(cpuThreshold))
 			})
 		})
 
-		Context("when there is no autoscale target CPU utilization label supplied", func() {
+		Context("when autoscale target CPU utilization is not supplied in the extension", func() {
 			It("will use default CPU threshold for autoscaling purposes ", func() {
 				Expect(projectService.autoscaleTargetCPUUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleCPUThreshold))
 			})
@@ -231,22 +215,19 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("autoscaleTargetMemoryUtilization", func() {
-		memThreshold := 70 // 70% utilization should kick off the autoscaling
+		memThreshold := 80 // 80% utilization should kick off the autoscaling
 
-		Context("when provided via label", func() {
-
+		Context("when provided via an extension", func() {
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: strconv.Itoa(memThreshold),
-				}
+				svcK8sConfig.Workload.Autoscale.MemoryThreshold = memThreshold
 			})
 
-			It("will use a label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(memThreshold))
 			})
 		})
 
-		Context("when there is no autoscale target Memory utilization label supplied", func() {
+		Context("when the autoscale target Memory utilization is not supplied in the extension", func() {
 			It("will use default Memory threshold for autoscaling purposes ", func() {
 				Expect(projectService.autoscaleTargetMemoryUtilization()).To(BeEquivalentTo(config.DefaultAutoscaleMemoryThreshold))
 			})
@@ -255,47 +236,53 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("workloadType", func() {
 
-		Context("when provided via label", func() {
+		Context("when provided via extension", func() {
+			workloadType := config.StatefulSetWorkload
 
-			workloadType := "StatefulSet"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadType: workloadType,
-				}
+			JustBeforeEach(func() {
+				projectService.SvcK8sConfig.Workload.Type = workloadType
 			})
 
-			It("will use a label value", func() {
+			It("will use a extension value", func() {
 				Expect(projectService.workloadType()).To(Equal(workloadType))
 			})
 		})
 
-		Context("when not specified via label", func() {
+		Context("when not specified via extension", func() {
 			It("will use a default workload type", func() {
 				Expect(projectService.workloadType()).To(Equal(config.DefaultWorkload))
 			})
 		})
 
 		Context("when deploy block `mode` defined as `global` and workload type is different than DaemonSet", func() {
+			projectWorkloadType := config.StatefulSetWorkload
 
-			projectWorkloadType := config.StatefulsetWorkload
+			JustBeforeEach(func() {
+				projectService.SvcK8sConfig.Workload.Type = projectWorkloadType
+				m, err := projectService.SvcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadType: projectWorkloadType,
-				}
-
-				deploy = &composego.DeployConfig{
+				svc := projectService.ServiceConfig
+				svc.Deploy = &composego.DeployConfig{
 					Mode: "global",
 				}
+				svc.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
+				}
+
+				projectService, err = NewProjectService(svc)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("warns the user about the mismatch", func() {
+				Expect(projectService.SvcK8sConfig.Workload.Type).To(Equal(projectWorkloadType))
+				Expect(projectService.Deploy.Mode).To(Equal("global"))
+
 				projectService.workloadType()
 				assertLog(logrus.WarnLevel,
 					"Compose service defined as 'global' should map to K8s DaemonSet. Current configuration forces conversion to StatefulSet",
 					map[string]string{
-						"workload-type":   projectWorkloadType,
+						"workload-type":   projectWorkloadType.String(),
 						"project-service": projectServiceName,
 					},
 				)
@@ -305,13 +292,11 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("serviceType", func() {
 
-		Context("when provided via label", func() {
+		Context("when provided via extension", func() {
 			validType := config.ClusterIPService
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceType: validType,
-				}
+				svcK8sConfig.Service.Type = validType
 			})
 
 			It("returns service type as expected", func() {
@@ -319,7 +304,7 @@ var _ = Describe("ProjectService", func() {
 			})
 		})
 
-		Context("when not specified via label", func() {
+		Context("when not specified via extension", func() {
 			It("returns service type as expected", func() {
 				Expect(projectService.serviceType()).To(Equal(config.DefaultService))
 			})
@@ -329,46 +314,51 @@ var _ = Describe("ProjectService", func() {
 
 			Context("with an invalid service value", func() {
 
+				var m map[string]interface{}
 				invalidType := "some-invalid-type"
 
+				JustBeforeEach(func() {
+					var err error
+					svcK8sConfig := config.SvcK8sConfig{}
+					svcK8sConfig.Service.Type = config.ServiceType(invalidType)
+
+					m, err = svcK8sConfig.Map()
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := NewProjectService(composego.ServiceConfig{
+						Name: "some service",
+						Extensions: map[string]interface{}{
+							config.K8SExtensionKey: m,
+						},
+					})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Service.Type"))
+				})
+			})
+
+			Context("when node port is specified via extension but service type was different that NodePort", func() {
+				nodePort := 1234
+
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelServiceType: invalidType,
-					}
+					svcK8sConfig.Service.Type = config.ClusterIPService
+					svcK8sConfig.Service.NodePort = nodePort
 				})
 
 				It("returns an error", func() {
 					_, err := projectService.serviceType()
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(fmt.Sprintf("`%s` workload service type `%s` not supported", projectServiceName, invalidType)))
+					Expect(err).To(MatchError(fmt.Sprintf("`%s` workload service type must be set as `NodePort` when assigning node port value", projectServiceName)))
 				})
 			})
 
-			Context("when node port is specified via label but service type was different that NodePort", func() {
-				nodePort := "1234"
+			Context("when node port is specified via extension and project service has multiple ports specified", func() {
+				nodePort := 1234
 
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelServiceType:         config.ClusterIPService,
-						config.LabelServiceNodePortPort: nodePort,
-					}
-				})
-
-				It("returns an error", func() {
-					_, err := projectService.serviceType()
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(fmt.Sprintf("`%s` workload service type must be set as `NodePort` when assiging node port value", projectServiceName)))
-				})
-			})
-
-			Context("when node port is specified via label and project service has multiple ports specified", func() {
-				nodePort := "1234"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelServiceType:         config.NodePortService,
-						config.LabelServiceNodePortPort: nodePort,
-					}
+					svcK8sConfig.Service.Type = config.NodePortService
+					svcK8sConfig.Service.NodePort = nodePort
 					ports = []composego.ServicePortConfig{
 						{
 							Target:    8080,
@@ -394,21 +384,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("nodePort", func() {
 
-		Context("when specified via labels", func() {
+		Context("when specified via an extension", func() {
 			nodePort := 1234
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceNodePortPort: strconv.Itoa(nodePort),
-				}
+				svcK8sConfig.Service.NodePort = nodePort
 			})
 
-			It("will use label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.nodePort()).To(Equal(int32(nodePort)))
 			})
 		})
 
-		Context("when not specified via labels", func() {
+		Context("when not specified via an extension", func() {
 			It("will return 0", func() {
 				Expect(projectService.nodePort()).To(Equal(int32(0)))
 			})
@@ -417,21 +405,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("exposeService", func() {
 
-		Context("when specified via labels", func() {
-			expose := "true"
+		Context("when specified via an extension", func() {
+			expose := "domain.com"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceExpose: expose,
-				}
+				svcK8sConfig.Service.Expose.Domain = expose
 			})
 
-			It("will use label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.exposeService()).To(Equal(expose))
 			})
 		})
 
-		Context("when not specified via labels", func() {
+		Context("when not specified via an extension", func() {
 			It("will return empty string", func() {
 				Expect(projectService.exposeService()).To(Equal(""))
 			})
@@ -439,18 +425,16 @@ var _ = Describe("ProjectService", func() {
 
 		Describe("validations", func() {
 
-			Context("when service hasn't been exposed via labels but TLS secret was provided", func() {
+			Context("when service hasn't been exposed via an extension but TLS secret was provided", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelServiceExpose:          "",
-						config.LabelServiceExposeTLSSecret: "my-tls-secret-name",
-					}
+					svcK8sConfig.Service.Expose.Domain = ""
+					svcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret-name"
 				})
 
 				It("returns an error", func() {
 					_, err := projectService.exposeService()
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Service can't have TLS secret name when it hasn't been exposed"))
+					Expect(err).To(MatchError("service can't have TLS secret name when it hasn't been exposed"))
 				})
 			})
 
@@ -460,21 +444,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("tlsSecretName", func() {
 
-		Context("when specified via labels", func() {
+		Context("when specified via an extension", func() {
 			tls := "my-secret"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelServiceExposeTLSSecret: tls,
-				}
+				svcK8sConfig.Service.Expose.TlsSecret = tls
 			})
 
-			It("will use label value", func() {
+			It("will use the extension value", func() {
 				Expect(projectService.tlsSecretName()).To(Equal(tls))
 			})
 		})
 
-		Context("when not specified via labels", func() {
+		Context("when not specified via an extension", func() {
 			It("will return an empty string", func() {
 				Expect(projectService.tlsSecretName()).To(Equal(""))
 			})
@@ -498,10 +480,11 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				expectedMaxSurge := intstr.FromInt(0)
+				expectedMaxSurge := intstr.FromString("25%")
 				expectedMaxUnavailable := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
+					projectService.SvcK8sConfig.Workload.RollingUpdateMaxSurge = 0
 					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
@@ -521,10 +504,11 @@ var _ = Describe("ProjectService", func() {
 					}
 				})
 
-				expectedMaxUnavailable := intstr.FromInt(0)
+				expectedMaxUnavailable := intstr.FromString("25%")
 				expectedMaxSurge := intstr.FromInt(cast.ToInt(parallelism))
 
 				It("returns appropriate RollingUpdateDeployment object", func() {
+					projectService.SvcK8sConfig.Workload.RollingUpdateMaxSurge = 0
 					Expect(projectService.getKubernetesUpdateStrategy()).To(Equal(&v1apps.RollingUpdateDeployment{
 						MaxUnavailable: &expectedMaxUnavailable,
 						MaxSurge:       &expectedMaxSurge,
@@ -539,9 +523,8 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("volumes", func() {
 
-		volumeName := "vol-a"
+		volumeName := "vol_a"
 		targetPath := "/some/path"
-		volumeLabels := composego.Labels{}
 
 		BeforeEach(func() {
 			volumes = []composego.ServiceVolumeConfig{
@@ -565,7 +548,7 @@ var _ = Describe("ProjectService", func() {
 					{
 						SvcName:      projectServiceName,
 						MountPath:    ":" + targetPath,
-						VolumeName:   volumeName,
+						VolumeName:   rfc1123(volumeName),
 						Container:    targetPath,
 						PVCName:      projectServiceName + "-claim0",
 						PVCSize:      config.DefaultVolumeSize,
@@ -574,18 +557,18 @@ var _ = Describe("ProjectService", func() {
 				}))
 			})
 
-			Context("when volume contains storage class label", func() {
+			Context("when volume contains a storage class in k8s extension", func() {
 				storageClass := "ssd"
 
 				BeforeEach(func() {
-					volumeLabels = composego.Labels{
-						config.LabelVolumeStorageClass: storageClass,
-					}
-
 					projectVolumes = composego.Volumes{
 						volumeName: composego.VolumeConfig{
-							Name:   volumeName,
-							Labels: volumeLabels,
+							Name: volumeName,
+							Extensions: map[string]interface{}{
+								config.K8SExtensionKey: map[string]interface{}{
+									"storageClass": storageClass,
+								},
+							},
 						},
 					}
 				})
@@ -596,18 +579,18 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 
-			Context("when volume contains volume size label", func() {
+			Context("when volume contains a volume size in k8s extension", func() {
 				storageSize := "1Gi"
 
 				BeforeEach(func() {
-					volumeLabels = composego.Labels{
-						config.LabelVolumeSize: storageSize,
-					}
-
 					projectVolumes = composego.Volumes{
 						volumeName: composego.VolumeConfig{
-							Name:   volumeName,
-							Labels: volumeLabels,
+							Name: volumeName,
+							Extensions: map[string]interface{}{
+								config.K8SExtensionKey: map[string]interface{}{
+									"size": storageSize,
+								},
+							},
 						},
 					}
 				})
@@ -650,17 +633,17 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("resourceRequests", func() {
-
-		Context("when resources aren't specified via labels and there is no resource reservation specified in deploy block", func() {
-			It("returns resource request values as 0", func() {
-				mem, cpu := projectService.resourceRequests()
-				Expect(*mem).To(BeEquivalentTo(0))
-				Expect(*cpu).To(BeEquivalentTo(0))
+		Context("not specified by deploy block", func() {
+			When("not specified via extension", func() {
+				It("returns resource request as zero values", func() {
+					mem, cpu := projectService.resourceRequests()
+					Expect(*mem).To(BeEquivalentTo(0))
+					Expect(*cpu).To(BeEquivalentTo(0))
+				})
 			})
 		})
 
-		Context("when resource reservation are defined by the deploy block", func() {
-
+		Context("specified by deploy block", func() {
 			BeforeEach(func() {
 				deploy = &composego.DeployConfig{
 					Resources: composego.Resources{
@@ -672,7 +655,7 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			Context("and resources aren't specified via labels", func() {
+			When("not specified via extension", func() {
 				It("returns resource request as defined in deploy block", func() {
 					mem, cpu := projectService.resourceRequests()
 					Expect(*mem).To(BeEquivalentTo(1000))
@@ -680,27 +663,23 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 
-			Context("and CPU request is specified via label", func() {
+			When("CPU request is specified via extension", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadCPU: "0.2",
-					}
+					svcK8sConfig.Workload.Resource.CPU = "0.2"
 				})
 
-				It("returns CPU request as defined by the label value ", func() {
+				It("returns CPU request as defined by the extension", func() {
 					_, cpu := projectService.resourceRequests()
 					Expect(*cpu).To(BeEquivalentTo(200))
 				})
 			})
 
-			Context("and Memory request is specified via label", func() {
+			When("Memory request is specified via extension", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadMemory: "1M",
-					}
+					svcK8sConfig.Workload.Resource.Memory = "1M"
 				})
 
-				It("returns Memory request as defined by the label value ", func() {
+				It("returns Memory request as defined by the extension", func() {
 					mem, _ := projectService.resourceRequests()
 					Expect(*mem).To(BeEquivalentTo(1000000))
 				})
@@ -709,17 +688,17 @@ var _ = Describe("ProjectService", func() {
 	})
 
 	Describe("resourceLimits", func() {
-
-		Context("when resource limits aren't specified via labels and there is no resource reservation limits specified in deploy block", func() {
-			It("returns resource limits values as 0", func() {
-				mem, cpu := projectService.resourceLimits()
-				Expect(*mem).To(BeEquivalentTo(0))
-				Expect(*cpu).To(BeEquivalentTo(0))
+		Context("not specified by deploy block", func() {
+			When("not specified via extension", func() {
+				It("returns resource limits as zero values", func() {
+					mem, cpu := projectService.resourceLimits()
+					Expect(*mem).To(BeEquivalentTo(0))
+					Expect(*cpu).To(BeEquivalentTo(0))
+				})
 			})
 		})
 
-		Context("when resource limits are defined by the deploy block", func() {
-
+		Context("specified by deploy block", func() {
 			BeforeEach(func() {
 				deploy = &composego.DeployConfig{
 					Resources: composego.Resources{
@@ -731,7 +710,7 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			Context("and resource limits aren't specified via labels", func() {
+			When("not specified via extension", func() {
 				It("returns resource limit as defined in deploy block", func() {
 					mem, cpu := projectService.resourceLimits()
 					Expect(*mem).To(BeEquivalentTo(1000))
@@ -739,27 +718,23 @@ var _ = Describe("ProjectService", func() {
 				})
 			})
 
-			Context("and CPU limit is specified via label", func() {
+			When("CPU limit is specified via extension", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadMaxCPU: "0.2",
-					}
+					svcK8sConfig.Workload.Resource.MaxCPU = "0.2"
 				})
 
-				It("returns CPU limit as defined by the label value ", func() {
+				It("returns CPU limit as defined by the extension", func() {
 					_, cpu := projectService.resourceLimits()
 					Expect(*cpu).To(BeEquivalentTo(200))
 				})
 			})
 
-			Context("and Memory limit is specified via label", func() {
+			When("Memory limit is specified via extension", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadMaxMemory: "200",
-					}
+					svcK8sConfig.Workload.Resource.MaxMemory = "200"
 				})
 
-				It("returns Memory limit as defined by the label value ", func() {
+				It("returns Memory limit as defined by the extension", func() {
 					mem, _ := projectService.resourceLimits()
 					Expect(*mem).To(BeEquivalentTo(200))
 				})
@@ -769,21 +744,20 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("runAsUser", func() {
 
-		Context("when defined via labels", func() {
-			runAsUser := "1000"
+		Context("when defined via an extension", func() {
+			runAsUser := int64(1000)
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsUser: runAsUser,
-				}
+				svcK8sConfig.Workload.PodSecurity.RunAsUser = &runAsUser
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.runAsUser()).To(Equal(runAsUser))
+			It("returns the extension value", func() {
+				expected := runAsUser
+				Expect(projectService.runAsUser()).To(Equal(&expected))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.runAsUser()).To(Equal(config.DefaultSecurityContextRunAsUser))
 			})
@@ -792,21 +766,20 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("runAsGroup", func() {
 
-		Context("when defined via labels", func() {
-			runAsGroup := "1000"
+		Context("when defined via an extension", func() {
+			runAsGroup := int64(1000)
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsGroup: runAsGroup,
-				}
+				svcK8sConfig.Workload.PodSecurity.RunAsGroup = &runAsGroup
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.runAsGroup()).To(Equal(runAsGroup))
+			It("returns the extension value", func() {
+				expected := runAsGroup
+				Expect(projectService.runAsGroup()).To(Equal(&expected))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.runAsGroup()).To(Equal(config.DefaultSecurityContextRunAsGroup))
 			})
@@ -815,21 +788,20 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("fsGroup", func() {
 
-		Context("when defined via labels", func() {
-			fsGroup := "1000"
+		Context("when defined via an extension", func() {
+			fsGroup := int64(1000)
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadSecurityContextFsGroup: fsGroup,
-				}
+				svcK8sConfig.Workload.PodSecurity.FsGroup = &fsGroup
 			})
 
-			It("returns label value", func() {
-				Expect(projectService.fsGroup()).To(Equal(fsGroup))
+			It("returns the extension value", func() {
+				expected := fsGroup
+				Expect(projectService.fsGroup()).To(Equal(&expected))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.fsGroup()).To(Equal(config.DefaultSecurityContextFsGroup))
 			})
@@ -838,21 +810,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("imagePullPolicy", func() {
 
-		Context("when defined via labels", func() {
+		Context("when defined via extension", func() {
 			policy := "Always"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadImagePullPolicy: policy,
-				}
+				svcK8sConfig.Workload.ImagePull.Policy = policy
 			})
 
-			It("returns label value", func() {
+			It("returns the extension value", func() {
 				Expect(projectService.imagePullPolicy()).To(Equal(v1.PullPolicy(policy)))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.imagePullPolicy()).To(Equal(v1.PullPolicy(config.DefaultImagePullPolicy)))
 			})
@@ -860,44 +830,41 @@ var _ = Describe("ProjectService", func() {
 
 		Context("for invalid image pull policy", func() {
 			policy := "invalid-policy-name"
+			extensions := make(map[string]interface{})
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadImagePullPolicy: policy,
-				}
+			JustBeforeEach(func() {
+				svcK8sConfig.Workload.ImagePull.Policy = policy
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				extensions[config.K8SExtensionKey] = m
 			})
 
 			It("warn the user and returns default value", func() {
-				Expect(projectService.imagePullPolicy()).To(Equal(v1.PullPolicy(config.DefaultImagePullPolicy)))
-
-				assertLog(logrus.WarnLevel,
-					fmt.Sprintf("Invalid image pull policy passed in via %s label. Defaulting to `IfNotPresent`.", config.LabelWorkloadImagePullPolicy),
-					map[string]string{
-						"project-service":   projectServiceName,
-						"image-pull-policy": policy,
-					},
-				)
+				_, err := NewProjectService(composego.ServiceConfig{
+					Extensions: extensions,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("SvcK8sConfig.Workload.ImagePull.Policy"))
 			})
 		})
 	})
 
 	Describe("imagePullSecret", func() {
 
-		Context("when defined via labels", func() {
+		Context("when defined via extension", func() {
 			secret := "image-pull-secret"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadImagePullSecret: secret,
-				}
+				svcK8sConfig.Workload.ImagePull.Secret = secret
 			})
 
-			It("returns label value", func() {
+			It("returns extension value", func() {
 				Expect(projectService.imagePullSecret()).To(Equal(secret))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.imagePullSecret()).To(Equal(config.DefaultImagePullSecret))
 			})
@@ -906,21 +873,19 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("serviceAccountName", func() {
 
-		Context("when defined via labels", func() {
+		Context("when defined an extension", func() {
 			sa := "sa"
 
 			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadServiceAccountName: sa,
-				}
+				svcK8sConfig.Workload.ServiceAccountName = sa
 			})
 
-			It("returns label value", func() {
+			It("returns the extension value", func() {
 				Expect(projectService.serviceAccountName()).To(Equal(sa))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via an extension", func() {
 			It("returns default value", func() {
 				Expect(projectService.serviceAccountName()).To(Equal(config.DefaultServiceAccountName))
 			})
@@ -929,24 +894,33 @@ var _ = Describe("ProjectService", func() {
 
 	Describe("restartPolicy", func() {
 
-		Context("when defined via labels", func() {
+		Context("when defined via extension", func() {
 			policy := config.DefaultRestartPolicy
 
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadRestartPolicy: policy,
+			JustBeforeEach(func() {
+				projectService.SvcK8sConfig.Workload.RestartPolicy = policy
+				m, err := projectService.SvcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				svc := projectService.ServiceConfig
+				svc.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
 				}
+
+				projectService, err = NewProjectService(svc)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("returns label value", func() {
+			It("returns the extension value", func() {
+				Expect(projectService.SvcK8sConfig.Workload.RestartPolicy).To(Equal(policy))
 				Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 			})
 		})
 
-		Context("when not defined via labels", func() {
+		Context("when not defined via extension", func() {
 
 			Context("and defined in the project service deploy block", func() {
-				policy := config.DefaultRestartPolicy
+				policy := config.DefaultRestartPolicy.String()
 
 				BeforeEach(func() {
 					deploy = &composego.DeployConfig{
@@ -962,10 +936,16 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			Context("and defined on the project service directly with no deploy block", func() {
-				policy := config.RestartPolicyNever
+				policy := config.RestartPolicyNever.String()
+
+				JustBeforeEach(func() {
+					projectService.Restart = policy
+					ps, err := NewProjectService(projectService.ServiceConfig)
+					Expect(err).NotTo(HaveOccurred())
+					projectService = ps
+				})
 
 				It("returns restart policy defined on the project service level", func() {
-					projectService.Restart = policy
 					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(policy)))
 				})
 			})
@@ -975,56 +955,6 @@ var _ = Describe("ProjectService", func() {
 		Context("when not defined anywhere", func() {
 			It("returns default value", func() {
 				Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.DefaultRestartPolicy)))
-			})
-		})
-
-		Describe("validations", func() {
-
-			Context("and restart policy was specified as `unless-stopped`", func() {
-				policy := "unless-stopped"
-
-				BeforeEach(func() {
-					deploy = &composego.DeployConfig{
-						RestartPolicy: &composego.RestartPolicy{
-							Condition: policy,
-						},
-					}
-				})
-
-				It("warns the user and defaults restart policy to `Always`", func() {
-					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.RestartPolicyAlways)))
-
-					assertLog(logrus.WarnLevel,
-						"Restart policy 'unless-stopped' is not supported, converting it to 'always'",
-						map[string]string{
-							"project-service": projectServiceName,
-							"restart-policy":  policy,
-						},
-					)
-				})
-
-			})
-
-			Context("when invalid policy has been provided", func() {
-				policy := "invalid-policy"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadRestartPolicy: policy,
-					}
-				})
-
-				It("warns the user and defaults restart policy to `Always`", func() {
-					Expect(projectService.restartPolicy()).To(Equal(v1.RestartPolicy(config.RestartPolicyAlways)))
-
-					assertLog(logrus.WarnLevel,
-						"Restart policy is not supported, defaulting to 'Always'",
-						map[string]string{
-							"project-service": projectServiceName,
-							"restart-policy":  policy,
-						},
-					)
-				})
 			})
 		})
 	})
@@ -1053,15 +983,15 @@ var _ = Describe("ProjectService", func() {
 				}
 			})
 
-			Context("when value defined in the OS environemnt", func() {
+			Context("when value defined in the OS environment", func() {
 				osVal := "BAZ"
 
 				BeforeEach(func() {
-					os.Setenv(key, osVal)
+					_ = os.Setenv(key, osVal)
 				})
 
 				AfterEach(func() {
-					os.Unsetenv(key)
+					_ = os.Unsetenv(key)
 				})
 
 				It("takes the value from the OS environment", func() {
@@ -1136,8 +1066,7 @@ var _ = Describe("ProjectService", func() {
 		})
 	})
 
-	Describe("healthcheck", func() {
-
+	Describe("liveness probe", func() {
 		Context("when valid healthcheck and probe type are defined", func() {
 			timeout := composego.Duration(time.Duration(10) * time.Second)
 			interval := composego.Duration(time.Duration(10) * time.Second)
@@ -1145,7 +1074,6 @@ var _ = Describe("ProjectService", func() {
 			retries := uint64(3)
 
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeExec.String())
 				healthcheck = composego.HealthCheckConfig{
 					Test: composego.HealthCheckTest{
 						"CMD-SHELL",
@@ -1159,52 +1087,26 @@ var _ = Describe("ProjectService", func() {
 			})
 
 			It("returns a Probe as expected", func() {
-				result, err := projectService.healthcheck()
+				result, err := projectService.LivenessProbe()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(&v1.Probe{
+				Expect(cmp.Diff(result, &v1.Probe{
 					Handler: v1.Handler{
 						Exec: &v1.ExecAction{
-							Command: healthcheck.Test[1:],
+							Command: []string{"my command"},
 						},
 					},
 					TimeoutSeconds:      10,
 					PeriodSeconds:       10,
 					InitialDelaySeconds: 10,
 					FailureThreshold:    3,
-				}))
-			})
-		})
-
-		Context("when valid healthcheck and no probe type is defined", func() {
-			timeout := composego.Duration(time.Duration(10) * time.Second)
-			interval := composego.Duration(time.Duration(10) * time.Second)
-			startPeriod := composego.Duration(time.Duration(10) * time.Second)
-			retries := uint64(3)
-
-			BeforeEach(func() {
-				healthcheck = composego.HealthCheckConfig{
-					Test: composego.HealthCheckTest{
-						"CMD-SHELL",
-						"my command",
-					},
-					Timeout:     &timeout,
-					Interval:    &interval,
-					StartPeriod: &startPeriod,
-					Retries:     &retries,
-				}
-			})
-
-			It("returns an error", func() {
-				result, err := projectService.healthcheck()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("probe type not provided"))
-				Expect(result).To(BeNil())
+					SuccessThreshold:    1,
+				})).To(BeEmpty())
 			})
 		})
 
 		Describe("validations", func() {
 			BeforeEach(func() {
-				labels.Add(config.LabelWorkloadLivenessProbeType, ProbeTypeExec.String())
+				svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
 			})
 
 			Context("when Test command is not defined", func() {
@@ -1217,428 +1119,73 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("logs and returns error", func() {
-					_, err := projectService.healthcheck()
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Health check misconfigured"))
-
-					assertLog(logrus.ErrorLevel,
-						"Health check misconfigured",
-						map[string]string{},
-					)
+					_, err := projectService.LivenessProbe()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
-			When("any of time based paramaters is set to 0", func() {
+			When("any of time based parameters is set to 0", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeTimeout: "0",
-						config.LabelWorkloadLivenessProbeType:    ProbeTypeExec.String(),
-					}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeExec.String()
+					svcK8sConfig.Workload.LivenessProbe.Timeout = 0
 				})
 
 				It("logs and returns error", func() {
-					_, err := projectService.healthcheck()
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Health check misconfigured"))
-
-					assertLog(logrus.ErrorLevel,
-						"Health check misconfigured",
-						map[string]string{},
-					)
+					_, err := projectService.LivenessProbe()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})
 	})
 
 	Describe("livenessHTTPProbe", func() {
-		When("defined via labels", func() {
+		When("defined via extension", func() {
 			Context("with all the parameters", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
-						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
-						config.LabelWorkloadLivenessProbeHTTPPort: "8080",
-					}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeHTTP.String()
+					svcK8sConfig.Workload.LivenessProbe.HTTP.Path = "/status"
+					svcK8sConfig.Workload.LivenessProbe.HTTP.Port = 8080
 				})
 
 				It("returns a handler", func() {
-					result, err := projectService.livenessHTTPProbe()
+					result, err := projectService.LivenessProbe()
 					Expect(err).To(BeNil())
-					Expect(result.Port.IntValue()).To(Equal(8080))
-					Expect(result.Path).To(Equal("/status"))
-				})
-			})
-
-			Context("with missing port", func() {
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
-						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
-					}
-				})
-
-				It("returns an error", func() {
-					_, err := projectService.livenessHTTPProbe()
-					Expect(err).NotTo(BeNil())
-					Expect(err.Error()).To(ContainSubstring("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPort))
-				})
-			})
-
-			Context("with NaN port", func() {
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
-						config.LabelWorkloadLivenessProbeHTTPPath: "/status",
-						config.LabelWorkloadLivenessProbeHTTPPort: "asd",
-					}
-				})
-
-				It("returns an error", func() {
-					_, err := projectService.livenessHTTPProbe()
-					Expect(err).NotTo(BeNil())
-					Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadLivenessProbeHTTPPort))
+					Expect(result.HTTPGet.Port.IntValue()).To(Equal(8080))
+					Expect(result.HTTPGet.Path).To(Equal("/status"))
 				})
 			})
 
 			Context("with missing path", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeHTTP.String(),
-						config.LabelWorkloadLivenessProbeHTTPPort: "8080",
-					}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeHTTP.String()
+					svcK8sConfig.Workload.LivenessProbe.HTTP.Port = 8080
 				})
 
 				It("returns an error", func() {
-					_, err := projectService.livenessHTTPProbe()
-					Expect(err).NotTo(BeNil())
-					Expect(err.Error()).To(ContainSubstring("%s not correctly defined", config.LabelWorkloadLivenessProbeHTTPPath))
+					Expect(projectService.Extensions).To(Equal(extensions))
+
+					lp, err := projectService.LivenessProbe()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(lp.HTTPGet).NotTo(BeNil())
+					Expect(lp.HTTPGet.Path).To(Equal(""))
 				})
 			})
 		})
 	})
 
 	Describe("livenessProbeTCP", func() {
-		When("defined via labels", func() {
+		When("defined via extension", func() {
 
 			Context("and supplied as string port", func() {
 				port := "8080"
 
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:    ProbeTypeTCP.String(),
-						config.LabelWorkloadLivenessProbeTCPPort: port,
-					}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
+					svcK8sConfig.Workload.LivenessProbe.TCP.Port = 8080
 				})
 
-				It("returns label value", func() {
-					p, err := projectService.livenessTCPProbe()
-					Expect(err).To(Succeed())
-					Expect(p.Port.String()).To(Equal(port))
-				})
-			})
-
-			Context("and empty port", func() {
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:    ProbeTypeTCP.String(),
-						config.LabelWorkloadLivenessProbeTCPPort: "",
-					}
-				})
-
-				It("returns an error", func() {
-					p, err := projectService.livenessTCPProbe()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)))
-					Expect(p).To(BeNil())
-				})
-			})
-
-			Context("with NaN port", func() {
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType:    ProbeTypeTCP.String(),
-						config.LabelWorkloadLivenessProbeTCPPort: "asds",
-					}
-				})
-
-				It("returns an error", func() {
-					_, err := projectService.livenessTCPProbe()
-					Expect(err).NotTo(BeNil())
-					Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort))
-				})
-			})
-
-			Context("and no port label", func() {
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeTCPPort: ProbeTypeTCP.String(),
-					}
-				})
-
-				It("returns an error", func() {
-					p, err := projectService.livenessTCPProbe()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadLivenessProbeTCPPort)))
-					Expect(p).To(BeNil())
-				})
-			})
-		})
-
-	})
-
-	Describe("livenessProbeCommand", func() {
-		When("defined via labels", func() {
-
-			Context("and supplied as string command", func() {
-				cmd := "my test command"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeCommand: cmd,
-					}
-				})
-
-				It("returns label value", func() {
-					Expect(projectService.livenessProbeCommand()).To(HaveLen(1))
-					Expect(projectService.livenessProbeCommand()).To(ContainElement(cmd))
-				})
-			})
-
-			Context("and specified as list", func() {
-				cmd := "[\"CMD\", \"echo\", \"Hello World\"]"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeCommand: cmd,
-					}
-				})
-
-				It("returns label value", func() {
-					Expect(projectService.livenessProbeCommand()).To(HaveLen(2))
-					Expect(projectService.livenessProbeCommand()).ToNot(ContainElements("CMD"))
-					Expect(projectService.livenessProbeCommand()).To(ContainElements("echo", "Hello World"))
-				})
-			})
-		})
-
-		When("defined via healthcheck block only", func() {
-			cmd := []string{
-				"CMD-SHELL",
-				"/my-test/command.sh",
-				"some-args",
-			}
-
-			JustBeforeEach(func() {
-				projectService.HealthCheck = &composego.HealthCheckConfig{
-					Test: composego.HealthCheckTest(cmd),
-				}
-			})
-
-			It("returns project service healthcheck test command", func() {
-				Expect(projectService.livenessProbeCommand()).To(HaveLen(2))
-				Expect(projectService.livenessProbeCommand()).To(ContainElements(cmd[1:]))
-			})
-		})
-
-		When("not defined by both label nor healthcheck block", func() {
-			It("returns default value", func() {
-				Expect(projectService.livenessProbeCommand()).To(ContainElements(config.DefaultLivenessProbeCommand))
-			})
-		})
-	})
-
-	Describe("livenessProbeInterval", func() {
-		When("defined via labels", func() {
-			interval := "30s"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeInterval: interval,
-				}
-			})
-
-			It("returns label value", func() {
-				Expect(projectService.livenessProbeInterval()).To(BeEquivalentTo(30))
-			})
-		})
-
-		When("defined via healthcheck block only", func() {
-			seconds := 10
-			interval := composego.Duration(time.Duration(seconds) * time.Second)
-
-			JustBeforeEach(func() {
-				projectService.HealthCheck = &composego.HealthCheckConfig{
-					Interval: &interval,
-				}
-			})
-
-			It("returns project service healthcheck interval", func() {
-				Expect(projectService.livenessProbeInterval()).To(BeEquivalentTo(seconds))
-			})
-		})
-
-		When("not defined by both label nor healthcheck block", func() {
-			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
-				Expect(projectService.livenessProbeInterval()).To(Equal(*expected))
-			})
-		})
-	})
-
-	Describe("livenessProbeTimeout", func() {
-		When("defined via labels", func() {
-			timeout := "30s"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeTimeout: timeout,
-				}
-			})
-
-			It("returns label value", func() {
-				Expect(projectService.livenessProbeTimeout()).To(BeEquivalentTo(30))
-			})
-		})
-
-		When("defined via healthcheck block only", func() {
-			seconds := 3
-			timeout := composego.Duration(time.Duration(seconds) * time.Second)
-
-			JustBeforeEach(func() {
-				projectService.HealthCheck = &composego.HealthCheckConfig{
-					Timeout: &timeout,
-				}
-			})
-
-			It("returns project service healthcheck timeout", func() {
-				Expect(projectService.livenessProbeTimeout()).To(BeEquivalentTo(seconds))
-			})
-		})
-
-		When("not defined by both label nor healthcheck block", func() {
-			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
-				Expect(projectService.livenessProbeTimeout()).To(Equal(*expected))
-			})
-		})
-	})
-
-	Describe("livenessProbeInitialDelay", func() {
-		When("defined via labels", func() {
-			delay := "30s"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeInitialDelay: delay,
-				}
-			})
-
-			It("returns label value", func() {
-				Expect(projectService.livenessProbeInitialDelay()).To(BeEquivalentTo(30))
-			})
-		})
-
-		When("defined via healthcheck block only", func() {
-			seconds := 5
-			startPeriod := composego.Duration(time.Duration(seconds) * time.Second)
-
-			JustBeforeEach(func() {
-				projectService.HealthCheck = &composego.HealthCheckConfig{
-					StartPeriod: &startPeriod,
-				}
-			})
-
-			It("returns project service healthcheck start period", func() {
-				Expect(projectService.livenessProbeInitialDelay()).To(BeEquivalentTo(seconds))
-			})
-		})
-
-		When("not defined by both label nor healthcheck block", func() {
-			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
-				Expect(projectService.livenessProbeInitialDelay()).To(Equal(*expected))
-			})
-		})
-	})
-
-	Describe("livenessProbeRetries", func() {
-		When("defined via labels", func() {
-			retries := "3"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeRetries: retries,
-				}
-			})
-
-			It("returns label value", func() {
-				expected := 3
-				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(expected))
-			})
-		})
-
-		When("defined via healthcheck block only", func() {
-			retries := uint64(5)
-
-			JustBeforeEach(func() {
-				projectService.HealthCheck = &composego.HealthCheckConfig{
-					Retries: &retries,
-				}
-			})
-
-			It("returns project service healthcheck retries", func() {
-				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(retries))
-			})
-		})
-
-		When("not defined by both label nor healthcheck block", func() {
-			It("returns default value", func() {
-				Expect(projectService.livenessProbeRetries()).To(BeEquivalentTo(config.DefaultProbeRetries))
-			})
-		})
-	})
-
-	Describe("readinessProbe", func() {
-
-		Describe("validations", func() {
-
-			When("any of time based paramaters is set to 0", func() {
-				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeTimeout: "0",
-					}
-				})
-
-				It("logs and returns error", func() {
-					_, err := projectService.readinessProbe()
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("Readiness probe misconfigured"))
-
-					assertLog(logrus.ErrorLevel,
-						"Readiness probe misconfigured",
-						map[string]string{},
-					)
-				})
-			})
-		})
-	})
-
-	Describe("readinessProbeTCP", func() {
-		When("defined via labels", func() {
-
-			Context("and supplied as string port", func() {
-				port := "8080"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeTCP.String(),
-						config.LabelWorkloadReadinessProbeTCPPort: port,
-					}
-				})
-
-				It("returns label value", func() {
-					p, err := projectService.readinessProbe()
+				It("returns the extension value", func() {
+					p, err := projectService.LivenessProbe()
 					Expect(err).To(Succeed())
 					Expect(p.TCPSocket.Port.String()).To(Equal(port))
 				})
@@ -1646,320 +1193,29 @@ var _ = Describe("ProjectService", func() {
 
 			Context("and empty port", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeTCP.String(),
-						config.LabelWorkloadReadinessProbeTCPPort: "",
-					}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
+					svcK8sConfig.Workload.LivenessProbe.TCP.Port = 0
 				})
 
 				It("returns an error", func() {
-					p, err := projectService.readinessProbe()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort)))
-					Expect(p).To(BeNil())
+					p, err := projectService.LivenessProbe()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(p.TCPSocket.Port.String()).To(Equal("0"))
 				})
 			})
 
-			Context("with NaN port", func() {
+			Context("and no port in extension", func() {
 				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeTCP.String(),
-						config.LabelWorkloadReadinessProbeTCPPort: "asds",
-					}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeTCP.String()
 				})
 
 				It("returns an error", func() {
-					_, err := projectService.readinessProbe()
-					Expect(err).NotTo(Succeed())
-					Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadReadinessProbeTCPPort))
-				})
-			})
-
-			Context("and no port label", func() {
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType: ProbeTypeTCP.String(),
-					}
-				})
-
-				It("returns an error", func() {
-					p, err := projectService.readinessProbe()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("%s not correctly defined", config.LabelWorkloadReadinessProbeTCPPort)))
-					Expect(p).To(BeNil())
+					p, err := projectService.LivenessProbe()
+					Expect(err).NotTo(HaveOccurred())
+					p.TCPSocket.Port = intstr.FromString("")
 				})
 			})
 		})
 
-		When("not defined by label", func() {
-			It("returns default value as empty string slice", func() {
-				pt, err := projectService.readinessProbeType()
-				Expect(err).To(Succeed())
-				Expect(*pt).To(Equal(ProbeTypeNone))
-				Expect(projectService.readinessProbeCommand()).To(Equal([]string{}))
-			})
-		})
 	})
-
-	Describe("readinessProbeHTTP", func() {
-		Context("and supplied as string port and path", func() {
-			port := "8080"
-			path := "/status"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
-					config.LabelWorkloadReadinessProbeHTTPPort: port,
-					config.LabelWorkloadReadinessProbeHTTPPath: path,
-				}
-			})
-
-			It("returns readiness probe with HTTPGet", func() {
-				p, err := projectService.readinessProbe()
-				Expect(err).To(Succeed())
-				Expect(p.HTTPGet.Port.String()).To(Equal(port))
-				Expect(p.HTTPGet.Path).To(Equal(path))
-			})
-		})
-
-		Context("and empty port", func() {
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
-					config.LabelWorkloadReadinessProbeHTTPPort: "",
-					config.LabelWorkloadReadinessProbeHTTPPath: "/status",
-				}
-			})
-
-			It("returns an error", func() {
-				p, err := projectService.readinessProbe()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(fmt.Sprintf("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort)))
-				Expect(p).To(BeNil())
-			})
-		})
-
-		Context("with NaN port", func() {
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
-					config.LabelWorkloadReadinessProbeHTTPPort: "asd",
-					config.LabelWorkloadReadinessProbeHTTPPath: "/status",
-				}
-			})
-
-			It("returns an error", func() {
-				_, err := projectService.readinessProbe()
-				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(ContainSubstring("%s needs to be a number", config.LabelWorkloadReadinessProbeHTTPPort))
-			})
-		})
-
-		Context("and no port label", func() {
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeHTTP.String(),
-					config.LabelWorkloadReadinessProbeHTTPPath: "/status",
-				}
-			})
-
-			It("returns an error", func() {
-				p, err := projectService.readinessProbe()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(fmt.Sprintf("%s not correctly defined", config.LabelWorkloadReadinessProbeHTTPPort)))
-				Expect(p).To(BeNil())
-			})
-		})
-	})
-
-	Describe("readinessProbeCommand", func() {
-		When("defined via labels", func() {
-
-			Context("and supplied as string command", func() {
-				cmd := "my test command"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeCommand: cmd,
-					}
-				})
-
-				It("returns label value", func() {
-					Expect(projectService.readinessProbeCommand()).To(HaveLen(1))
-					Expect(projectService.readinessProbeCommand()).To(ContainElement(cmd))
-				})
-			})
-
-			Context("and specified as list", func() {
-				cmd := "[\"CMD\", \"echo\", \"Hello World\"]"
-
-				BeforeEach(func() {
-					labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeCommand: cmd,
-					}
-				})
-
-				It("returns label value", func() {
-					Expect(projectService.readinessProbeCommand()).To(HaveLen(2))
-					Expect(projectService.readinessProbeCommand()).ToNot(ContainElements("CMD"))
-					Expect(projectService.readinessProbeCommand()).To(ContainElements("echo", "Hello World"))
-				})
-			})
-		})
-
-		When("not defined by label", func() {
-			It("returns default value as empty string slice", func() {
-				pt, err := projectService.readinessProbeType()
-				Expect(err).To(Succeed())
-				Expect(*pt).To(Equal(ProbeTypeNone))
-				Expect(projectService.readinessProbeCommand()).To(Equal([]string{}))
-			})
-		})
-	})
-
-	Describe("readinessProbeInterval", func() {
-		When("defined via labels", func() {
-			interval := "30s"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:     ProbeTypeExec.String(),
-					config.LabelWorkloadReadinessProbeInterval: interval,
-				}
-			})
-
-			It("returns label value", func() {
-				Expect(projectService.readinessProbeInterval()).To(BeEquivalentTo(30))
-			})
-		})
-
-		When("not defined by label", func() {
-			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultProbeInterval)
-				Expect(projectService.readinessProbeInterval()).To(Equal(*expected))
-			})
-		})
-	})
-
-	Describe("readinessProbeTimeout", func() {
-		When("defined via labels", func() {
-			timeout := "30s"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-					config.LabelWorkloadReadinessProbeTimeout: timeout,
-				}
-			})
-
-			It("returns label value", func() {
-				Expect(projectService.readinessProbeTimeout()).To(BeEquivalentTo(30))
-			})
-		})
-
-		When("not defined by label", func() {
-			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultProbeTimeout)
-				Expect(projectService.readinessProbeTimeout()).To(Equal(*expected))
-			})
-		})
-	})
-
-	Describe("readinessProbeInitialDelay", func() {
-		When("defined via labels", func() {
-			delay := "30s"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:         ProbeTypeExec.String(),
-					config.LabelWorkloadReadinessProbeInitialDelay: delay,
-				}
-			})
-
-			It("returns label value", func() {
-				Expect(projectService.readinessProbeInitialDelay()).To(BeEquivalentTo(30))
-			})
-		})
-
-		When("not defined by label", func() {
-			It("returns default value", func() {
-				expected, _ := durationStrToSecondsInt(config.DefaultProbeInitialDelay)
-				Expect(projectService.readinessProbeInitialDelay()).To(Equal(*expected))
-			})
-		})
-	})
-
-	Describe("readinessProbeRetries", func() {
-		When("defined via labels", func() {
-			retries := "3"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-					config.LabelWorkloadReadinessProbeRetries: retries,
-				}
-			})
-
-			It("returns label value", func() {
-				expected := 3
-				Expect(projectService.readinessProbeRetries()).To(BeEquivalentTo(expected))
-			})
-		})
-
-		When("not defined by label", func() {
-			It("returns default value", func() {
-				Expect(projectService.readinessProbeRetries()).To(BeEquivalentTo(config.DefaultProbeRetries))
-			})
-		})
-	})
-
-	Describe("readinessProbeDisabled", func() {
-		When("defined via labels with valid (truth) value", func() {
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType: ProbeTypeNone.String(),
-				}
-			})
-
-			It("returns label value", func() {
-				pt, err := projectService.readinessProbeType()
-				Expect(err).To(Succeed())
-				Expect(*pt).To(Equal(ProbeTypeNone))
-			})
-
-			It("returns a nil probe", func() {
-				probe, err := projectService.readinessProbe()
-				Expect(err).To(Succeed())
-				Expect(probe).To(BeNil())
-			})
-		})
-
-		When("defined via labels with invalid (non truthy) value", func() {
-			disabled := "FOO"
-
-			BeforeEach(func() {
-				labels = composego.Labels{
-					config.LabelWorkloadReadinessProbeType: disabled,
-				}
-			})
-
-			It("returns an error", func() {
-				p, err := projectService.readinessProbe()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("not a supported readiness probe type"))
-				Expect(p).To(BeNil())
-			})
-		})
-
-		When("not defined via labels at all", func() {
-			It("returns default value - disable by default", func() {
-				p, err := projectService.readinessProbe()
-				Expect(err).To(Succeed())
-				Expect(p).To(BeNil())
-			})
-		})
-	})
-
 })

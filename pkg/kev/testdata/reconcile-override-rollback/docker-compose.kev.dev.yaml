@@ -1,25 +1,21 @@
 version: "3.9"
 services:
   db:
-    labels:
-      kev.service.type: None
-      kev.workload.cpu: "0.1"
-      kev.workload.image-pull-policy: IfNotPresent
-      kev.workload.liveness-probe-type: exec
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.liveness-probe-initial-delay: 1m0s
-      kev.workload.liveness-probe-interval: 1m0s
-      kev.workload.liveness-probe-retries: "3"
-      kev.workload.liveness-probe-timeout: 10s
-      kev.workload.max-cpu: "0.5"
-      kev.workload.max-memory: 500Mi
-      kev.workload.memory: 10Mi
-      kev.workload.replicas: "1"
-      kev.workload.rolling-update-max-surge: "1"
-      kev.workload.service-account-name: default
-      kev.workload.type: StatefulSet
+    x-k8s:
+      workload:
+        replicas: 1
+        livenessProbe: 
+          type: exec
+          exec:
+            command: ["echo", "Define healthcheck command for service db"]
+          initialDelay: 1m0s
+          period: 1m0s
+          failureThreashold: 3
+          timeout: 10s
+      service:
+        type: None
 volumes:
   db_data:
-    labels:
-      kev.volume.size: 100Mi
-      kev.volume.storage-class: standard
+    x-k8s:
+      size: 100Mi
+      storageClass: standard

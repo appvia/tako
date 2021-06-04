@@ -21,6 +21,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -197,17 +198,17 @@ func (e *Environment) loadOverride() (*Environment, error) {
 		envVarsFromNilToBlankInService(s)
 		serviceConfig, err := newServiceConfig(s)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Cannot load environment [%s], service [%s]", e.Name, name)
+			log.Debugf("cannot load environment [%s], service [%s]: err %s", e.Name, name, err.Error())
 		}
 		services = append(services, serviceConfig)
 	}
 	volumes := Volumes{}
-	for _, v := range p.VolumeNames() {
-		volumeConfig, err := newVolumeConfig(v, p)
+	for _, volName := range p.VolumeNames() {
+		volumeConfig, err := newVolumeConfig(volName, p)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Cannot load environment [%s], volume [%s]", e.Name, v)
+			return nil, errors.Wrapf(err, "Cannot load environment [%s], volume [%s]", e.Name, volName)
 		}
-		volumes[v] = volumeConfig
+		volumes[volName] = volumeConfig
 	}
 	e.override = &composeOverride{
 		Version:  p.GetVersion(),
@@ -215,10 +216,6 @@ func (e *Environment) loadOverride() (*Environment, error) {
 		Volumes:  volumes,
 	}
 	return e, nil
-}
-
-func (e *Environment) prepareForMergeUsing(override *composeOverride) {
-	e.override = e.override.expandLabelsFrom(override)
 }
 
 func (e *Environment) mergeInto(p *ComposeProject) error {

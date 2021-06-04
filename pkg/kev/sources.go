@@ -20,24 +20,93 @@ import (
 	"encoding/json"
 	"path/filepath"
 
+	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
 type BaseOverrideOpts func(s *Sources, c *ComposeProject) error
 
-// CalculateBaseOverride calculates the base set of labels deduced from a group of compose sources.
+// CalculateBaseOverride calculates the extensions deduced from a group of compose sources.
 func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	ready, err := NewComposeProject(s.Files, WithTransforms)
 	if err != nil {
 		return errors.Errorf("%s\nsee compose files: %v", err.Error(), s.Files)
 	}
-	s.override = extractLabels(ready)
+
+	s.override = &composeOverride{
+		Version: ready.version,
+		Volumes: map[string]VolumeConfig{},
+	}
+
+	if err := extractVolumesExtensions(ready, s.override); err != nil {
+		return err
+	}
+
+	for _, svc := range ready.Services {
+		target := ServiceConfig{
+			Name:       svc.Name,
+			Extensions: svc.Extensions,
+		}
+
+		k8sConf, err := config.SvcK8sConfigFromCompose(&svc)
+		if err != nil {
+			return err
+		}
+
+		m, err := k8sConf.Map()
+		if err != nil {
+			return err
+		}
+
+		if target.Extensions == nil {
+			target.Extensions = make(map[string]interface{})
+		}
+		target.Extensions[config.K8SExtensionKey] = m
+
+		s.override.Services = append(s.override.Services, target)
+	}
+
 	for _, opt := range opts {
 		if err := opt(s, ready); err != nil {
-			return nil
+			log.Debug(err.Error())
+			return err
 		}
 	}
+
+	return nil
+}
+
+// extractVolumesExtensions adds a k8s extension to each defined volume.
+// Every extension contains default k8s settings.
+func extractVolumesExtensions(c *ComposeProject, out *composeOverride) error {
+	for _, v := range c.VolumeNames() {
+		vol := c.Volumes[v]
+
+		k8sVol, err := config.VolK8sConfigFromCompose(&vol)
+		if err != nil {
+			return nil
+		}
+
+		target := VolumeConfig{
+			Extensions: vol.Extensions,
+		}
+
+		if target.Extensions == nil {
+			target.Extensions = make(map[string]interface{})
+		}
+
+		m, err := k8sVol.Map()
+		if err != nil {
+			return err
+		}
+
+		target.Extensions[config.K8SExtensionKey] = m
+
+		out.Volumes[v] = target
+	}
+
 	return nil
 }
 
@@ -54,8 +123,8 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 
 		services = append(services, ServiceConfig{
 			Name:        svc.Name,
-			Labels:      svc.Labels,
 			Environment: originSvc.Environment,
+			Extensions:  svc.Extensions,
 		})
 	}
 	s.override.Services = services
@@ -65,9 +134,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 // MarshalYAML makes Sources implement yaml.Marshaler.
 func (s *Sources) MarshalYAML() (interface{}, error) {
 	var out []string
-	for _, f := range s.Files {
-		out = append(out, f)
-	}
+	out = append(out, s.Files...)
 	return out, nil
 }
 
@@ -97,16 +164,4 @@ func (s *Sources) getWorkingDir() string {
 
 func (s *Sources) toComposeProject() (*ComposeProject, error) {
 	return NewComposeProject(s.Files)
-}
-
-func newSources(files []string, workingDir string) (*Sources, error) {
-	if len(files) > 0 {
-		return &Sources{Files: files}, nil
-	}
-
-	defaults, err := findDefaultComposeFiles(workingDir)
-	if err != nil {
-		return nil, err
-	}
-	return &Sources{Files: defaults}, nil
 }

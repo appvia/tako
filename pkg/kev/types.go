@@ -114,7 +114,7 @@ type Environment struct {
 	override *composeOverride
 }
 
-// composeOverride augments a compose project with labels and env vars to produce
+// composeOverride augments a compose project with an extension and env vars to produce
 // k8s deployment config
 type composeOverride struct {
 	Version  string   `yaml:"version,omitempty" json:"version,omitempty" diff:"version"`
@@ -133,7 +133,6 @@ type ComposeProject struct {
 // ServiceConfig is a shallow version of a compose-go ServiceConfig
 type ServiceConfig struct {
 	Name        string                      `yaml:"-" json:"-" diff:"name"`
-	Labels      composego.Labels            `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
 	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
 	Extensions  map[string]interface{}      `yaml:",inline" json:"-"`
 }
@@ -152,8 +151,8 @@ type Volumes map[string]VolumeConfig
 
 // VolumeConfig is a shallow version of a compose-go VolumeConfig
 type VolumeConfig struct {
-	Name   string           `yaml:",omitempty" json:"name,omitempty" diff:"name"`
-	Labels composego.Labels `yaml:",omitempty" json:"labels,omitempty" diff:"labels"`
+	Name       string                 `yaml:",omitempty" json:"name,omitempty" diff:"name"`
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 // changeset tracks changes made to a version, services and volumes

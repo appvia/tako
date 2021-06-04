@@ -1,17 +1,27 @@
 version: "3.7"
 services:
   db:
-    labels:
-      kev.workload.liveness-probe-type: exec
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.replicas: "1"
+    x-k8s:
+      workload:
+        replicas: 1
+        livenessProbe:
+          type: exec
+          exec:
+            command:
+              - echo
+              - I'm a useless check
   wordpress:
-    labels:
-      kev.workload.liveness-probe-type: exec
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service wordpress"]'
-      kev.workload.replicas: "1"
-      kev.workload.unknown: "unknown-value"
+    x-k8s:
+      workload:
+        unknown: "unknown-value"
+        replicas: 1
+        livenessProbe:
+          type: exec
+          exec:
+            command:
+              - echo
+              - I'm a useless check
 volumes:
   db_data:
-    labels:
-      kev.volume.storage-class: standard
+    x-k8s:
+      storageClass: standard

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Appvia Ltd <info@appvia.io>
+ * Copyright 2021 Appvia Ltd <info@appvia.io>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package kev
+package config
 
-import (
-	"github.com/appvia/kev/pkg/kev/config"
-	"github.com/pkg/errors"
-)
+type extensionOptions struct {
+	skipValidation bool
+}
 
-func newVolumeConfig(name string, p *ComposeProject) (VolumeConfig, error) {
-	ext := p.Volumes[name].Extensions
+// K8sExtensionOption will modify parsing behaviour of the k8s extension.
+type K8sExtensionOption func(*extensionOptions)
 
-	_, err := config.ParseVolK8sConfigFromMap(ext)
-	if err != nil {
-		return VolumeConfig{}, errors.Wrapf(err, "when parsing vol %s extensions", name)
+// SkipValidation skips validation when parsing a k8s extension from a service.
+func SkipValidation() K8sExtensionOption {
+	return func(extOpts *extensionOptions) {
+		extOpts.skipValidation = true
 	}
-
-	return VolumeConfig{Extensions: ext}, nil
 }

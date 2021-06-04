@@ -1,3 +1,4 @@
+id: 10d61d9a-99c4-4721-9b80-dd6725c657cc
 compose:
   - docker-compose.yaml
 environments:

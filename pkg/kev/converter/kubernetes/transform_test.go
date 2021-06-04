@@ -32,7 +32,7 @@ import (
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	networking "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -47,20 +47,24 @@ var _ = Describe("Transform", func() {
 	var project composego.Project
 	var projectService ProjectService
 	var excluded []string
+	var extensions map[string]interface{}
 
 	BeforeEach(func() {
 		project = composego.Project{
 			Services: composego.Services{},
 		}
 
-		projectService = ProjectService{
-			Name:  "web",
-			Image: "some-image",
-		}
+		ps, err := NewProjectService(composego.ServiceConfig{
+			Name:       "web",
+			Image:      "some-image",
+			Extensions: extensions,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		projectService = ps
 	})
 
 	JustBeforeEach(func() {
-		project.Services = append(project.Services, composego.ServiceConfig(projectService))
+		project.Services = append(project.Services, projectService.ServiceConfig)
 
 		k = Kubernetes{
 			Opt:      ConvertOptions{},
@@ -72,11 +76,6 @@ var _ = Describe("Transform", func() {
 
 	Describe("Transform", func() {
 		When("service exclusion list is empty", func() {
-			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
-				}
-			})
 
 			It("includes kubernetes objects for project services", func() {
 				objs, err := k.Transform()
@@ -111,9 +110,11 @@ var _ = Describe("Transform", func() {
 		When("project service doesn't have image specified", func() {
 
 			BeforeEach(func() {
-				projectService = ProjectService{
+				ps, err := NewProjectService(composego.ServiceConfig{
 					Name: "web",
-				}
+				})
+				Expect(err).NotTo(HaveOccurred())
+				projectService = ps
 			})
 
 			It("uses project service name as service image", func() {
@@ -129,11 +130,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("with imaged pull secret specified via labels", func() {
+		Context("with imaged pull secret specified via an extension", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadImagePullSecret: "my-pp-secret",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.ImagePull.Secret = "my-pp-secret"
+
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("uses passed image pull secret in the spec", func() {
@@ -142,11 +152,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("with service account name supplied via labels", func() {
+		Context("with service account name supplied via an extension", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadServiceAccountName: "my-service-account",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.ServiceAccountName = "my-service-account"
+
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("uses passed image pull policy in the spec", func() {
@@ -225,13 +244,11 @@ var _ = Describe("Transform", func() {
 			Context("and the config metadata points at external config", func() {
 				BeforeEach(func() {
 					project.Configs = composego.Configs{
-						configName: composego.ConfigObjConfig(
-							composego.ConfigObjConfig{
-								External: composego.External{
-									External: true,
-								},
+						configName: composego.ConfigObjConfig{
+							External: composego.External{
+								External: true,
 							},
-						),
+						},
 					}
 				})
 
@@ -280,7 +297,7 @@ var _ = Describe("Transform", func() {
 				projectService.Name = strings.Repeat("a", 100)
 			})
 
-			It("trims down service name to max 63 chars as per DNS label standard RFC-1123", func() {
+			It("trims down service name to max 63 chars as per DNS extension standard RFC-1123", func() {
 				Expect(k.initSvc(projectService).Name).To(HaveLen(63))
 			})
 		})
@@ -339,7 +356,7 @@ var _ = Describe("Transform", func() {
 		})
 	})
 
-	Describe("initiConfigMap", func() {
+	Describe("initConfigMap", func() {
 
 		configMapName := "myConfig"
 		data := map[string]string{
@@ -426,6 +443,13 @@ var _ = Describe("Transform", func() {
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
 					},
+					Strategy: v1apps.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &v1apps.RollingUpdateDeployment{
+							MaxSurge:       &intstr.IntOrString{Type: 0, IntVal: 1, StrVal: ""},
+							MaxUnavailable: &intstr.IntOrString{Type: 1, IntVal: 0, StrVal: "25%"},
+						},
+					},
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
 							Annotations: configAnnotations(projectService),
@@ -462,11 +486,9 @@ var _ = Describe("Transform", func() {
 				mountPath = "/mount/path"
 
 				project.Configs = composego.Configs{
-					configName: composego.ConfigObjConfig(
-						composego.ConfigObjConfig{
-							File: "/path/to/config/file",
-						},
-					),
+					configName: composego.ConfigObjConfig{
+						File: "/path/to/config/file",
+					},
 				}
 
 				projectService.Configs = []composego.ServiceConfigObjConfig{
@@ -492,7 +514,6 @@ var _ = Describe("Transform", func() {
 
 		When("update strategy is defined in project service deploy block", func() {
 			BeforeEach(func() {
-				// @todo add support for update stragy via label
 				parallelism := uint64(2)
 				projectService.Deploy = &composego.DeployConfig{
 					UpdateConfig: &composego.UpdateConfig{
@@ -500,6 +521,9 @@ var _ = Describe("Transform", func() {
 						Order:       "start-first",
 					},
 				}
+				svcK8sConfig, err := config.SvcK8sConfigFromCompose(&projectService.ServiceConfig)
+				Expect(err).ToNot(HaveOccurred())
+				projectService.SvcK8sConfig = svcK8sConfig
 			})
 
 			It("it includes update strategy in the deployment spec", func() {
@@ -555,12 +579,12 @@ var _ = Describe("Transform", func() {
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
 							Annotations: configAnnotations(projectService),
-							Labels:      configLabels(projectService.Name), //added
+							Labels:      configLabels(projectService.Name), // added
 						},
 						Spec: expectedPodSpec,
 					},
-					ServiceName: projectService.Name, //added
-					UpdateStrategy: v1apps.StatefulSetUpdateStrategy{ //added
+					ServiceName: projectService.Name, // added
+					UpdateStrategy: v1apps.StatefulSetUpdateStrategy{ // added
 						Type:          v1apps.RollingUpdateStatefulSetStrategyType,
 						RollingUpdate: &v1apps.RollingUpdateStatefulSetStrategy{},
 					},
@@ -593,11 +617,9 @@ var _ = Describe("Transform", func() {
 				mountPath = "/mount/path"
 
 				project.Configs = composego.Configs{
-					configName: composego.ConfigObjConfig(
-						composego.ConfigObjConfig{
-							File: "/path/to/config/file",
-						},
-					),
+					configName: composego.ConfigObjConfig{
+						File: "/path/to/config/file",
+					},
 				}
 
 				projectService.Configs = []composego.ServiceConfigObjConfig{
@@ -627,7 +649,7 @@ var _ = Describe("Transform", func() {
 		var expectedJob *v1batch.Job
 
 		replicas := 1
-		expectedPrallelism := int32(replicas)
+		expectedParallelism := int32(replicas)
 		expectedCompletions := int32(replicas)
 
 		JustBeforeEach(func() {
@@ -641,7 +663,7 @@ var _ = Describe("Transform", func() {
 					Labels: configAllLabels(projectService),
 				},
 				Spec: v1batch.JobSpec{
-					Parallelism: &expectedPrallelism,
+					Parallelism: &expectedParallelism,
 					Completions: &expectedCompletions,
 					Selector: &meta.LabelSelector{
 						MatchLabels: configLabels(projectService.Name),
@@ -682,11 +704,9 @@ var _ = Describe("Transform", func() {
 				mountPath = "/mount/path"
 
 				project.Configs = composego.Configs{
-					configName: composego.ConfigObjConfig(
-						composego.ConfigObjConfig{
-							File: "/path/to/config/file",
-						},
-					),
+					configName: composego.ConfigObjConfig{
+						File: "/path/to/config/file",
+					},
 				}
 
 				projectService.Configs = []composego.ServiceConfigObjConfig{
@@ -714,23 +734,26 @@ var _ = Describe("Transform", func() {
 	Describe("initIngress", func() {
 		port := int32(1234)
 
-		When("project service label instructing to expose the k8s service is specified as empty string", func() {
+		When("project service extension exposing the k8s service using an empty string", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: "",
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = ""
 			})
 
-			It("doesn't initiat an ingress", func() {
+			It("doesn't initiate an ingress", func() {
 				Expect(k.initIngress(projectService, port)).To(BeNil())
 			})
 		})
 
-		When("project service label instructing to expose the k8s service is specified as `true`", func() {
+		When("project service extension exposing the k8s service", func() {
+			domain := "domain.name"
+			ingressAnnotations := map[string]string{
+				"kubernetes.io/ingress.class":    "external",
+				"cert-manager.io/cluster-issuer": "prod-le-dns01",
+			}
+
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: "true",
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = domain
+				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
 			})
 
 			It("initialises Ingress with a port routing to the project service name", func() {
@@ -744,55 +767,7 @@ var _ = Describe("Transform", func() {
 					ObjectMeta: meta.ObjectMeta{
 						Name:        projectService.Name,
 						Labels:      configLabels(projectService.Name),
-						Annotations: configAnnotations(projectService),
-					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
-							{
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
-											{
-												Path: "",
-												Backend: networkingv1beta1.IngressBackend{
-													ServiceName: projectService.Name,
-													ServicePort: intstr.IntOrString{
-														IntVal: port,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}))
-			})
-		})
-
-		When("project service label instructing to expose the k8s service is specified as `domain.name`", func() {
-			domain := "domain.name"
-			path := "path"
-
-			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: filepath.Join(domain, path),
-				}
-			})
-
-			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
-				ing := k.initIngress(projectService, port)
-
-				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
-					TypeMeta: meta.TypeMeta{
-						Kind:       "Ingress",
-						APIVersion: "networking.k8s.io/v1beta1",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name:        projectService.Name,
-						Labels:      configLabels(projectService.Name),
-						Annotations: configAnnotations(projectService),
+						Annotations: ingressAnnotations,
 					},
 					Spec: networkingv1beta1.IngressSpec{
 						Rules: []networkingv1beta1.IngressRule{
@@ -802,7 +777,7 @@ var _ = Describe("Transform", func() {
 									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
 										Paths: []networkingv1beta1.HTTPIngressPath{
 											{
-												Path: "/" + path,
+												Path: "",
 												Backend: networkingv1beta1.IngressBackend{
 													ServiceName: projectService.Name,
 													ServicePort: intstr.IntOrString{
@@ -820,81 +795,95 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service label instructing to expose the k8s service is specified as comma separated list of domain names", func() {
+		When("project service extension exposing the k8s service using a domain name", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
+			})
+
+			It("initialises Ingress with the correct service", func() {
+				ingress := k.initIngress(projectService, port)
+				configuredService := ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.ServiceName
+				Expect(configuredService).To(Equal(projectService.Name))
+			})
+
+			It("initialises Ingress with the correct port", func() {
+				ingress := k.initIngress(projectService, port)
+				configuredPort := ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.ServicePort.IntVal
+				Expect(configuredPort).To(Equal(port))
+			})
+		})
+
+		When("project service extension exposing the k8s service using a domain with a path", func() {
+			domain := "domain.name"
+			path := "path"
+
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = filepath.Join(domain, path)
+			})
+
+			It("specifies host in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.Spec.Rules[0].Host).To(Equal(domain))
+			})
+
+			It("specifies path in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				ingressPath := ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path
+				Expect(ingressPath).To(Equal("/" + path))
+			})
+		})
+
+		When("project service extension exposing the k8s service using a comma separated list of domain names", func() {
 			domains := []string{
 				"domain.name",
 				"another.domain.name",
 			}
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose: strings.Join(domains, ","),
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = strings.Join(domains, ",")
 			})
 
-			It("initialises Ingress with a port routing to the project service name and specifies host information", func() {
-				ing := k.initIngress(projectService, port)
-
-				Expect(ing).To(Equal(&networkingv1beta1.Ingress{
-					TypeMeta: meta.TypeMeta{
-						Kind:       "Ingress",
-						APIVersion: "networking.k8s.io/v1beta1",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name:        projectService.Name,
-						Labels:      configLabels(projectService.Name),
-						Annotations: configAnnotations(projectService),
-					},
-					Spec: networkingv1beta1.IngressSpec{
-						Rules: []networkingv1beta1.IngressRule{
-							{
-								Host: domains[0],
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
-											{
-												Path: "",
-												Backend: networkingv1beta1.IngressBackend{
-													ServiceName: projectService.Name,
-													ServicePort: intstr.IntOrString{
-														IntVal: port,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-							{
-								Host: domains[1],
-								IngressRuleValue: networkingv1beta1.IngressRuleValue{
-									HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-										Paths: []networkingv1beta1.HTTPIngressPath{
-											{
-												Path: "",
-												Backend: networkingv1beta1.IngressBackend{
-													ServiceName: projectService.Name,
-													ServicePort: intstr.IntOrString{
-														IntVal: port,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}))
+			It("specifies all comma separated hosts in the initialised Ingress", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.Spec.Rules[0].Host).To(Equal(domains[0]))
+				Expect(ingress.Spec.Rules[1].Host).To(Equal(domains[1]))
 			})
 		})
 
-		When("TLS secret name was specified via label", func() {
+		When("project service extension exposing the k8s service using a default ingress backend", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelServiceExpose:          "domain.name",
-					config.LabelServiceExposeTLSSecret: "my-tls-secret",
-				}
+				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendKeyword
+			})
+
+			It("creates a default backend in the initialised Ingress with no rules`", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.Spec.Backend.ServiceName).To(Equal(projectService.Name))
+				Expect(ingress.Spec.Backend.ServicePort.IntVal).To(Equal(port))
+				Expect(ingress.Spec.Rules).To(HaveLen(0))
+			})
+		})
+
+		When("project service extension instructing to expose the k8s service with domain and annotations", func() {
+			ingressAnnotations := map[string]string{
+				"kubernetes.io/ingress.class":    "external",
+				"cert-manager.io/cluster-issuer": "prod-le-dns01",
+			}
+
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.IngressAnnotations = ingressAnnotations
+				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
+			})
+
+			It("initialises Ingress with configured ingress annotations", func() {
+				ingress := k.initIngress(projectService, port)
+				Expect(ingress.ObjectMeta.Annotations).To(Equal(ingressAnnotations))
+			})
+		})
+
+		When("TLS secret name was specified via extension", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
+				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
 			})
 
 			It("will include it in the ingress spec", func() {
@@ -906,6 +895,18 @@ var _ = Describe("Transform", func() {
 						SecretName: "my-tls-secret",
 					},
 				}))
+			})
+		})
+
+		When("TLS secret name was specified via extension for service exposed with default ingress backend", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendKeyword
+				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
+			})
+
+			It("does not create a TLS object in the ingress spec", func() {
+				ing := k.initIngress(projectService, port)
+				Expect(ing.Spec.TLS).To(HaveLen(0))
 			})
 		})
 	})
@@ -927,9 +928,7 @@ var _ = Describe("Transform", func() {
 
 				When("the maximum number of replicas is defined", func() {
 					BeforeEach(func() {
-						projectService.Labels = composego.Labels{
-							config.LabelWorkloadAutoscaleMaxReplicas: "10",
-						}
+						projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
 					})
 
 					It("initialises HPA with expected API version referencing passed object", func() {
@@ -940,12 +939,10 @@ var _ = Describe("Transform", func() {
 						Expect(hpa.Spec.ScaleTargetRef.Name).To(Equal(projectService.Name))
 					})
 
-					When("workload CPU threshold paramters is also specified", func() {
+					When("workload CPU threshold parameters is also specified", func() {
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas:             "10",
-								config.LabelWorkloadAutoscaleCPUUtilizationThreshold: "65",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
+							projectService.SvcK8sConfig.Workload.Autoscale.CPUThreshold = 65
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service", func() {
@@ -961,9 +958,7 @@ var _ = Describe("Transform", func() {
 					When("workload CPU threshold is not specified", func() {
 
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "10",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service with default target CPU utilization of 70%", func() {
@@ -977,12 +972,9 @@ var _ = Describe("Transform", func() {
 					})
 
 					When("autoscaling max replicas number is lower or equal to initial number of replicas", func() {
-
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadReplicas:             "10",
-								config.LabelWorkloadAutoscaleMaxReplicas: "5",
-							}
+							projectService.SvcK8sConfig.Workload.Replicas = 10
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 5
 						})
 
 						It("doesn't initialise the Horizontal Pod Autoscaler", func() {
@@ -993,23 +985,19 @@ var _ = Describe("Transform", func() {
 
 					When("the maximum number of replicas is specified as 0", func() {
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "0",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 0
 						})
 
-						It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+						It("doesn't initialize Horizontal Pod Autoscaler for that project service", func() {
 							hpa := k.initHpa(projectService, obj)
 							Expect(hpa).To(BeNil())
 						})
 					})
 
-					When("workload Memory threshold paramter is also specified", func() {
+					When("workload Memory threshold parameter is also specified", func() {
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas:                "10",
-								config.LabelWorkloadAutoscaleMemoryUtilizationThreshold: "40",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
+							projectService.SvcK8sConfig.Workload.Autoscale.MemoryThreshold = 40
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service", func() {
@@ -1025,9 +1013,7 @@ var _ = Describe("Transform", func() {
 					When("workload Memory threshold is not specified", func() {
 
 						BeforeEach(func() {
-							projectService.Labels = composego.Labels{
-								config.LabelWorkloadAutoscaleMaxReplicas: "10",
-							}
+							projectService.SvcK8sConfig.Workload.Autoscale.MaxReplicas = 10
 						})
 
 						It("initialises Horizontal Pod Autoscaler for a project service with default target Memory utilization of 70%", func() {
@@ -1042,7 +1028,7 @@ var _ = Describe("Transform", func() {
 				})
 
 				When("the maximum number of replicas is not defined", func() {
-					It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+					It("doesn't initialize Horizontal Pod Autoscaler for that project service", func() {
 						hpa := k.initHpa(projectService, obj)
 						Expect(hpa).To(BeNil())
 					})
@@ -1061,7 +1047,7 @@ var _ = Describe("Transform", func() {
 				}
 			})
 
-			It("doens't initialize Horizontal Pod Autoscaler for that project service", func() {
+			It("doesn't initialize Horizontal Pod Autoscaler for that project service", func() {
 				hpa := k.initHpa(projectService, obj)
 				Expect(hpa).To(BeNil())
 			})
@@ -1209,8 +1195,14 @@ var _ = Describe("Transform", func() {
 			}
 
 			It("sets correct access mode", func() {
+				var spec v1.PersistentVolumeClaimSpec
+
 				pvc, err := k.createPVC(volume)
-				Expect(pvc.Spec.AccessModes).To(Equal([]v1.PersistentVolumeAccessMode{v1.ReadOnlyMany}))
+				if pvc != nil {
+					spec = pvc.Spec
+				}
+
+				Expect(spec.AccessModes).To(Equal([]v1.PersistentVolumeAccessMode{v1.ReadOnlyMany}))
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -1272,7 +1264,7 @@ var _ = Describe("Transform", func() {
 				Expect(p).To(Equal([]v1.ContainerPort{
 					{
 						ContainerPort: int32(8080),
-						Protocol:      v1.Protocol("TCP"),
+						Protocol:      "TCP",
 						HostIP:        "10.10.10.10",
 					},
 				}))
@@ -1330,9 +1322,7 @@ var _ = Describe("Transform", func() {
 				nodePort := int32(4444)
 
 				BeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelServiceNodePortPort: strconv.Itoa(int(nodePort)),
-					}
+					projectService.SvcK8sConfig.Service.NodePort = int(nodePort)
 				})
 
 				It("specifies that port in the service port spec", func() {
@@ -1399,7 +1389,7 @@ var _ = Describe("Transform", func() {
 
 	Describe("configEmptyVolumeSource", func() {
 		When("key passed as `tmpfs`", func() {
-			It("retuens EmptyDir volume source as expected", func() {
+			It("returns EmptyDir volume source as expected", func() {
 				Expect(k.configEmptyVolumeSource("tmpfs")).To(Equal(&v1.VolumeSource{
 					EmptyDir: &v1.EmptyDirVolumeSource{Medium: v1.StorageMediumMemory},
 				}))
@@ -1407,7 +1397,7 @@ var _ = Describe("Transform", func() {
 		})
 
 		When("key is passed with value other than `tmpfs`", func() {
-			It("retuens EmptyDir volume source as expected", func() {
+			It("returns EmptyDir volume source as expected", func() {
 				Expect(k.configEmptyVolumeSource("")).To(Equal(&v1.VolumeSource{
 					EmptyDir: &v1.EmptyDirVolumeSource{},
 				}))
@@ -1422,7 +1412,7 @@ var _ = Describe("Transform", func() {
 		When("ConfigMap doesn't use sub-paths", func() {
 			configMap := &v1.ConfigMap{}
 
-			It("configures ConfigMapVolumeSource as expecte", func() {
+			It("configures ConfigMapVolumeSource as expected", func() {
 				volSrc := k.configConfigMapVolumeSource(configMapName, targetPath, configMap)
 				Expect(volSrc).To(Equal(&v1.VolumeSource{
 					ConfigMap: &v1.ConfigMapVolumeSource{
@@ -1446,7 +1436,7 @@ var _ = Describe("Transform", func() {
 				},
 			}
 
-			It("configures ConfigMapVolumeSource as expecte", func() {
+			It("configures ConfigMapVolumeSource as expected", func() {
 				volSrc := k.configConfigMapVolumeSource(configMapName, targetPath, configMap)
 
 				_, expectedPath := path.Split(targetPath)
@@ -1492,12 +1482,10 @@ var _ = Describe("Transform", func() {
 	Describe("configPVCVolumeSource", func() {
 		It("creates PVC volume source as expected", func() {
 			claimName := "claimName"
-			readOnly := false
-
-			Expect(k.configPVCVolumeSource(claimName, readOnly)).To(Equal(&v1.VolumeSource{
+			Expect(k.configPVCVolumeSource(claimName, false)).To(Equal(&v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 					ClaimName: claimName,
-					ReadOnly:  readOnly,
+					ReadOnly:  false,
 				},
 			}))
 		})
@@ -1530,7 +1518,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("for env dependend vars containing double curly braces e.g. {{OTHER_ENV_VAR_NAME}} ", func() {
+		Context("for env dependent vars containing double curly braces e.g. {{OTHER_ENV_VAR_NAME}} ", func() {
 
 			secretRef := "postgres://{{USER}}:{{PASS}}@{{HOST}}:{{PORT}}/{{DB}}"
 
@@ -1540,7 +1528,7 @@ var _ = Describe("Transform", func() {
 				}
 			})
 
-			It("expands that env variable value to reference dependet variables", func() {
+			It("expands that env variable value to reference dependent variables", func() {
 				vars, err := k.configEnvs(projectService)
 
 				Expect(vars[0].Value).To(Equal("postgres://$(USER):$(PASS)@$(HOST):$(PORT)/$(DB)"))
@@ -1631,7 +1619,7 @@ var _ = Describe("Transform", func() {
 						}
 					})
 
-					It("doesn't add environment variable with malconfigured reference", func() {
+					It("doesn't add environment variable with misconfigured reference", func() {
 						vars, err := k.configEnvs(projectService)
 
 						Expect(vars).To(HaveLen(0))
@@ -1682,7 +1670,7 @@ var _ = Describe("Transform", func() {
 						}
 					})
 
-					It("doesn't add environment variable with malconfigured reference", func() {
+					It("doesn't add environment variable with misconfigured reference", func() {
 						vars, err := k.configEnvs(projectService)
 
 						Expect(vars).To(HaveLen(0))
@@ -1733,7 +1721,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("warns and continues", func() {
-				objects := []runtime.Object{}
+				var objects []runtime.Object
 				newObjs := k.createConfigMapFromComposeConfig(projectService, objects)
 				Expect(newObjs).To(HaveLen(0))
 			})
@@ -1749,7 +1737,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("generates a ConfigMap object and appends it to objects slice", func() {
-				objects := []runtime.Object{}
+				var objects []runtime.Object
 				newObjs := k.createConfigMapFromComposeConfig(projectService, objects)
 				Expect(newObjs).To(HaveLen(1))
 			})
@@ -1768,7 +1756,6 @@ var _ = Describe("Transform", func() {
 				},
 				ObjectMeta: meta.ObjectMeta{
 					Name: networkName,
-					//Labels: ConfigLabels(name),
 				},
 				Spec: networking.NetworkPolicySpec{
 					PodSelector: meta.LabelSelector{
@@ -1814,9 +1801,10 @@ var _ = Describe("Transform", func() {
 			},
 		}
 
-		Context("for healdess service type", func() {
+		Context("for headless service type", func() {
 			It("creates headless service", func() {
-				svc := k.createService(config.HeadlessService, projectService)
+				svc, err := k.createService(config.HeadlessService, projectService)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeClusterIP))
 				Expect(svc.Spec.ClusterIP).To(Equal("None"))
 				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
@@ -1826,7 +1814,8 @@ var _ = Describe("Transform", func() {
 
 		Context("for any other service type", func() {
 			It("creates a service", func() {
-				svc := k.createService(config.NodePortService, projectService)
+				svc, err := k.createService(config.NodePortService, projectService)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeNodePort))
 				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
 				Expect(svc.Spec.Ports).To(Equal(expectedPorts))
@@ -1888,46 +1877,36 @@ var _ = Describe("Transform", func() {
 
 			When("readiness probe is defined for project service", func() {
 				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeCommand: "hello world",
-						config.LabelWorkloadLivenessProbeType:     ProbeTypeNone.String(),
+					svcK8sConfig := config.DefaultSvcK8sConfig()
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					svcK8sConfig.Workload.ReadinessProbe.Type = config.ProbeTypeExec.String()
+					svcK8sConfig.Workload.ReadinessProbe.Exec.Command = []string{"hello world"}
+
+					ext, err := svcK8sConfig.Map()
+					Expect(err).NotTo(HaveOccurred())
+					projectService.Extensions = map[string]interface{}{
+						config.K8SExtensionKey: ext,
 					}
 				})
 
 				It("includes readiness probe definition in the pod spec", func() {
 					err := k.updateKubernetesObjects(projectService, &objs)
 					Expect(err).ToNot(HaveOccurred())
-
+					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe).NotTo(BeNil())
 					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command).To(Equal([]string{"hello world"}))
-				})
-			})
-
-			When("readiness probe is misconfigured", func() {
-				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadReadinessProbeType:    ProbeTypeExec.String(),
-						config.LabelWorkloadReadinessProbeCommand: "",
-					}
-				})
-
-				It("logs and returns an error", func() {
-					err := k.updateKubernetesObjects(projectService, &objs)
-					Expect(err).To(HaveOccurred())
-
-					assertLog(logrus.ErrorLevel,
-						"Couldn't update k8s object",
-						map[string]string{})
-
-					Expect(o.Spec.Template.Spec.Containers[0].ReadinessProbe).To(BeNil())
 				})
 			})
 
 			When("readiness probe is not defined or disabled", func() {
 				JustBeforeEach(func() {
-					projectService.Labels = composego.Labels{
-						config.LabelWorkloadLivenessProbeType: ProbeTypeNone.String(),
-					}
+					svcK8sConfig := config.SvcK8sConfig{}
+					svcK8sConfig.Workload.LivenessProbe.Type = config.ProbeTypeNone.String()
+					m, err := svcK8sConfig.Map()
+
+					Expect(err).NotTo(HaveOccurred())
+
+					projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+					projectService, err = NewProjectService(projectService.ServiceConfig)
 				})
 
 				It("doesn't include readiness probe definition in the pod spec", func() {
@@ -2018,9 +1997,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory request provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadMemory: "10Mi",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.Memory = "10Mi"
+
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container memory request as expected", func() {
@@ -2031,9 +2017,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with memory limit provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadMaxMemory: "10M",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.MaxMemory = "10M"
+
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container memory limit as expected", func() {
@@ -2044,9 +2037,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu request provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadCPU: "0.1",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.CPU = "0.1"
+
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container cpu request as expected", func() {
@@ -2057,9 +2057,16 @@ var _ = Describe("Transform", func() {
 
 		Context("with cpu limit provided in configuration", func() {
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadMaxCPU: "0.5",
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.Resource.MaxCPU = "0.5"
+
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: ext,
 				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
 			})
 
 			It("sets container cpu limit as expected", func() {
@@ -2072,13 +2079,20 @@ var _ = Describe("Transform", func() {
 	Describe("setPodSecurityContext", func() {
 		podSecContext := &v1.PodSecurityContext{}
 
-		When("runAsUser label is specified", func() {
+		When("runAsUser is specified in a k8s extension", func() {
 			runAsUser := int64(1000)
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsUser: strconv.Itoa(int(runAsUser)),
-				}
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodSecurity.RunAsUser = &runAsUser
+
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("adds RunAsUser into pod security context as expected", func() {
@@ -2087,13 +2101,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("runAsGroup label is specified", func() {
+		When("runAsGroup is specified in a k8s extension", func() {
 			runAsGroup := int64(1000)
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadSecurityContextRunAsGroup: strconv.Itoa(int(runAsGroup)),
-				}
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodSecurity.RunAsGroup = &runAsGroup
+
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("adds RunAsGroup into pod security context as expected", func() {
@@ -2102,13 +2123,20 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("fsGroup label is specified", func() {
+		When("fsGroup is specified in a k8s extension", func() {
 			fsGroup := int64(1000)
 
 			BeforeEach(func() {
-				projectService.Labels = composego.Labels{
-					config.LabelWorkloadSecurityContextFsGroup: strconv.Itoa(int(fsGroup)),
-				}
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodSecurity.FsGroup = &fsGroup
+
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("adds FSGroup into pod security context as expected", func() {

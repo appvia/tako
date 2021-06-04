@@ -18,6 +18,7 @@ package kev_test
 
 import (
 	"bytes"
+	"io/ioutil"
 	"path"
 
 	"github.com/appvia/kev/pkg/kev"
@@ -76,8 +77,8 @@ var _ = Describe("InitRunner", func() {
 		It("should write out a yaml file with manifest data", func() {
 			var buffer bytes.Buffer
 			_, err := manifest.WriteTo(&buffer)
-
 			Expect(err).ToNot(HaveOccurred())
+
 			Expect(buffer.String()).To(MatchRegexp(`id: [a-z0-9]+`))
 			Expect(buffer.String()).To(ContainSubstring("compose:"))
 			Expect(buffer.String()).To(MatchRegexp(`.*- .*compose.yml`))
@@ -173,7 +174,7 @@ var _ = Describe("InitRunner", func() {
 		})
 	})
 
-	Context("sandbox dev environment", func() {
+	Context("Sandbox dev environment", func() {
 		When("dev is not supplied as an environment", func() {
 			BeforeEach(func() {
 				workingDir = "./testdata/init-default/compose-yaml"
@@ -198,47 +199,89 @@ var _ = Describe("InitRunner", func() {
 	})
 
 	Context("Created environment overrides", func() {
-		BeforeEach(func() {
-			workingDir = "./testdata/init-default/compose-yaml"
-		})
+		When("no extensions in the sources", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-default/compose-yaml"
+			})
 
-		Context("marshalling", func() {
-			It("should write out a yaml file with manifest data", func() {
-				var buffer bytes.Buffer
+			Context("marshalled and minified", func() {
+				It("write out a yaml file with default minified extension data", func() {
+					var buffer bytes.Buffer
+					_, err := env.WriteTo(&buffer)
+					Expect(err).ToNot(HaveOccurred())
 
-				_, err := env.WriteTo(&buffer)
-				Expect(err).ToNot(HaveOccurred())
+					expected, err := ioutil.ReadFile("./testdata/init-default/compose-yaml/output.yaml")
+					Expect(err).ToNot(HaveOccurred())
 
-				expected := `version: "3.9"
-services:
-  db:
-    labels:
-      kev.workload.liveness-probe-command: '["CMD", "echo", "Define healthcheck command for service db"]'
-      kev.workload.liveness-probe-type: exec
-      kev.workload.replicas: "1"
-volumes:
-  db_data:
-    labels:
-      kev.volume.size: 100Mi
-`
-				Expect(buffer.String()).To(Equal(expected))
+					Expect(buffer.String()).To(MatchYAML(expected))
+				})
+			})
+
+			Context("services", func() {
+				It("includes default config params in k8s extension", func() {
+					svc, _ := env.GetService("db")
+
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(svc.Extensions, config.SkipValidation())
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(svcK8sConfig.Workload.LivenessProbe).To(Equal(config.LivenessProbe{
+						Type: config.ProbeTypeExec.String(),
+						ProbeConfig: config.ProbeConfig{
+							Exec: config.ExecProbe{
+								Command: config.DefaultLivenessProbeCommand,
+							},
+						},
+					}))
+					Expect(svcK8sConfig.Workload.Replicas).NotTo(BeZero())
+				})
+			})
+
+			Context("volumes ", func() {
+				It("should include default config params in k8s extension", func() {
+					vol, _ := env.GetVolume("db_data")
+					k8sVol, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(k8sVol.Size).To(Equal(config.DefaultVolumeSize))
+				})
 			})
 		})
-
-		Context("with services", func() {
-			It("should include a subset of labels as config params", func() {
-				svc, _ := env.GetService("db")
-				Expect(svc.GetLabels()).To(HaveLen(3))
-				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeType))
-				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadLivenessProbeCommand))
-				Expect(svc.GetLabels()).To(HaveKey(config.LabelWorkloadReplicas))
+		When("there are extensions in the sources", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-default/compose-yaml-src-ext"
 			})
-		})
-		Context("with volumes", func() {
-			It("should include a subset of labels as config params", func() {
-				vol, _ := env.GetVolume("db_data")
-				Expect(vol.Labels).To(HaveLen(1))
-				Expect(vol.Labels).To(HaveKey(config.LabelVolumeSize))
+
+			Context("marshalled and minified", func() {
+				It("writes out a minified yaml file with sources values overriding extension defaults", func() {
+					var buffer bytes.Buffer
+					_, err := env.WriteTo(&buffer)
+					Expect(err).ToNot(HaveOccurred())
+
+					expected, err := ioutil.ReadFile("./testdata/init-default/compose-yaml-src-ext/output.yaml")
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(buffer.String()).To(MatchYAML(expected))
+				})
+			})
+
+			Context("services", func() {
+				It("includes replicas config value from sources in k8s extension", func() {
+					svc, _ := env.GetService("db")
+
+					svcK8sConfig, err := config.ParseSvcK8sConfigFromMap(svc.Extensions, config.SkipValidation())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(svcK8sConfig.Workload.Replicas).To(Equal(10))
+				})
+			})
+
+			Context("volumes ", func() {
+				It("includes size config value from sources in k8s extension", func() {
+					vol, _ := env.GetVolume("db_data")
+					k8sVol, err := config.ParseVolK8sConfigFromMap(vol.Extensions)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(k8sVol.Size).To(Equal("30Gi"))
+				})
 			})
 		})
 	})

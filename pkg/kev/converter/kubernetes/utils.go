@@ -35,16 +35,17 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Selector used as labels and selector
@@ -96,7 +97,12 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			log.Error("Error creating output file")
 			return err
 		}
-		defer f.Close()
+		defer func(f *os.File) {
+			err := f.Close()
+			if err != nil {
+				log.Error("Error closing output file")
+			}
+		}(f)
 	}
 
 	var files []string
@@ -226,7 +232,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 		file = fmt.Sprintf("%s-%s.yaml", name, trailing)
 	}
 	if toStdout {
-		fmt.Fprintf(os.Stdout, "%s\n", string(data))
+		_, _ = fmt.Fprintf(os.Stdout, "%s\n", string(data))
 		return "", nil
 	} else if f != nil {
 		// Write all content to a single file f
@@ -234,7 +240,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 			log.Error("Couldn't write manifests content to a single file")
 			return "", err
 		}
-		f.Sync()
+		_ = f.Sync()
 	} else {
 		// Write content separately to each file
 		file = filepath.Join(path, file)
@@ -320,7 +326,12 @@ func isDir(name string) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Error("error closing a file.")
+		}
+	}(f)
 
 	// Get file attributes and information
 	fileStat, err := f.Stat()
@@ -472,25 +483,6 @@ func getRestartPolicy(projectServiceName, restart string) (v1.RestartPolicy, err
 	}
 }
 
-// getServiceType returns service type based on passed string value
-// @orig: https://github.com/kubernetes/kompose/blob/1f0a097836fb4e0ae4a802eb7ab543a4f9493727/pkg/loader/compose/utils.go#L108
-func getServiceType(serviceType string) (string, error) {
-	switch strings.ToLower(serviceType) {
-	case "", "clusterip":
-		return string(v1.ServiceTypeClusterIP), nil
-	case "nodeport":
-		return string(v1.ServiceTypeNodePort), nil
-	case "loadbalancer":
-		return string(v1.ServiceTypeLoadBalancer), nil
-	case "headless":
-		return config.HeadlessService, nil
-	case "none":
-		return config.NoService, nil
-	default:
-		return "", fmt.Errorf("Unknown value %s, supported values are 'none, nodeport, clusterip, headless or loadbalancer'", serviceType)
-	}
-}
-
 // sortServices sorts all compose project services by name
 func sortServices(project *composego.Project) {
 	sort.Slice(project.Services, func(i, j int) bool {
@@ -584,15 +576,11 @@ func configAllLabels(projectService ProjectService) map[string]string {
 }
 
 // configAnnotations configures annotations - they are effectively compose project service labels,
-// but will exclude all Kev configuration labels by default.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L152
 func configAnnotations(projectService ProjectService) map[string]string {
 	annotations := map[string]string{}
 	for key, value := range projectService.Labels {
-		// don't turn kev configuration labels into kubernetes annotations!
-		if !strings.HasPrefix(key, config.LabelPrefix) {
-			annotations[key] = value
-		}
+		annotations[key] = value
 	}
 	return annotations
 }
@@ -889,24 +877,6 @@ func checkVolDependent(dv Volumes, volumes []Volumes) bool {
 	return true
 }
 
-// getVolumeLabels returns size and selector if present in volume labels
-// @orig: https://github.com/kubernetes/kompose/blob/e7f05588bf8bd645000612faa136b1b6aa0d5bb6/pkg/loader/compose/v3.go#L559
-func getVolumeLabels(volume composego.VolumeConfig) (string, string, string) {
-	size, selector, storageClass := "", "", ""
-
-	for key, value := range volume.Labels {
-		if key == config.LabelVolumeSize {
-			size = value
-		} else if key == config.LabelVolumeSelector {
-			selector = value
-		} else if key == config.LabelVolumeStorageClass {
-			storageClass = value
-		}
-	}
-
-	return size, selector, storageClass
-}
-
 // useSubPathMount check if a configmap should be mounted as subpath
 // in this situation, this configmap will only contains 1 key in data
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L339
@@ -963,27 +933,50 @@ func contains(strs []string, s string) bool {
 	return i < len(strs) && strs[i] == s
 }
 
-// runtimeObjectConvertToTarget converts runtime object into a target
-func runtimeObjectConvertToTarget(o runtime.Object, target interface{}) error {
-	unstructured, err := ToUnstructured(o)
-	if err != nil {
-		return err
-	}
-
-	return FromUnstructured(unstructured, target)
-}
-
 // ToUnstructured converts runtime.Object to unstructured map[string]interface{}
 func ToUnstructured(o runtime.Object) (map[string]interface{}, error) {
-	unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
+	raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
 	if err != nil {
 		return nil, err
 	}
 
-	return unstructured, nil
+	return raw, nil
 }
 
-// FromUnstructured converts unstructured to target object
-func FromUnstructured(unstructured map[string]interface{}, target interface{}) error {
-	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured, target)
+// volumeByNameAndFormat find a volume using a name, and the name's underlying format.
+func volumeByNameAndFormat(name string, formatter func(string) string, volumes composego.Volumes) composego.VolumeConfig {
+	for _, v := range volumes {
+		if name == formatter(v.Name) {
+			return v
+		}
+	}
+	return composego.VolumeConfig{}
+}
+
+// hasDefaultIngressBackendKeyword determines whether the host value list contains the keyword used to create
+// a default backend ingress.
+func hasDefaultIngressBackendKeyword(v []string) bool {
+	return strings.Contains(strings.Join(v, ""), DefaultIngressBackendKeyword)
+}
+
+// createIngressRule creates an ingress rule using a set of parameters.
+func createIngressRule(host, path, serviceName string, port int32) networkingv1beta1.IngressRule {
+	return networkingv1beta1.IngressRule{
+		Host: host,
+		IngressRuleValue: networkingv1beta1.IngressRuleValue{
+			HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+				Paths: []networkingv1beta1.HTTPIngressPath{
+					{
+						Path: path,
+						Backend: networkingv1beta1.IngressBackend{
+							ServiceName: serviceName,
+							ServicePort: intstr.IntOrString{
+								IntVal: port,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }

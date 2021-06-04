@@ -58,7 +58,7 @@ func augmentOrAddDeploy(x *ComposeProject) error {
 func augmentOrAddHealthCheck(x *ComposeProject) error {
 	var updated composego.Services
 	err := x.WithServices(x.ServiceNames(), func(svc composego.ServiceConfig) error {
-		check := createHealthCheck(svc.Name)
+		check := createHealthCheck()
 
 		if svc.HealthCheck != nil {
 			if err := mergo.Merge(&check, svc.HealthCheck, mergo.WithOverride); err != nil {
@@ -109,15 +109,15 @@ func createDeploy() composego.DeployConfig {
 }
 
 // createHealthCheck returns a healthcheck block with configured placeholders.
-func createHealthCheck(svcName string) composego.HealthCheckConfig {
-	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand, svcName)
+func createHealthCheck() composego.HealthCheckConfig {
+	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand[1])
 	to, _ := time.ParseDuration(config.DefaultProbeTimeout)
 	iv, _ := time.ParseDuration(config.DefaultProbeInterval)
 	sp, _ := time.ParseDuration(config.DefaultProbeInitialDelay)
 	timeout := composego.Duration(to)
 	interval := composego.Duration(iv)
 	startPeriod := composego.Duration(sp)
-	retries := uint64(config.DefaultProbeRetries)
+	retries := uint64(config.DefaultProbeFailureThreshold)
 
 	return composego.HealthCheckConfig{
 		Test:        []string{"CMD", "echo", testMsg},

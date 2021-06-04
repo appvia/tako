@@ -1,0 +1,21 @@
+version: '3.9'
+services:
+  db:
+    image: mysql:8.0.19
+    command: '--default-authentication-plugin=mysql_native_password'
+    restart: always
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=somewordpress
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress
+    x-k8s:
+      workload:
+        replicas: 10
+volumes:
+  db_data:
+    x-k8s:
+      size: 30Gi
+

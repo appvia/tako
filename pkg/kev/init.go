@@ -131,7 +131,7 @@ func (r *InitRunner) DetectSources() (*Sources, error) {
 		return &Sources{Files: r.config.ComposeSources}, nil
 	}
 
-	s := sg.Add(fmt.Sprintf("Scanning for compose configuration"))
+	s := sg.Add("Scanning for compose configuration")
 	defaults, err := findDefaultComposeFiles(r.WorkingDir)
 	if err != nil {
 		initStepError(r.UI, s, initStepComposeSource, err)
@@ -167,7 +167,10 @@ func (r *InitRunner) CreateManifestAndEnvironmentOverrides(sources *Sources) err
 		return err
 	}
 
-	r.manifest.MintEnvironments(r.config.Envs)
+	if err := r.manifest.MintEnvironments(r.config.Envs); err != nil {
+		initStepError(r.UI, sg.Add(""), initStepCreateDeploymentEnvs, err)
+		return err
+	}
 
 	if err := r.eventHandler(PostCreateManifest, r); err != nil {
 		return newEventError(err, PostCreateManifest)
@@ -228,6 +231,7 @@ func createInitWritableResults(workingDir string, manifest *Manifest, skManifest
 		WriterTo: manifest,
 		FilePath: path.Join(workingDir, ManifestFilename),
 	})
+
 	out = append(out, manifest.Environments.toWritableResults()...)
 
 	if skManifest != nil {

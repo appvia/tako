@@ -19,7 +19,6 @@ package kev
 import (
 	"fmt"
 
-	"github.com/appvia/kev/pkg/kev/config"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
@@ -46,97 +45,6 @@ func (o *composeOverride) getVolume(name string) (VolumeConfig, error) {
 	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
-// toBaseLabels returns a copy of the composeOverride with condensed base labels for services and volumes.
-func (o *composeOverride) toBaseLabels() *composeOverride {
-	var services Services
-	volumes := Volumes{}
-
-	for _, svcConfig := range o.Services {
-		services = append(services, svcConfig.condenseLabels(config.BaseServiceLabels))
-	}
-	for key, volConfig := range o.Volumes {
-		volumes[key] = volConfig.condenseLabels(config.BaseVolumeLabels)
-	}
-
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes}
-}
-
-// toLabelsMatching condenses an override's labels to the same label keys found in the provided override.
-func (o *composeOverride) toLabelsMatching(other *composeOverride) *composeOverride {
-	services := o.servicesWithLabelsMatching(other)
-	volumes := o.volumesWithLabelsMatching(other)
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes, UI: o.UI}
-}
-
-func (o *composeOverride) servicesWithLabelsMatching(other *composeOverride) Services {
-	var services Services
-	for _, svc := range o.Services {
-		otherSvc, err := other.getService(svc.Name)
-		if err != nil {
-			services = append(services, svc)
-			continue
-		}
-		services = append(services, svc.condenseLabels(keys(otherSvc.Labels)))
-	}
-	return services
-}
-
-func (o *composeOverride) volumesWithLabelsMatching(other *composeOverride) Volumes {
-	volumes := Volumes{}
-	for volKey, volConfig := range o.Volumes {
-		otherVol, err := other.getVolume(volKey)
-		if err != nil {
-			volumes[volKey] = volConfig
-			continue
-		}
-		volumes[volKey] = volConfig.condenseLabels(keys(otherVol.Labels))
-	}
-	return volumes
-}
-
-// expandLabelsFrom returns a copy of the compose override
-// filling in gaps in services and volumes labels (keys and values) using the provided override.
-func (o *composeOverride) expandLabelsFrom(other *composeOverride) *composeOverride {
-	services := o.servicesLabelsExpandedFrom(other)
-	volumes := o.volumesLabelsExpandedFrom(other)
-	return &composeOverride{Version: o.Version, Services: services, Volumes: volumes}
-}
-
-func (o *composeOverride) servicesLabelsExpandedFrom(other *composeOverride) Services {
-	var out Services
-	for _, otherSvc := range other.Services {
-		dstSvc, err := o.getService(otherSvc.Name)
-		if err != nil {
-			continue
-		}
-		for key, value := range otherSvc.GetLabels() {
-			if _, ok := dstSvc.Labels[key]; !ok {
-				dstSvc.Labels[key] = value
-			}
-		}
-		out = append(out, dstSvc)
-	}
-	return out
-}
-
-func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volumes {
-	out := Volumes{}
-	for otherVolKey, otherVolConfig := range other.Volumes {
-		dstVol, err := o.getVolume(otherVolKey)
-		if err != nil {
-			continue
-		}
-
-		for key, value := range otherVolConfig.Labels {
-			if _, ok := dstVol.Labels[key]; !ok {
-				dstVol.Labels[key] = value
-			}
-		}
-		out[otherVolKey] = dstVol
-	}
-	return out
-}
-
 // diffAndPatch detects and patches all changes between a destination override and the current override.
 // A change is either a create, update or delete event.
 // A change targets an override's version, services or volumes and its properties will depend on the actual target.
@@ -145,28 +53,36 @@ func (o *composeOverride) volumesLabelsExpandedFrom(other *composeOverride) Volu
 //    Type: "create",   //string
 //    Value: srcSvc,    //interface{} in this case: ServiceConfig
 // }
-// Example: here's a Change that updates a service's label:
-// {
-// 		Type:   "update",                 //string
-// 		Index:  index,                    // interface{} in this case: int
-// 		Parent: "labels",                 // string
-// 		Target: config.LabelServiceType,  // string
-// 		Value:  srcSvc.GetLabels()[config.LabelServiceType], // interface{} in this case: string
-// }
-//
 // ENV VARS NOTE:
 // The changeset deals with the docker-compose `environment` attribute as a special case:
 // - Env vars specified in docker compose overrides modify a project's docker-compose env vars.
 // - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
 // - A changeset will NOT update or create env vars in an environment specific docker compose override file.
 // - To create useful diffs the project's base docker-compose env vars will be taken into account.
-func (o *composeOverride) diffAndPatch(dst *composeOverride) {
+func (o *composeOverride) diffAndPatch(dst *composeOverride) error {
 	o.detectAndPatchVersionUpdate(dst)
-	o.detectAndPatchServicesCreate(dst)
-	o.detectAndPatchServicesDelete(dst)
-	o.detectAndPatchServicesEnvironmentDelete(dst)
-	o.detectAndPatchVolumesCreate(dst)
-	o.detectAndPatchVolumesDelete(dst)
+
+	if err := o.detectAndPatchServicesCreate(dst); err != nil {
+		return nil
+	}
+
+	if err := o.detectAndPatchServicesDelete(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchServicesEnvironmentDelete(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchVolumesCreate(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchVolumesDelete(dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
@@ -190,7 +106,7 @@ func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
 		kmd.WithIndent(3))
 }
 
-func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting service additions")
@@ -207,19 +123,23 @@ func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) {
 	}
 	if cset.HasNoPatches() {
 		step.Success("No service additions detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyServicesPatchesIfAny(dst)
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
 	step.Success("Applied service additions")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting service removals")
@@ -237,19 +157,24 @@ func (o *composeOverride) detectAndPatchServicesDelete(dst *composeOverride) {
 
 	if cset.HasNoPatches() {
 		step.Success("No service removals detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyServicesPatchesIfAny(dst)
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied service removals")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting env var removals")
@@ -275,19 +200,24 @@ func (o *composeOverride) detectAndPatchServicesEnvironmentDelete(dst *composeOv
 
 	if cset.HasNoPatches() {
 		step.Success("No env var removals detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyServicesPatchesIfAny(dst)
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied env var removals")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting volume additions")
@@ -305,19 +235,24 @@ func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) {
 
 	if cset.HasNoPatches() {
 		step.Success("No volume additions detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyVolumesPatchesIfAny(dst)
+	msgs, err := cset.applyVolumesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied volume additions")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
-func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) {
+func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) error {
 	sg := o.UI.StepGroup()
 	defer sg.Done()
 	step := sg.Add("Detecting volume removals")
@@ -334,16 +269,21 @@ func (o *composeOverride) detectAndPatchVolumesDelete(dst *composeOverride) {
 
 	if cset.HasNoPatches() {
 		step.Success("No volume removals detected")
-		return
+		return nil
 	}
 
-	msgs := cset.applyVolumesPatchesIfAny(dst)
+	msgs, err := cset.applyVolumesPatchesIfAny(dst)
+	if err != nil {
+		return err
+	}
+
 	step.Success("Applied volume removals")
 	for _, msg := range msgs {
 		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 			kmd.WithIndentChar(kmd.LogIndentChar),
 			kmd.WithIndent(3))
 	}
+	return nil
 }
 
 // mergeInto merges an override onto a compose project.
@@ -368,9 +308,6 @@ func (o *composeOverride) mergeServicesInto(p *ComposeProject) error {
 
 		envVarsFromNilToBlankInService(base)
 
-		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverride); err != nil {
-			return errors.Wrapf(err, "cannot merge labels for service %s", override.Name)
-		}
 		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge extensions for service %s", override.Name)
 		}
@@ -390,8 +327,8 @@ func (o *composeOverride) mergeVolumesInto(p *ComposeProject) error {
 			return fmt.Errorf("could not find volume %s", override.Name)
 		}
 
-		if err := mergo.Merge(&base.Labels, &override.Labels, mergo.WithOverwriteWithEmptyValue); err != nil {
-			return errors.Wrapf(err, "cannot merge labels for volume %s", name)
+		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
+			return errors.Wrapf(err, "cannot merge extensions for volume %s", name)
 		}
 		p.Volumes[name] = base
 	}

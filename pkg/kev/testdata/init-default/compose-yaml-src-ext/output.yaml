@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  db:
+    x-k8s:
+      workload:
+        livenessProbe:
+          exec:
+            command:
+            - echo
+            - Define healthcheck command for service
+          type: exec
+        replicas: 10
+volumes:
+  db_data:
+    x-k8s:
+      size: 30Gi
