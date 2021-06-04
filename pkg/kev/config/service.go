@@ -88,7 +88,7 @@ func inferServiceTypeFromComposeValue(v string) (ServiceType, error) {
 	case "nodeport":
 		return NodePortService, nil
 	case "loadbalancer":
-		return NodePortService, nil
+		return LoadBalancerService, nil
 	case "headless":
 		return HeadlessService, nil
 	case "none":
