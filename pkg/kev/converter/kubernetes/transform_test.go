@@ -855,10 +855,11 @@ var _ = Describe("Transform", func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = DefaultIngressBackendKeyword
 			})
 
-			It("creates a single rule without a host in the initialised Ingress", func() {
+			It("creates a default backend in the initialised Ingress with no rules`", func() {
 				ingress := k.initIngress(projectService, port)
-				Expect(ingress.Spec.Rules).To(HaveLen(1))
-				Expect(ingress.Spec.Rules[0].Host).To(HaveLen(0))
+				Expect(ingress.Spec.Backend.ServiceName).To(Equal(projectService.Name))
+				Expect(ingress.Spec.Backend.ServicePort.IntVal).To(Equal(port))
+				Expect(ingress.Spec.Rules).To(HaveLen(0))
 			})
 		})
 
@@ -903,7 +904,7 @@ var _ = Describe("Transform", func() {
 				projectService.SvcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret"
 			})
 
-			It("does not create a TLS object it in the ingress spec", func() {
+			It("does not create a TLS object in the ingress spec", func() {
 				ing := k.initIngress(projectService, port)
 				Expect(ing.Spec.TLS).To(HaveLen(0))
 			})

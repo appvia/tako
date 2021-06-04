@@ -116,7 +116,7 @@ func (p *ProjectService) nodePort() int32 {
 
 // exposeService tells whether service for project component should be exposed
 func (p *ProjectService) exposeService() (string, error) {
-	val := p.SvcK8sConfig.Service.Expose.Domain
+	val := strings.TrimSpace(p.SvcK8sConfig.Service.Expose.Domain)
 
 	if val == "" && p.tlsSecretName() != "" {
 		return "", fmt.Errorf("service can't have TLS secret name when it hasn't been exposed")

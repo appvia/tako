@@ -655,8 +655,11 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 	}
 
 	if hasDefaultIngressBackendKeyword(hosts) {
-		ingress.Spec.Rules = []networkingv1beta1.IngressRule{
-			createIngressRule("", "", projectService.Name, port),
+		ingress.Spec.Backend = &networkingv1beta1.IngressBackend{
+			ServiceName: projectService.Name,
+			ServicePort: intstr.IntOrString{
+				IntVal: port,
+			},
 		}
 		return ingress
 	}
