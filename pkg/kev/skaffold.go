@@ -156,9 +156,18 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) bool {
 	prevArts := s.Build.Artifacts
 
+	sort.SliceStable(prevArts, func(i, j int) bool {
+		return prevArts[i].ImageName < prevArts[j].ImageName
+	})
+
 	s.SetBuildArtifacts(analysis, project)
 
-	return !reflect.DeepEqual(s.Build.Artifacts, prevArts)
+	currArts := s.Build.Artifacts
+	sort.SliceStable(currArts, func(i, j int) bool {
+		return currArts[i].ImageName < currArts[j].ImageName
+	})
+
+	return !reflect.DeepEqual(currArts, prevArts)
 }
 
 // UpdateSkaffoldProfiles updates skaffold profiles with appropriate kubernetes files output paths.

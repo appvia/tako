@@ -516,15 +516,22 @@ var _ = Describe("Skaffold", func() {
 						It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
 							// Note: there are two build artifacts: 1) from Skaffold analysis, 2) from Docker Compose
 							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(2))
-							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal("myservice"))
-							Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal("src/myservice"))
-							Expect(skaffoldManifest.Build.Artifacts[1].ImageName).To(Equal(image))
-							Expect(skaffoldManifest.Build.Artifacts[1].Workspace).To(Equal(context))
+							Expect(skaffoldManifest.Build.Artifacts).To(ContainElements(
+								&latest.Artifact{
+									ImageName: "myservice",
+									Workspace: "src/myservice",
+								},
+								&latest.Artifact{
+									ImageName: image,
+									Workspace: context,
+								},
+							))
 						})
 
 						It("uses default `docker` build strategy for artifact", func() {
 							// ensure artifact type is not set to `buildpack`
 							Expect(skaffoldManifest.Build.Artifacts[0].ArtifactType.BuildpackArtifact).To(BeNil())
+							Expect(skaffoldManifest.Build.Artifacts[1].ArtifactType.BuildpackArtifact).To(BeNil())
 						})
 					})
 
