@@ -16,7 +16,7 @@ services:                                                # compose services sect
         type: None                                       # Default: none (no service). Possible options: none | headless | clusterip | nodeport | loadbalancer.
         nodeport:                                        # Default: nil. Only taken into account when working with service.type: nodeport
         expose:                                          # K8s configuration to expose a service externally (by default services are never exposed)
-          domain:                                        # Default: "" (no ingress). Possible options: "" | domain.com,otherdomain.com (comma separated domain names). When with domain name(s) - it'll generate an ingress object and expose service externally.
+          domain:                                        # Default: "" (no ingress). Possible options: "" | "default" | domain.com,otherdomain.com (comma separated domain names). When with "default" or domain name(s) - it'll generate an ingress object and expose service externally.
           tlsSecret:                                     # Default: "" (no tls). Kubernetes secret name where certs will be loaded from.
       workload:                                          # K8s workload configuration (only required if values are overridden)
         autoscale:                                       # Configures an application for auto-scaling.

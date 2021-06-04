@@ -1003,9 +1003,10 @@ Defines how to expose the service externally. This detail can't be easily derive
 
 ### service.expose.domain
 
-This setting accepts a comma separated list of domains for the ingress.
+#### Possible options:
 
-E.g. `"domain.com,otherdomain.com..."`
+- "default" - ingress will be created with Kubernetes cluster defaults.
+- "domain.com,otherdomain.com..." - comma separated list of domains for the ingress.
 
 #### Default: `""` - No ingress will be created!
 
@@ -1018,7 +1019,7 @@ services:
       service:
         type: LoadBalancer
         expose:
-          domain: "my-awesome-service.com"
+          domain: my-awesome-service.com
 ...
 ```
 
