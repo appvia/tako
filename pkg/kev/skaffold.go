@@ -544,10 +544,10 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 			Enabled: true,
 		},
 		CustomLabels: []string{
-			"io.kev.dev/profile=" + profiles[0],
-			"io.kev.dev/kubecontext=" + runCfg.Kubecontext,
-			"io.kev.dev/namespace=" + runCfg.K8sNamespace,
-			fmt.Sprintf("io.kev.dev/pollinterval=%d", pollInterval),
+			"kev.dev/profile=" + profiles[0],
+			"kev.dev/kubecontext=" + runCfg.Kubecontext,
+			"kev.dev/namespace=" + runCfg.K8sNamespace,
+			fmt.Sprintf("kev.dev/pollinterval=%d", pollInterval),
 		},
 	}
 

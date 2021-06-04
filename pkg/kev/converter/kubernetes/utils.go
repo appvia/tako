@@ -50,8 +50,8 @@ import (
 
 // Selector used as labels and selector
 const (
-	Selector     = "io.kev.service"
-	NetworkLabel = "io.kev.network"
+	Selector     = "service"
+	NetworkLabel = "network"
 )
 
 // EnvSort struct
