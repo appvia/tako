@@ -247,7 +247,11 @@ services:
 
 ## workload.autoscale
 
-Configures an application for auto-scaling. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+Enables application horizontal pod autoscaling. See K8s [documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+
+Autoscaling assumes that a workload's number of replicas is smaller than the maximum desired number of replicas - otherwise autoscaling won't be enabled.
+
+Then, it periodically adjusts the number of replicas to match the observed metrics such as average CPU utilisation, average memory utilisation or any other custom metric to the target max replicas specified by the user.
 
 ### workload.autoscale.maxReplicas
 
@@ -266,6 +270,7 @@ services:
       workload:
         autoscale:
           maxReplicas: 10
+      replicas: 2
 ...
 ```
 
@@ -309,6 +314,7 @@ services:
         autoscale:
           maxReplicas: 10
           memThreshold: 70
+        replicas: 2
 ...
 ```
 
