@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -45,7 +44,7 @@ func NewManifest(sources *Sources) *Manifest {
 
 // LoadManifest returns application manifests.
 func LoadManifest(workingDir string) (*Manifest, error) {
-	data, err := ioutil.ReadFile(path.Join(workingDir, ManifestFilename))
+	data, err := ioutil.ReadFile(filepath.Join(workingDir, ManifestFilename))
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +143,7 @@ func (m *Manifest) MintEnvironments(candidates []string) error {
 	}
 
 	for _, env := range candidates {
-		envFilename := path.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
+		envFilename := filepath.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
 		var step kmd.Step
 		if env == SandboxEnv {
 			step = sg.Add(fmt.Sprintf("Creating the %s sandbox env file: %s", SandboxEnv, envFilename))

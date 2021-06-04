@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -34,7 +33,7 @@ func TestKev(t *testing.T) {
 }
 
 func NewTempWorkingDir(composePath string) (tmpWd string, err error) {
-	data, err := ioutil.ReadFile(path.Join("testdata", composePath))
+	data, err := ioutil.ReadFile(filepath.Join("testdata", composePath))
 	if err != nil {
 		return "", err
 	}
@@ -44,7 +43,7 @@ func NewTempWorkingDir(composePath string) (tmpWd string, err error) {
 		return "", err
 	}
 
-	wdWithComposePath := path.Join(base, composePath)
+	wdWithComposePath := filepath.Join(base, composePath)
 	wd := filepath.Dir(wdWithComposePath)
 
 	if err := os.MkdirAll(wd, os.ModePerm); err != nil {

@@ -18,7 +18,7 @@ package kev
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/converter"
@@ -78,7 +78,7 @@ func (r *RenderRunner) LoadProject() error {
 	sg := r.UI.StepGroup()
 	defer sg.Done()
 
-	if !ManifestExistsForPath(path.Join(r.WorkingDir, ManifestFilename)) {
+	if !ManifestExistsForPath(filepath.Join(r.WorkingDir, ManifestFilename)) {
 		err := errors.Errorf("Missing project manifest: %s", ManifestFilename)
 		renderStepError(r.UI, sg.Add(""), renderStepLoad, err)
 		return err

@@ -155,7 +155,7 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 		// if that's a chart it'll spit things out to "templates" subdir
 		if opt.CreateChart {
-			finalDirName = path.Join(dirName, "templates")
+			finalDirName = filepath.Join(dirName, "templates")
 		}
 
 		if err := os.RemoveAll(finalDirName); err != nil {

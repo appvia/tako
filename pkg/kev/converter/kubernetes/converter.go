@@ -19,7 +19,7 @@ package kubernetes
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 
 	"github.com/appvia/kev/pkg/kev/log"
@@ -73,9 +73,9 @@ func (c *K8s) Render(singleFile bool,
 		outDirPath := ""
 		if dir != "" {
 			// adding env name suffix to the custom directory to differentiate
-			outDirPath = path.Join(dir, env)
+			outDirPath = filepath.Join(dir, env)
 		} else {
-			outDirPath = path.Join(workDir, MultiFileSubDir, env)
+			outDirPath = filepath.Join(workDir, MultiFileSubDir, env)
 		}
 
 		// @step create output directory
@@ -89,7 +89,7 @@ func (c *K8s) Render(singleFile bool,
 		// @step generate multiple / single file
 		outFilePath := ""
 		if singleFile {
-			outFilePath = path.Join(outDirPath, singleFileDefaultName)
+			outFilePath = filepath.Join(outDirPath, singleFileDefaultName)
 		} else {
 			outFilePath = outDirPath
 		}
