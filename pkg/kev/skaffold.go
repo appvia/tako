@@ -24,7 +24,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -688,7 +687,7 @@ Once you have skaffold.yaml in your project, make sure that Kev references it by
 		return "", nil, errors.New("Can't activate Skaffold dev loop. Kev wasn't initialized with --skaffold." + msg)
 	}
 
-	configPath := path.Join(workDir, manifest.Skaffold)
+	configPath := filepath.Join(workDir, manifest.Skaffold)
 
 	if !fileExists(configPath) {
 		return "", nil, errors.New("Can't find Skaffold config file referenced by Kev manifest. Have you initialized Kev with --skaffold?" + msg)

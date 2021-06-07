@@ -18,7 +18,6 @@ package kev
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 
 	"github.com/appvia/kev/pkg/kev/config"
@@ -86,7 +85,7 @@ func (r *InitRunner) EnsureFirstInit() error {
 	defer sg.Done()
 	s := sg.Add("Ensuring this project has not already been initialised")
 
-	manifestPath := path.Join(r.WorkingDir, ManifestFilename)
+	manifestPath := filepath.Join(r.WorkingDir, ManifestFilename)
 	if ManifestExistsForPath(manifestPath) {
 		absWd, _ := filepath.Abs(r.WorkingDir)
 		err := fmt.Errorf("%s already exists at: %s", ManifestFilename, absWd)
@@ -197,7 +196,7 @@ func (r *InitRunner) CreateOrUpdateSkaffoldManifest() (*SkaffoldManifest, error)
 		return nil, err
 	}
 
-	skPath := path.Join(r.WorkingDir, SkaffoldFileName)
+	skPath := filepath.Join(r.WorkingDir, SkaffoldFileName)
 	envs := r.manifest.GetEnvironmentsNames()
 	switch ManifestExistsForPath(skPath) {
 	case true:
@@ -229,7 +228,7 @@ func createInitWritableResults(workingDir string, manifest *Manifest, skManifest
 	var out []WritableResult
 	out = append(out, WritableResult{
 		WriterTo: manifest,
-		FilePath: path.Join(workingDir, ManifestFilename),
+		FilePath: filepath.Join(workingDir, ManifestFilename),
 	})
 
 	out = append(out, manifest.Environments.toWritableResults()...)
@@ -237,7 +236,7 @@ func createInitWritableResults(workingDir string, manifest *Manifest, skManifest
 	if skManifest != nil {
 		out = append(out, WritableResult{
 			WriterTo: skManifest,
-			FilePath: path.Join(workingDir, SkaffoldFileName),
+			FilePath: filepath.Join(workingDir, SkaffoldFileName),
 		})
 	}
 	return out

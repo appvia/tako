@@ -19,7 +19,7 @@ package kev_test
 import (
 	"bytes"
 	"io/ioutil"
-	"path"
+	"path/filepath"
 
 	"github.com/appvia/kev/pkg/kev"
 	"github.com/appvia/kev/pkg/kev/config"
@@ -55,12 +55,12 @@ var _ = Describe("InitRunner", func() {
 		})
 
 		It("should contain a manifest file", func() {
-			filename := path.Join(workingDir, kev.ManifestFilename)
+			filename := filepath.Join(workingDir, kev.ManifestFilename)
 			Expect(results).To(ContainElement(kev.WritableResult{WriterTo: manifest, FilePath: filename}))
 		})
 
 		It("should contain an override environment", func() {
-			filename := path.Join(workingDir, "compose.kev.dev.yml")
+			filename := filepath.Join(workingDir, "compose.kev.dev.yml")
 			Expect(results).To(ContainElement(kev.WritableResult{WriterTo: env, FilePath: filename}))
 		})
 	})
