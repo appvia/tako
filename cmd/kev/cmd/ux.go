@@ -16,14 +16,9 @@
 
 package cmd
 
-import (
-	"github.com/appvia/kev/pkg/kev/log"
-	"github.com/sirupsen/logrus"
-)
-
 func setReporting(verbose bool) {
-	log.SetLogLevel(logrus.InfoLevel)
-	if verbose {
-		log.SetLogLevel(logrus.DebugLevel)
-	}
+	// log.SetLogLevel(logrus.InfoLevel)
+	// if verbose {
+	// 	log.SetLogLevel(logrus.DebugLevel)
+	// }
 }

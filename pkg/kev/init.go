@@ -42,6 +42,13 @@ func NewInitRunner(workingDir string, opts ...Options) *InitRunner {
 func (r *InitRunner) Run() (WritableResults, error) {
 	var skManifest *SkaffoldManifest
 
+	if r.LogVerbose() {
+		cancelFunc, pr, pw := r.pipeLogsToUI()
+		defer cancelFunc()
+		defer pw.Close()
+		defer pr.Close()
+	}
+
 	if err := r.EnsureFirstInit(); err != nil {
 		return nil, err
 	}

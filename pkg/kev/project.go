@@ -17,15 +17,21 @@
 package kev
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/appvia/kev/pkg/kev/config"
+	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Init initialises the base project to be used in a runner
 func (p *Project) Init(opts ...Options) {
+	p.ctx = context.Background()
 	p.SetConfig(opts...)
 
 	if len(p.AppName) == 0 {
@@ -34,6 +40,10 @@ func (p *Project) Init(opts ...Options) {
 
 	if p.UI == nil {
 		p.UI = kmd.ConsoleUI()
+	}
+
+	if p.LogVerbose() {
+		log.SetLogLevel(logrus.DebugLevel)
 	}
 }
 
@@ -133,6 +143,45 @@ func (p *Project) SetConfig(opts ...Options) {
 		o(p, cfg)
 	}
 	p.config = cfg
+}
+
+// LogVerbose indicates whether the project is running in verbose mode
+func (p *Project) LogVerbose() bool {
+	return p.config.LogVerbose
+}
+
+// pipeLogsToUI pipes all logs to configured UI
+func (p *Project) pipeLogsToUI() (context.CancelFunc, *io.PipeReader, *io.PipeWriter) {
+	pr, pw := io.Pipe()
+	log.SetOutput(pw)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	go p.displayLogs(pr, ctx)
+	return cancelFunc, pr, pw
+}
+
+// displayLogs displays logs streamed in from the provided reader
+// until the provided context signals that it is done.
+func (p *Project) displayLogs(reader io.Reader, ctx context.Context) {
+	buf := make([]byte, 1024)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			n, err := reader.Read(buf)
+			if err != nil {
+				return
+			}
+			line := string(buf[:n])
+			p.UI.Output(
+				strings.TrimSuffix(line, "\n"),
+				kmd.WithIndent(1),
+				kmd.WithIndentChar(kmd.LogIndentChar),
+				kmd.WithStyle(kmd.LogStyle),
+			)
+		}
+	}
 }
 
 // WithAppName configures a project app name
@@ -244,5 +293,11 @@ func WithSkaffoldVerboseEnabled(c bool) Options {
 func WithExcludeServicesByEnv(c map[string][]string) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.ExcludeServicesByEnv = c
+	}
+}
+
+func WithLogVerbose(c bool) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.LogVerbose = c
 	}
 }

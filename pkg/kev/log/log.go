@@ -36,7 +36,7 @@ const (
 	errorDetailPrefix = "⨯ "
 
 	// detailPrefix debug log level prefix for info, debug, error, using unicode to ensure a visual on screen.
-	detailPrefix = " → "
+	// detailPrefix = " → "
 
 	// InfoPrefix info log level prefix
 	InfoPrefix = "💡"
@@ -71,7 +71,8 @@ var logger = &logrus.Logger{
 		},
 	},
 	Hooks: make(logrus.LevelHooks),
-	Level: logrus.InfoLevel,
+	Level: logrus.ErrorLevel,
+	// Level: logrus.DebugLevel,
 }
 
 var enableFileInfo = false
@@ -235,8 +236,8 @@ func decorate(level string, f ...Fields) logrus.Fields {
 		switch level {
 		case "debug-title":
 			fields["prefix"] = successTitlePrefix
-		case "debug":
-			fields["prefix"] = detailPrefix
+		// case "debug":
+		// 	fields["prefix"] = detailPrefix
 		case "error-detail":
 			fields["prefix"] = errorDetailPrefix
 		case "info":
