@@ -11,7 +11,7 @@ version: "3.7"
 services:                                                # compose services section
   wordpress:                                             # compose project service name
     x-k8s:                                               # compose K8s configuration extension
-      disabled: false                                    # When disabled the compose service won't be included in generated K8s manifests. Defaults to 'false'. 
+      disabled: false                                    # When disabled the compose service won't be included in generated K8s manifests. Defaults to 'false'.
       service:                                           # K8s service configuration (only required if values are overridden)
         type: None                                       # Default: none (no service). Possible options: none | headless | clusterip | nodeport | loadbalancer.
         nodeport:                                        # Default: nil. Set with numeric value e.g. 5555. Only taken into account when working with service.type: nodeport
@@ -29,7 +29,7 @@ services:                                                # compose services sect
         livenessProbe:                                   # Workload's liveness probe
           ### EXEC
           type: exec                                     # Default: exec. Possible options: none | exec | http | tcp. See examples for other probe types in commented sections below.
-          exec:                                          # The exec command matching the liveness probe type.      
+          exec:                                          # The exec command matching the liveness probe type.
             command:                                     # Liveness probe command to run.
               - echo
               - Define healthcheck command for service
@@ -72,8 +72,10 @@ services:                                                # compose services sect
         resource:                                        # Defines resource requests and limits
           cpu: "0.1"                                     # Default: 0.1. CPU request per workload.
           maxCpu: "0.5"                                  # Default: 0.5. CPU limit per workload.
-          maxMemory: 500Mi                               # Default: 500Mi. Memory limit per workload.              
           memory: 10Mi                                   # Default: 10Mi. Memory request per workload.
+          maxMemory: 500Mi                               # Default: 500Mi. Memory limit per workload.
+          storage: 100Mi                                 # Default: not set. Ephemeral storage size request per workload.
+          maxStorage: 500Mi                              # Default: not set. Ephemeral storage size limit per workload.
         restartPolicy: Always                            # Default: Always. Possible options: Always / OnFailure / Never.
         rollingUpdateMaxSurge: 1                         # Default: 1. Maximum number of containers to be updated at a time.
         serviceAccountName: default                      # Default: default. Service account name to be used.
