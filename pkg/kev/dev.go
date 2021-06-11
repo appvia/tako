@@ -50,6 +50,13 @@ func NewDevRunner(workingDir string, opts ...Options) *DevRunner {
 
 // Run runs the dev command business logic
 func (r *DevRunner) Run() error {
+	if r.LogVerbose() {
+		cancelFunc, pr, pw := r.pipeLogsToUI()
+		defer cancelFunc()
+		defer pw.Close()
+		defer pr.Close()
+	}
+
 	if err := r.eventHandler(DevLoopStarting, r); err != nil {
 		return newEventError(err, DevLoopStarting)
 	}

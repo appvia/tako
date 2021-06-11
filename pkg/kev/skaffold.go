@@ -520,6 +520,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	}
 
 	logrus.SetLevel(logrus.WarnLevel)
+	logrus.SetOutput(out)
 
 	// Port-forward options
 	pfopts := config.PortForwardOptions{}

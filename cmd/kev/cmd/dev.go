@@ -127,7 +127,7 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 }
 
-func runDevCmd(cmd *cobra.Command, args []string) error {
+func runDevCmd(cmd *cobra.Command, _ []string) error {
 	skaffold, err := cmd.Flags().GetBool("skaffold")
 	namespace, err := cmd.Flags().GetString("namespace")
 	kubecontext, err := cmd.Flags().GetString("kubecontext")
@@ -161,5 +161,6 @@ func runDevCmd(cmd *cobra.Command, args []string) error {
 		kev.WithSkaffoldManualTriggerEnabled(manualTrigger),
 		kev.WithSkaffoldVerboseEnabled(verbose),
 		kev.WithEnvs(envs),
+		kev.WithLogVerbose(verbose),
 	)
 }
