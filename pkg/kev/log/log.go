@@ -28,26 +28,6 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-const (
-	// successTitlePrefix log level prefix for info and debug, using unicode to ensure a visual on screen.
-	successTitlePrefix = "✓ "
-
-	// ErrorTitlePrefix error log level prefix, using unicode to ensure a visual on screen.
-	errorDetailPrefix = "⨯ "
-
-	// detailPrefix debug log level prefix for info, debug, error, using unicode to ensure a visual on screen.
-	// detailPrefix = " → "
-
-	// InfoPrefix info log level prefix
-	InfoPrefix = "💡"
-
-	// ErrorPrefix error log level prefix
-	ErrorPrefix = "✋"
-
-	// FatalPrefix fatal log level prefix
-	FatalPrefix = "😱"
-)
-
 // tuiFormatter is a text user interface formatter that wraps the logrus-prefixed-formatter.
 type tuiFormatter struct {
 	*prefixed.TextFormatter
@@ -144,26 +124,6 @@ func ErrorDetailf(m string, args ...interface{}) {
 	logger.WithFields(decorate("error-detail")).Errorf(m, args...)
 }
 
-// Info logs a Info message
-func Info(args ...interface{}) {
-	logger.WithFields(decorate("info")).Info(args...)
-}
-
-// InfoWithFields logs an Info message with fields
-func InfoWithFields(f Fields, args ...interface{}) {
-	logger.WithFields(decorate("info", f)).Info(args...)
-}
-
-// Infof logs a Info message
-func Infof(m string, args ...interface{}) {
-	logger.WithFields(decorate("info")).Infof(m, args...)
-}
-
-// InfofWithFields logs an Info message with fields
-func InfofWithFields(f Fields, m string, args ...interface{}) {
-	logger.WithFields(decorate("info", f)).Infof(m, args...)
-}
-
 // Warn logs a Warning message
 func Warn(args ...interface{}) {
 	logger.WithFields(decorate("warn")).Warn(args...)
@@ -225,28 +185,10 @@ func FatalfWithFields(f Fields, m string, args ...interface{}) {
 }
 
 // decorate adds extra fields based on the entry log level
-func decorate(level string, f ...Fields) logrus.Fields {
+func decorate(_ string, f ...Fields) logrus.Fields {
 	fields := Fields{}
 	if len(f) > 0 {
 		fields = f[0]
-	}
-
-	if fields["prefix"] == nil || fields["prefix"] == "" {
-		switch level {
-		case "debug-title":
-			fields["prefix"] = successTitlePrefix
-		// case "debug":
-		// 	fields["prefix"] = detailPrefix
-		case "error-detail":
-			fields["prefix"] = errorDetailPrefix
-		case "info":
-			fields["prefix"] = InfoPrefix
-		case "error":
-			fields["prefix"] = ErrorPrefix
-		case "fatal":
-			fields["prefix"] = FatalPrefix
-		default:
-		}
 	}
 
 	if enableFileInfo {

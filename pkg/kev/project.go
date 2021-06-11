@@ -296,6 +296,8 @@ func WithExcludeServicesByEnv(c map[string][]string) Options {
 	}
 }
 
+// WithLogVerbose configures a project's run config to enable or disable verbose
+// logging at a debug log level.
 func WithLogVerbose(c bool) Options {
 	return func(project *Project, cfg *runConfig) {
 		cfg.LogVerbose = c
