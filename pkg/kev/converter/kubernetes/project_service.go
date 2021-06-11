@@ -244,7 +244,7 @@ func (p *ProjectService) placement() map[string]string {
 // resourceRequests returns workload resource requests (memory & cpu)
 // It parses CPU, Memory & Ephemeral Storage as k8s resource.Quantity regardless
 // of how values are supplied (via deploy block or an extension).
-// Note: Only CPU & Memory requests can set via docker compose deploy block!
+// Note: Only CPU & Memory requests can be set via docker compose deploy block!
 //       Storage can only be set via extension parameter.
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
@@ -283,7 +283,7 @@ func (p *ProjectService) resourceRequests() (*int64, *int64, *int64) {
 // resourceLimits returns workload resource limits (memory & cpu)
 // It parses CPU, Memory & Ephemeral Storage as k8s resource.Quantity regardless
 // of how values are supplied (via deploy block or an extension).
-// Note: Only CPU & Memory requests can set via docker compose deploy block!
+// Note: Only CPU & Memory requests can be set via docker compose deploy block!
 //       Storage can only be set via extension parameter.
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1

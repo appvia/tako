@@ -661,7 +661,6 @@ var _ = Describe("ProjectService", func() {
 					mem, cpu, storage := projectService.resourceRequests()
 					Expect(*mem).To(BeEquivalentTo(1000))
 					Expect(*cpu).To(BeEquivalentTo(100))
-					// storage can't be specified in docker compose deploy block
 					Expect(*storage).To(BeEquivalentTo(0))
 				})
 			})
@@ -730,7 +729,6 @@ var _ = Describe("ProjectService", func() {
 					mem, cpu, storage := projectService.resourceLimits()
 					Expect(*mem).To(BeEquivalentTo(1000))
 					Expect(*cpu).To(BeEquivalentTo(100))
-					// storage can't be set via docker compose deploy block
 					Expect(*storage).To(BeEquivalentTo(0))
 				})
 			})
