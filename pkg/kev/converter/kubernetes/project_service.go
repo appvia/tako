@@ -242,14 +242,18 @@ func (p *ProjectService) placement() map[string]string {
 }
 
 // resourceRequests returns workload resource requests (memory & cpu)
-// It parses CPU & Memory as k8s resource.Quantity regardless
+// It parses CPU, Memory & Ephemeral Storage as k8s resource.Quantity regardless
 // of how values are supplied (via deploy block or an extension).
+// Note: Only CPU & Memory requests can be set via docker compose deploy block!
+//       Storage can only be set via extension parameter.
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
 // - Memory: 1, 1M, 1m, 1G, 1Gi
-func (p *ProjectService) resourceRequests() (*int64, *int64) {
+// - Storage: 128974848, 10M, 100Mi, 1G, 2Gi
+func (p *ProjectService) resourceRequests() (*int64, *int64, *int64) {
 	var memRequest int64
 	var cpuRequest int64
+	var storageRequest int64
 
 	// @step extract requests from deploy block if present
 	if p.Deploy != nil && p.Deploy.Resources.Reservations != nil {
@@ -268,18 +272,27 @@ func (p *ProjectService) resourceRequests() (*int64, *int64) {
 		cpuRequest = v.ToDec().MilliValue()
 	}
 
-	return &memRequest, &cpuRequest
+	if val := p.SvcK8sConfig.Workload.Resource.Storage; val != "" {
+		v, _ := resource.ParseQuantity(val)
+		storageRequest, _ = v.AsInt64()
+	}
+
+	return &memRequest, &cpuRequest, &storageRequest
 }
 
 // resourceLimits returns workload resource limits (memory & cpu)
-// It parses CPU & Memory as k8s resource.Quantity regardless
+// It parses CPU, Memory & Ephemeral Storage as k8s resource.Quantity regardless
 // of how values are supplied (via deploy block or an extension).
+// Note: Only CPU & Memory requests can be set via docker compose deploy block!
+//       Storage can only be set via extension parameter.
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
 // - Memory: 1, 1M, 1m, 1G, 1Gi
-func (p *ProjectService) resourceLimits() (*int64, *int64) {
+// - Storage: 128974848, 10M, 100Mi, 1G, 2Gi
+func (p *ProjectService) resourceLimits() (*int64, *int64, *int64) {
 	var memLimit int64
 	var cpuLimit int64
+	var storageLimit int64
 
 	// @step extract limits from deploy block if present
 	if p.Deploy != nil && p.Deploy.Resources.Limits != nil {
@@ -297,7 +310,12 @@ func (p *ProjectService) resourceLimits() (*int64, *int64) {
 		cpuLimit = v.ToDec().MilliValue()
 	}
 
-	return &memLimit, &cpuLimit
+	if val := p.SvcK8sConfig.Workload.Resource.MaxStorage; val != "" {
+		v, _ := resource.ParseQuantity(val)
+		storageLimit, _ = v.AsInt64()
+	}
+
+	return &memLimit, &cpuLimit, &storageLimit
 }
 
 // runAsUser returns pod security context runAsUser value

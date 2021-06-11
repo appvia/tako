@@ -1871,9 +1871,9 @@ func (k *Kubernetes) removeDupObjects(objs *[]runtime.Object) {
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L592
 func (k *Kubernetes) setPodResources(projectService ProjectService, template *v1.PodTemplateSpec) {
 	// @step resource limits
-	memLimit, cpuLimit := projectService.resourceLimits()
+	memLimit, cpuLimit, storageLimit := projectService.resourceLimits()
 
-	if *memLimit > 0 || *cpuLimit > 0 {
+	if *memLimit > 0 || *cpuLimit > 0 || *storageLimit > 0 {
 		resourceLimits := v1.ResourceList{}
 
 		if *memLimit > 0 {
@@ -1884,13 +1884,17 @@ func (k *Kubernetes) setPodResources(projectService ProjectService, template *v1
 			resourceLimits[v1.ResourceCPU] = *resource.NewMilliQuantity(*cpuLimit, resource.DecimalSI)
 		}
 
+		if *storageLimit > 0 {
+			resourceLimits[v1.ResourceEphemeralStorage] = *resource.NewQuantity(*storageLimit, resource.BinarySI)
+		}
+
 		template.Spec.Containers[0].Resources.Limits = resourceLimits
 	}
 
 	// @step resource requests
-	memRequest, cpuRequest := projectService.resourceRequests()
+	memRequest, cpuRequest, storageRequest := projectService.resourceRequests()
 
-	if *memRequest > 0 || *cpuRequest > 0 {
+	if *memRequest > 0 || *cpuRequest > 0 || *storageRequest > 0 {
 		resourceRequests := v1.ResourceList{}
 
 		if *memRequest > 0 {
@@ -1899,6 +1903,10 @@ func (k *Kubernetes) setPodResources(projectService ProjectService, template *v1
 
 		if *cpuRequest > 0 {
 			resourceRequests[v1.ResourceCPU] = *resource.NewMilliQuantity(*cpuRequest, resource.DecimalSI)
+		}
+
+		if *storageRequest > 0 {
+			resourceRequests[v1.ResourceEphemeralStorage] = *resource.NewQuantity(*storageRequest, resource.BinarySI)
 		}
 
 		template.Spec.Containers[0].Resources.Requests = resourceRequests

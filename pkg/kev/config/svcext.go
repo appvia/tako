@@ -429,10 +429,12 @@ type Workload struct {
 }
 
 type Resource struct {
-	Memory    string `yaml:"memory,omitempty"`
-	MaxMemory string `yaml:"maxMemory,omitempty"`
-	CPU       string `yaml:"cpu,omitempty"`
-	MaxCPU    string `yaml:"maxCpu,omitempty"`
+	Memory     string `yaml:"memory,omitempty"`
+	MaxMemory  string `yaml:"maxMemory,omitempty"`
+	CPU        string `yaml:"cpu,omitempty"`
+	MaxCPU     string `yaml:"maxCpu,omitempty"`
+	Storage    string `yaml:"storage,omitempty"`
+	MaxStorage string `yaml:"maxStorage,omitempty"`
 }
 
 type ImagePull struct {
