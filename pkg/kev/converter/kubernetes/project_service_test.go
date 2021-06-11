@@ -636,9 +636,10 @@ var _ = Describe("ProjectService", func() {
 		Context("not specified by deploy block", func() {
 			When("not specified via extension", func() {
 				It("returns resource request as zero values", func() {
-					mem, cpu := projectService.resourceRequests()
+					mem, cpu, storage := projectService.resourceRequests()
 					Expect(*mem).To(BeEquivalentTo(0))
 					Expect(*cpu).To(BeEquivalentTo(0))
+					Expect(*storage).To(BeEquivalentTo(0))
 				})
 			})
 		})
@@ -657,9 +658,10 @@ var _ = Describe("ProjectService", func() {
 
 			When("not specified via extension", func() {
 				It("returns resource request as defined in deploy block", func() {
-					mem, cpu := projectService.resourceRequests()
+					mem, cpu, storage := projectService.resourceRequests()
 					Expect(*mem).To(BeEquivalentTo(1000))
 					Expect(*cpu).To(BeEquivalentTo(100))
+					Expect(*storage).To(BeEquivalentTo(0))
 				})
 			})
 
@@ -669,7 +671,7 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("returns CPU request as defined by the extension", func() {
-					_, cpu := projectService.resourceRequests()
+					_, cpu, _ := projectService.resourceRequests()
 					Expect(*cpu).To(BeEquivalentTo(200))
 				})
 			})
@@ -680,8 +682,19 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("returns Memory request as defined by the extension", func() {
-					mem, _ := projectService.resourceRequests()
+					mem, _, _ := projectService.resourceRequests()
 					Expect(*mem).To(BeEquivalentTo(1000000))
+				})
+			})
+
+			When("Storage request is specified via extension", func() {
+				BeforeEach(func() {
+					svcK8sConfig.Workload.Resource.Storage = "0.5G"
+				})
+
+				It("returns Storage request as defined by the extension", func() {
+					_, _, storage := projectService.resourceRequests()
+					Expect(*storage).To(BeEquivalentTo(500000000))
 				})
 			})
 		})
@@ -691,9 +704,10 @@ var _ = Describe("ProjectService", func() {
 		Context("not specified by deploy block", func() {
 			When("not specified via extension", func() {
 				It("returns resource limits as zero values", func() {
-					mem, cpu := projectService.resourceLimits()
+					mem, cpu, storage := projectService.resourceLimits()
 					Expect(*mem).To(BeEquivalentTo(0))
 					Expect(*cpu).To(BeEquivalentTo(0))
+					Expect(*storage).To(BeEquivalentTo(0))
 				})
 			})
 		})
@@ -712,9 +726,10 @@ var _ = Describe("ProjectService", func() {
 
 			When("not specified via extension", func() {
 				It("returns resource limit as defined in deploy block", func() {
-					mem, cpu := projectService.resourceLimits()
+					mem, cpu, storage := projectService.resourceLimits()
 					Expect(*mem).To(BeEquivalentTo(1000))
 					Expect(*cpu).To(BeEquivalentTo(100))
+					Expect(*storage).To(BeEquivalentTo(0))
 				})
 			})
 
@@ -724,7 +739,7 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("returns CPU limit as defined by the extension", func() {
-					_, cpu := projectService.resourceLimits()
+					_, cpu, _ := projectService.resourceLimits()
 					Expect(*cpu).To(BeEquivalentTo(200))
 				})
 			})
@@ -735,8 +750,19 @@ var _ = Describe("ProjectService", func() {
 				})
 
 				It("returns Memory limit as defined by the extension", func() {
-					mem, _ := projectService.resourceLimits()
+					mem, _, _ := projectService.resourceLimits()
 					Expect(*mem).To(BeEquivalentTo(200))
+				})
+			})
+
+			When("Ephemeral Storage limit is specified via extension", func() {
+				BeforeEach(func() {
+					svcK8sConfig.Workload.Resource.MaxStorage = "1G"
+				})
+
+				It("returns Ephemeral Storage limit as defined by the extension", func() {
+					_, _, storage := projectService.resourceLimits()
+					Expect(*storage).To(BeEquivalentTo(1000000000))
 				})
 			})
 		})

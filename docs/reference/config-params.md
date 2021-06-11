@@ -11,13 +11,13 @@ Kev leverages the Docker Compose specification to configure and prepare an appli
 
 Project wide configuration is OPTIONAL and can be defined in one (or more) of the source compose files used to initialise the project.
 
-It will be applied against all environments unless a specific environment overrides a setting with its own value. 
+It will be applied against all environments unless a specific environment overrides a setting with its own value.
 
 ## Environment configuration
 
 Environment configuration lives in a dedicated docker compose override file. This automatically gets applied to the project's source docker compose files at the `render` phase.
 
-Any project wide configuration found will be overridden by environment specific values.  
+Any project wide configuration found will be overridden by environment specific values.
 
 ### Component level configuration
 
@@ -74,7 +74,7 @@ services:
   my-service:
     x-k8s:
       workload:
-        imagePull: 
+        imagePull:
           policy: IfNotPresent
 ...
 ```
@@ -443,6 +443,45 @@ services:
           maxMemory: 0.3Gi
 ...
 ```
+### workload.resource.storage
+
+Defines the ephemeral storage size request for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#setting-requests-and-limits-for-local-ephemeral-storage).
+
+#### Default: `nil` (not set)
+
+#### Possible options: Arbitrary [Memory units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory). Examples: `64Mi`, `1Gi`...
+
+> workload.resource.storage:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        resource:
+          storage: 200M
+...
+```
+
+### workload.resource.maxStorage
+
+Defines the ephemeral storage size limit for a given workload. See official K8s [documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#setting-requests-and-limits-for-local-ephemeral-storage).
+
+#### Default: `nil` (not set)
+
+#### Possible options: Arbitrary [Memory units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory). Examples: `64Mi`, `1Gi`...
+
+> workload.resource.maxStorage:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        resource:
+          maxStorage: 10Gi
+...
+```
 
 ## workload.livenessProbe
 
@@ -483,7 +522,7 @@ Kev uses the following heuristics to derive that information for each service:
 If compose file(s) specifies the `healthcheck.test` attribute key in a service config it will use its value.
 If probe is not defined, it will prompt the user to define one by injecting a generic echo command.
 
-#### Default: echo "<generic prompt text>" 
+#### Default: echo "<generic prompt text>"
 
 #### Possible options: shell command
 
@@ -502,10 +541,10 @@ services:
 ...
 ```
 
-### workload.livenessProbe.http.port 
+### workload.livenessProbe.http.port
 
-Defines the liveness probe port to be used for the workload when the type is `http`. 
-See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
+Defines the liveness probe port to be used for the workload when the type is `http`.
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request).
 
 #### Possible options: Integer
 
@@ -525,8 +564,8 @@ services:
 
 ### workload.livenessProbe.http.path
 
-Defines the liveness probe path to be used for the workload when the type is `http`. 
-See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request). 
+Defines the liveness probe path to be used for the workload when the type is `http`.
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request).
 
 #### Possible options: String
 
@@ -729,15 +768,15 @@ services:
         readinessProbe:
           type: exec
           exec:
-            command: 
+            command:
             - /is-my-service-ready.sh
 ...
 ```
 
 ### workload.readinessProbe.http.port
 
-Defines the readiness probe port to be used for the workload when the type is `http`. 
-See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
+Defines the readiness probe port to be used for the workload when the type is `http`.
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 #### Possible options: Integer
 
@@ -757,8 +796,8 @@ services:
 
 ### workload.readinessProbe.http.path
 
-Defines the readiness probe path to be used for the workload when the type is `http`. 
-See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
+Defines the readiness probe path to be used for the workload when the type is `http`.
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 #### Possible options: String
 
@@ -779,8 +818,8 @@ services:
 
 ### workload.readinessProbe.tcp.port
 
-Defines the readiness probe path to be used for the workload when the type is `tcp`. 
-See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes). 
+Defines the readiness probe path to be used for the workload when the type is `tcp`.
+See official K8s [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
 #### Possible options: Integer
 
@@ -1055,7 +1094,7 @@ services:
 
 ### service.expose.ingressAnnotations
 
-Ingress annotations are used to configure some options depending on the Ingress controller. Different Ingress controller support different annotations. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource) 
+Ingress annotations are used to configure some options depending on the Ingress controller. Different Ingress controller support different annotations. See official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource)
 
 NOTE: This option is only relevant when service is exposed, see: [service.expose.domain](#service.expose.domain) above.
 
