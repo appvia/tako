@@ -78,7 +78,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	singleFile, err := cmd.Flags().GetBool("single")
 	dir, err := cmd.Flags().GetString("dir")
 	envs, err := cmd.Flags().GetStringSlice("environment")
-	verbose, _ := cmd.Root().Flags().GetBool("verbose")
+	verbose, err := cmd.Root().Flags().GetBool("verbose")
 
 	if err != nil {
 		return err
