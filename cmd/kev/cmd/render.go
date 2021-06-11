@@ -84,8 +84,6 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	setReporting(verbose)
-
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
 	wd := "."
@@ -96,5 +94,6 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		kev.WithManifestsAsSingleFile(singleFile),
 		kev.WithOutputDir(dir),
 		kev.WithEnvs(envs),
+		kev.WithLogVerbose(verbose),
 	)
 }

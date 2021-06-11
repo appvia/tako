@@ -40,6 +40,13 @@ func NewRenderRunner(workingDir string, opts ...Options) *RenderRunner {
 
 // Run executes the runner returning results that can be written to disk
 func (r *RenderRunner) Run() (map[string]string, error) {
+	if r.LogVerbose() {
+		cancelFunc, pr, pw := r.pipeLogsToUI()
+		defer cancelFunc()
+		defer pw.Close()
+		defer pr.Close()
+	}
+
 	if err := r.LoadProject(); err != nil {
 		return nil, err
 	}
