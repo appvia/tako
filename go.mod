@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/GoogleContainerTools/skaffold v1.22.0
-	github.com/appvia/komando v0.0.0-20210610131224-62524eed11df
+	github.com/appvia/komando v0.0.0-20210610171422-3e73ea976d7b
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-playground/validator/v10 v10.4.1

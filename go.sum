@@ -204,6 +204,8 @@ github.com/appvia/komando v0.0.0-20210609140051-282b505807b7 h1:FyowKyUl2oE5cFSw
 github.com/appvia/komando v0.0.0-20210609140051-282b505807b7/go.mod h1:pYknqj2kFX72TuSOG+K8InN9B02BTZTxDR4x7zo4Ths=
 github.com/appvia/komando v0.0.0-20210610131224-62524eed11df h1:CmZ61aZ2cfUUzkrZiO7wfNxPkBfhSh5ccWIafFDncSE=
 github.com/appvia/komando v0.0.0-20210610131224-62524eed11df/go.mod h1:pYknqj2kFX72TuSOG+K8InN9B02BTZTxDR4x7zo4Ths=
+github.com/appvia/komando v0.0.0-20210610171422-3e73ea976d7b h1:cxouAv9MQaRz7dRhV65tqsEBMCmC0rB01YWm+7gpt54=
+github.com/appvia/komando v0.0.0-20210610171422-3e73ea976d7b/go.mod h1:pYknqj2kFX72TuSOG+K8InN9B02BTZTxDR4x7zo4Ths=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
