@@ -71,8 +71,7 @@ var logger = &logrus.Logger{
 		},
 	},
 	Hooks: make(logrus.LevelHooks),
-	Level: logrus.ErrorLevel,
-	// Level: logrus.DebugLevel,
+	Level: logrus.InfoLevel,
 }
 
 var enableFileInfo = false

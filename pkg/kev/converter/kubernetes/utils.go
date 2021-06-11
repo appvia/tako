@@ -314,7 +314,7 @@ home:
 		return err
 	}
 
-	log.Infof("chart created in %q", dirName+string(os.PathSeparator))
+	log.Debugf("chart created in %q", dirName+string(os.PathSeparator))
 	return nil
 }
 
