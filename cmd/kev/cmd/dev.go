@@ -128,17 +128,13 @@ func init() {
 }
 
 func runDevCmd(cmd *cobra.Command, _ []string) error {
-	skaffold, err := cmd.Flags().GetBool("skaffold")
-	namespace, err := cmd.Flags().GetString("namespace")
-	kubecontext, err := cmd.Flags().GetString("kubecontext")
-	kevenv, err := cmd.Flags().GetString("kev-env")
-	tail, err := cmd.Flags().GetBool("tail")
-	manualTrigger, err := cmd.Flags().GetBool("manual-trigger")
-	verbose, err := cmd.Root().Flags().GetBool("verbose")
-
-	if err != nil {
-		return err
-	}
+	skaffold, _ := cmd.Flags().GetBool("skaffold")
+	namespace, _ := cmd.Flags().GetString("namespace")
+	kubecontext, _ := cmd.Flags().GetString("kubecontext")
+	kevenv, _ := cmd.Flags().GetString("kev-env")
+	tail, _ := cmd.Flags().GetBool("tail")
+	manualTrigger, _ := cmd.Flags().GetBool("manual-trigger")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	eventHandler := func(e kev.RunnerEvent, r kev.Runner) error { return nil }
 

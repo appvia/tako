@@ -74,15 +74,11 @@ func init() {
 }
 
 func runRenderCmd(cmd *cobra.Command, _ []string) error {
-	format, err := cmd.Flags().GetString("format")
-	singleFile, err := cmd.Flags().GetBool("single")
-	dir, err := cmd.Flags().GetString("dir")
-	envs, err := cmd.Flags().GetStringSlice("environment")
-	verbose, err := cmd.Root().Flags().GetBool("verbose")
-
-	if err != nil {
-		return err
-	}
+	format, _ := cmd.Flags().GetString("format")
+	singleFile, _ := cmd.Flags().GetBool("single")
+	dir, _ := cmd.Flags().GetString("dir")
+	envs, _ := cmd.Flags().GetStringSlice("environment")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.

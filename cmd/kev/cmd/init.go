@@ -74,14 +74,10 @@ func init() {
 }
 
 func runInitCmd(cmd *cobra.Command, _ []string) error {
-	files, err := cmd.Flags().GetStringSlice("file")
-	envs, err := cmd.Flags().GetStringSlice("environment")
-	skaffold, err := cmd.Flags().GetBool("skaffold")
-	verbose, err := cmd.Root().Flags().GetBool("verbose")
-
-	if err != nil {
-		return err
-	}
+	files, _ := cmd.Flags().GetStringSlice("file")
+	envs, _ := cmd.Flags().GetStringSlice("environment")
+	skaffold, _ := cmd.Flags().GetBool("skaffold")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
