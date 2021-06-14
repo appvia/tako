@@ -502,7 +502,7 @@ func (k *Kubernetes) initDeployment(projectService ProjectService) *v1apps.Deplo
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
-					Annotations: configAnnotations(projectService),
+					Annotations: configAnnotations(projectService.Labels, projectService.podAnnotations()),
 					Labels:      configLabels(projectService.Name),
 				},
 				Spec: podSpec,
@@ -576,7 +576,7 @@ func (k *Kubernetes) initStatefulSet(projectService ProjectService) *v1apps.Stat
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
-					Annotations: configAnnotations(projectService),
+					Annotations: configAnnotations(projectService.Labels, projectService.podAnnotations()),
 					Labels:      configLabels(projectService.Name),
 				},
 				Spec: podSpec,
@@ -620,7 +620,7 @@ func (k *Kubernetes) initJob(projectService ProjectService, replicas int) *v1bat
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: meta.ObjectMeta{
-					Annotations: configAnnotations(projectService),
+					Annotations: configAnnotations(projectService.Labels, projectService.podAnnotations()),
 					Labels:      configLabels(projectService.Name),
 				},
 				Spec: podSpec,
@@ -759,7 +759,7 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 		ObjectMeta: meta.ObjectMeta{
 			Name:        projectService.Name,
 			Labels:      configLabels(projectService.Name),
-			Annotations: configAnnotations(projectService),
+			Annotations: configAnnotations(projectService.Labels),
 		},
 		Spec: autoscalingv2beta2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2beta2.CrossVersionObjectReference{
@@ -1339,10 +1339,10 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			})
 		case "pod":
 			// Selects a field of the pod
-			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.annotations,
+			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.podAnnotations,
 			// 					spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
 			paths := []string{
-				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.annotations",
+				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.podAnnotations",
 				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
 			}
 
@@ -1503,7 +1503,7 @@ func (k *Kubernetes) initPod(projectService ProjectService) *v1.Pod {
 		ObjectMeta: meta.ObjectMeta{
 			Name:        projectService.Name,
 			Labels:      configLabels(projectService.Name),
-			Annotations: configAnnotations(projectService),
+			Annotations: configAnnotations(projectService.Labels, projectService.podAnnotations()),
 		},
 		Spec: k.initPodSpec(projectService),
 	}
@@ -1612,7 +1612,7 @@ func (k *Kubernetes) createService(serviceType config.ServiceType, projectServic
 		svc.Spec.Type = v1SvcType
 	}
 
-	svc.ObjectMeta.Annotations = configAnnotations(projectService)
+	svc.ObjectMeta.Annotations = configAnnotations(projectService.Labels)
 
 	return svc, nil
 }
@@ -1636,7 +1636,7 @@ func (k *Kubernetes) createHeadlessService(projectService ProjectService) *v1.Se
 	svc.Spec.Ports = servicePorts
 	svc.Spec.ClusterIP = "None"
 
-	svc.ObjectMeta.Annotations = configAnnotations(projectService)
+	svc.ObjectMeta.Annotations = configAnnotations(projectService.Labels)
 
 	return svc
 }
@@ -1668,7 +1668,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step add PVCs to objects
 	// Looping on the slice pvcs instead of `*objects = append(*objects, pvcs...)`
 	// because the type of objects and pvcs is different, but when doing append
-	// one element at a time it gets converted to runtime.Object for objects slice
+	// one element at a time it getfs converted to runtime.Object for objects slice
 	for _, p := range pvcs {
 		*objects = append(*objects, p)
 	}
@@ -1684,8 +1684,8 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step configure capabilities
 	capabilities := k.configCapabilities(projectService)
 
-	// @step configure annotations
-	annotations := configAnnotations(projectService)
+	// @step configure podAnnotations
+	annotations := configAnnotations(projectService.Labels)
 
 	// @step fillTemplate function will fill the pod template with the values calculated from config
 	fillTemplate := func(template *v1.PodTemplateSpec) error {

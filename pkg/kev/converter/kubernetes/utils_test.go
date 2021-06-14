@@ -540,9 +540,13 @@ var _ = Describe("Utils", func() {
 	})
 
 	Describe("configAnnotations", func() {
+		var (
+			projectService ProjectService
+			err            error
+		)
 
-		Context("with project service labels present", func() {
-			projectService, err := NewProjectService(composego.ServiceConfig{
+		BeforeEach(func() {
+			projectService, err = NewProjectService(composego.ServiceConfig{
 				Labels: composego.Labels{
 					"FOO": "BAR",
 					"BAR": "BAZ",
@@ -550,11 +554,23 @@ var _ = Describe("Utils", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			It("returns a map of labels as expected", func() {
-				Expect(configAnnotations(projectService)).To(HaveLen(2))
-				Expect(configAnnotations(projectService)).To(HaveKeyWithValue("FOO", "BAR"))
-				Expect(configAnnotations(projectService)).To(HaveKeyWithValue("BAR", "BAZ"))
-			})
+			projectService.SvcK8sConfig.Workload.PodAnnotations = map[string]string{
+				"info.kev.io/annotation1": "app/role/value1",
+				"info.kev.io/annotation-db": `|
+{{- with secret "database/creds/db-app" -}}
+	postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable
+{{- end }}`,
+			}
 		})
+
+		It("returns a map of annotations based on supplied sources", func() {
+			annotations := configAnnotations(projectService.Labels, projectService.podAnnotations())
+			Expect(annotations).To(HaveLen(4))
+			Expect(annotations).To(HaveKeyWithValue("FOO", "BAR"))
+			Expect(annotations).To(HaveKeyWithValue("BAR", "BAZ"))
+			Expect(annotations).To(HaveKeyWithValue("info.kev.io/annotation1", "app/role/value1"))
+			Expect(annotations).To(HaveKeyWithValue("info.kev.io/annotation-db", "|\n{{- with secret \"database/creds/db-app\" -}}\n\tpostgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable\n{{- end }}"))
+		})
+
 	})
 })

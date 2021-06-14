@@ -452,7 +452,7 @@ var _ = Describe("Transform", func() {
 					},
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
-							Annotations: configAnnotations(projectService),
+							Annotations: configAnnotations(projectService.Labels),
 							Labels:      configLabels(projectService.Name),
 						},
 						Spec: expectedPodSpec,
@@ -532,6 +532,30 @@ var _ = Describe("Transform", func() {
 				Expect(d.Spec.Strategy.RollingUpdate.MaxUnavailable.IntValue()).To(Equal(0))
 			})
 		})
+
+		Context("for project service configured with pod annotations", func() {
+			BeforeEach(func() {
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodAnnotations = map[string]string{"key1": "value1"}
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: ext}
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("generates annotations directly on the pod spec", func() {
+				d := k.initDeployment(projectService)
+				Expect(d.Spec.Template.Annotations).To(HaveLen(1))
+				Expect(d.Spec.Template.Annotations).To(HaveKeyWithValue("key1", "value1"))
+			})
+
+			It("does not generate any annotations on the Deployment metadata object", func() {
+				d := k.initDeployment(projectService)
+				Expect(d.ObjectMeta.Annotations).To(HaveLen(0))
+			})
+		})
 	})
 
 	Describe("initDaemonSet", func() {
@@ -578,7 +602,7 @@ var _ = Describe("Transform", func() {
 					},
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
-							Annotations: configAnnotations(projectService),
+							Annotations: configAnnotations(projectService.Labels, projectService.podAnnotations()),
 							Labels:      configLabels(projectService.Name), // added
 						},
 						Spec: expectedPodSpec,
@@ -642,6 +666,30 @@ var _ = Describe("Transform", func() {
 				Expect(podContainerVolumeMounts[0].MountPath).To(Equal(mountPath))
 			})
 		})
+
+		Context("for project service configured with pod annotations", func() {
+			BeforeEach(func() {
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodAnnotations = map[string]string{"key1": "value1"}
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: ext}
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("generates annotations directly on the pod spec", func() {
+				d := k.initStatefulSet(projectService)
+				Expect(d.Spec.Template.Annotations).To(HaveLen(1))
+				Expect(d.Spec.Template.Annotations).To(HaveKeyWithValue("key1", "value1"))
+			})
+
+			It("does not generate any annotations on the StatefulSet metadata object", func() {
+				d := k.initStatefulSet(projectService)
+				Expect(d.ObjectMeta.Annotations).To(HaveLen(0))
+			})
+		})
 	})
 
 	Describe("initJob", func() {
@@ -670,7 +718,7 @@ var _ = Describe("Transform", func() {
 					},
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: meta.ObjectMeta{
-							Annotations: configAnnotations(projectService),
+							Annotations: configAnnotations(projectService.Labels),
 							Labels:      configLabels(projectService.Name),
 						},
 						Spec: expectedPodSpec,
@@ -727,6 +775,30 @@ var _ = Describe("Transform", func() {
 				Expect(podContainerVolumeMounts).To(HaveLen(1))
 				Expect(podContainerVolumeMounts[0].Name).To(Equal(configName))
 				Expect(podContainerVolumeMounts[0].MountPath).To(Equal(mountPath))
+			})
+		})
+
+		Context("for project service configured with pod annotations", func() {
+			BeforeEach(func() {
+				svcK8sConfig := config.DefaultSvcK8sConfig()
+				svcK8sConfig.Workload.PodAnnotations = map[string]string{"key1": "value1"}
+				ext, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: ext}
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("generates annotations directly on the pod spec", func() {
+				d := k.initJob(projectService, replicas)
+				Expect(d.Spec.Template.Annotations).To(HaveLen(1))
+				Expect(d.Spec.Template.Annotations).To(HaveKeyWithValue("key1", "value1"))
+			})
+
+			It("does not generate any annotations on the Job metadata object", func() {
+				d := k.initJob(projectService, replicas)
+				Expect(d.ObjectMeta.Annotations).To(HaveLen(0))
 			})
 		})
 	})
@@ -863,7 +935,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service with domain and annotations", func() {
+		When("project service extension instructing to expose the k8s service with domain and podAnnotations", func() {
 			ingressAnnotations := map[string]string{
 				"kubernetes.io/ingress.class":    "external",
 				"cert-manager.io/cluster-issuer": "prod-le-dns01",
@@ -874,7 +946,7 @@ var _ = Describe("Transform", func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
 			})
 
-			It("initialises Ingress with configured ingress annotations", func() {
+			It("initialises Ingress with configured ingress podAnnotations", func() {
 				ingress := k.initIngress(projectService, port)
 				Expect(ingress.ObjectMeta.Annotations).To(Equal(ingressAnnotations))
 			})
@@ -1807,7 +1879,7 @@ var _ = Describe("Transform", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeClusterIP))
 				Expect(svc.Spec.ClusterIP).To(Equal("None"))
-				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
+				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService.Labels)))
 				Expect(svc.Spec.Ports).To(Equal(expectedPorts))
 			})
 		})
@@ -1817,7 +1889,7 @@ var _ = Describe("Transform", func() {
 				svc, err := k.createService(config.NodePortService, projectService)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(svc.Spec.Type).To(Equal(v1.ServiceTypeNodePort))
-				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
+				Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService.Labels)))
 				Expect(svc.Spec.Ports).To(Equal(expectedPorts))
 			})
 		})
@@ -1827,7 +1899,7 @@ var _ = Describe("Transform", func() {
 		It("creates headless service", func() {
 			svc := k.createHeadlessService(projectService)
 			Expect(svc.Spec.ClusterIP).To(Equal("None"))
-			Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService)))
+			Expect(svc.ObjectMeta.Annotations).To(Equal(configAnnotations(projectService.Labels)))
 			Expect(svc.Spec.Ports).To(Equal([]v1.ServicePort{
 				{
 					Name:     "headless",
