@@ -28,6 +28,23 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
+var (
+	// DebugPrefix debug log level prefix
+	DebugPrefix = ""
+
+	// InfoPrefix info log level prefix
+	InfoPrefix = ""
+
+	// WarnPrefix warn log level prefix
+	WarnPrefix = ""
+
+	// ErrorPrefix error log level prefix
+	ErrorPrefix = ""
+
+	// FatalPrefix fatal log level prefix
+	FatalPrefix = ""
+)
+
 // tuiFormatter is a text user interface formatter that wraps the logrus-prefixed-formatter.
 type tuiFormatter struct {
 	*prefixed.TextFormatter
@@ -89,11 +106,6 @@ func DisableFileInfo() {
 	enableFileInfo = false
 }
 
-// DebugTitlef logs a Debug message
-func DebugTitlef(m string, args ...interface{}) {
-	logger.WithFields(decorate("debug-title")).Debugf(m, args...)
-}
-
 // Debug logs a Debug message
 func Debug(args ...interface{}) {
 	logger.WithFields(decorate("debug")).Debug(args...)
@@ -114,14 +126,24 @@ func DebugfWithFields(f Fields, m string, args ...interface{}) {
 	logger.WithFields(decorate("debug", f)).Debugf(m, args...)
 }
 
-// ErrorDetailf logs an Error message
-func ErrorDetail(args ...interface{}) {
-	logger.WithFields(decorate("error-detail")).Error(args...)
+// Info logs a Info message
+func Info(args ...interface{}) {
+	logger.WithFields(decorate("info")).Info(args...)
 }
 
-// ErrorDetailf logs an Error message
-func ErrorDetailf(m string, args ...interface{}) {
-	logger.WithFields(decorate("error-detail")).Errorf(m, args...)
+// InfoWithFields logs an Info message with fields
+func InfoWithFields(f Fields, args ...interface{}) {
+	logger.WithFields(decorate("info", f)).Info(args...)
+}
+
+// Infof logs a Info message
+func Infof(m string, args ...interface{}) {
+	logger.WithFields(decorate("info")).Infof(m, args...)
+}
+
+// InfofWithFields logs an Info message with fields
+func InfofWithFields(f Fields, m string, args ...interface{}) {
+	logger.WithFields(decorate("info", f)).Infof(m, args...)
 }
 
 // Warn logs a Warning message
@@ -185,10 +207,26 @@ func FatalfWithFields(f Fields, m string, args ...interface{}) {
 }
 
 // decorate adds extra fields based on the entry log level
-func decorate(_ string, f ...Fields) logrus.Fields {
+func decorate(level string, f ...Fields) logrus.Fields {
 	fields := Fields{}
 	if len(f) > 0 {
 		fields = f[0]
+	}
+
+	if fields["prefix"] == nil || fields["prefix"] == "" {
+		switch level {
+		case "debug":
+			fields["prefix"] = DebugPrefix
+		case "info":
+			fields["prefix"] = InfoPrefix
+		case "warn":
+			fields["prefix"] = WarnPrefix
+		case "error":
+			fields["prefix"] = ErrorPrefix
+		case "fatal":
+			fields["prefix"] = FatalPrefix
+		default:
+		}
 	}
 
 	if enableFileInfo {
