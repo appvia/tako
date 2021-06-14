@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/appvia/kev/pkg/kev/log"
@@ -51,6 +50,13 @@ func NewDevRunner(workingDir string, opts ...Options) *DevRunner {
 
 // Run runs the dev command business logic
 func (r *DevRunner) Run() error {
+	if r.LogVerbose() {
+		cancelFunc, pr, pw := r.pipeLogsToUI()
+		defer cancelFunc()
+		defer pw.Close()
+		defer pr.Close()
+	}
+
 	if err := r.eventHandler(DevLoopStarting, r); err != nil {
 		return newEventError(err, DevLoopStarting)
 	}
@@ -122,7 +128,7 @@ func (r *DevRunner) Run() error {
 
 		profileName := r.config.Envs[0] + EnvProfileNameSuffix
 		go RunSkaffoldDev(ctx, pw, skaffoldConfigPath, []string{profileName}, r.config)
-		go r.DisplayLogs(pr, ctx)
+		go r.displayLogs(pr, ctx)
 	}
 
 	go r.Watch(change)
@@ -304,32 +310,6 @@ func (r *DevRunner) DisplaySkaffoldOptionsIfAvailable() {
 			)
 		}
 	}
-}
-
-// DisplayLogs displays logs streamed in from the provided reader
-// until the provided context signals that it is done.
-func (r *DevRunner) DisplayLogs(reader io.Reader, ctx context.Context) {
-	buf := make([]byte, 1024)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			n, err := reader.Read(buf)
-			if err != nil {
-				fmt.Println("err: ", err.Error())
-				return
-			}
-			line := string(buf[:n])
-			r.UI.Output(
-				strings.TrimSuffix(line, "\n"),
-				kmd.WithIndent(1),
-				kmd.WithIndentChar(kmd.LogIndentChar),
-				kmd.WithStyle(kmd.LogStyle),
-			)
-		}
-	}
-
 }
 
 // catchCtrlC catches ctrl+c in dev loop when running Skaffold

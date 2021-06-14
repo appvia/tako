@@ -17,6 +17,7 @@
 package kev
 
 import (
+	"context"
 	"io"
 
 	kmd "github.com/appvia/komando"
@@ -39,6 +40,8 @@ type runConfig struct {
 	// ExcludeServicesByEnv is used to exclude an environment's set of services from processing.
 	// Primary use is during render.
 	ExcludeServicesByEnv map[string][]string
+	// LogVerbose enables/disables verbose logging at a debug log level.
+	LogVerbose bool
 }
 
 // Options helps configure running project commands
@@ -72,6 +75,7 @@ type Project struct {
 	manifest     *Manifest
 	config       *runConfig
 	eventHandler EventHandler
+	ctx          context.Context
 }
 
 // InitRunner runs the required sequences to initialise a project.

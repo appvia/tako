@@ -171,8 +171,8 @@ func findFirstFileFromFilesInDir(files []string, dir string) string {
 	if len(candidates) > 0 {
 		winner := candidates[0]
 		if len(candidates) > 1 {
-			log.Warnf("Found multiple override config files with supported names: %s", strings.Join(candidates, ", "))
-			log.Warnf("Using %s", winner)
+			log.Debugf("Found multiple override config files with supported names: %s", strings.Join(candidates, ", "))
+			log.Debugf("Using %s", winner)
 		}
 		return winner
 	}

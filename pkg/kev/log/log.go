@@ -28,24 +28,21 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-const (
-	// successTitlePrefix log level prefix for info and debug, using unicode to ensure a visual on screen.
-	successTitlePrefix = "✓ "
-
-	// ErrorTitlePrefix error log level prefix, using unicode to ensure a visual on screen.
-	errorDetailPrefix = "⨯ "
-
-	// detailPrefix debug log level prefix for info, debug, error, using unicode to ensure a visual on screen.
-	detailPrefix = " → "
+var (
+	// DebugPrefix debug log level prefix
+	DebugPrefix = ""
 
 	// InfoPrefix info log level prefix
-	InfoPrefix = "💡"
+	InfoPrefix = ""
+
+	// WarnPrefix warn log level prefix
+	WarnPrefix = ""
 
 	// ErrorPrefix error log level prefix
-	ErrorPrefix = "✋"
+	ErrorPrefix = ""
 
 	// FatalPrefix fatal log level prefix
-	FatalPrefix = "😱"
+	FatalPrefix = ""
 )
 
 // tuiFormatter is a text user interface formatter that wraps the logrus-prefixed-formatter.
@@ -109,11 +106,6 @@ func DisableFileInfo() {
 	enableFileInfo = false
 }
 
-// DebugTitlef logs a Debug message
-func DebugTitlef(m string, args ...interface{}) {
-	logger.WithFields(decorate("debug-title")).Debugf(m, args...)
-}
-
 // Debug logs a Debug message
 func Debug(args ...interface{}) {
 	logger.WithFields(decorate("debug")).Debug(args...)
@@ -132,16 +124,6 @@ func DebugWithFields(f Fields, args ...interface{}) {
 // DebugfWithFields logs a Debug message with fields
 func DebugfWithFields(f Fields, m string, args ...interface{}) {
 	logger.WithFields(decorate("debug", f)).Debugf(m, args...)
-}
-
-// ErrorDetailf logs an Error message
-func ErrorDetail(args ...interface{}) {
-	logger.WithFields(decorate("error-detail")).Error(args...)
-}
-
-// ErrorDetailf logs an Error message
-func ErrorDetailf(m string, args ...interface{}) {
-	logger.WithFields(decorate("error-detail")).Errorf(m, args...)
 }
 
 // Info logs a Info message
@@ -233,14 +215,12 @@ func decorate(level string, f ...Fields) logrus.Fields {
 
 	if fields["prefix"] == nil || fields["prefix"] == "" {
 		switch level {
-		case "debug-title":
-			fields["prefix"] = successTitlePrefix
 		case "debug":
-			fields["prefix"] = detailPrefix
-		case "error-detail":
-			fields["prefix"] = errorDetailPrefix
+			fields["prefix"] = DebugPrefix
 		case "info":
 			fields["prefix"] = InfoPrefix
+		case "warn":
+			fields["prefix"] = WarnPrefix
 		case "error":
 			fields["prefix"] = ErrorPrefix
 		case "fatal":

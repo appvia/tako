@@ -199,7 +199,7 @@ func (m *Manifest) ReconcileConfig(envs ...string) (*Manifest, error) {
 			return nil, err
 		}
 
-		log.DebugTitlef("Reconciling environment [%s]", e.Name)
+		log.Debugf("Reconciling environment [%s]", e.Name)
 
 		m.UI.Output(fmt.Sprintf("%s: %s", e.Name, e.File))
 

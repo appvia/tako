@@ -77,6 +77,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 	files, _ := cmd.Flags().GetStringSlice("file")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 	skaffold, _ := cmd.Flags().GetBool("skaffold")
+	verbose, _ := cmd.Root().Flags().GetBool("verbose")
 
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
@@ -85,5 +86,7 @@ func runInitCmd(cmd *cobra.Command, _ []string) error {
 		kev.WithAppName(rootCmd.Use),
 		kev.WithComposeSources(files),
 		kev.WithEnvs(envs),
-		kev.WithSkaffold(skaffold))
+		kev.WithSkaffold(skaffold),
+		kev.WithLogVerbose(verbose),
+	)
 }

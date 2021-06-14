@@ -40,7 +40,7 @@ func (c *Dummy) Render(singleFile bool,
 	rendered map[string][]byte,
 	excluded map[string][]string) (map[string]string, error) {
 
-	log.Infof("Hello from %s adapter Render()", Name)
+	log.Debugf("Hello from %s adapter Render()", Name)
 	return nil, nil
 
 }
