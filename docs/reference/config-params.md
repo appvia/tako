@@ -53,7 +53,30 @@ services:
 
 # → Workload
 
-This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined for each application stack component.
+This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined for each application stack component. 
+
+## workload.annotations
+
+A key/value map to attach metadata to a K8s Pod spec in a deployable object, e.g., Deployment, StatefulSet, etc... See official K8s [documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).
+
+### Default: nil (not specified)
+
+### Possible options: key/value map with a string key and string value.
+
+> workload.annotations:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        annotations:
+          key1: value 1
+          key2: value 2
+          key3: |
+            value 3 and value 4 
+...
+```
 
 ## workload.imagePull
 

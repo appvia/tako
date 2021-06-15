@@ -49,6 +49,15 @@ func (p *ProjectService) enabled() bool {
 	return !p.SvcK8sConfig.Disabled
 }
 
+// podAnnotations returns the workload pod annotations
+func (p *ProjectService) podAnnotations() map[string]string {
+	out := p.SvcK8sConfig.Workload.Annotations
+	if len(out) == 0 {
+		out = map[string]string{}
+	}
+	return out
+}
+
 // replicas returns number of replicas for given project service
 func (p *ProjectService) replicas() int32 {
 	return int32(p.SvcK8sConfig.Workload.Replicas)

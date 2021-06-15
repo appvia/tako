@@ -575,14 +575,16 @@ func configAllLabels(projectService ProjectService) map[string]string {
 	return base
 }
 
-// configAnnotations configures annotations - they are effectively compose project service labels,
+// configAnnotations creates annotations to be used where they are required,
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L152
-func configAnnotations(projectService ProjectService) map[string]string {
-	annotations := map[string]string{}
-	for key, value := range projectService.Labels {
-		annotations[key] = value
+func configAnnotations(src ...map[string]string) map[string]string {
+	out := map[string]string{}
+	for _, m := range src {
+		for key, val := range m {
+			out[key] = val
+		}
 	}
-	return annotations
+	return out
 }
 
 // parseIngressPath parses the path for ingress.

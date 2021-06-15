@@ -415,17 +415,18 @@ func validateDNSSubdomainNameIfAny(fl validator.FieldLevel) bool {
 
 // Workload holds all the workload-related k8s configurations.
 type Workload struct {
-	Type                  WorkloadType   `yaml:"type,omitempty" validate:"workloadType"`
-	Replicas              int            `yaml:"replicas" validate:""`
-	ServiceAccountName    string         `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
-	RollingUpdateMaxSurge int            `yaml:"rollingUpdateMaxSurge,omitempty" validate:""`
-	LivenessProbe         LivenessProbe  `yaml:"livenessProbe" validate:"required"`
-	ReadinessProbe        ReadinessProbe `yaml:"readinessProbe,omitempty"`
-	RestartPolicy         RestartPolicy  `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
-	ImagePull             ImagePull      `yaml:"imagePull,omitempty"`
-	Resource              Resource       `yaml:"resource,omitempty"`
-	Autoscale             Autoscale      `yaml:"autoscale,omitempty"`
-	PodSecurity           PodSecurity    `yaml:"podSecurity,omitempty"`
+	Type                  WorkloadType      `yaml:"type,omitempty" validate:"workloadType"`
+	Replicas              int               `yaml:"replicas" validate:""`
+	ServiceAccountName    string            `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
+	RollingUpdateMaxSurge int               `yaml:"rollingUpdateMaxSurge,omitempty" validate:""`
+	Annotations           map[string]string `yaml:"annotations,omitempty"`
+	LivenessProbe         LivenessProbe     `yaml:"livenessProbe" validate:"required"`
+	ReadinessProbe        ReadinessProbe    `yaml:"readinessProbe,omitempty"`
+	RestartPolicy         RestartPolicy     `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
+	ImagePull             ImagePull         `yaml:"imagePull,omitempty"`
+	Resource              Resource          `yaml:"resource,omitempty"`
+	Autoscale             Autoscale         `yaml:"autoscale,omitempty"`
+	PodSecurity           PodSecurity       `yaml:"podSecurity,omitempty"`
 }
 
 type Resource struct {
