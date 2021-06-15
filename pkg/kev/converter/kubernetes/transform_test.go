@@ -536,7 +536,7 @@ var _ = Describe("Transform", func() {
 		Context("for project service configured with pod annotations", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
-				svcK8sConfig.Workload.PodAnnotations = map[string]string{"key1": "value1"}
+				svcK8sConfig.Workload.Annotations = map[string]string{"key1": "value1"}
 				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
@@ -670,7 +670,7 @@ var _ = Describe("Transform", func() {
 		Context("for project service configured with pod annotations", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
-				svcK8sConfig.Workload.PodAnnotations = map[string]string{"key1": "value1"}
+				svcK8sConfig.Workload.Annotations = map[string]string{"key1": "value1"}
 				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
@@ -781,7 +781,7 @@ var _ = Describe("Transform", func() {
 		Context("for project service configured with pod annotations", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
-				svcK8sConfig.Workload.PodAnnotations = map[string]string{"key1": "value1"}
+				svcK8sConfig.Workload.Annotations = map[string]string{"key1": "value1"}
 				ext, err := svcK8sConfig.Map()
 				Expect(err).NotTo(HaveOccurred())
 
@@ -935,7 +935,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project service extension instructing to expose the k8s service with domain and podAnnotations", func() {
+		When("project service extension instructing to expose the k8s service with domain and ingress annotations", func() {
 			ingressAnnotations := map[string]string{
 				"kubernetes.io/ingress.class":    "external",
 				"cert-manager.io/cluster-issuer": "prod-le-dns01",

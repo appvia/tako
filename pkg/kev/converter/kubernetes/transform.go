@@ -1668,7 +1668,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step add PVCs to objects
 	// Looping on the slice pvcs instead of `*objects = append(*objects, pvcs...)`
 	// because the type of objects and pvcs is different, but when doing append
-	// one element at a time it getfs converted to runtime.Object for objects slice
+	// one element at a time it gets converted to runtime.Object for objects slice
 	for _, p := range pvcs {
 		*objects = append(*objects, p)
 	}

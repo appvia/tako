@@ -419,7 +419,7 @@ type Workload struct {
 	Replicas              int               `yaml:"replicas" validate:""`
 	ServiceAccountName    string            `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
 	RollingUpdateMaxSurge int               `yaml:"rollingUpdateMaxSurge,omitempty" validate:""`
-	PodAnnotations        map[string]string `yaml:"annotations,omitempty"`
+	Annotations           map[string]string `yaml:"annotations,omitempty"`
 	LivenessProbe         LivenessProbe     `yaml:"livenessProbe" validate:"required"`
 	ReadinessProbe        ReadinessProbe    `yaml:"readinessProbe,omitempty"`
 	RestartPolicy         RestartPolicy     `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`

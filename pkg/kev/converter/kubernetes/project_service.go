@@ -51,7 +51,7 @@ func (p *ProjectService) enabled() bool {
 
 // podAnnotations returns the workload pod annotations
 func (p *ProjectService) podAnnotations() map[string]string {
-	out := p.SvcK8sConfig.Workload.PodAnnotations
+	out := p.SvcK8sConfig.Workload.Annotations
 	if len(out) == 0 {
 		out = map[string]string{}
 	}

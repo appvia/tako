@@ -554,7 +554,7 @@ var _ = Describe("Utils", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			projectService.SvcK8sConfig.Workload.PodAnnotations = map[string]string{
+			projectService.SvcK8sConfig.Workload.Annotations = map[string]string{
 				"info.kev.io/annotation1": "app/role/value1",
 				"info.kev.io/annotation-db": `|
 {{- with secret "database/creds/db-app" -}}
