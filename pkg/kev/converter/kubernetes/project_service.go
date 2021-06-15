@@ -139,7 +139,7 @@ func (p *ProjectService) tlsSecretName() string {
 	return p.SvcK8sConfig.Service.Expose.TlsSecret
 }
 
-// ingressAnnotations returns the ingress podAnnotations for exposed service (to be used in the ingress configuration)
+// ingressAnnotations returns the ingress annotations for exposed service (to be used in the ingress configuration)
 func (p *ProjectService) ingressAnnotations() map[string]string {
 	annotations := p.SvcK8sConfig.Service.Expose.IngressAnnotations
 	if len(annotations) == 0 {
