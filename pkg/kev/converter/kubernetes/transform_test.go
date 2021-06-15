@@ -533,7 +533,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("for project service configured with pod annotations", func() {
+		Context("for project service configured with annotations", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Annotations = map[string]string{"key1": "value1"}
@@ -667,7 +667,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("for project service configured with pod annotations", func() {
+		Context("for project service configured with annotations", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Annotations = map[string]string{"key1": "value1"}
@@ -778,7 +778,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("for project service configured with pod annotations", func() {
+		Context("for project service configured with annotations", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.Annotations = map[string]string{"key1": "value1"}
@@ -946,7 +946,7 @@ var _ = Describe("Transform", func() {
 				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
 			})
 
-			It("initialises Ingress with configured ingress podAnnotations", func() {
+			It("initialises Ingress with configured ingress annotations", func() {
 				ingress := k.initIngress(projectService, port)
 				Expect(ingress.ObjectMeta.Annotations).To(Equal(ingressAnnotations))
 			})

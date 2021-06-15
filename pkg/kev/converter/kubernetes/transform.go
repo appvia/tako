@@ -1339,10 +1339,10 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			})
 		case "pod":
 			// Selects a field of the pod
-			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.podAnnotations,
+			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.annotations,
 			// 					spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
 			paths := []string{
-				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.podAnnotations",
+				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.annotations",
 				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
 			}
 
@@ -1684,7 +1684,7 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step configure capabilities
 	capabilities := k.configCapabilities(projectService)
 
-	// @step configure podAnnotations
+	// @step configure annotations
 	annotations := configAnnotations(projectService.Labels)
 
 	// @step fillTemplate function will fill the pod template with the values calculated from config
