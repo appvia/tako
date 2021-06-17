@@ -101,8 +101,9 @@ func (chg change) patchService(override *composeOverride) (string, error) {
 			return "", err
 		}
 
-		newValue.Extensions[config.K8SExtensionKey] = minified
-		override.Services = append(override.Services, newValue)
+		override.Services = append(override.Services, ServiceConfig{Name: newValue.Name, Extensions: map[string]interface{}{
+			config.K8SExtensionKey: minified,
+		}})
 
 		msg := fmt.Sprintf("added service: %s", newValue.Name)
 		log.Debugf(msg)
@@ -154,8 +155,9 @@ func (chg change) patchVolume(override *composeOverride) (string, error) {
 			return "", err
 		}
 
-		newValue.Extensions[config.K8SExtensionKey] = minified
-		override.Volumes[chg.Index.(string)] = newValue
+		override.Volumes[chg.Index.(string)] = VolumeConfig{Name: newValue.Name, Extensions: map[string]interface{}{
+			config.K8SExtensionKey: minified,
+		}}
 
 		msg := fmt.Sprintf("added volume: %s", chg.Index.(string))
 		log.Debugf(msg)

@@ -19,6 +19,7 @@ package kev
 import (
 	"fmt"
 
+	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 	"github.com/imdario/mergo"
@@ -63,7 +64,7 @@ func (o *composeOverride) diffAndPatch(dst *composeOverride) error {
 	o.detectAndPatchVersionUpdate(dst)
 
 	if err := o.detectAndPatchServicesCreate(dst); err != nil {
-		return nil
+		return err
 	}
 
 	if err := o.detectAndPatchServicesDelete(dst); err != nil {
@@ -117,10 +118,12 @@ func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) err
 		if !dstSvcSet[srcSvc.Name] {
 			cset.services = append(cset.services, change{
 				Type:  CREATE,
-				Value: srcSvc.minusEnvVars(),
+				Value: srcSvc,
 			})
+			log.Debugf("detected a new service named: %s", srcSvc.Name)
 		}
 	}
+
 	if cset.HasNoPatches() {
 		step.Success("No service additions detected")
 		return nil
@@ -128,6 +131,7 @@ func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) err
 
 	msgs, err := cset.applyServicesPatchesIfAny(dst)
 	if err != nil {
+		step.Error()
 		return err
 	}
 	step.Success("Applied service additions")
@@ -230,6 +234,7 @@ func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) erro
 				Index: srcVolKey,
 				Value: srcVolConfig,
 			})
+			log.Debugf("detected a new volume named: %s", srcVolKey)
 		}
 	}
 
@@ -240,6 +245,7 @@ func (o *composeOverride) detectAndPatchVolumesCreate(dst *composeOverride) erro
 
 	msgs, err := cset.applyVolumesPatchesIfAny(dst)
 	if err != nil {
+		step.Error()
 		return err
 	}
 
