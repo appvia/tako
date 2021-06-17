@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 
 	"github.com/appvia/kev/pkg/kev/log"
@@ -65,16 +66,23 @@ func (r *DevRunner) Run() error {
 	r.UI.Output("[development mode] ... watching for changes - press Ctrl+C to stop", kmd.WithStyle(kmd.LogStyle))
 	r.DisplaySkaffoldOptionsIfAvailable()
 
-	runPreCommands := func() error {
+	runPreCommands := func(envs []string) error {
 		sg := r.UI.StepGroup()
 		defer sg.Done()
 
-		step := sg.Add(fmt.Sprintf("Running render for environment: %s", r.config.Envs[0]))
+		var msg string
+		if len(envs) == 0 {
+			msg = "Running render for all environments"
+		} else {
+			msg = fmt.Sprintf("Running render for environment: %s", envs[0])
+		}
+
+		step := sg.Add(msg)
 
 		renderRunner = NewRenderRunner(
 			r.WorkingDir,
 			WithEventHandler(r.eventHandler),
-			WithEnvs(r.config.Envs),
+			WithEnvs(envs),
 			WithUI(kmd.NoOpUI()),
 		)
 		if _, err := renderRunner.Run(); err != nil {
@@ -90,7 +98,7 @@ func (r *DevRunner) Run() error {
 	defer close(change)
 
 	// initial manifests generation for specified environments only
-	if err := runPreCommands(); err != nil {
+	if err := runPreCommands(r.config.Envs); err != nil {
 		return err
 	}
 
@@ -133,6 +141,8 @@ func (r *DevRunner) Run() error {
 
 	go r.Watch(change)
 
+	envRe := regexp.MustCompile(`^.*\.(.*)\.ya?ml$`)
+
 	for {
 		ch := <-change
 		if len(ch) > 0 {
@@ -143,11 +153,14 @@ func (r *DevRunner) Run() error {
 				kmd.WithStyle(kmd.LogStyle),
 			)
 
+			match := envRe.FindStringSubmatch(ch)
+			env := match[1]
+
 			if err := r.eventHandler(DevLoopIterated, r); err != nil {
 				return newEventError(err, DevLoopIterated)
 			}
 
-			_ = runPreCommands()
+			_ = runPreCommands([]string{env})
 
 			// empty the buffer as we only ever do one re-render cycle per a batch of changes
 			if len(change) > 0 {

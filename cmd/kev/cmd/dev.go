@@ -139,7 +139,8 @@ func runDevCmd(cmd *cobra.Command, _ []string) error {
 	eventHandler := func(e kev.RunnerEvent, r kev.Runner) error { return nil }
 
 	var envs []string
-	if len(kevenv) > 0 {
+	if len(kevenv) > 0 && skaffold {
+		// when in --skaffold mode - only watch, render and deploy a specified environment
 		envs = append(envs, kevenv)
 	}
 
