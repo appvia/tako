@@ -256,9 +256,9 @@ var _ = Describe("Reconcile", func() {
 					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
 					Expect(err).ToNot(HaveOccurred())
 					for _, env := range envs {
-						Expect(env.GetServices()).To(HaveLen(2))
-						Expect(env.GetServices()[0].Name).To(Equal("db"))
-						Expect(env.GetServices()[1].Name).To(Equal("wordpress"))
+						Expect(env.GetServices()).To(HaveLen(2), "failed for env: %s", env.Name)
+						Expect(env.GetServices()[0].Name).To(Equal("db"), "failed for env: %s", env.Name)
+						Expect(env.GetServices()[1].Name).To(Equal("wordpress"), "failed for env: %s", env.Name)
 					}
 				})
 
@@ -269,7 +269,7 @@ var _ = Describe("Reconcile", func() {
 					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
 					Expect(err).ToNot(HaveOccurred())
 					for _, env := range envs {
-						Expect(env.GetServices()[1].Extensions).To(Equal(expected))
+						Expect(env.GetServices()[1].Extensions).To(Equal(expected), "failed for env: %s", env.Name)
 					}
 				})
 
@@ -277,7 +277,7 @@ var _ = Describe("Reconcile", func() {
 					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
 					Expect(err).ToNot(HaveOccurred())
 					for _, env := range envs {
-						Expect(env.GetServices()[1].Environment).To(HaveLen(0))
+						Expect(env.GetServices()[1].Environment).To(HaveLen(0), "failed for env: %s", env.Name)
 					}
 				})
 
@@ -357,8 +357,8 @@ var _ = Describe("Reconcile", func() {
 					v, _ := env.GetVolume("db_data")
 					volExt := v.Extensions[config.K8SExtensionKey].(map[string]interface{})
 
-					Expect(v.Extensions).To(HaveLen(1))
-					Expect(volExt["size"]).To(Equal("100Mi"))
+					Expect(v.Extensions).To(HaveLen(1), "failed for env: %s", env.Name)
+					Expect(volExt["size"]).To(Equal("100Mi"), "failed for env: %s", env.Name)
 				}
 
 			})
