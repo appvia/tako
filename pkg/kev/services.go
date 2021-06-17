@@ -89,12 +89,3 @@ func (sc ServiceConfig) detectSecretsInEnvVars(matchers []map[string]string) []s
 
 	return matches
 }
-
-// minusEnvVars returns a copy of the ServiceConfig with blank env vars
-func (sc ServiceConfig) minusEnvVars() ServiceConfig {
-	return ServiceConfig{
-		Name:        sc.Name,
-		Environment: map[string]*string{},
-		Extensions:  sc.Extensions,
-	}
-}
