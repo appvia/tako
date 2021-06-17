@@ -241,7 +241,10 @@ var _ = Describe("Reconcile", func() {
 			Context("and the service has no deploy or healthcheck config", func() {
 				BeforeEach(func() {
 					workingDir = "testdata/reconcile-service-basic"
-					overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+					overrideFiles = []string{
+						workingDir + "/docker-compose.kev.dev.yaml",
+						workingDir + "/docker-compose.kev.stage.yaml",
+					}
 				})
 
 				It("confirms the number of services pre reconciliation", func() {
@@ -250,19 +253,32 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should add the new service to all environments", func() {
-					Expect(env.GetServices()).To(HaveLen(2))
-					Expect(env.GetServices()[0].Name).To(Equal("db"))
-					Expect(env.GetServices()[1].Name).To(Equal("wordpress"))
+					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
+					Expect(err).ToNot(HaveOccurred())
+					for _, env := range envs {
+						Expect(env.GetServices()).To(HaveLen(2))
+						Expect(env.GetServices()[0].Name).To(Equal("db"))
+						Expect(env.GetServices()[1].Name).To(Equal("wordpress"))
+					}
 				})
 
-				It("should configure the added service extension value defaults", func() {
+				It("should configure the added service extension value defaults in all environments", func() {
 					expected, err := newMinifiedServiceExtensions("wordpress")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(env.GetServices()[1].Extensions).To(Equal(expected))
+
+					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
+					Expect(err).ToNot(HaveOccurred())
+					for _, env := range envs {
+						Expect(env.GetServices()[1].Extensions).To(Equal(expected))
+					}
 				})
 
-				It("should not include any env vars", func() {
-					Expect(env.GetServices()[1].Environment).To(HaveLen(0))
+				It("should not include any env vars in any environments", func() {
+					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
+					Expect(err).ToNot(HaveOccurred())
+					for _, env := range envs {
+						Expect(env.GetServices()[1].Environment).To(HaveLen(0))
+					}
 				})
 
 				It("should log the change summary using the debug level", func() {
@@ -321,7 +337,10 @@ var _ = Describe("Reconcile", func() {
 		Context("when a new compose volume has been added", func() {
 			BeforeEach(func() {
 				workingDir = "testdata/reconcile-volume-add"
-				overrideFiles = []string{workingDir + "/docker-compose.kev.dev.yaml"}
+				overrideFiles = []string{
+					workingDir + "/docker-compose.kev.dev.yaml",
+					workingDir + "/docker-compose.kev.stage.yaml",
+				}
 			})
 
 			It("confirms the number of volumes pre reconciliation", func() {
@@ -329,13 +348,19 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("should add the new volumes to all environments", func() {
-				Expect(env.GetVolumes()).To(HaveLen(1))
+				envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
+				Expect(err).ToNot(HaveOccurred())
 
-				v, _ := env.GetVolume("db_data")
-				volExt := v.Extensions[config.K8SExtensionKey].(map[string]interface{})
+				for _, env := range envs {
+					Expect(env.GetVolumes()).To(HaveLen(1))
 
-				Expect(v.Extensions).To(HaveLen(1))
-				Expect(volExt["size"]).To(Equal("100Mi"))
+					v, _ := env.GetVolume("db_data")
+					volExt := v.Extensions[config.K8SExtensionKey].(map[string]interface{})
+
+					Expect(v.Extensions).To(HaveLen(1))
+					Expect(volExt["size"]).To(Equal("100Mi"))
+				}
+
 			})
 
 			It("should log the change summary using the debug level", func() {
