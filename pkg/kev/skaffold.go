@@ -154,7 +154,9 @@ func UpdateSkaffoldBuildArtifacts(path string, project *ComposeProject) error {
 // true - when list of artefacts was updated, false - otherwise
 func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *ComposeProject) bool {
 	prevArts := s.Build.Artifacts
-
+	if prevArts == nil {
+		prevArts = []*latest.Artifact{}
+	}
 	sort.SliceStable(prevArts, func(i, j int) bool {
 		return prevArts[i].ImageName < prevArts[j].ImageName
 	})
@@ -162,6 +164,9 @@ func (s *SkaffoldManifest) UpdateBuildArtifacts(analysis *Analysis, project *Com
 	s.SetBuildArtifacts(analysis, project)
 
 	currArts := s.Build.Artifacts
+	if currArts == nil {
+		currArts = []*latest.Artifact{}
+	}
 	sort.SliceStable(currArts, func(i, j int) bool {
 		return currArts[i].ImageName < currArts[j].ImageName
 	})
