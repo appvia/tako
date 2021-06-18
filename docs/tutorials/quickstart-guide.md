@@ -101,7 +101,7 @@ In this example, we deploy the `stage` environment:
 
 ```sh
 # deploys your app with stage settings onto the default namespace
-kubectl apply -f k8s/stage
+$ kubectl apply -f k8s/stage
 ```
 
 ### Other deployment tooling
