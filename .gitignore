@@ -15,6 +15,9 @@ examples/node-app/docker-compose.kev*
 examples/node-app/kev.yaml
 examples/node-app/k8s
 
+### Wordpress app example
+examples/wordpress-mysql/k8s
+
 ### Go mod vendor ###
 vendor
 

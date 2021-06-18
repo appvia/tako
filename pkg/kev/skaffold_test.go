@@ -349,6 +349,23 @@ var _ = Describe("Skaffold", func() {
 				Expect(images).ToNot(ContainElement("quay.io/myorg/svc2"))
 			})
 		})
+
+		When("previous build artefacts were not defined (nil)", func() {
+			BeforeEach(func() {
+				skaffoldManifest.Build.Artifacts = nil
+			})
+
+			When("and current build artefacts were not detected (empty slice)", func() {
+				BeforeEach(func() {
+					analysis = nil
+					project.Services[0].Build = nil // reminder: images with no build context are excluded
+				})
+
+				It("returns false", func() {
+					Expect(changed).To(BeFalse())
+				})
+			})
+		})
 	})
 
 	Describe("InjectProfiles", func() {
