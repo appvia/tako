@@ -41,7 +41,7 @@ It'll also bootstrap the Skaffold config file (`skaffold.yaml`). If skaffold.yam
 Once changes to base & environment specific Compose file(s) have been made
 
 ```sh
-# One-off Kubernetes manifests render : 
+# One-off Kubernetes manifests render: 
 $ kev render
 ```
 

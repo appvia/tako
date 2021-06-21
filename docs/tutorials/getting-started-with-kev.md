@@ -391,7 +391,7 @@ Also, we've made some minor adjustments to the `wordpress` service. Kev will rec
 
 This will be applied to all _Compose environment overrides_.
 
-We hve already initialised kev, so to catch the new changes to the Compose file we simply need to re-run,
+We have already initialised kev, so to catch the new changes to the Compose file we simply need to re-run,
 ```sh
 $ kev render
 ```
