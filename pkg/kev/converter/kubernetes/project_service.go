@@ -49,6 +49,50 @@ func (p *ProjectService) enabled() bool {
 	return !p.SvcK8sConfig.Disabled
 }
 
+// command returns the workload command
+// When defined via config extension takes presedence over Entrypoint defined by the compose service spec.
+// Compose project service spec Entrypoint is equivalent to a k8s command,
+// see: https://github.com/kubernetes/kompose/blob/0036f0c32b37d0a521421b76e58b580b7574c127/docs/conversion.md
+func (p *ProjectService) command() []string {
+	var out []string
+
+	if len(p.Entrypoint) > 0 {
+		out = []string(p.Entrypoint)
+	}
+
+	if len(p.SvcK8sConfig.Workload.Command) > 0 {
+		out = p.SvcK8sConfig.Workload.Command
+	}
+
+	if len(out) == 0 {
+		out = []string{}
+	}
+
+	return out
+}
+
+// commandArgs returns the workload command arguments.
+// When defined via config extension takes presedence over Command defined by the compose service spec.
+// Compose project service spec Command is equivalent to k8s args,
+// see: https://github.com/kubernetes/kompose/blob/0036f0c32b37d0a521421b76e58b580b7574c127/docs/conversion.md
+func (p *ProjectService) commandArgs() []string {
+	var out []string
+
+	if len(p.Command) > 0 {
+		out = []string(p.Command)
+	}
+
+	if len(p.SvcK8sConfig.Workload.CommandArgs) > 0 {
+		out = p.SvcK8sConfig.Workload.CommandArgs
+	}
+
+	if len(out) == 0 {
+		out = []string{}
+	}
+
+	return out
+}
+
 // podAnnotations returns the workload pod annotations
 func (p *ProjectService) podAnnotations() map[string]string {
 	out := p.SvcK8sConfig.Workload.Annotations

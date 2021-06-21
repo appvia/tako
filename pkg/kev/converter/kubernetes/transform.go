@@ -244,6 +244,12 @@ func (k *Kubernetes) initPodSpec(projectService ProjectService) v1.PodSpec {
 	// @step get service account for the pod
 	serviceAccount := projectService.serviceAccountName()
 
+	// @step get command for the container
+	command := projectService.command()
+
+	// @step get command arguments for the container
+	commandArgs := projectService.commandArgs()
+
 	pod := v1.PodSpec{
 		Containers: []v1.Container{
 			{
@@ -251,6 +257,12 @@ func (k *Kubernetes) initPodSpec(projectService ProjectService) v1.PodSpec {
 				Image: image,
 			},
 		},
+	}
+	if len(command) > 0 {
+		pod.Containers[0].Command = command
+	}
+	if len(commandArgs) > 0 {
+		pod.Containers[0].Args = commandArgs
 	}
 	if pullSecret != "" {
 		pod.ImagePullSecrets = []v1.LocalObjectReference{
@@ -1693,8 +1705,8 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 			template.Spec.Containers[0].Name = rfc1123dns(projectService.ContainerName)
 		}
 		template.Spec.Containers[0].Env = envs
-		template.Spec.Containers[0].Command = projectService.Entrypoint
-		template.Spec.Containers[0].Args = projectService.Command
+		template.Spec.Containers[0].Command = projectService.command()
+		template.Spec.Containers[0].Args = projectService.commandArgs()
 		template.Spec.Containers[0].WorkingDir = projectService.WorkingDir
 		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, volumesMounts...)
 		template.Spec.Containers[0].Stdin = projectService.StdinOpen
