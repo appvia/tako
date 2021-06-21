@@ -19,7 +19,12 @@ services:                                                # compose services sect
           domain:                                        # Default: "" (no ingress). Possible options: "" | "default" | domain.com,otherdomain.com (comma separated domain names). When with "default" or domain name(s) - it'll generate an ingress object and expose service externally.
           tlsSecret:                                     # Default: "" (no tls). Kubernetes secret name where certs will be loaded from.
       workload:                                          # K8s workload configuration (only required if values are overridden)
-        annotations:                                     # Default: nil. A key/value map to attach metadata to a K8s Pod Spec in a deployable object, e.g. Deployment, StatefulSet, etc... 
+        command:                                         # Default: nil. When defined it'll override start command defined in the container.
+          - /bin/sh
+        commandArgs:                                     # Default: nil. When defined it'll override command arguments defined in the container.
+          - -c
+          - /do/something
+        annotations:                                     # Default: nil. A key/value map to attach metadata to a K8s Pod Spec in a deployable object, e.g. Deployment, StatefulSet, etc...
           key-one: value one
           key-two: value two
         autoscale:                                       # Configures an application for auto-scaling.

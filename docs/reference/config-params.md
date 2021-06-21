@@ -53,8 +53,49 @@ services:
 
 # → Workload
 
-This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined for each application stack component. 
+This configuration group contains Kubernetes `workload` specific settings. Configuration parameters can be individually defined for each application stack component.
 
+## workload.command
+
+Defines a command to run for given workload. If defined it'll take presedence over the default docker image command.
+
+### Default: nil (not specified - docker image command will be used)
+
+### Possible options: an array of string values.
+
+> workload.command:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        command:
+          - /bin/sh
+          - -c
+          - /do/something && /run/my/program
+...
+```
+
+## workload.commandArgs
+
+Defines a command arguments for given workload. If defined it'll take presedence over the default docker image args.
+### Default: nil (not specified - docker image args will be used)
+
+### Possible options: an array of string values.
+
+> workload.commandArgs:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      workload:
+        commandArgs:
+          - -c
+          - sleep 10 && /run/my/program
+...
+```
 ## workload.annotations
 
 A key/value map to attach metadata to a K8s Pod spec in a deployable object, e.g., Deployment, StatefulSet, etc... See official K8s [documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).
@@ -74,7 +115,7 @@ services:
           key1: value 1
           key2: value 2
           key3: |
-            value 3 and value 4 
+            value 3 and value 4
 ...
 ```
 
