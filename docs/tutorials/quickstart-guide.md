@@ -14,7 +14,7 @@ title: Quick start guide
 Run the following command within your project directory:
 
 ```sh
-kev init
+$ kev init
 ```
 
 This identifies the default `docker-compose.yaml` and (if present) `docker-compose.override.yaml` files in your project directory. They will be used as the source of truth for your application deployment in Kubernetes.
@@ -24,7 +24,7 @@ Also, it creates an implicit sandbox `dev` environment and its Compose override 
 Here's another example. It uses an alternate `docker-compose` file with `stage` & `prod` environments:
 
 ```sh
-kev init -f my-docker-compose.yaml -e stage -e prod
+$ kev init -f my-docker-compose.yaml -e stage -e prod
 ```
 
 It makes use of,
@@ -62,7 +62,7 @@ We now need to generate manifests based on your Docker Compose config and enviro
 Run the following command from your project root:
 
 ```sh
-kev render
+$ kev render
 ```
 
 The command above,
@@ -100,7 +100,8 @@ To deploy your app onto Kubernetes,
 In this example, we deploy the `stage` environment:
 
 ```sh
-kubectl apply -f k8s/stage     # deploys your app with stage settings onto the default namespace
+# deploys your app with stage settings onto the default namespace
+$ kubectl apply -f k8s/stage
 ```
 
 ### Other deployment tooling

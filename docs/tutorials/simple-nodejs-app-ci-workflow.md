@@ -51,8 +51,8 @@ users:
 
 Now encode the slimmed down `kube-config` file into base64.
 
-```shell script
-cat ~/path/to/remote/cluster/kube/config | base64
+```sh
+$ cat ~/path/to/remote/cluster/kube/config | base64
 ```
 
 Then create the following [CircleCI Project Environment Variables](https://circleci.com/docs/2.0/env-vars/#setting-an-environment-variable-in-a-project),
@@ -96,13 +96,13 @@ To follow the tutorial, make a copy of the project directory (`./examples/node-a
 > * prepare the app for use with [Skaffold](https://skaffold.dev/).
 
 ```sh
-kev init -e staging --skaffold
+$ kev init -e staging --skaffold
 ```
 
 You will notice the staging environment configuration file has been created:
 
 > Added environment specific override files:
-```
+```sh
 ...
 |- docker-compose.kev.staging.yaml      # staging env
 ```
@@ -125,8 +125,8 @@ The commit will trigger the CI pipeline.
 
 After the `stage` job successfully finishes, inspect that the Node app is running in your remote cluster:
 
-> List Kubernetes application pods for the Node.js app:
 ```sh
+# List Kubernetes application pods for the Node.js app:
 $ kubectl --context <remote_cluster_context> -n staging get po
 
 NAME                   READY   STATUS    RESTARTS   AGE

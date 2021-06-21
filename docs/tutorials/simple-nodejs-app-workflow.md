@@ -16,17 +16,19 @@ title: Kev workflow example with a simple Node.js App
 > * prepare the app for use with [Skaffold](https://skaffold.dev/).
 
 ```sh
-kev init -e dev -e staging -e prod --skaffold
+$ kev init -e staging -e prod --skaffold
 ```
 
 You will notice that 3 separate environment specific configuration files have been created:
 
 > Added environment specific override files:
-```
+```sh
 |- docker-compose.kev.dev.yaml
 |- docker-compose.kev.staging.yaml
 |- docker-compose.kev.prod.yaml
 ```
+
+(The `dev` configuration is created by default by kev).
 
 Adjust Kubernetes specific application parameters for each of the components as and when necessary. This is done via Compose [extensions](../../docs/reference/config-params.md).
 
@@ -38,9 +40,9 @@ It'll also bootstrap the Skaffold config file (`skaffold.yaml`). If skaffold.yam
 
 Once changes to base & environment specific Compose file(s) have been made
 
-> One-off Kubernetes manifests render:
 ```sh
-kev render
+# One-off Kubernetes manifests render: 
+$ kev render
 ```
 
 This will produce K8s manifests for all environments. See [help](../../docs/cli/kev_render.md) for usage examples.
@@ -53,9 +55,9 @@ Run the command below to continuously watch for changes made to any of the sourc
 
 See [help](../../docs/cli/kev_dev.md) for usage examples.
 
-> Watch Compose changes and auto render Kubernetes manifests:
 ```sh
-kev dev
+# Watch Compose changes and auto render Kubernetes manifests:
+$ kev dev
 ```
 
 ### Watch for Compose and Application source code changes with Build/Push/Deploy loop enabled
@@ -64,9 +66,10 @@ Watch for changes to your application's Compose files plus project source code. 
 
 See [help](../../docs/cli/kev_dev.md) for usage examples.
 
-> Watch Compose and App source code changes, render manifests and build/push/deploy with Skaffold:
 ```sh
-kev dev --skaffold
+# Watch Compose and App source code changes, render manifests and
+# build/push/deploy with Skaffold:
+$ kev dev --skaffold
 ```
 
 Open the browser at `http://localhost:8080`. You should see `Hello World` displayed on the screen.
@@ -78,8 +81,8 @@ Open the browser at `http://localhost:8080`. You should see `Hello World` displa
 
 Once the app has been built, pushed and deployed via Kev's Skaffold integration you may inspect that the Node app is running in your cluster:
 
-> List Kubernetes application pods for the Node.js app:
 ```sh
+# List Kubernetes application pods for the Node.js app:
 $ kubectl --context docker-desktop -n default get po
 
 NAME                   READY   STATUS    RESTARTS   AGE
@@ -88,8 +91,9 @@ app-69d87ffbc8-pq4bs   1/1     Running   0          9s
 
 Now, try to adjust number of replicas for the app by modifying `x-k8s.workload.replicas` value to `2`. You should observe `dev` loop pick up all the changes and do the hard work of generating K8s manifests, building, pushing and deploying your application automatically.
 
-> List Kubernetes application pods for the Node.js app after change to desired replicas number:
 ```sh
+# List Kubernetes application pods for the Node.js app after change 
+# to desired replicas number:
 $ kubectl --context docker-desktop -n default get po
 
 NAME                   READY   STATUS        RESTARTS   AGE
