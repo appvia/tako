@@ -427,6 +427,8 @@ type Workload struct {
 	Resource              Resource          `yaml:"resource,omitempty"`
 	Autoscale             Autoscale         `yaml:"autoscale,omitempty"`
 	PodSecurity           PodSecurity       `yaml:"podSecurity,omitempty"`
+	Command               []string          `yaml:"command,omitempty"`
+	CommandArgs           []string          `yaml:"commandArgs,omitempty"`
 }
 
 type Resource struct {

@@ -47,6 +47,8 @@ var _ = Describe("ProjectService", func() {
 		environment        composego.MappingWithEquals
 		healthcheck        composego.HealthCheckConfig
 		projectVolumes     composego.Volumes
+		command            composego.ShellCommand
+		args               composego.ShellCommand
 		svcK8sConfig       config.SvcK8sConfig
 	)
 
@@ -60,6 +62,8 @@ var _ = Describe("ProjectService", func() {
 		environment = composego.MappingWithEquals{}
 		healthcheck = composego.HealthCheckConfig{}
 		projectVolumes = composego.Volumes{}
+		command = composego.ShellCommand{}
+		args = composego.ShellCommand{}
 
 		svcK8sConfig = config.SvcK8sConfig{}
 	})
@@ -79,6 +83,8 @@ var _ = Describe("ProjectService", func() {
 			Environment: environment,
 			HealthCheck: &healthcheck,
 			Volumes:     volumes,
+			Entrypoint:  command,
+			Command:     args,
 			Extensions:  extensions,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -117,6 +123,137 @@ var _ = Describe("ProjectService", func() {
 		When("component toggle extension is not specified", func() {
 			It("defaults to true", func() {
 				Expect(projectService.enabled()).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("command", func() {
+		customCommand := []string{
+			"/bin/bash",
+			"-c",
+			"sleep 1",
+		}
+
+		Context("when provided via extension", func() {
+
+			BeforeEach(func() {
+				svcK8sConfig.Workload.Command = customCommand
+			})
+
+			It("will use the extension value", func() {
+				Expect(projectService.command()).To(Equal(customCommand))
+			})
+		})
+
+		Context("when provided via both the extension and as part of the project service spec", func() {
+
+			BeforeEach(func() {
+				svcK8sConfig.Workload.Command = customCommand
+
+				command = []string{
+					"/default/command",
+				}
+			})
+
+			It("will use the extension value", func() {
+				Expect(projectService.command()).To(Equal(customCommand))
+			})
+		})
+
+		Context("when command not present in config extension but specified as part of the project service spec", func() {
+			BeforeEach(func() {
+				command = []string{
+					"/default/command",
+				}
+			})
+
+			It("will use a command as specified in the project service spec", func() {
+				Expect(projectService.command()).NotTo(BeEmpty())
+				Expect(projectService.command()).To(BeEquivalentTo(command))
+			})
+		})
+
+		Context("when there is no command supplied in neither config extension nor project service spec", func() {
+			It("will return nil", func() {
+				Expect(projectService.command()).To(BeNil())
+			})
+		})
+	})
+
+	Describe("commandArgs", func() {
+		customCommandArgs := []string{
+			"-c",
+			"sleep 1",
+		}
+
+		Context("when provided via config extension", func() {
+
+			BeforeEach(func() {
+				svcK8sConfig.Workload.CommandArgs = customCommandArgs
+			})
+
+			It("will use the extension value", func() {
+				Expect(projectService.commandArgs()).To(Equal(customCommandArgs))
+			})
+		})
+
+		Context("when provided via both the extension and as part of the project service spec", func() {
+
+			BeforeEach(func() {
+				svcK8sConfig.Workload.CommandArgs = customCommandArgs
+
+				args = []string{
+					"/default/command",
+				}
+			})
+
+			It("will use the extension value", func() {
+				Expect(projectService.commandArgs()).To(Equal(customCommandArgs))
+			})
+		})
+
+		Context("when command args not present in config extension but specified as part of the project service spec", func() {
+			BeforeEach(func() {
+				args = []string{
+					"/default/command",
+				}
+			})
+
+			It("will use a command args as specified in the project service spec", func() {
+				Expect(projectService.commandArgs()).NotTo(BeEmpty())
+				Expect(projectService.commandArgs()).To(BeEquivalentTo(args))
+			})
+		})
+
+		Context("when there is no command args specified via config extension", func() {
+			It("will return nil", func() {
+				Expect(projectService.commandArgs()).To(BeNil())
+			})
+		})
+	})
+
+	Describe("podAnnotations", func() {
+		annotations := map[string]string{
+			"key1": "val1",
+			"key2": "val2",
+		}
+
+		Context("when provided via config extension", func() {
+
+			BeforeEach(func() {
+				svcK8sConfig.Workload.Annotations = annotations
+			})
+
+			It("will use the extension value", func() {
+				Expect(projectService.podAnnotations()).To(HaveKeyWithValue("key1", "val1"))
+				Expect(projectService.podAnnotations()).To(HaveKeyWithValue("key2", "val2"))
+				Expect(projectService.podAnnotations()).To(HaveLen(2))
+			})
+		})
+
+		Context("when there is no annotations specified via config extension", func() {
+			It("will return an empty string -> string map", func() {
+				Expect(projectService.podAnnotations()).To(HaveLen(0))
 			})
 		})
 	})

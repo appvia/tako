@@ -130,7 +130,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		Context("with imaged pull secret specified via an extension", func() {
+		Context("with image pull secret specified via an extension", func() {
 			BeforeEach(func() {
 				svcK8sConfig := config.DefaultSvcK8sConfig()
 				svcK8sConfig.Workload.ImagePull.Secret = "my-pp-secret"
@@ -171,6 +171,97 @@ var _ = Describe("Transform", func() {
 			It("uses passed image pull policy in the spec", func() {
 				spec := k.initPodSpec(projectService)
 				Expect(spec.ServiceAccountName).To(Equal("my-service-account"))
+			})
+		})
+
+		Context("with command specified via an extension or project service spec", func() {
+			var (
+				svcK8sConfig config.SvcK8sConfig
+			)
+
+			BeforeEach(func() {
+				svcK8sConfig = config.DefaultSvcK8sConfig()
+			})
+
+			JustBeforeEach(func() {
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
+				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			When("command specified via a config extension", func() {
+				BeforeEach(func() {
+					svcK8sConfig.Workload.Command = []string{"/bin/bash", "-c", "sleep 1"}
+				})
+
+				It("uses command as specified in config extension", func() {
+					spec := k.initPodSpec(projectService)
+					Expect(spec.Containers[0].Command).To(Equal([]string{"/bin/bash", "-c", "sleep 1"}))
+				})
+			})
+
+			When("command specified via project service spec", func() {
+				BeforeEach(func() {
+					projectService.Entrypoint = []string{"/default/command"}
+				})
+
+				It("uses command as specified in project service spec", func() {
+					spec := k.initPodSpec(projectService)
+					Expect(spec.Containers[0].Command).To(Equal([]string{"/default/command"}))
+				})
+			})
+
+			When("command not specified in config extension nor in project service spec", func() {
+				It("doesn't set up container command", func() {
+					spec := k.initPodSpec(projectService)
+					Expect(spec.Containers[0].Command).To(BeNil())
+				})
+			})
+		})
+
+		Context("with command arguments specified via an extension", func() {
+			var (
+				svcK8sConfig config.SvcK8sConfig
+			)
+
+			BeforeEach(func() {
+				svcK8sConfig = config.DefaultSvcK8sConfig()
+			})
+
+			JustBeforeEach(func() {
+				m, err := svcK8sConfig.Map()
+				Expect(err).NotTo(HaveOccurred())
+
+				projectService.Extensions = map[string]interface{}{
+					config.K8SExtensionKey: m,
+				}
+
+				projectService, err = NewProjectService(projectService.ServiceConfig)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			When("command arguments specified via a config extension", func() {
+				BeforeEach(func() {
+					svcK8sConfig.Workload.CommandArgs = []string{"-c", "sleep 1"}
+				})
+
+				It("uses command args as specified via a config extension", func() {
+					spec := k.initPodSpec(projectService)
+					Expect(spec.Containers[0].Args).To(Equal([]string{"-c", "sleep 1"}))
+				})
+			})
+
+			When("command arguments not specified via a config extension", func() {
+				It("doesn't set up container command arguments", func() {
+					spec := k.initPodSpec(projectService)
+					Expect(spec.Containers[0].Args).To(BeNil())
+				})
 			})
 		})
 
