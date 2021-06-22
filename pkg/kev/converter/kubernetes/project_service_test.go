@@ -174,8 +174,8 @@ var _ = Describe("ProjectService", func() {
 		})
 
 		Context("when there is no command supplied in neither config extension nor project service spec", func() {
-			It("will return an empty string slice", func() {
-				Expect(projectService.command()).To(Equal([]string{}))
+			It("will return nil", func() {
+				Expect(projectService.command()).To(BeNil())
 			})
 		})
 	})
@@ -226,8 +226,8 @@ var _ = Describe("ProjectService", func() {
 		})
 
 		Context("when there is no command args specified via config extension", func() {
-			It("will return an empty string slice", func() {
-				Expect(projectService.commandArgs()).To(Equal([]string{}))
+			It("will return nil", func() {
+				Expect(projectService.commandArgs()).To(BeNil())
 			})
 		})
 	})
@@ -253,7 +253,7 @@ var _ = Describe("ProjectService", func() {
 
 		Context("when there is no annotations specified via config extension", func() {
 			It("will return an empty string -> string map", func() {
-				Expect(projectService.podAnnotations()).To(Equal(map[string]string{}))
+				Expect(projectService.podAnnotations()).To(HaveLen(0))
 			})
 		})
 	})
