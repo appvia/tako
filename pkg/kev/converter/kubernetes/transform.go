@@ -696,7 +696,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 	return ingress
 }
 
-// initHpa initialised horizontal pod autoscaler for a project service
+// initHpa initialises horizontal pod autoscaler for a project service
 func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Object) *autoscalingv2beta2.HorizontalPodAutoscaler {
 	t := reflect.ValueOf(target).Elem()
 	typeMeta := t.FieldByName("TypeMeta").Interface().(meta.TypeMeta)
@@ -787,6 +787,30 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 			Conditions: []autoscalingv2beta2.HorizontalPodAutoscalerCondition{},
 		},
 	}
+}
+
+// initSa initialises Service Account for a project service
+// It only creates the ServiceAccount spec for accounts with name other than `default`
+func (k *Kubernetes) initSa(projectService ProjectService) *v1.ServiceAccount {
+	automountSAToken := false
+	saname := projectService.serviceAccountName()
+
+	if saname != "default" && len(strings.TrimSpace(saname)) > 0 {
+		return &v1.ServiceAccount{
+			TypeMeta: meta.TypeMeta{
+				Kind:       "ServiceAccount",
+				APIVersion: "v1",
+			},
+			ObjectMeta: meta.ObjectMeta{
+				Name:        saname,
+				Labels:      configLabels(projectService.Name),
+				Annotations: configAnnotations(projectService.Labels),
+			},
+			AutomountServiceAccountToken: &automountSAToken,
+		}
+	}
+
+	return nil
 }
 
 // createSecrets create secrets
@@ -1449,23 +1473,30 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	}
 
 	// @step create object based on inferred / manually configured workload controller type
+	var o runtime.Object
+
 	switch {
 	case config.WorkloadTypesEqual(workloadType, config.DeploymentWorkload):
-		o := k.initDeployment(projectService)
+		o = k.initDeployment(projectService)
 		objects = append(objects, o)
-		hpa := k.initHpa(projectService, o)
-		if hpa != nil {
-			objects = append(objects, hpa)
-		}
 	case config.WorkloadTypesEqual(workloadType, config.StatefulSetWorkload):
-		o := k.initStatefulSet(projectService)
+		o = k.initStatefulSet(projectService)
 		objects = append(objects, o)
-		hpa := k.initHpa(projectService, o)
-		if hpa != nil {
-			objects = append(objects, hpa)
-		}
 	case config.WorkloadTypesEqual(workloadType, config.DaemonSetWorkload):
 		objects = append(objects, k.initDaemonSet(projectService))
+	}
+
+	// @step create a horizontal pod autoscaler for eligible objects
+	if o != nil {
+		hpa := k.initHpa(projectService, o)
+		if hpa != nil {
+			objects = append(objects, hpa)
+		}
+	}
+
+	// @step create a Service Account if speficied
+	if sa := k.initSa(projectService); sa != nil {
+		objects = append(objects, sa)
 	}
 
 	return objects
