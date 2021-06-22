@@ -1218,6 +1218,58 @@ var _ = Describe("Transform", func() {
 
 	})
 
+	Describe("initSa", func() {
+		When("service account name is specified as empty string in the workload configuration", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Workload.ServiceAccountName = ""
+			})
+
+			It("doesn't initialize ServiceAccount for that project service", func() {
+				sa := k.initServiceAccount(projectService)
+				Expect(sa).To(BeNil())
+			})
+		})
+
+		When("service account name is defined as `default`", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Workload.ServiceAccountName = "default"
+			})
+
+			It("doesn't initialize ServiceAccount for that project service", func() {
+				sa := k.initServiceAccount(projectService)
+				Expect(sa).To(BeNil())
+			})
+		})
+
+		When("service account name is specified with name different than `default`", func() {
+			BeforeEach(func() {
+				projectService.SvcK8sConfig.Workload.ServiceAccountName = "mysvcacc"
+			})
+
+			It("initializes ServiceAccount for the project service", func() {
+				sa := k.initServiceAccount(projectService)
+				Expect(sa).ToNot(BeNil())
+
+				automountSAToken := false
+
+				expected := &v1.ServiceAccount{
+					TypeMeta: meta.TypeMeta{
+						Kind:       "ServiceAccount",
+						APIVersion: "v1",
+					},
+					ObjectMeta: meta.ObjectMeta{
+						Name:        "mysvcacc",
+						Labels:      configLabels(projectService.Name),
+						Annotations: configAnnotations(projectService.Labels),
+					},
+					AutomountServiceAccountToken: &automountSAToken,
+				}
+
+				Expect(sa).To(Equal(expected))
+			})
+		})
+	})
+
 	Describe("createSecrets", func() {
 		secretName := "my-secret"
 		var secretConfig composego.SecretConfig
