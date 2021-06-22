@@ -1225,7 +1225,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("doesn't initialize ServiceAccount for that project service", func() {
-				sa := k.initSa(projectService)
+				sa := k.initServiceAccount(projectService)
 				Expect(sa).To(BeNil())
 			})
 		})
@@ -1236,7 +1236,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("doesn't initialize ServiceAccount for that project service", func() {
-				sa := k.initSa(projectService)
+				sa := k.initServiceAccount(projectService)
 				Expect(sa).To(BeNil())
 			})
 		})
@@ -1247,7 +1247,7 @@ var _ = Describe("Transform", func() {
 			})
 
 			It("initializes ServiceAccount for the project service", func() {
-				sa := k.initSa(projectService)
+				sa := k.initServiceAccount(projectService)
 				Expect(sa).ToNot(BeNil())
 
 				automountSAToken := false

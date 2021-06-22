@@ -789,9 +789,9 @@ func (k *Kubernetes) initHpa(projectService ProjectService, target runtime.Objec
 	}
 }
 
-// initSa initialises Service Account for a project service
+// initServiceAccount initialises Service Account for a project service
 // It only creates the ServiceAccount spec for accounts with name other than `default`
-func (k *Kubernetes) initSa(projectService ProjectService) *v1.ServiceAccount {
+func (k *Kubernetes) initServiceAccount(projectService ProjectService) *v1.ServiceAccount {
 	automountSAToken := false
 	saname := projectService.serviceAccountName()
 
@@ -1495,7 +1495,7 @@ func (k *Kubernetes) createKubernetesObjects(projectService ProjectService) []ru
 	}
 
 	// @step create a Service Account if speficied
-	if sa := k.initSa(projectService); sa != nil {
+	if sa := k.initServiceAccount(projectService); sa != nil {
 		objects = append(objects, sa)
 	}
 
