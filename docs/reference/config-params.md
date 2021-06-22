@@ -57,7 +57,7 @@ This configuration group contains Kubernetes `workload` specific settings. Confi
 
 ## workload.command
 
-Defines a command to run for given workload. If defined it'll take presedence over the default docker image command.
+Defines a command to run for given workload. If defined it'll take precedence over the default docker image command.
 
 ### Default: nil (not specified - docker image command will be used)
 
@@ -79,7 +79,7 @@ services:
 
 ## workload.commandArgs
 
-Defines a command arguments for given workload. If defined it'll take presedence over the default docker image args.
+Defines a command arguments for given workload. If defined it'll take precedence over the default docker image args.
 ### Default: nil (not specified - docker image args will be used)
 
 ### Possible options: an array of string values.
