@@ -7,9 +7,9 @@ It also contains all the _Kev_ artefacts required to migrate the app from a Dock
 Project structure:
 ```
 .
-├── docker-compose.kev.dev.yaml
-├── docker-compose.kev.local.yaml
-├── docker-compose.kev.stage.yaml
+├── docker-compose.env.dev.yaml
+├── docker-compose.env.local.yaml
+├── docker-compose.env.stage.yaml
 ├── docker-compose.yaml
 ├── kev.yaml
 └── README.md

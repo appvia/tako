@@ -24,7 +24,7 @@ setup() {
 
 teardown() {
   [ -f "$BATS_TEST_DIRNAME/kev.yaml" ] && rm -f "$BATS_TEST_DIRNAME/kev.yaml"
-  [ -f "$BATS_TEST_DIRNAME/docker-compose.kev.$E2E_KEV_ENV.yaml" ] && rm -rf "$BATS_TEST_DIRNAME/docker-compose.kev.$E2E_KEV_ENV.yaml"
+  [ -f "$BATS_TEST_DIRNAME/docker-compose.env.$E2E_KEV_ENV.yaml" ] && rm -rf "$BATS_TEST_DIRNAME/docker-compose.env.$E2E_KEV_ENV.yaml"
   [ -d "$TMP/k8s" ] && rm -rf "$TMP/k8s"
   cd -
 }
