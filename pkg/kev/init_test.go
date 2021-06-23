@@ -60,7 +60,7 @@ var _ = Describe("InitRunner", func() {
 		})
 
 		It("should contain an override environment", func() {
-			filename := filepath.Join(workingDir, "compose.kev.dev.yml")
+			filename := filepath.Join(workingDir, "compose.env.dev.yml")
 			Expect(results).To(ContainElement(kev.WritableResult{WriterTo: env, FilePath: filename}))
 		})
 	})
@@ -83,7 +83,7 @@ var _ = Describe("InitRunner", func() {
 			Expect(buffer.String()).To(ContainSubstring("compose:"))
 			Expect(buffer.String()).To(MatchRegexp(`.*- .*compose.yml`))
 			Expect(buffer.String()).To(ContainSubstring("environments:"))
-			Expect(buffer.String()).To(MatchRegexp(`dev: .*compose.kev.dev.yml`))
+			Expect(buffer.String()).To(MatchRegexp(`dev: .*compose.env.dev.yml`))
 		})
 	})
 
