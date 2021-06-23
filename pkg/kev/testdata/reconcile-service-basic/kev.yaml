@@ -2,5 +2,5 @@ id: 10b5c35d-8b9a-42af-a16e-ed758a06c231
 compose:
   - testdata/reconcile-service-basic/docker-compose.yaml
 environments:
-  dev: testdata/reconcile-service-basic/docker-compose.kev.dev.yaml
-  stage: testdata/reconcile-service-basic/docker-compose.kev.stage.yaml
+  dev: testdata/reconcile-service-basic/docker-compose.env.dev.yaml
+  stage: testdata/reconcile-service-basic/docker-compose.env.stage.yaml

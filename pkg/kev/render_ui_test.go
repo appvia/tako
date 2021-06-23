@@ -81,7 +81,7 @@ var _ = Describe("RenderRunner UI", func() {
 
 			Expect(log.NextHeader()).To(HaveKeyWithValue("Validating compose environment overrides...", []string{}))
 
-			Expect(log.NextOutput()).To(HaveKeyWithValue("Detecting secrets in: testdata/detect-secrets/docker-compose.kev.dev.yaml", []string{}))
+			Expect(log.NextOutput()).To(HaveKeyWithValue("Detecting secrets in: testdata/detect-secrets/docker-compose.env.dev.yaml", []string{}))
 			Expect(log.NextStep()).To(HaveKeyWithValue(`Analysing service: db`, []string{}))
 			Expect(log.NextStep()).To(HaveKeyWithValue("Warning", []string{`[Detected in service:  db]`}))
 
