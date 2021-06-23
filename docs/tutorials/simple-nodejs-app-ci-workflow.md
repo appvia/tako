@@ -104,7 +104,7 @@ You will notice the staging environment configuration file has been created:
 > Added environment specific override files:
 ```sh
 ...
-|- docker-compose.kev.staging.yaml      # staging env
+|- docker-compose.env.staging.yaml      # staging env
 ```
 
 Adjust your Kubernetes `staging` application parameters for each of the components as needed. This is done via Compose [extensions](../../docs/reference/config-params.md).

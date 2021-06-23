@@ -108,9 +108,9 @@ Detecting secrets in: docker-compose.yaml
  ✓  None detected in service: wordpress
 
 » Creating deployment environments...
- ✓  Creating the dev sandbox env file: docker-compose.kev.dev.yaml
- ✓  Creating the local env file: docker-compose.kev.local.yaml
- ✓  Creating the stage env file: docker-compose.kev.stage.yaml
+ ✓  Creating the dev sandbox env file: docker-compose.env.dev.yaml
+ ✓  Creating the local env file: docker-compose.env.local.yaml
+ ✓  Creating the stage env file: docker-compose.env.stage.yaml
 
 » Detecting Skaffold settings...
 Skipping - no Skaffold options detected
@@ -121,9 +121,9 @@ It syncs your deployment environments to updates made
 to your compose sources.
 
 And, the following deployment env files have been created:
-    dev: docker-compose.kev.dev.yaml
-  local: docker-compose.kev.local.yaml
-  stage: docker-compose.kev.stage.yaml
+    dev: docker-compose.env.dev.yaml
+  local: docker-compose.env.local.yaml
+  stage: docker-compose.env.stage.yaml
 
 Update these to configure your deployments per related environment.
 
@@ -140,7 +140,7 @@ Kev has now been initialised and configured. It has,
 
 It has also generated four files:
 - `kev.yaml`, a manifest that describes our _source application definition_ and _Compose environment overrides_.
-- Three `docker-compose.kev.*.yaml` files to represent our _Compose environment overrides_.
+- Three `docker-compose.env.*.yaml` files to represent our _Compose environment overrides_.
 
 #### Manifest: kev.yaml
 
@@ -150,12 +150,12 @@ id: b903b060-9762-4a59-8131-47e129f70256
 compose:
   - docker-compose.yaml
 environments:
-  dev: docker-compose.kev.dev.yaml
-  local: docker-compose.kev.local.yaml
-  stage: docker-compose.kev.stage.yaml
+  dev: docker-compose.env.dev.yaml
+  local: docker-compose.env.local.yaml
+  stage: docker-compose.env.stage.yaml
 ```
 
-#### Compose environment overrides: docker-compose.kev.*.yaml
+#### Compose environment overrides: docker-compose.env.*.yaml
 
 The created `dev`, `local` and `stage` _Compose environment overrides_ are currently identical.
 
@@ -205,29 +205,29 @@ Detecting secrets in: docker-compose.yaml
  ✓  None detected in service: wordpress
 
 » Validating compose environment overrides...
-Detecting secrets in: docker-compose.kev.dev.yaml
+Detecting secrets in: docker-compose.env.dev.yaml
  ✓  None detected in service: wordpress
-Detecting secrets in: docker-compose.kev.local.yaml
+Detecting secrets in: docker-compose.env.local.yaml
  ✓  None detected in service: wordpress
-Detecting secrets in: docker-compose.kev.stage.yaml
+Detecting secrets in: docker-compose.env.stage.yaml
  ✓  None detected in service: wordpress
 
 » Detecting project updates...
-dev: docker-compose.kev.dev.yaml
+dev: docker-compose.env.dev.yaml
  ✓  No version update detected
  ✓  No service additions detected
  ✓  No service removals detected
  ✓  No env var removals detected
  ✓  No volume additions detected
  ✓  No volume removals detected
-local: docker-compose.kev.local.yaml
+local: docker-compose.env.local.yaml
  ✓  No version update detected
  ✓  No service additions detected
  ✓  No service removals detected
  ✓  No env var removals detected
  ✓  No volume additions detected
  ✓  No volume removals detected
-stage: docker-compose.kev.stage.yaml
+stage: docker-compose.env.stage.yaml
  ✓  No version update detected
  ✓  No service additions detected
  ✓  No service removals detected
@@ -236,19 +236,19 @@ stage: docker-compose.kev.stage.yaml
  ✓  No volume removals detected
 
 » Rendering manifests, format: kubernetes...
-dev: docker-compose.kev.dev.yaml
+dev: docker-compose.env.dev.yaml
  ✓  Converted service: wordpress
    | rendered Deployment
    | rendered Service
  ✓  Networking
    | rendered NetworkPolicy
-local: docker-compose.kev.local.yaml
+local: docker-compose.env.local.yaml
  ✓  Converted service: wordpress
    | rendered Deployment
    | rendered Service
  ✓  Networking
    | rendered NetworkPolicy
-stage: docker-compose.kev.stage.yaml
+stage: docker-compose.env.stage.yaml
  ✓  Converted service: wordpress
    | rendered Deployment
    | rendered Service
@@ -420,7 +420,7 @@ https://github.com/appvia/kev/blob/master/docs/reference/config-params.md#refere
 ...
 
 » Rendering manifests, format: kubernetes...
-dev: docker-compose.kev.dev.yaml
+dev: docker-compose.env.dev.yaml
  ✓  Converted service: db
    | rendered StatefulSet
    | rendered Service
@@ -429,7 +429,7 @@ dev: docker-compose.kev.dev.yaml
     ...
  ✓  Networking
     ...
-local: docker-compose.kev.local.yaml
+local: docker-compose.env.local.yaml
  ✓  Converted service: db
    | rendered StatefulSet
    | rendered Service
@@ -438,7 +438,7 @@ local: docker-compose.kev.local.yaml
     ...
  ✓  Networking
     ...
-stage: docker-compose.kev.stage.yaml
+stage: docker-compose.env.stage.yaml
  ✓  Converted service: db
    | rendered StatefulSet
    | rendered Service
@@ -536,7 +536,7 @@ As it happens, we have a requirement that our `stage` environment should mirror 
 
 In this case, we need to run 5 instances of the `wordpress` service to simulate how the app works in a heavy user traffic setting.
 
-Let's make this happen. We need to edit our `docker-compose.kev.stage.yaml` Compose environment override file.
+Let's make this happen. We need to edit our `docker-compose.env.stage.yaml` Compose environment override file.
 
 We'll change the: `x-k8s.workload.replicas` value from 1 to 5.
 

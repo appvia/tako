@@ -23,9 +23,9 @@ You will notice that 3 separate environment specific configuration files have be
 
 > Added environment specific override files:
 ```sh
-|- docker-compose.kev.dev.yaml
-|- docker-compose.kev.staging.yaml
-|- docker-compose.kev.prod.yaml
+|- docker-compose.env.dev.yaml
+|- docker-compose.env.staging.yaml
+|- docker-compose.env.prod.yaml
 ```
 
 (The `dev` configuration is created by default by kev).

@@ -34,9 +34,9 @@ It makes use of,
 Creating the files below in your project directory:
 
 ```sh
-├── docker-compose.kev.dev.yaml         # dev sandbox Compose environment override file
-├── docker-compose.kev.prod.yaml        # prod Compose environment override file
-├── docker-compose.kev.stage.yaml       # stage Compose environment override file
+├── docker-compose.env.dev.yaml         # dev sandbox Compose environment override file
+├── docker-compose.env.prod.yaml        # prod Compose environment override file
+├── docker-compose.env.stage.yaml       # stage Compose environment override file
 ├── kev.yaml                            # kev project manifest
 ├── ...
 ```
