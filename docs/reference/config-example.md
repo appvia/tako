@@ -1,6 +1,6 @@
 ---
 weight: 51
-title: Kev configuration example
+title: Configuration example
 ---
 
 # Config example
