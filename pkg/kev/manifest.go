@@ -34,9 +34,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Infix component of generated docker-compose filenames
+// Infix component of generated environment override filenames
 // (e.g. results in docker-compose.env.dev.yaml)
-const dockerComposeInfix = "env"
+const envOverrideFileInfix = "env"
 
 // NewManifest returns a new Manifest struct.
 func NewManifest(sources *Sources) *Manifest {
@@ -142,7 +142,7 @@ func (m *Manifest) MintEnvironments(candidates []string) error {
 	}
 
 	for _, env := range candidates {
-		envFilename := filepath.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, dockerComposeInfix, env))
+		envFilename := filepath.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, envOverrideFileInfix, env))
 		var step kmd.Step
 		if env == SandboxEnv {
 			step = sg.Add(fmt.Sprintf("Creating the %s sandbox env file: %s", SandboxEnv, envFilename))
