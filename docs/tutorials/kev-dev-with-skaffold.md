@@ -42,11 +42,11 @@ This command prepares your application and bootstraps a new Skaffold config (_sk
 
 #### Retrofit Skaffold support in existing Kev project
 
-If a Kev project has been previously initialised without Skaffold support, the easiest way forward to adopt Skaffold is to remove _kev.yaml_ file and initialize the project again.
+If a Kev project has been previously initialised without Skaffold support, the easiest way forward to adopt Skaffold is to remove _appmeta.yaml_ file and initialize the project again.
 
 **Note:** Be mindful that names of all the environments you want to track must be specified - Kev `init` won't automatically discover existing environment override files!
 
-Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Kev about the fact by adding the following line in _kev.yaml_ file:
+Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Kev about the fact by adding the following line in _appmeta.yaml_ file:
 
 ```sh
 # Initialize Skaffold in your project
@@ -55,7 +55,7 @@ Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Kev abo
 skaffold init
 ```
 
-And then add the following line to the `kev.yaml` file.
+And then add the following line to the `appmeta.yaml` file.
 
 ```yaml
 compose:

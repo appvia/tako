@@ -11,6 +11,6 @@ Project structure:
 ├── docker-compose.env.local.yaml
 ├── docker-compose.env.stage.yaml
 ├── docker-compose.yaml
-├── kev.yaml
+├── appmeta.yaml
 └── README.md
 ```

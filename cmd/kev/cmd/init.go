@@ -25,7 +25,7 @@ var initLongDesc = `Tracks compose sources & creates deployment environments.
 
 Examples:
 
-  ### Initialise kev.yaml with root docker-compose.yml and override file tracking. Adds a sandbox dev deployment environment.
+  ### Initialise appmeta.yaml with root docker-compose.yml and override file tracking. Adds a sandbox dev deployment environment.
   $ kev init
 
   ### Use an alternate docker-compose.yml file.
