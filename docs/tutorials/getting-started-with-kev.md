@@ -139,12 +139,13 @@ Kev has now been initialised and configured. It has,
 - Created `dev` (a sandbox used by Kev for continuous development), `local` (useful for testing on our own machine) and `staging` (useful for testing on a remote machine) _Compose environment overrides_.
 
 It has also generated four files:
-- `appmeta.yaml`, a manifest that describes our _source application definition_ and _Compose environment overrides_.
+- `appmeta.yaml`, a project metadata file that describes our _source application definition_ and _Compose environment overrides_.
 - Three `docker-compose.env.*.yaml` files to represent our _Compose environment overrides_.
 
-#### Manifest: appmeta.yaml
+#### Project metadata file
 
-The `appmeta.yaml` manifest file confirms a successful `init`,
+The `appmeta.yaml` metadata file contains references to all required files in the conversion process. Its creation confirms a successful `init`,
+
 ```yaml
 id: b903b060-9762-4a59-8131-47e129f70256
 compose:
@@ -155,9 +156,9 @@ environments:
   stage: docker-compose.env.stage.yaml
 ```
 
-#### Compose environment overrides: docker-compose.env.*.yaml
+#### Compose environment overrides files
 
-The created `dev`, `local` and `stage` _Compose environment overrides_ are currently identical.
+The created `docker-compose.env.dev.yaml` (and `local` and `stage` equivalents)  are generated for each of the `-e` switches we used in the `kev init` command. These _Compose environment overrides_ are currently identical.
 
 The `x-k8s` extension section for each service enables you to control how the app runs on Kubernetes. See the [configuration reference](../reference/config-params.md) to find all the available options and understand how they affect deployments.
 
