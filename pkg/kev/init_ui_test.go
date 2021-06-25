@@ -105,7 +105,7 @@ var _ = Describe("InitRunner UI", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(log.NextHeader()).To(HaveKeyWithValue("Creating deployment environments...", []string{}))
-			Expect(log.NextStep()).To(HaveKeyWithValue("Creating the dev sandbox env file: testdata/init-default/compose-yml/compose.kev.dev.yml", []string{}))
+			Expect(log.NextStep()).To(HaveKeyWithValue("Creating the dev sandbox env file: testdata/init-default/compose-yml/compose.env.dev.yml", []string{}))
 			Expect(log.NextStep()).To(HaveKeyWithValue("Success", []string{}))
 		})
 	})

@@ -7,7 +7,7 @@ title: Misc
 
 ## Reconciling project changes
 
-Kev tracks updates made to a project's docker-compose files (files listed in `kev.yaml`).
+Kev tracks updates made to a project's docker-compose files (files listed in `appmeta.yaml`).
 
 Kev will specifically monitor the scenarios listed here. And, then apply strategies to manage those scenarios.
 

@@ -34,6 +34,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Infix component of generated environment override filenames
+// (e.g. results in docker-compose.env.dev.yaml)
+const envOverrideFileInfix = "env"
+
 // NewManifest returns a new Manifest struct.
 func NewManifest(sources *Sources) *Manifest {
 	return &Manifest{
@@ -57,11 +61,6 @@ func LoadManifest(workingDir string) (*Manifest, error) {
 	m.UI = kmd.NoOpUI()
 
 	return m, nil
-}
-
-// GetManifestName returns base manifest file name (without extension)
-func GetManifestName() string {
-	return strings.TrimSuffix(ManifestFilename, filepath.Ext(ManifestFilename))
 }
 
 // WriteTo writes out a manifest to a writer.
@@ -143,7 +142,7 @@ func (m *Manifest) MintEnvironments(candidates []string) error {
 	}
 
 	for _, env := range candidates {
-		envFilename := filepath.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, GetManifestName(), env))
+		envFilename := filepath.Join(m.getWorkingDir(), fmt.Sprintf(fileNameTemplate, envOverrideFileInfix, env))
 		var step kmd.Step
 		if env == SandboxEnv {
 			step = sg.Add(fmt.Sprintf("Creating the %s sandbox env file: %s", SandboxEnv, envFilename))

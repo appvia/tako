@@ -37,7 +37,7 @@ func TestCanLoadAManifest(t *testing.T) {
 		Environments: kev.Environments{
 			&kev.Environment{
 				Name: "dev",
-				File: "testdata/in-cluster-wordpress/docker-compose.kev.dev.yaml",
+				File: "testdata/in-cluster-wordpress/docker-compose.env.dev.yaml",
 			},
 		},
 	}

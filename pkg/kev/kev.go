@@ -23,7 +23,7 @@ const (
 
 var (
 	// ManifestFilename is a name of main application manifest file
-	ManifestFilename    = "kev.yaml"
+	ManifestFilename    = "appmeta.yaml"
 	SecretsReferenceUrl = "https://github.com/appvia/kev/blob/master/docs/reference/config-params.md#reference-k8s-secret-key-value"
 )
 

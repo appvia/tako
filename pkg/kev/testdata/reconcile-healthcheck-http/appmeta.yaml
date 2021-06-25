@@ -2,4 +2,4 @@ id: 10b5c35d-8b9a-42af-a16e-ed758a06c231
 compose:
   - testdata/reconcile-healthcheck-http/docker-compose.yaml
 environments:
-  dev: testdata/reconcile-healthcheck-http/docker-compose.kev.dev.yaml
+  dev: testdata/reconcile-healthcheck-http/docker-compose.env.dev.yaml

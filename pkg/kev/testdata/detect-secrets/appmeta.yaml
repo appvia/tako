@@ -2,4 +2,4 @@ id: 10b5c35d-8b9a-42af-a16e-ed758a06c231
 compose:
   - testdata/detect-secrets/docker-compose.yaml
 environments:
-  dev: testdata/detect-secrets/docker-compose.kev.dev.yaml
+  dev: testdata/detect-secrets/docker-compose.env.dev.yaml

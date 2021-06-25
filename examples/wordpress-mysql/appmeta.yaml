@@ -1,0 +1,7 @@
+id: 98b5e7c9-4a40-4006-bb5e-57e496b183c4
+compose:
+  - docker-compose.yaml
+environments:
+  dev: docker-compose.env.dev.yaml
+  local: docker-compose.env.local.yaml
+  stage: docker-compose.env.stage.yaml
