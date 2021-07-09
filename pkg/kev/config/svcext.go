@@ -420,7 +420,7 @@ type Workload struct {
 	ServiceAccountName    string            `yaml:"serviceAccountName,omitempty" validate:"subdomainIfAny"`
 	RollingUpdateMaxSurge int               `yaml:"rollingUpdateMaxSurge,omitempty" validate:""`
 	Annotations           map[string]string `yaml:"annotations,omitempty"`
-	LivenessProbe         LivenessProbe     `yaml:"livenessProbe" validate:"required"`
+	LivenessProbe         LivenessProbe     `yaml:"livenessProbe,omitempty"`
 	ReadinessProbe        ReadinessProbe    `yaml:"readinessProbe,omitempty"`
 	RestartPolicy         RestartPolicy     `yaml:"restartPolicy,omitempty" validate:"restartPolicy"`
 	ImagePull             ImagePull         `yaml:"imagePull,omitempty"`
