@@ -263,7 +263,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service extension value defaults in all environments", func() {
-					expected, err := newMinifiedServiceExtensions("wordpress")
+					expected, err := newMinifiedServiceExtensions("wordpress", false)
 					Expect(err).NotTo(HaveOccurred())
 
 					envs, err := manifest.GetEnvironments([]string{"dev", "stage"})
@@ -302,7 +302,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure parse config into extensions", func() {
-					expected, err := newMinifiedServiceExtensions("wordpress", config.SvcK8sConfig{
+					expected, err := newMinifiedServiceExtensions("wordpress", false, config.SvcK8sConfig{
 						Workload: config.Workload{
 							Replicas: 3,
 						},
@@ -323,7 +323,7 @@ var _ = Describe("Reconcile", func() {
 				})
 
 				It("should configure the added service extensions from healthcheck config", func() {
-					expected, err := newMinifiedServiceExtensions("wordpress")
+					expected, err := newMinifiedServiceExtensions("wordpress", true)
 					Expect(err).NotTo(HaveOccurred())
 					expected["x-k8s"].(map[string]interface{})["workload"].(map[string]interface{})["livenessProbe"] = map[string]interface{}{
 						"type": config.ProbeTypeNone.String(),
@@ -562,20 +562,23 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func newMinifiedServiceExtensions(_ string, svcK8sConfigs ...config.SvcK8sConfig) (map[string]interface{}, error) {
+func newMinifiedServiceExtensions(_ string, includeLivenessProbe bool, svcK8sConfigs ...config.SvcK8sConfig) (map[string]interface{}, error) {
 	livenessProbe := config.DefaultLivenessProbe()
 	k8s := config.SvcK8sConfig{
 		Workload: config.Workload{
-			LivenessProbe: config.LivenessProbe{
-				Type: livenessProbe.Type,
-				ProbeConfig: config.ProbeConfig{
-					Exec: config.ExecProbe{
-						Command: livenessProbe.Exec.Command,
-					},
-				},
-			},
 			Replicas: config.DefaultReplicaNumber,
 		},
+	}
+
+	if includeLivenessProbe {
+		k8s.Workload.LivenessProbe = config.LivenessProbe{
+			Type: livenessProbe.Type,
+			ProbeConfig: config.ProbeConfig{
+				Exec: config.ExecProbe{
+					Command: livenessProbe.Exec.Command,
+				},
+			},
+		}
 	}
 
 	for _, conf := range svcK8sConfigs {

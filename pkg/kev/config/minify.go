@@ -16,11 +16,26 @@
 
 package config
 
+import (
+	"reflect"
+)
+
 // MinifySvcK8sExtension creates a minimal service extension configuration using the supplied src.
 func MinifySvcK8sExtension(src map[string]interface{}) (map[string]interface{}, error) {
 	srcCfg, err := ParseSvcK8sConfigFromMap(src)
 	if err != nil {
 		return nil, err
+	}
+
+	isDefaultLivenessProbe := srcCfg.Workload.LivenessProbe.Type == ProbeTypeExec.String() &&
+		reflect.DeepEqual(srcCfg.Workload.LivenessProbe.Exec.Command, DefaultLivenessProbeCommand)
+
+	if isDefaultLivenessProbe {
+		return SvcK8sConfig{
+			Workload: Workload{
+				Replicas: srcCfg.Workload.Replicas,
+			},
+		}.Map()
 	}
 
 	var probeConfig ProbeConfig

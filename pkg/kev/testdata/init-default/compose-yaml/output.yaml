@@ -3,12 +3,6 @@ services:
   db:
     x-k8s:
       workload:
-        livenessProbe:
-          exec:
-            command:
-            - echo
-            - Define healthcheck command for service
-          type: exec
         replicas: 1
 volumes:
   db_data:
