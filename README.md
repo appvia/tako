@@ -79,6 +79,12 @@ Kev bridges the gaps in the existing tooling, helping developers familiar with D
 
 We welcome any contributions from the community! Have a look at our [contribution](CONTRIBUTING.md) guide for more information on how to get started. If you use Kev, find it useful, or are generally interested in improving Developer Experience on Kubernetes then please let us know by **Starring** and **Watching** this repo. Thanks!
 
+## Get Involved
+
+Join discussion on our [Community channel](https://www.appvia.io/join-the-appvia-community).
+
+Kev is a community project and we welcome your contributions. To report a bug, suggest an improvement, or request a new feature please open a Github issue. Refer to our [contributing](CONTRIBUTING.md) guide for more information on how you can help.
+
 ## Roadmap
 
 See our [Roadmap][roadmap] for details about our plans for the project.
