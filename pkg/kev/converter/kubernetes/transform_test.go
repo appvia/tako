@@ -1754,7 +1754,7 @@ var _ = Describe("Transform", func() {
 
 		Context("for environment variables values that start with a special case keywords", func() {
 
-			When("env var value starts with `secret` but doesn't have expected format", func() {
+			When("env var value starts with a special keyword but doesn't have an expected format", func() {
 				secret := "secret.foo"
 				config := "config.bar"
 				pod := "pod.baz"
