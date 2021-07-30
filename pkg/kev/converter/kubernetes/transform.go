@@ -1333,6 +1333,8 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 	envs := EnvSort{}
 	envsWithDeps := []v1.EnvVar{}
 
+	refK8s := regexp.MustCompile(`^(config|pod|secret|container)\.[^\.]*\.[^\.]*`)
+
 	// @step load up the environment variables
 	for k, v := range projectService.environment() {
 		// @step for nil value we replace it with empty string
@@ -1341,15 +1343,29 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 			v = &temp
 		}
 
-		// @step generate EnvVar spec and handle special value reference cases for `secret`, `configmap`, `pod` field or `container` resource
+		// @step generate EnvVar spec and handle special value reference cases for kubernetes `secret`, `configmap`, `pod` field or `container` resource
 		// e.g. `secret.my-secret-name.my-key`,
-		// 		`config.my-config-name.config-key`,
-		// 		`pod.metadata.namespace`,
-		// 		`container.my-container-name.limits.cpu`,
+		//      `config.my-config-name.config-key`,
+		//      `pod.metadata.namespace`,
+		//      `container.my-container-name.limits.cpu`,
 		// if none of the special cases has been referenced by the env var value then it's going to be treated as literal value
+
+		specialCase := ""
+
+		// @step determine whether env var value matches special case
+		obj := refK8s.FindStringSubmatch(*v)
+		if len(obj) > 1 {
+			specialCase = obj[1]
+		}
+
 		parts := strings.Split(*v, ".")
-		switch parts[0] {
+
+		switch specialCase {
 		case "secret":
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("environment variable %s referencing kubernetes secret is invalid: %s", k, *v)
+			}
+
 			envs = append(envs, v1.EnvVar{
 				Name: k,
 				ValueFrom: &v1.EnvVarSource{
@@ -1362,6 +1378,10 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				},
 			})
 		case "config":
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("environment variable %s referencing kubernetes config map is invalid: %s", k, *v)
+			}
+
 			envs = append(envs, v1.EnvVar{
 				Name: k,
 				ValueFrom: &v1.EnvVarSource{
@@ -1374,12 +1394,14 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 				},
 			})
 		case "pod":
-			// Selects a field of the pod
-			// supported paths: metadata.name, metadata.namespace, metadata.labels, metadata.annotations,
-			// 					spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+			// Selects a field of the pod; Supported paths:
 			paths := []string{
 				"metadata.name", "metadata.namespace", "metadata.labels", "metadata.annotations",
 				"spec.nodeName", "spec.serviceAccountName", "status.hostIP", "status.podIP", "status.podIPs",
+			}
+
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("environment variable %s referencing kubernetes pod field is invalid: %s", k, *v)
 			}
 
 			thePath := strings.Join(parts[1:], ".")
@@ -1394,20 +1416,25 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 					},
 				})
 			} else {
-				log.WarnfWithFields(log.Fields{
+				log.DebugfWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"env-var":         k,
 					"path":            thePath,
 				}, "Unsupported Pod field reference: %s", thePath)
+
+				return nil, fmt.Errorf("environment variable %s references unsupported kubernetes pod field: %s", k, *v)
 			}
 		case "container":
 			// Selects a resource of the container. Only resources limits and requests are currently supported:
-			// 		limits.cpu, limits.memory, limits.ephemeral-storage,
-			//  	requests.cpu, requests.memory and requests.ephemeral-storage
 			resources := []string{
 				"limits.cpu", "limits.memory", "limits.ephemeral-storage",
 				"requests.cpu", "requests.memory", "requests.ephemeral-storage",
 			}
+
+			if len(parts) != 4 {
+				return nil, fmt.Errorf("environment variable %s referencing kubernetes container resource is invalid: %s", k, *v)
+			}
+
 			theResource := strings.Join(parts[2:], ".")
 
 			if contains(resources, theResource) {
@@ -1421,12 +1448,14 @@ func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, err
 					},
 				})
 			} else {
-				log.WarnfWithFields(log.Fields{
+				log.DebugfWithFields(log.Fields{
 					"project-service": projectService.Name,
 					"env-var":         k,
 					"container":       parts[1],
 					"resource":        theResource,
 				}, "Unsupported Container resource reference: %s", theResource)
+
+				return nil, fmt.Errorf("environment variable %s references unsupported kubernetes container resource: %s", k, *v)
 			}
 		default:
 			if strings.Contains(*v, "{{") && strings.Contains(*v, "}}") {
@@ -1690,15 +1719,13 @@ func (k *Kubernetes) updateKubernetesObjects(projectService ProjectService, obje
 	// @step configure the environment variables
 	envs, err := k.configEnvs(projectService)
 	if err != nil {
-		log.Error("Unable to load env variables")
-		return err
+		return errors.Wrap(err, "Unable to load env variables")
 	}
 
 	// @step configure the container volumes
 	volumesMounts, volumes, pvcs, cms, err := k.configVolumes(projectService)
 	if err != nil {
-		log.Error("Unable to configure container volumes")
-		return err
+		return errors.Wrap(err, "Unable to configure container volumes")
 	}
 
 	// @step configure Tmpfs

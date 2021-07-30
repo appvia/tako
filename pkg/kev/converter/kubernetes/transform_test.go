@@ -1752,6 +1752,72 @@ var _ = Describe("Transform", func() {
 
 		})
 
+		Context("for environment variables values that start with a special case keywords", func() {
+
+			When("env var value starts with a special keyword but doesn't have an expected format", func() {
+				secret := "secret.foo"
+				config := "config.bar"
+				pod := "pod.baz"
+				container := "container"
+
+				BeforeEach(func() {
+					projectService.Environment = composego.MappingWithEquals{
+						"MY_SECRET": &secret,
+						"MY_CONFIG": &config,
+						"MY_POD":    &pod,
+						"MY_CONT":   &container,
+					}
+				})
+
+				It("treats the value as literal", func() {
+					vars, err := k.configEnvs(projectService)
+
+					Expect(vars).To(HaveLen(4))
+					Expect(vars).To(ContainElements([]v1.EnvVar{
+						{
+							Name:  "MY_SECRET",
+							Value: secret,
+						},
+						{
+							Name:  "MY_CONFIG",
+							Value: config,
+						},
+						{
+							Name:  "MY_POD",
+							Value: pod,
+						},
+						{
+							Name:  "MY_CONT",
+							Value: container,
+						},
+					}))
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			Context("when special case value matches the format ", func() {
+
+				Context("and the symbolic value has insufficient number of elements", func() {
+					val := "secret.foo.bar.baz"
+
+					BeforeEach(func() {
+						projectService.Environment = composego.MappingWithEquals{
+							"MY_SECRET": &val,
+						}
+					})
+
+					It("returns an error", func() {
+						vars, err := k.configEnvs(projectService)
+
+						Expect(vars).To(HaveLen(0))
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("environment variable MY_SECRET referencing kubernetes secret is invalid: secret.foo.bar.baz"))
+					})
+				})
+			})
+		})
+
 		Context("for env vars with symbolic values", func() {
 
 			Context("as secret.secret-name.secret-key", func() {
@@ -1838,16 +1904,8 @@ var _ = Describe("Transform", func() {
 						vars, err := k.configEnvs(projectService)
 
 						Expect(vars).To(HaveLen(0))
-
-						assertLog(logrus.WarnLevel,
-							"Unsupported Pod field reference: unsupported.path",
-							map[string]string{
-								"project-service": projectService.Name,
-								"env-var":         "MY_CONFIG",
-								"path":            "unsupported.path",
-							})
-
-						Expect(err).ToNot(HaveOccurred())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("environment variable MY_CONFIG references unsupported kubernetes pod field: pod.unsupported.path"))
 					})
 				})
 			})
@@ -1889,17 +1947,8 @@ var _ = Describe("Transform", func() {
 						vars, err := k.configEnvs(projectService)
 
 						Expect(vars).To(HaveLen(0))
-
-						assertLog(logrus.WarnLevel,
-							"Unsupported Container resource reference: unsupported.resource",
-							map[string]string{
-								"project-service": projectService.Name,
-								"env-var":         "MY_CONFIG",
-								"container":       "my-container",
-								"resource":        "unsupported.resource",
-							})
-
-						Expect(err).ToNot(HaveOccurred())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("environment variable MY_CONFIG references unsupported kubernetes container resource: container.my-container.unsupported.resource"))
 					})
 				})
 			})
