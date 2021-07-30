@@ -1755,78 +1755,65 @@ var _ = Describe("Transform", func() {
 		Context("for environment variables values that start with a special case keywords", func() {
 
 			When("env var value starts with `secret` but doesn't have expected format", func() {
-				secretRef := "secret.foo"
+				secret := "secret.foo"
+				config := "config.bar"
+				pod := "pod.baz"
+				container := "container"
 
 				BeforeEach(func() {
 					projectService.Environment = composego.MappingWithEquals{
-						"MY_SECRET": &secretRef,
+						"MY_SECRET": &secret,
+						"MY_CONFIG": &config,
+						"MY_POD":    &pod,
+						"MY_CONT":   &container,
 					}
 				})
 
 				It("treats the value as literal", func() {
 					vars, err := k.configEnvs(projectService)
 
-					Expect(vars).To(HaveLen(1))
-					Expect(vars[0].Name).To(Equal("MY_SECRET"))
-					Expect(vars[0].Value).To(Equal(secretRef))
+					Expect(vars).To(HaveLen(4))
+					Expect(vars).To(ContainElements([]v1.EnvVar{
+						{
+							Name:  "MY_SECRET",
+							Value: secret,
+						},
+						{
+							Name:  "MY_CONFIG",
+							Value: config,
+						},
+						{
+							Name:  "MY_POD",
+							Value: pod,
+						},
+						{
+							Name:  "MY_CONT",
+							Value: container,
+						},
+					}))
+
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
-			When("env var value starts with `config` but doesn't have expected format", func() {
-				configRef := "config.foo"
+			Context("when special case value matches the format ", func() {
 
-				BeforeEach(func() {
-					projectService.Environment = composego.MappingWithEquals{
-						"MY_SECRET": &configRef,
-					}
-				})
+				Context("and the symbolic value has insufficient number of elements", func() {
+					val := "secret.foo.bar.baz"
 
-				It("treats the value as literal", func() {
-					vars, err := k.configEnvs(projectService)
+					BeforeEach(func() {
+						projectService.Environment = composego.MappingWithEquals{
+							"MY_SECRET": &val,
+						}
+					})
 
-					Expect(vars).To(HaveLen(1))
-					Expect(vars[0].Name).To(Equal("MY_SECRET"))
-					Expect(vars[0].Value).To(Equal(configRef))
-					Expect(err).ToNot(HaveOccurred())
-				})
-			})
+					It("returns an error", func() {
+						vars, err := k.configEnvs(projectService)
 
-			When("env var value starts with `pod` but doesn't have expected format", func() {
-				podRef := "pod.foo"
-
-				BeforeEach(func() {
-					projectService.Environment = composego.MappingWithEquals{
-						"MY_SECRET": &podRef,
-					}
-				})
-
-				It("treats the value as literal", func() {
-					vars, err := k.configEnvs(projectService)
-
-					Expect(vars).To(HaveLen(1))
-					Expect(vars[0].Name).To(Equal("MY_SECRET"))
-					Expect(vars[0].Value).To(Equal(podRef))
-					Expect(err).ToNot(HaveOccurred())
-				})
-			})
-
-			When("env var value starts with `container` but doesn't have expected format", func() {
-				containerRef := "container"
-
-				BeforeEach(func() {
-					projectService.Environment = composego.MappingWithEquals{
-						"MY_SECRET": &containerRef,
-					}
-				})
-
-				It("treats the value as literal", func() {
-					vars, err := k.configEnvs(projectService)
-
-					Expect(vars).To(HaveLen(1))
-					Expect(vars[0].Name).To(Equal("MY_SECRET"))
-					Expect(vars[0].Value).To(Equal(containerRef))
-					Expect(err).ToNot(HaveOccurred())
+						Expect(vars).To(HaveLen(0))
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("environment variable MY_SECRET referencing kubernetes secret is invalid: secret.foo.bar.baz"))
+					})
 				})
 			})
 		})
