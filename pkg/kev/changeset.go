@@ -140,6 +140,21 @@ func (chg change) patchService(override *composeOverride) (string, error) {
 
 			svc.Extensions[config.K8SExtensionKey] = newValue
 			log.Debugf("service [%s] extensions updated to %+v", svcName, newValue)
+		case "services":
+			// Currently, the only update that can occur to a service is
+			// its image name. This will likely change in future.
+			svc := override.Services[chg.Index.(int)]
+			svcName := svc.Name
+
+			newValue, ok := chg.Value.(string)
+			if !ok {
+				log.Debugf("unable to update service image [%s], invalid value %+v", svcName, newValue)
+				return "", nil
+			}
+			svc.Image = newValue
+			msg := fmt.Sprintf("updated image to: %s", newValue)
+			log.Debugf(msg)
+			return msg, nil
 		}
 	}
 	return "", nil

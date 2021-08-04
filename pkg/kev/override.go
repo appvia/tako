@@ -46,24 +46,50 @@ func (o *composeOverride) getVolume(name string) (VolumeConfig, error) {
 	return VolumeConfig{}, fmt.Errorf("no such volume: %s", name)
 }
 
-// diffAndPatch detects and patches all changes between a destination override and the current override.
+// diffAndPatch detects and patches all changes between a destination override and the current
+// override.
+//
 // A change is either a create, update or delete event.
-// A change targets an override's version, services or volumes and its properties will depend on the actual target.
+//
+// A change targets an override's version, services or volumes and its properties will depend
+// on the actual target.
+//
 // Example: here's a Change that creates a new service:
+//
 // {
-//    Type: "create",   //string
-//    Value: srcSvc,    //interface{} in this case: ServiceConfig
+//    Type: "create",   // string
+//    Value: srcSvc,    // interface{} in this case: ServiceConfig
 // }
-// ENV VARS NOTE:
-// The changeset deals with the docker-compose `environment` attribute as a special case:
-// - Env vars specified in docker compose overrides modify a project's docker-compose env vars.
-// - A changeset will ONLY REMOVE an env var if it is removed from a project's docker-compose env vars.
-// - A changeset will NOT update or create env vars in an environment specific docker compose override file.
-// - To create useful diffs the project's base docker-compose env vars will be taken into account.
+//
+// CHANGESET NOTES:
+//
+// Generally values in the docker-compose file override values in the environment overrides.
+// However, there are two special exceptions to this:
+//
+// 1) docker-compose `environment` attributes:
+//
+//    - Env vars specified in docker compose overrides modify a project's docker-compose
+//      env vars.
+//    - A changeset will ONLY REMOVE an env var if it is removed from a project's
+//      docker-compose env vars.
+//    - A changeset will NOT update or create env vars in an environment specific docker
+//      compose override file.
+//    - To create useful diffs the project's base docker-compose env vars will be taken
+//      into account.
+//
+// 2) Image names in the environment overrides:
+//
+//    - These take precedence over those initially defined in the originating
+//      docker-compose file. This allows users to specify different images in each
+//      environment.
 func (o *composeOverride) diffAndPatch(dst *composeOverride) error {
 	o.detectAndPatchVersionUpdate(dst)
 
 	if err := o.detectAndPatchServicesCreate(dst); err != nil {
+		return err
+	}
+
+	if err := o.detectAndPatchServicesUpdate(dst); err != nil {
 		return err
 	}
 
@@ -105,6 +131,56 @@ func (o *composeOverride) detectAndPatchVersionUpdate(dst *composeOverride) {
 	o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
 		kmd.WithIndentChar(kmd.LogIndentChar),
 		kmd.WithIndent(3))
+}
+
+func (o *composeOverride) detectAndPatchServicesUpdate(dst *composeOverride) error {
+	sg := o.UI.StepGroup()
+	defer sg.Done()
+	step := sg.Add("Detecting service updates")
+
+	cset := changeset{}
+	srcSvcSet := o.Services.Set()
+	for index, srcSvc := range o.Services {
+		if srcSvcSet[srcSvc.Name] {
+			dstSvc, err := dst.getService(srcSvc.Name)
+			if err != nil {
+				// Service not present in the override, which means this isn't
+				// an update; it should be handled by create checks
+				continue
+			}
+			// A note here about change semantic: usually the docker-compose file
+			// overrides the generate override files (e.g. deleting a service, volume
+			// etc). However, in the case of service updates,
+			if srcSvc.Image != dstSvc.Image {
+				cset.services = append(cset.services, change{
+					Type:   UPDATE,
+					Index:  index,
+					Parent: "services",
+					Value:  dstSvc.Image,
+				})
+				log.Debugf("detected an updated service image: %s", dstSvc.Image)
+			}
+		}
+	}
+
+	if cset.HasNoPatches() {
+		step.Success("No service updates detected")
+		return nil
+	}
+
+	msgs, err := cset.applyServicesPatchesIfAny(dst)
+	if err != nil {
+		step.Error()
+		return err
+	}
+	step.Success("Applied service updates")
+	for _, msg := range msgs {
+		o.UI.Output(msg, kmd.WithStyle(kmd.LogStyle),
+			kmd.WithIndentChar(kmd.LogIndentChar),
+			kmd.WithIndent(3))
+	}
+
+	return nil
 }
 
 func (o *composeOverride) detectAndPatchServicesCreate(dst *composeOverride) error {
@@ -311,8 +387,15 @@ func (o *composeOverride) mergeServicesInto(p *ComposeProject) error {
 		if err != nil {
 			return err
 		}
-
 		envVarsFromNilToBlankInService(base)
+
+		// Copy over anything that is defined outside an extension or
+		// environment - users may modify some elements of the generated
+		// override files such as image names (for example, to provide
+		// different images for staging and prod environments)
+		if override.Image != base.Image {
+			base.Image = override.Image
+		}
 
 		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge extensions for service %s", override.Name)
