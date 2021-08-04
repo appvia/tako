@@ -22,6 +22,7 @@ import (
 
 	"github.com/appvia/kev/pkg/kev/config"
 	"github.com/appvia/kev/pkg/kev/log"
+
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -47,6 +48,7 @@ func (s *Sources) CalculateBaseOverride(opts ...BaseOverrideOpts) error {
 	for _, svc := range ready.Services {
 		target := ServiceConfig{
 			Name:       svc.Name,
+			Image:      svc.Image,
 			Extensions: svc.Extensions,
 		}
 
@@ -123,6 +125,7 @@ func withEnvVars(s *Sources, origin *ComposeProject) error {
 
 		services = append(services, ServiceConfig{
 			Name:        svc.Name,
+			Image:       originSvc.Image,
 			Environment: originSvc.Environment,
 			Extensions:  svc.Extensions,
 		})
