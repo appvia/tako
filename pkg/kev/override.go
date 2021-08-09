@@ -139,27 +139,28 @@ func (o *composeOverride) detectAndPatchServicesUpdate(dst *composeOverride) err
 	step := sg.Add("Detecting service updates")
 
 	cset := changeset{}
-	srcSvcSet := o.Services.Set()
 	for index, srcSvc := range o.Services {
-		if srcSvcSet[srcSvc.Name] {
-			dstSvc, err := dst.getService(srcSvc.Name)
-			if err != nil {
-				// Service not present in the override, which means this isn't
-				// an update; it should be handled by create checks
-				continue
-			}
-			// A note here about change semantic: usually the docker-compose file
-			// overrides the generate override files (e.g. deleting a service, volume
-			// etc). However, in the case of service updates,
-			if srcSvc.Image != dstSvc.Image {
-				cset.services = append(cset.services, change{
-					Type:   UPDATE,
-					Index:  index,
-					Parent: "services",
-					Value:  dstSvc.Image,
-				})
-				log.Debugf("detected an updated service image: %s", dstSvc.Image)
-			}
+		dstSvc, err := dst.getService(srcSvc.Name)
+		if err != nil {
+			// Service not present in the override, which means this isn't
+			// an update; it should be handled by create checks
+			continue
+		}
+		// A note here about change semantics: usually docker-compose file
+		// elements (such as ervices or volumes) influence the content of
+		// environment-specific overrides (i.e. changes in the docker-compose
+		// file take precedence over those in the overrides), However, in
+		// the case of service updates, this works the other way around: image
+		// changes in an override should be maintained over the original in the
+		// docker-compose file.
+		if srcSvc.Image != dstSvc.Image {
+			cset.services = append(cset.services, change{
+				Type:   UPDATE,
+				Index:  index,
+				Parent: "services",
+				Value:  dstSvc.Image,
+			})
+			log.Debugf("detected an updated service image: %s", dstSvc.Image)
 		}
 	}
 

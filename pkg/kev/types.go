@@ -137,7 +137,7 @@ type ComposeProject struct {
 // ServiceConfig is a shallow version of a compose-go ServiceConfig
 type ServiceConfig struct {
 	Name        string                      `yaml:"-" json:"-" diff:"name"`
-	Image       string                      `yaml:"image" json:"-" diff:"image"`
+	Image       string                      `yaml:"image,omitempty" json:"-" diff:"image"`
 	Environment composego.MappingWithEquals `yaml:",omitempty" json:"environment,omitempty" diff:"environment"`
 	Extensions  map[string]interface{}      `yaml:",inline" json:"-"`
 }

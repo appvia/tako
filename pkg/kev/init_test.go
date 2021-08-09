@@ -275,5 +275,39 @@ var _ = Describe("InitRunner", func() {
 				})
 			})
 		})
+		When("image name not defined in the sources", func() {
+			Context("Image name is not defined", func() {
+				BeforeEach(func() {
+					workingDir = "./testdata/init-image/no-image"
+				})
+				It("should be empty in the override", func() {
+					var buffer bytes.Buffer
+					_, err := env.WriteTo(&buffer)
+					Expect(err).ToNot(HaveOccurred())
+
+					expected, err := ioutil.ReadFile("./testdata/init-image/no-image/output.yaml")
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(buffer.String()).To(MatchYAML(expected))
+				})
+			})
+		})
+		When("image name defined in the sources", func() {
+			BeforeEach(func() {
+				workingDir = "./testdata/init-image/image"
+			})
+			Context("Image name is provided", func() {
+				It("should be written to the override", func() {
+					var buffer bytes.Buffer
+					_, err := env.WriteTo(&buffer)
+					Expect(err).ToNot(HaveOccurred())
+
+					expected, err := ioutil.ReadFile("./testdata/init-image/image/output.yaml")
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(buffer.String()).To(MatchYAML(expected))
+				})
+			})
+		})
 	})
 })
