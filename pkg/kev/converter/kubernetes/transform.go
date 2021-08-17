@@ -44,7 +44,7 @@ import (
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -645,38 +645,39 @@ func (k *Kubernetes) initJob(projectService ProjectService, replicas int) *v1bat
 
 // initIngress initialises ingress object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
-// @todo change to networkingv1 after migration to k8s 0.19
-func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *networkingv1beta1.Ingress {
+func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *networkingv1.Ingress {
 	expose, _ := projectService.exposeService()
 	if expose == "" {
 		return nil
 	}
 	hosts := regexp.MustCompile("[ ,]*,[ ,]*").Split(expose, -1)
 
-	ingress := &networkingv1beta1.Ingress{
+	ingress := &networkingv1.Ingress{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "Ingress",
-			APIVersion: "networking.k8s.io/v1beta1",
+			APIVersion: "networking.k8s.io/v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:        projectService.Name,
 			Labels:      configLabels(projectService.Name),
 			Annotations: projectService.ingressAnnotations(),
 		},
-		Spec: networkingv1beta1.IngressSpec{},
+		Spec: networkingv1.IngressSpec{},
 	}
 
 	if hasDefaultIngressBackendKeyword(hosts) {
-		ingress.Spec.Backend = &networkingv1beta1.IngressBackend{
-			ServiceName: projectService.Name,
-			ServicePort: intstr.IntOrString{
-				IntVal: port,
+		ingress.Spec.DefaultBackend = &networkingv1.IngressBackend{
+			Service: &networkingv1.IngressServiceBackend{
+				Name: projectService.Name,
+				Port: networkingv1.ServiceBackendPort{
+					Number: port,
+				},
 			},
 		}
 		return ingress
 	}
 
-	var ingressRules []networkingv1beta1.IngressRule
+	var ingressRules []networkingv1.IngressRule
 	for _, host := range hosts {
 		host, p := parseIngressPath(host)
 		ingressRules = append(ingressRules, createIngressRule(host, p, projectService.Name, port))
@@ -685,7 +686,7 @@ func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *net
 
 	tlsSecretName := projectService.tlsSecretName()
 	if tlsSecretName != "" {
-		ingress.Spec.TLS = []networkingv1beta1.IngressTLS{
+		ingress.Spec.TLS = []networkingv1.IngressTLS{
 			{
 				Hosts:      hosts,
 				SecretName: tlsSecretName,
