@@ -32,8 +32,6 @@ import (
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
-	networking "k8s.io/api/networking/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -922,6 +920,8 @@ var _ = Describe("Transform", func() {
 			It("initialises Ingress with a port routing to the project service name", func() {
 				ing := k.initIngress(projectService, port)
 
+				pathType := networkingv1.PathTypeImplementationSpecific
+
 				Expect(ing).To(Equal(&networkingv1.Ingress{
 					TypeMeta: meta.TypeMeta{
 						Kind:       "Ingress",
@@ -940,7 +940,8 @@ var _ = Describe("Transform", func() {
 									HTTP: &networkingv1.HTTPIngressRuleValue{
 										Paths: []networkingv1.HTTPIngressPath{
 											{
-												Path: "",
+												Path:     "",
+												PathType: &pathType,
 												Backend: networkingv1.IngressBackend{
 													Service: &networkingv1.IngressServiceBackend{
 														Name: projectService.Name,
@@ -2015,7 +2016,7 @@ var _ = Describe("Transform", func() {
 		networkName := "foo"
 
 		It("creates network policy", func() {
-			Expect(k.createNetworkPolicy(projectServiceName, networkName)).To(Equal(&networking.NetworkPolicy{
+			Expect(k.createNetworkPolicy(projectServiceName, networkName)).To(Equal(&networkingv1.NetworkPolicy{
 				TypeMeta: meta.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "networking.k8s.io/v1",
@@ -2023,12 +2024,12 @@ var _ = Describe("Transform", func() {
 				ObjectMeta: meta.ObjectMeta{
 					Name: networkName,
 				},
-				Spec: networking.NetworkPolicySpec{
+				Spec: networkingv1.NetworkPolicySpec{
 					PodSelector: meta.LabelSelector{
 						MatchLabels: map[string]string{NetworkLabel + "/" + networkName: "true"},
 					},
-					Ingress: []networking.NetworkPolicyIngressRule{{
-						From: []networking.NetworkPolicyPeer{{
+					Ingress: []networkingv1.NetworkPolicyIngressRule{{
+						From: []networkingv1.NetworkPolicyPeer{{
 							PodSelector: &meta.LabelSelector{
 								MatchLabels: map[string]string{NetworkLabel + "/" + networkName: "true"},
 							},
@@ -2173,6 +2174,8 @@ var _ = Describe("Transform", func() {
 
 					projectService.Extensions = map[string]interface{}{config.K8SExtensionKey: m}
 					projectService, err = NewProjectService(projectService.ServiceConfig)
+
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("doesn't include readiness probe definition in the pod spec", func() {
@@ -2186,7 +2189,7 @@ var _ = Describe("Transform", func() {
 
 	Describe("sortServicesFirst", func() {
 		objs := []runtime.Object{
-			&v1beta1.Deployment{
+			&v1apps.Deployment{
 				TypeMeta: meta.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -2235,7 +2238,7 @@ var _ = Describe("Transform", func() {
 		})
 
 		Context("with non-duplicate objects", func() {
-			objs := append(objs, &v1beta1.Deployment{
+			objs := append(objs, &v1apps.Deployment{
 				TypeMeta: meta.TypeMeta{
 					Kind: "Deployment",
 				},

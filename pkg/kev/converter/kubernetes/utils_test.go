@@ -23,8 +23,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -70,10 +70,10 @@ var _ = Describe("Utils", func() {
 			})
 
 			Context("when schema group version is empty", func() {
-				o := &v1beta1.Deployment{
+				o := &v1apps.Deployment{
 					TypeMeta: meta.TypeMeta{
 						Kind:       "Deployment",
-						APIVersion: "extensions/v1beta1",
+						APIVersion: "apps/v1",
 					},
 				}
 				gv := schema.GroupVersion{}
@@ -84,8 +84,8 @@ var _ = Describe("Utils", func() {
 
 					info := versioned.DeepCopyObject().GetObjectKind().GroupVersionKind()
 					Expect(info.Kind).To(Equal("Deployment"))
-					Expect(info.Version).To(Equal("v1beta1"))
-					Expect(info.Group).To(Equal("extensions"))
+					Expect(info.Version).To(Equal("v1"))
+					Expect(info.Group).To(Equal("apps"))
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})

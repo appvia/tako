@@ -962,13 +962,16 @@ func hasDefaultIngressBackendKeyword(v []string) bool {
 
 // createIngressRule creates an ingress rule using a set of parameters.
 func createIngressRule(host, path, serviceName string, port int32) networkingv1.IngressRule {
+	pathType := networkingv1.PathTypeImplementationSpecific
+
 	return networkingv1.IngressRule{
 		Host: host,
 		IngressRuleValue: networkingv1.IngressRuleValue{
 			HTTP: &networkingv1.HTTPIngressRuleValue{
 				Paths: []networkingv1.HTTPIngressPath{
 					{
-						Path: path,
+						Path:     path,
+						PathType: &pathType,
 						Backend: networkingv1.IngressBackend{
 							Service: &networkingv1.IngressServiceBackend{
 								Name: serviceName,
