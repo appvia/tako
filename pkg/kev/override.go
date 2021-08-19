@@ -314,6 +314,12 @@ func (o *composeOverride) mergeServicesInto(p *ComposeProject) error {
 
 		envVarsFromNilToBlankInService(base)
 
+		// Copy over image name if one has bee defined in the override. In
+		// future this may expand to invlude other fields.
+		if override.Image != "" && override.Image != base.Image {
+			base.Image = override.Image
+		}
+
 		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge extensions for service %s", override.Name)
 		}
