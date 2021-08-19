@@ -18,6 +18,7 @@ package kev
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/appvia/kev/pkg/kev/log"
 	kmd "github.com/appvia/komando"
@@ -313,6 +314,13 @@ func (o *composeOverride) mergeServicesInto(p *ComposeProject) error {
 		}
 
 		envVarsFromNilToBlankInService(base)
+
+		// Copy over image name if one has bee defined in the override. In
+		// future this may expand to invlude other fields.
+		trimmed := strings.TrimSpace(override.Image)
+		if trimmed != "" && trimmed != base.Image {
+			base.Image = override.Image
+		}
 
 		if err := mergo.Merge(&base.Extensions, &override.Extensions, mergo.WithOverride); err != nil {
 			return errors.Wrapf(err, "cannot merge extensions for service %s", override.Name)

@@ -512,6 +512,48 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
+		Context("when compose image name is overridden in an environment", func() {
+			BeforeEach(func() {
+				workingDir = "testdata/reconcile-image-name-override"
+				overrideFiles = []string{
+					workingDir + "/docker-compose.env.dev.yaml",
+					workingDir + "/docker-compose.env.stage.yaml",
+				}
+			})
+
+			It("confirms the overridden image name pre-reconciliation", func() {
+				s, err := override.GetService("db")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(s.Image).To(Equal("mysql:latest"))
+			})
+
+			It("should keep the appropriate image in the environment override", func() {
+				testCases := []struct {
+					env           string
+					expectedImage string
+				}{
+					{env: "dev", expectedImage: "mysql:latest"},
+					{env: "stage", expectedImage: ""},
+				}
+				for _, tc := range testCases {
+					env, err := manifest.GetEnvironment(tc.env)
+					Expect(err).NotTo(HaveOccurred())
+
+					svc, err := env.GetService("db")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(svc.Image).To(Equal(tc.expectedImage))
+				}
+			})
+
+			It("should log the change summary using the debug level", func() {
+				Expect(testutil.GetLoggedLevel(hook)).To(Equal("debug"))
+			})
+
+			It("should not error", func() {
+				Expect(mErr).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("when healthcheck is overridden by overlay", func() {
 			Context("liveness tcp", func() {
 				BeforeEach(func() {

@@ -1,0 +1,6 @@
+id: 10b5c35d-8b9a-42af-a16e-ed758a06c231
+compose:
+  - testdata/reconcile-image-name-override/docker-compose.yaml
+environments:
+  dev: testdata/reconcile-image-name-override/docker-compose.env.dev.yaml
+  stage: testdata/reconcile-image-name-override/docker-compose.env.stage.yaml
