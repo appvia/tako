@@ -1114,7 +1114,9 @@ Defines how to expose the service externally. By default, all component services
 #### Possible options:
 
 - "default" - ingress will be created with Kubernetes cluster defaults.
-- "domain.com,otherdomain.com..." - comma separated list of domains for the ingress.
+- "domain.com" - a single domain name for the ingress.
+- "domain.com/foo" - a single domain name with a path.
+- "domain.com,otherdomain.com/bar,..." - comma separated list of domains (with or without path) for the ingress.
 
 #### Default: `""` - No ingress will be created!
 
