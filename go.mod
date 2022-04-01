@@ -21,6 +21,6 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	k8s.io/api v0.19.7
-	k8s.io/apimachinery v0.19.7
+	k8s.io/api v0.23.5
+	k8s.io/apimachinery v0.23.5
 )
