@@ -96,3 +96,8 @@ Copyright (c) 2020-2021 [Appvia Ltd](https://appvia.io)
 This project is distributed under the [Apache License, Version 2.0](./LICENSE).
 
 [roadmap]: https://github.com/appvia/kev/issues
+
+
+### Infrastructure model
+
+![Infrastructure model](.infragenie/infrastructure_model.png)
