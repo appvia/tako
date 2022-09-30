@@ -6,7 +6,7 @@ require (
 	github.com/GoogleContainerTools/skaffold v1.22.0
 	github.com/appvia/komando v0.0.0-20210615112332-10b3c13b31d3
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
-	github.com/fsnotify/fsnotify v1.5.1
+	github.com/fsnotify/fsnotify v1.5.4
 	github.com/go-playground/validator/v10 v10.6.1
 	github.com/google/go-cmp v0.5.7
 	github.com/google/uuid v1.3.0
