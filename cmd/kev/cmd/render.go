@@ -46,7 +46,7 @@ func init() {
 		"format",
 		"f",
 		"kubernetes", // default: native kubernetes manifests
-		"Deployment files format. Default: Kubernetes manifests.",
+		"Deployment files format. Default: Kubernetes manifests. Supports kubernets and kustomize outputs.",
 	)
 
 	flags.BoolP(
