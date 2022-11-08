@@ -646,7 +646,7 @@ func (k *Kubernetes) initJob(projectService ProjectService, replicas int) *v1bat
 // initIngress initialises ingress object
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L446
 func (k *Kubernetes) initIngress(projectService ProjectService, port int32) *networkingv1.Ingress {
-	expose, _ := projectService.exposeService()
+	expose, _ := projectService.prefixedDomain()
 	if expose == "" {
 		return nil
 	}
@@ -1328,7 +1328,7 @@ func (k *Kubernetes) configPVCVolumeSource(name string, readonly bool) *v1.Volum
 
 // configEnvs returns a list of sorted kubernetes EnvVar objects mapping all project service environment variables
 // NOTE: compose-go library preloads all environment variables defined in env_files (if any), and appends
-// 		  them to the list of explicitly provided environment variables.
+// them to the list of explicitly provided environment variables.
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/kubernetes.go#L961
 func (k *Kubernetes) configEnvs(projectService ProjectService) ([]v1.EnvVar, error) {
 	envs := EnvSort{}
