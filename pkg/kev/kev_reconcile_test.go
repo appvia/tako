@@ -358,7 +358,7 @@ var _ = Describe("Reconcile", func() {
 					volExt := v.Extensions[config.K8SExtensionKey].(map[string]interface{})
 
 					Expect(v.Extensions).To(HaveLen(1), "failed for env: %s", env.Name)
-					Expect(volExt["size"]).To(Equal("100Mi"), "failed for env: %s", env.Name)
+					Expect(volExt["size"]).To(Equal("1Gi"), "failed for env: %s", env.Name)
 				}
 
 			})

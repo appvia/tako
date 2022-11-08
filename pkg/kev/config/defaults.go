@@ -18,7 +18,7 @@ package config
 
 const (
 	// DefaultVolumeSize default value PV class
-	DefaultVolumeSize = "100Mi"
+	DefaultVolumeSize = "1Gi"
 
 	// DefaultVolumeStorageClass default PV storage class
 	DefaultVolumeStorageClass = ""

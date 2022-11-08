@@ -7,4 +7,4 @@ services:
 volumes:
   db_data:
     x-k8s:
-      size: 100Mi
+      size: 1Gi
