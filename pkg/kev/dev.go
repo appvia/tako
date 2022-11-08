@@ -144,6 +144,8 @@ func (r *DevRunner) Run() error {
 	envRe := regexp.MustCompile(`^.*\.(.*)\.ya?ml$`)
 
 	for {
+		var env []string
+
 		ch := <-change
 		if len(ch) > 0 {
 			r.UI.Output(
@@ -154,13 +156,17 @@ func (r *DevRunner) Run() error {
 			)
 
 			match := envRe.FindStringSubmatch(ch)
-			env := match[1]
+			if len(match) > 0 {
+				env = []string{match[1]}
+			} else {
+				env = []string{}
+			}
 
 			if err := r.eventHandler(DevLoopIterated, r); err != nil {
 				return newEventError(err, DevLoopIterated)
 			}
 
-			_ = runPreCommands([]string{env})
+			_ = runPreCommands(env)
 
 			// empty the buffer as we only ever do one re-render cycle per a batch of changes
 			if len(change) > 0 {
