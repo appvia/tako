@@ -170,6 +170,21 @@ func (p *ProjectService) exposeService() (string, error) {
 	return val, nil
 }
 
+// prefixedDomain prefixes specified domain name when service is exposed
+func (p *ProjectService) prefixedDomain() (string, error) {
+	prefix := strings.TrimSpace(p.SvcK8sConfig.Service.Expose.DomainPrefix)
+	domain, err := p.exposeService()
+	if err != nil {
+		return "", err
+	}
+
+	if prefix != "" {
+		return fmt.Sprintf("%s%s", prefix, domain), nil
+	}
+
+	return domain, nil
+}
+
 // tlsSecretName returns TLS secret name for exposed service (to be used in the ingress configuration)
 func (p *ProjectService) tlsSecretName() string {
 	return p.SvcK8sConfig.Service.Expose.TlsSecret
@@ -290,7 +305,8 @@ func (p *ProjectService) placement() map[string]string {
 // It parses CPU, Memory & Ephemeral Storage as k8s resource.Quantity regardless
 // of how values are supplied (via deploy block or an extension).
 // Note: Only CPU & Memory requests can be set via docker compose deploy block!
-//       Storage can only be set via extension parameter.
+// Storage can only be set via extension parameter.
+//
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
 // - Memory: 1, 1M, 1m, 1G, 1Gi
@@ -329,7 +345,8 @@ func (p *ProjectService) resourceRequests() (*int64, *int64, *int64) {
 // It parses CPU, Memory & Ephemeral Storage as k8s resource.Quantity regardless
 // of how values are supplied (via deploy block or an extension).
 // Note: Only CPU & Memory requests can be set via docker compose deploy block!
-//       Storage can only be set via extension parameter.
+// Storage can only be set via extension parameter.
+//
 // It supports resource notations:
 // - CPU: 0.1, 100m (which is the same as 0.1), 1
 // - Memory: 1, 1M, 1m, 1G, 1Gi
