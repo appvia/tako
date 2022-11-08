@@ -1133,6 +1133,27 @@ services:
 ...
 ```
 
+### service.expose.domainPrefix
+When specified the domain will be prefixed with the value of this attribute.
+Prefix will be prepended to the specified domain name.
+Example: `domainPrefix: "hello."` and `domain: world.my-awesome-service.com` will result in `hello.world.my-awesome-service.com`.
+
+#### Default: `""` - No domain prefix will be used!
+
+> service.expose.domain:
+```yaml
+version: 3.7
+services:
+  my-service:
+    x-k8s:
+      service:
+        type: LoadBalancer
+        expose:
+          domainPrefix: hello
+          domain: world.my-awesome-service.com
+...
+```
+
 ### service.expose.tlsSecret
 
 Defines whether to use TLS for the exposed service and which secret name contains certificates for the service. See the official K8s [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls).
