@@ -465,6 +465,7 @@ type Service struct {
 }
 
 type Expose struct {
+	DomainPrefix       string            `yaml:"domainPrefix,omitempty"`
 	Domain             string            `yaml:"domain,omitempty"`
 	TlsSecret          string            `yaml:"tlsSecret,omitempty"`
 	IngressAnnotations map[string]string `yaml:"ingressAnnotations,omitempty"`

@@ -579,6 +579,52 @@ var _ = Describe("ProjectService", func() {
 
 	})
 
+	Describe("prefixedDomain", func() {
+
+		Context("when prefix specified via an extension", func() {
+			prefix := "myprefix."
+			expose := "domain.com"
+
+			BeforeEach(func() {
+				svcK8sConfig.Service.Expose.DomainPrefix = prefix
+				svcK8sConfig.Service.Expose.Domain = expose
+			})
+
+			It("will use the extension value", func() {
+				Expect(projectService.prefixedDomain()).To(Equal("myprefix.domain.com"))
+			})
+		})
+
+		Context("when not specified via an extension", func() {
+			BeforeEach(func() {
+				svcK8sConfig.Service.Expose.Domain = "domain.com"
+			})
+
+			It("will return empty string", func() {
+				Expect(projectService.prefixedDomain()).To(Equal("domain.com"))
+			})
+		})
+
+		Describe("validations", func() {
+
+			Context("when service hasn't been exposed via an extension but TLS secret was provided", func() {
+				BeforeEach(func() {
+					svcK8sConfig.Service.Expose.DomainPrefix = "myprefix-"
+					svcK8sConfig.Service.Expose.Domain = ""
+					svcK8sConfig.Service.Expose.TlsSecret = "my-tls-secret-name"
+				})
+
+				It("returns an error", func() {
+					_, err := projectService.prefixedDomain()
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("service can't have TLS secret name when it hasn't been exposed"))
+				})
+			})
+
+		})
+
+	})
+
 	Describe("tlsSecretName", func() {
 
 		Context("when specified via an extension", func() {
