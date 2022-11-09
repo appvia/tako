@@ -979,7 +979,7 @@ var _ = Describe("Transform", func() {
 			})
 		})
 
-		When("project servive extension is exposing the k8s service using a domain name and prefix", func() {
+		When("project service extension is exposing the k8s service using a domain name and prefix", func() {
 			BeforeEach(func() {
 				projectService.SvcK8sConfig.Service.Expose.DomainPrefix = "myprefix."
 				projectService.SvcK8sConfig.Service.Expose.Domain = "domain.name"
