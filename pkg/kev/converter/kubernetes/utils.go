@@ -254,7 +254,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 	return file, nil
 }
 
-//  Generate Helm Chart configuration
+// Generate Helm Chart configuration
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L54
 func generateHelm(dirName string) error {
 	type ChartDetails struct {
@@ -366,61 +366,58 @@ func getDirName(opt ConvertOptions) string {
 	return dirName
 }
 
-// marshal marshals a runtime.Object and return byte array
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L269
-func marshal(obj runtime.Object, jsonFormat bool, indent int) (data []byte, err error) {
-	// convert data to yaml or json
-	if jsonFormat {
-		data, err = json.MarshalIndent(obj, "", "  ")
-	} else {
-		data, err = marshalWithIndent(obj, indent)
-	}
+// sanitizeObject ensures that runtime object status field is removed as it is not needed
+// and returns a map representation of the object
+func sanitizeObject(obj runtime.Object) (map[string]interface{}, error) {
+	// JSON encode the object
+	j, err := json.Marshal(obj)
 	if err != nil {
-		data = nil
+		return nil, err
 	}
-	return
-}
 
-// jsonToYaml converts JSON to YAML
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L283
-func jsonToYaml(j []byte, spaces int) ([]byte, error) {
-	// Convert the JSON to an object.
-	var jsonObj interface{}
+	// Convert the JSON to a map.
+	var jsonObj map[string]interface{}
 	// We are using yaml.Unmarshal here (instead of json.Unmarshal) because the
 	// Go JSON library doesn't try to pick the right number type (int, float,
 	// etc.) when unmarshling to interface{}, it just picks float64
 	// universally. go-yaml does go through the effort of picking the right
 	// number type, so we can preserve number type throughout this process.
-	err := yaml.Unmarshal(j, &jsonObj)
+	err = yaml.Unmarshal(j, &jsonObj)
 	if err != nil {
 		return nil, err
 	}
 
-	var b bytes.Buffer
-	encoder := yaml.NewEncoder(&b)
-	encoder.SetIndent(spaces)
-	if err := encoder.Encode(jsonObj); err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
+	// Remove the status field
+	delete(jsonObj, "Status")
+	delete(jsonObj, "status")
+
+	return jsonObj, nil
 }
 
-// marshalWithIndent marshals with specified indentation size
-// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L308
-func marshalWithIndent(o interface{}, indent int) ([]byte, error) {
-	j, err := json.Marshal(o)
+// marshal marshals a runtime.Object and return byte array
+// @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L269
+func marshal(obj runtime.Object, jsonFormat bool, indent int) ([]byte, error) {
+
+	// sanitize object before marshaling
+	jsonObj, err := sanitizeObject(obj)
 	if err != nil {
-		log.Error("Error marshaling into JSON")
 		return nil, err
 	}
 
-	y, err := jsonToYaml(j, indent)
-	if err != nil {
-		log.Error("Error converting JSON to YAML")
-		return nil, err
-	}
+	// convert data to yaml or json
+	switch jsonFormat {
+	case true:
+		return json.MarshalIndent(jsonObj, "", "  ")
 
-	return y, nil
+	default:
+		var b bytes.Buffer
+		encoder := yaml.NewEncoder(&b)
+		encoder.SetIndent(indent)
+		if err := encoder.Encode(jsonObj); err != nil {
+			return nil, err
+		}
+		return b.Bytes(), nil
+	}
 }
 
 // convertToVersion converts object to a versioned object
