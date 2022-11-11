@@ -30,6 +30,7 @@ type Converter interface {
 		dir, workDir string,
 		projects map[string]*composego.Project,
 		files map[string][]string,
+		additionalManifests []string,
 		rendered map[string][]byte,
 		excluded map[string][]string) (map[string]string, error)
 }

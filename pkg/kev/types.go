@@ -26,17 +26,30 @@ import (
 
 // runConfig stores configuration for a command
 type runConfig struct {
-	ComposeSources        []string
-	Envs                  []string
-	ManifestFormat        string
+	// ComposeSources is a list of compose files to use
+	ComposeSources []string
+	// Envs is a list of environments to use
+	Envs []string
+	// ManifestFormat is a format of the output manifests
+	ManifestFormat string
+	// ManifestsAsSingleFile indicates whether to render all manifests into a single file
 	ManifestsAsSingleFile bool
-	OutputDir             string
-	K8sNamespace          string
-	Kubecontext           string
-	Skaffold              bool
-	SkaffoldTail          bool
+	// AdditionalManifests is a list of additional manifests that should be added to the generated manifests set
+	AdditionalManifests []string
+	// OutputDir is a directory where to store the generated manifests
+	OutputDir string
+	// K8sNamespace is a target Kubernetes namespace
+	K8sNamespace string
+	// KubeContext is a target Kubernetes cluster context
+	Kubecontext string
+	// Skaffold is a flag indicating whether to generate skaffold.yaml
+	Skaffold bool
+	// SkaffoldTail is a flag indicating whether to tail skaffold logs
+	SkaffoldTail bool
+	// SkaffoldManualTrigger is a flag indicating whether trigger changes manually when skaffold dev loop is running
 	SkaffoldManualTrigger bool
-	SkaffoldVerbose       bool
+	// SkaffoldVerbose is a flag indicating whether to enable verbose logging for skaffold
+	SkaffoldVerbose bool
 	// ExcludeServicesByEnv is used to exclude an environment's set of services from processing.
 	// Primary use is during render.
 	ExcludeServicesByEnv map[string][]string
@@ -69,11 +82,17 @@ type Runner interface {
 // Project is the base struct for all runners.
 // Runners must initialise a project using Init().
 type Project struct {
-	AppName      string
-	WorkingDir   string
-	UI           kmd.UI
-	manifest     *Manifest
-	config       *runConfig
+	// AppName is the application name.
+	AppName string
+	// WorkingDir is the working directory.
+	WorkingDir string
+	// UI is the user interface.
+	UI kmd.UI
+	// manifest is the project manifest containing information on source compose files, environments etc.
+	manifest *Manifest
+	// config is the project configuration.
+	config *runConfig
+	// eventHandler is the event handler.
 	eventHandler EventHandler
 	ctx          context.Context
 }

@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -45,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // Selector used as labels and selector
@@ -75,7 +75,7 @@ func (env EnvSort) Swap(i, j int) {
 
 // PrintList prints k8s objects
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L153
-func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string][]byte) error {
+func PrintList(objects []runtime.Object, opt ConvertOptions, additionalManifests []string, rendered map[string][]byte) error {
 
 	var f *os.File
 	dirName := getDirName(opt)
@@ -83,19 +83,33 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 	// Check if output file is a directory
 	isDirVal, err := isDir(opt.OutFile)
+
 	if err != nil {
 		log.Error("Directory check failed")
 		return err
 	}
+
 	if opt.CreateChart {
 		isDirVal = true
 	}
+
 	if !isDirVal {
+		// cleanup target directory before creating a new file
+		if err := os.RemoveAll(filepath.Dir(dirName)); err != nil {
+			return err
+		}
+
+		if err := os.MkdirAll(filepath.Dir(dirName), 0755); err != nil {
+			return err
+		}
+
+		// create a new output file
 		f, err = createOutFile(opt.OutFile)
 		if err != nil {
 			log.Error("Error creating output file")
 			return err
 		}
+
 		defer func(f *os.File) {
 			err := f.Close()
 			if err != nil {
@@ -104,18 +118,16 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 		}(f)
 	}
 
-	var files []string
-	var indent int
-
+	indent := 2
 	if opt.YAMLIndent > 0 {
 		indent = opt.YAMLIndent
-	} else {
-		indent = 2
 	}
 
 	// @step print to stdout, or to a single file - it will return a list object
 	if opt.ToStdout || f != nil {
+
 		list := &v1.List{}
+
 		// convert objects to versioned and add them to list
 		for _, object := range objects {
 			versionedObject, err := convertToVersion(object, schema.GroupVersion{})
@@ -125,6 +137,20 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 
 			list.Items = append(list.Items, runtime.RawExtension{Object: versionedObject})
 		}
+
+		// if additional manifests files are specified, add them to the generated objects list
+		if len(additionalManifests) > 0 {
+			for _, extraManifest := range additionalManifests {
+
+				ro, err := fileToRuntimeObject(extraManifest)
+				if err != nil {
+					return err
+				}
+
+				list.Items = append(list.Items, runtime.RawExtension{Object: ro})
+			}
+		}
+
 		// version list itself
 		listVersion := schema.GroupVersion{Group: "", Version: "v1"}
 		list.Kind = "List"
@@ -140,16 +166,17 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			return err
 		}
 
-		printVal, err := print("", dirName, "", data, opt.ToStdout, opt.GenerateJSON, f)
+		file, err := print(dirName, "", "", data, opt.ToStdout, opt.GenerateJSON, f)
 		if err != nil {
 			log.Error("Printing manifests failed")
 			return err
 		}
 
-		files = append(files, printVal)
-		rendered[printVal] = data
+		rendered[file] = data
+
 	} else {
 		// @step output directory specified - print all objects individually to that directory
+
 		finalDirName := dirName
 
 		// if that's a chart it'll spit things out to "templates" subdir
@@ -165,13 +192,27 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 			return err
 		}
 
-		var file string
+		// if additional manifests files are specified, add them to the generated objects
+		if len(additionalManifests) > 0 {
+			for _, extraManifest := range additionalManifests {
+
+				ro, err := fileToRuntimeObject(extraManifest)
+				if err != nil {
+					return err
+				}
+
+				objects = append(objects, ro)
+			}
+		}
+
 		// create a separate file for each provider
 		for _, v := range objects {
+
 			versionedObject, err := convertToVersion(v, schema.GroupVersion{})
 			if err != nil {
 				return err
 			}
+
 			data, err := marshal(versionedObject, opt.GenerateJSON, indent)
 			if err != nil {
 				return err
@@ -197,42 +238,67 @@ func PrintList(objects []runtime.Object, opt ConvertOptions, rendered map[string
 				// Use reflect to access ObjectMeta struct inside runtime.Object.
 				// cast it to correct type - meta.ObjectMeta
 				objectMeta = val.FieldByName("ObjectMeta").Interface().(meta.ObjectMeta)
-
 			}
 
-			file, err = print(objectMeta.Name, finalDirName, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f)
+			file, err := print(finalDirName, objectMeta.Name, strings.ToLower(typeMeta.Kind), data, opt.ToStdout, opt.GenerateJSON, f)
 			if err != nil {
 				log.Error("Printing manifests failed")
 				return err
 			}
 
-			files = append(files, file)
 			rendered[file] = data
 		}
 	}
 	// @step for helm output generate chart directory structure
 	if opt.CreateChart {
-		err = generateHelm(dirName)
-		if err != nil {
+		if err = generateHelm(dirName); err != nil {
 			log.Error("Couldn't generate HELM chart")
 			return err
 		}
 	}
+
 	return nil
+}
+
+// fileToRuntimeObject reads a file and converts its contents to a runtime.Object
+func fileToRuntimeObject(file string) (runtime.Object, error) {
+	// @step: create a new decoder
+	decoder := scheme.Codecs.UniversalDeserializer()
+
+	// @step: read the file
+	path, err := filepath.Abs(file)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// @step: decode the file
+	runtimeObject, _, err := decoder.Decode(data, nil, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("malformed manifest file %s", file))
+	}
+
+	return runtimeObject, nil
 }
 
 // print either renders to stdout or to file/s
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/utils.go#L176
-func print(name, path string, trailing string, data []byte, toStdout, generateJSON bool, f *os.File) (string, error) {
+func print(path, name, kind string, data []byte, toStdout, generateJSON bool, f *os.File) (string, error) {
 	file := ""
+
 	if generateJSON {
-		file = fmt.Sprintf("%s-%s.json", name, trailing)
+		file = fmt.Sprintf("%s-%s.json", name, kind)
 	} else {
-		file = fmt.Sprintf("%s-%s.yaml", name, trailing)
+		file = fmt.Sprintf("%s-%s.yaml", name, kind)
 	}
+
 	if toStdout {
 		_, _ = fmt.Fprintf(os.Stdout, "%s\n", string(data))
 		return "", nil
+
 	} else if f != nil {
 		// Write all content to a single file f
 		if _, err := f.WriteString(fmt.Sprintf("%s\n", string(data))); err != nil {
@@ -240,10 +306,11 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 			return "", err
 		}
 		_ = f.Sync()
+
 	} else {
 		// Write content separately to each file
 		file = filepath.Join(path, file)
-		if err := ioutil.WriteFile(file, []byte(data), 0644); err != nil {
+		if err := os.WriteFile(file, []byte(data), 0644); err != nil {
 			log.ErrorWithFields(log.Fields{
 				"file": file,
 			}, "Failed to write content to a file")
@@ -251,6 +318,7 @@ func print(name, path string, trailing string, data []byte, toStdout, generateJS
 		}
 		log.Debugf("%s file %q created", Name, file)
 	}
+
 	return file, nil
 }
 
@@ -284,7 +352,7 @@ func generateHelm(dirName string) error {
 
 	// @step Create the readme file
 	readme := "This chart was created by Kompose\n"
-	err = ioutil.WriteFile(dirName+string(os.PathSeparator)+"README.md", []byte(readme), 0644)
+	err = os.WriteFile(dirName+string(os.PathSeparator)+"README.md", []byte(readme), 0644)
 	if err != nil {
 		return err
 	}
@@ -308,7 +376,7 @@ home:
 	var chartData bytes.Buffer
 	_ = t.Execute(&chartData, details)
 
-	err = ioutil.WriteFile(dirName+string(os.PathSeparator)+"Chart.yaml", chartData.Bytes(), 0644)
+	err = os.WriteFile(dirName+string(os.PathSeparator)+"Chart.yaml", chartData.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -503,7 +571,7 @@ func durationStrToSecondsInt(s string) (*int32, error) {
 // getContentFromFile gets the content from the file..
 // @orig: https://github.com/kubernetes/kompose/blob/master/pkg/transformer/kubernetes/k8sutils.go#L775
 func getContentFromFile(file string) (string, error) {
-	fileBytes, err := ioutil.ReadFile(file)
+	fileBytes, err := os.ReadFile(file)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"file": file,

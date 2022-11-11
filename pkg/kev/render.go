@@ -212,13 +212,7 @@ func (r *RenderRunner) RenderFromComposeToK8sManifests() (map[string]string, err
 	manifestFormat := r.config.ManifestFormat
 	r.UI.Header(fmt.Sprintf("Rendering manifests, format: %s...", manifestFormat))
 
-	results, err := r.manifest.RenderWithConvertor(
-		converter.Factory(manifestFormat, r.UI),
-		r.config.OutputDir,
-		r.config.ManifestsAsSingleFile,
-		r.config.Envs,
-		r.config.ExcludeServicesByEnv,
-	)
+	results, err := r.manifest.RenderWithConvertor(converter.Factory(manifestFormat, r.UI), r.config)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +234,7 @@ func printRenderProjectWithOptionsError(appName string, ui kmd.UI) {
 	)
 }
 
-func printRenderProjectWithOptionsSuccess(r *RenderRunner, results map[string]string, envs Environments, manifestFormat string) error {
+func printRenderProjectWithOptionsSuccess(r *RenderRunner, results map[string]string, envs Environments) error {
 	var namedValues []kmd.NamedValue
 	for _, env := range envs {
 		namedValues = append(namedValues, kmd.NamedValue{Name: env.Name, Value: results[env.Name]})
@@ -255,7 +249,7 @@ func printRenderProjectWithOptionsSuccess(r *RenderRunner, results map[string]st
 	}
 
 	ui.Output(
-		fmt.Sprintf("A set of '%s' manifests have been generated:", manifestFormat),
+		fmt.Sprintf("A set of '%s' manifests have been generated:", r.config.ManifestFormat),
 		kmd.WithStyle(kmd.SuccessStyle),
 	)
 	ui.NamedValues(namedValues, kmd.WithStyle(kmd.SuccessStyle))
