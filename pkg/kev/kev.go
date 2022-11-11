@@ -64,7 +64,7 @@ func RenderProjectWithOptions(workingDir string, opts ...Options) error {
 		return err
 	}
 
-	return printRenderProjectWithOptionsSuccess(runner, results, envs, runner.config.ManifestFormat)
+	return printRenderProjectWithOptionsSuccess(runner, results, envs)
 }
 
 // DevWithOptions runs a continuous development cycle detecting project updates and

@@ -282,7 +282,7 @@ func (m *Manifest) MergeEnvIntoSources(e *Environment) (*ComposeProject, error) 
 }
 
 // RenderWithConvertor renders K8s manifests with specific converter
-func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, singleFile bool, envs []string, excluded map[string][]string) (map[string]string, error) {
+func (m *Manifest) RenderWithConvertor(c converter.Converter, runc *runConfig) (map[string]string, error) {
 	errSg := m.UI.StepGroup()
 	defer errSg.Done()
 
@@ -291,7 +291,7 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		return nil, err
 	}
 
-	filteredEnvs, err := m.GetEnvironments(envs)
+	filteredEnvs, err := m.GetEnvironments(runc.Envs)
 	if err != nil {
 		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
@@ -313,7 +313,8 @@ func (m *Manifest) RenderWithConvertor(c converter.Converter, outputDir string, 
 		files[env.Name] = append(sourcesFiles, env.File)
 	}
 
-	outputPaths, err := c.Render(singleFile, outputDir, m.getWorkingDir(), projects, files, rendered, excluded)
+	outputPaths, err := c.Render(runc.ManifestsAsSingleFile, runc.OutputDir, m.getWorkingDir(),
+		projects, files, runc.AdditionalManifests, rendered, runc.ExcludeServicesByEnv)
 	if err != nil {
 		renderStepError(m.UI, errSg.Add(""), renderStepRenderGeneral, err)
 		return nil, err
