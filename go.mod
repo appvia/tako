@@ -22,6 +22,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.19.7
 	k8s.io/apimachinery v0.19.7
+	k8s.io/client-go v0.19.7
 )
 
 require (
@@ -181,7 +182,6 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/client-go v0.19.7 // indirect
 	k8s.io/klog/v2 v2.5.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210113233702-8566a335510f // indirect
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73 // indirect
