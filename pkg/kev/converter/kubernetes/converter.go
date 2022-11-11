@@ -122,7 +122,7 @@ func (c *K8s) Render(singleFile bool,
 		}
 
 		// @step Produce objects
-		err = PrintList(objects, convertOpts, rendered)
+		err = PrintList(objects, convertOpts, additionalFiles, rendered)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not render %s manifests to disk, details:\n", Name)
 		}
