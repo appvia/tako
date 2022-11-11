@@ -241,6 +241,14 @@ func WithManifestsAsSingleFile(c bool) Options {
 	}
 }
 
+// WithAdditionalManifests configures a project's run config with additional manifests that should be added
+// in the output directory.
+func WithAdditionalManifests(c []string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.AdditionalManifests = c
+	}
+}
+
 // WithOutputDir configures a project's run config with a location to render a project's K8s manifests.
 func WithOutputDir(c string) Options {
 	return func(project *Project, cfg *runConfig) {

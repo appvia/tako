@@ -70,6 +70,13 @@ func init() {
 		"Target environment for which deployment files should be rendered",
 	)
 
+	flags.StringSliceP(
+		"additional-manifests",
+		"a",
+		[]string{},
+		"Additional Kubernetes manifests to be included in the output",
+	)
+
 	rootCmd.AddCommand(renderCmd)
 }
 
@@ -79,6 +86,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 	dir, _ := cmd.Flags().GetString("dir")
 	envs, _ := cmd.Flags().GetStringSlice("environment")
 	verbose, _ := cmd.Root().Flags().GetBool("verbose")
+	additionalManifests, _ := cmd.Flags().GetStringSlice("additional-manifests")
 
 	// The working directory is always the current directory.
 	// This ensures created manifest yaml entries are portable between users and require no path fixing.
@@ -88,6 +96,7 @@ func runRenderCmd(cmd *cobra.Command, _ []string) error {
 		kev.WithAppName(rootCmd.Use),
 		kev.WithManifestFormat(format),
 		kev.WithManifestsAsSingleFile(singleFile),
+		kev.WithAdditionalManifests(additionalManifests),
 		kev.WithOutputDir(dir),
 		kev.WithEnvs(envs),
 		kev.WithLogVerbose(verbose),
