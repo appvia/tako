@@ -56,11 +56,13 @@ func (c *K8s) Render(singleFile bool,
 	dir, workDir string,
 	projects map[string]*composego.Project,
 	files map[string][]string,
+	additionalFiles []string,
 	rendered map[string][]byte,
 	excluded map[string][]string) (map[string]string, error) {
 
 	renderOutputPaths := map[string]string{}
 	envs := getSortedEnvs(projects)
+
 	for _, env := range envs {
 		project := projects[env]
 
