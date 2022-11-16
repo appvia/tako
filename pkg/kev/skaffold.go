@@ -345,10 +345,19 @@ func (s *SkaffoldManifest) AddProfileIfNotPresent(p latest.Profile) {
 func (s *SkaffoldManifest) SetBuildArtifacts(analysis *Analysis, project *ComposeProject) {
 	artifacts := []*latest.Artifact{}
 
+	existingArtifacts := s.Build.Artifacts
+
 	for context, image := range collectBuildArtifacts(analysis, project) {
 		artifact := &latest.Artifact{
 			ImageName: image,
 			Workspace: context,
+		}
+
+		// if skaffold contains sync rules for particular artifact, we need to preserve them
+		for _, a := range existingArtifacts {
+			if a.ImageName == image && a.Workspace == context && a.Sync != nil {
+				artifact.Sync = a.Sync
+			}
 		}
 
 		if analysis == nil || analysis.Dockerfiles == nil || len(analysis.Dockerfiles) == 0 {
