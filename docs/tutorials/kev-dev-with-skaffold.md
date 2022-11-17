@@ -97,4 +97,8 @@ Additional OPTIONAL flags for Skaffold enabled workflow:
 
 When the dev loop is interrupted with Ctrl+C it will automatically cleanup all deployed K8s objects from a target namespace and attempt to prune locally built docker images.
 
+![][diagram]
+
 _NOTE: Image pruning might take some time and in some cases won't remove stale docker images. it's therefore advised that local images are periodically pruned manually._
+
+[diagram]: ../images/kev-with-skaffold.svg
