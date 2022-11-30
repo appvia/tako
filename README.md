@@ -5,7 +5,7 @@
 ![Stability:Beta](https://img.shields.io/badge/stability-beta-orange)
 ![CircleCI](https://img.shields.io/circleci/build/github/appvia/kev/master)
 ![GitHub tag (latest SemVer)](https://img.shields.io/github/v/release/appvia/kev)
-![License: Apache-2.0](https://img.shields.io/github/license/appvia/kev)
+[![License: Apache-2.0](https://img.shields.io/github/license/appvia/kev)](https://github.com/appvia/kev/blob/master/LICENSE)
 
 
 Kev helps developers port and iterate Docker Compose apps onto Kubernetes. It understands the Docker Compose application topology and prepares it for deployment in (multiple) target environments, with minimal user input.
