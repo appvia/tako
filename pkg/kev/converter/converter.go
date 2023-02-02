@@ -18,7 +18,8 @@ package converter
 
 import (
 	"github.com/appvia/kev/pkg/kev/converter/dummy"
-	"github.com/appvia/kev/pkg/kev/converter/kubernetes"
+	kubernetes "github.com/appvia/kev/pkg/kev/converter/kubernetes"
+	kustomize "github.com/appvia/kev/pkg/kev/converter/kustomize"
 	kmd "github.com/appvia/komando"
 	composego "github.com/compose-spec/compose-go/types"
 )
@@ -41,6 +42,13 @@ func Factory(name string, ui kmd.UI) Converter {
 	case "dummy":
 		// Dummy converter example
 		return dummy.New()
+	case "kustomize":
+		// Kubernetes manifests converter by default
+		if ui == nil {
+			return kustomize.New()
+		}
+		return kustomize.NewWithUI(ui)
+
 	default:
 		// Kubernetes manifests converter by default
 		if ui == nil {
