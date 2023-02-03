@@ -1,5 +1,5 @@
 {
-  "name": "kev-node-app",
+  "name": "tako-node-app",
   "version": "1.0.0",
   "description": "Docker-Compose Node.js app on Kubernetes",
   "author": "Appvia Ltd <info@appvia.io>",

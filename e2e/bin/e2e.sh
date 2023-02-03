@@ -26,7 +26,7 @@ export YELLOW='\e[0;33m'
 export RED='\e[0;31m'
 export PATH=${PATH}:${PWD}/bin
 export KUBECTL="kubectl"
-export E2E_KEV_ENV='e2e'
+export E2E_TAKO_ENV='e2e'
 export E2E_KUBECONFIG="${PWD}/hack/e2e/kubeconfig"
 
 log() { (printf 2>/dev/null "$@${NC}\n"); }
@@ -36,7 +36,7 @@ failed() { log "${YELLOW}[$(date +"%T")] [FAIL] $@"; }
 usage() {
   cat <<EOF
   Usage: $(basename $0)
-  --build-cli    <bool>    : indicates should build the kev cli (defaults: ${BUILD_CLI})
+  --build-cli    <bool>    : indicates should build the tako cli (defaults: ${BUILD_CLI})
   -h|--help                : display this usage menu
 EOF
   if [[ -n $@ ]]; then
@@ -73,7 +73,7 @@ can-run-e2e(){
 
 build-cli() {
   if [[ ${BUILD_CLI} == true ]]; then
-    announce "Building Kev"
+    announce "Building Tako"
     make build
   fi
 }

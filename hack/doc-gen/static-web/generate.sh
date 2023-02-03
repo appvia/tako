@@ -14,14 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-KEV_ROOT=$(cd "$(dirname "$0")/../../.."; pwd)
+TAKO_ROOT=$(cd "$(dirname "$0")/../../.."; pwd)
 
 if [[ $# -gt 1 ]]; then
   echo "usage: ${BASH_SOURCE} [DIRECTORY]"
   exit 1
 fi
 
-STATIC_WEB_GENERATOR_DIR=${KEV_ROOT}/hack/doc-gen/static-web
+STATIC_WEB_GENERATOR_DIR=${TAKO_ROOT}/hack/doc-gen/static-web
 
 OUTPUT_DIR="$@"
 if [[ -z "${OUTPUT_DIR}" ]]; then
@@ -33,4 +33,4 @@ mkdir -p ${OUTPUT_DIR}
 npm install
 
 # Generate documentation as static website to OUTPUT_DIR
-hugo server -e production -c ${KEV_ROOT}/docs -d ${OUTPUT_DIR} --cleanDestinationDir
+hugo server -e production -c ${TAKO_ROOT}/docs -d ${OUTPUT_DIR} --cleanDestinationDir

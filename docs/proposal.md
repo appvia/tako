@@ -1,6 +1,6 @@
 ---
 weight: 1
-title: Kev proposal
+title: Tako proposal
 ---
 
 # Proposal

@@ -1,8 +1,8 @@
-## Wordpress with MySQL - using Kev
+## Wordpress with MySQL - using Tako
 
 This example defines one of the basic setups for Wordpress.
 
-It also contains all the _Kev_ artefacts required to migrate the app from a Docker Compose Workflow to Kubernetes.
+It also contains all the _Tako_ artefacts required to migrate the app from a Docker Compose Workflow to Kubernetes.
 
 Project structure:
 ```

@@ -1,11 +1,11 @@
 ---
 weight: 14
-title: Kev CI workflow example with a simple Node.js App
+title: Tako CI workflow example with a simple Node.js App
 ---
 
 # CI workflow example with a simple Node.js app
 
-This example walks through using Kev in a commit based CI pipeline.
+This example walks through using Tako in a commit based CI pipeline.
 
 You will setup CircleCI to render, build, push and deploy to a remote staging environment.
 
@@ -14,9 +14,9 @@ We assume that you,
 - Have a [CircleCI](https://circleci.com/) account connected to your Git repo.
 - Have a [kube-config file](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) with access to a remote cluster.
 
-## Get Kev
+## Get Tako
 
-* Download [Kev](https://github.com/appvia/kev/releases/latest) & add it your `PATH`.
+* Download [Tako](https://github.com/appvia/tako/releases/latest) & add it your `PATH`.
 
 ## Prepare for CI
 
@@ -71,7 +71,7 @@ Here is the [CircleCI config file](../../examples/node-app/.circleci/config.yaml
 
 It assumes the necessary **CircleCI Environment Variables have been setup**, and the target cluster has a `staging` namespace already setup.
 
-It also depends on the Kev staging environment that we will be creating shortly. Here's the relevant step that performs the actual deployment,
+It also depends on the Tako staging environment that we will be creating shortly. Here's the relevant step that performs the actual deployment,
 
 > CircleCI Deploy step: render staging, use Skaffold to build, push and deploy your app to Kubernetes.
 ```yaml
@@ -81,7 +81,7 @@ It also depends on the Kev staging environment that we will be creating shortly.
           name: Deploy
           command: |
             echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
-            ./bin/kev render -e staging
+            ./bin/tako render -e staging
             ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
 ...
 ...
@@ -91,12 +91,12 @@ It also depends on the Kev staging environment that we will be creating shortly.
 
 To follow the tutorial, make a copy of the project directory (`./examples/node-app`).
 
-> Inside the copied project directory (`./examples/node-app`) instruct Kev to:
+> Inside the copied project directory (`./examples/node-app`) instruct Tako to:
 > * create a `staging` based Kubernetes environment configuration.
 > * prepare the app for use with [Skaffold](https://skaffold.dev/).
 
 ```sh
-$ kev init -e staging --skaffold
+$ tako init -e staging --skaffold
 ```
 
 You will notice the staging environment configuration file has been created:
@@ -109,7 +109,7 @@ You will notice the staging environment configuration file has been created:
 
 Adjust your Kubernetes `staging` application parameters for each of the components as needed. This is done via Compose [extensions](../../docs/reference/config-params.md).
 
-Also, you'll find that Kev has bootstrapped a Skaffold config file (`skaffold.yaml`). If a `skaffold.yaml` file previously existed, then the additional profiles will be added there.
+Also, you'll find that Tako has bootstrapped a Skaffold config file (`skaffold.yaml`). If a `skaffold.yaml` file previously existed, then the additional profiles will be added there.
 
 Our CI pipeline will be using this Skaffold config file to power builds, pushes and deployments.
 

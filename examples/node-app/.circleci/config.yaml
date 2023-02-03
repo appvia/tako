@@ -30,12 +30,12 @@ jobs:
             sudo apt-get update
             sudo apt install -y curl git
       - run:
-          name: Installing Kev
+          name: Installing Tako
           command: |
             curl --request GET -sL \
-                --url https://github.com/appvia/kev/releases/latest/download/kev-linux-amd64 \
-                --output bin/kev
-            chmod +x bin/kev
+                --url https://github.com/appvia/tako/releases/latest/download/tako-linux-amd64 \
+                --output bin/tako
+            chmod +x bin/tako
       - run:
           name: Installing Skaffold
           command: |
@@ -47,7 +47,7 @@ jobs:
           name: Deploy
           command: |
             echo ${KUBE_CONFIG_STAGING} | base64 -d > ${KUBE_CONFIG_STAGING_FILE}
-            ./bin/kev render -e staging
+            ./bin/tako render -e staging
             ./bin/skaffold run --kubeconfig ${KUBE_CONFIG_STAGING_FILE} --kube-context ${KUBE_CONTEXT_STAGING} --profile staging-env --namespace staging
 
 workflows:

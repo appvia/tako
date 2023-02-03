@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Help us identify and fix issues in Kev
+about: Help us identify and fix issues in Tako
 title: "[BUG]"
 labels: bug
 assignees: ''
@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 <!--
-Thank you for helping to improve Kev!
+Thank you for helping to improve Tako!
 
 Please search open issues before raising a new one. This project uses issues to
 track both bugs and new features.
@@ -16,10 +16,10 @@ track both bugs and new features.
 
 ### Short issue description
 <!--
-Please let us know what behaviour you expected and how Kev actually behaved.
+Please let us know what behaviour you expected and how Tako actually behaved.
 -->
 
-Kev version:
+Tako version:
 OS (Linux/Mac/Windows..):
 Docker Compose version:
 Kubernetes version:

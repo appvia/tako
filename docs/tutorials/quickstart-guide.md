@@ -5,16 +5,16 @@ title: Quick start guide
 
 # Quickstart
 
-- `kev init` - identifies a project's Compose Kubernetes source files and creates Compose environment overrides.
-- `kev render` - detects, applies any config changes and generates deployment manifests.
-- `kev help` - run it if you're a little lost.
+- `tako init` - identifies a project's Compose Kubernetes source files and creates Compose environment overrides.
+- `tako render` - detects, applies any config changes and generates deployment manifests.
+- `tako help` - run it if you're a little lost.
 
 ## Initialise project
 
 Run the following command within your project directory:
 
 ```sh
-$ kev init
+$ tako init
 ```
 
 This identifies the default `docker-compose.yaml` and (if present) `docker-compose.override.yaml` files in your project directory. They will be used as the source of truth for your application deployment in Kubernetes.
@@ -24,7 +24,7 @@ Also, it creates an implicit sandbox `dev` environment and its Compose override 
 Here's another example. It uses an alternate `docker-compose` file with `stage` & `prod` environments:
 
 ```sh
-$ kev init -f my-docker-compose.yaml -e stage -e prod
+$ tako init -f my-docker-compose.yaml -e stage -e prod
 ```
 
 It makes use of,
@@ -37,16 +37,16 @@ Creating the files below in your project directory:
 ├── docker-compose.env.dev.yaml         # dev sandbox Compose environment override file
 ├── docker-compose.env.prod.yaml        # prod Compose environment override file
 ├── docker-compose.env.stage.yaml       # stage Compose environment override file
-├── appmeta.yaml                        # kev project manifest
+├── appmeta.yaml                        # Tako project manifest
 ├── ...
 ```
 
-Here's what happened, Kev has,
+Here's what happened, Tako has,
 - Inferred the configuration details already present in your compose Kubernetes deployment sources.
 - Assigned sensible defaults for any config it couldn't infer.
 - Created Compose overrides files for the `dev`, `prod` and `stage` environments.
 
-That's it, your Kev project is now ready!
+That's it, your Tako project is now ready!
 
 From now on it can,
 - Detect edits in your source compose file.
@@ -62,7 +62,7 @@ We now need to generate manifests based on your Docker Compose config and enviro
 Run the following command from your project root:
 
 ```sh
-$ kev render
+$ tako render
 ```
 
 The command above,
@@ -106,6 +106,6 @@ $ kubectl apply -f k8s/stage
 
 ### Other deployment tooling
 
-With Kev, you can use any Kubernetes deployment tool or framework you're familiar with, e.g `skaffold`, `tilt`, etc...
+With Tako, you can use any Kubernetes deployment tool or framework you're familiar with, e.g `skaffold`, `tilt`, etc...
 
 Check our [Roadmap][roadmap] for upcoming planned integrations.
