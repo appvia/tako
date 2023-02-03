@@ -1,4 +1,4 @@
-module github.com/appvia/kev
+module github.com/appvia/tako
 
 go 1.19
 

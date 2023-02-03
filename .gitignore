@@ -1,18 +1,18 @@
-### kev dirs, files & stuff ###
-.kev/*
-**/kev.yaml
-**/kev.yml
-**/docker-compose.kev.*.yaml
+### tako dirs, files & stuff ###
+.tako/*
+**/tako.yaml
+**/tako.yml
+**/docker-compose.tako.*.yaml
 k8s/*
 docker-compose.yaml
 docker-compose.override.yaml
-!/pkg/kev/testdata/**/*.yaml
-!/examples/**/*.yaml
 skaffold.yaml
+!/pkg/tako/testdata/**/*.yaml
+!/examples/**/*.yaml
 
 ### Node app example
-examples/node-app/docker-compose.kev*
-examples/node-app/kev.yaml
+examples/node-app/docker-compose.tako*
+examples/node-app/tako.yaml
 examples/node-app/k8s
 
 ### Wordpress app example

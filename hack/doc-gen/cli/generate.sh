@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-KEV_ROOT=$(cd "$(dirname "$0")/../../.."; pwd)
+TAKO_ROOT=$(cd "$(dirname "$0")/../../.."; pwd)
 
 if [[ $# -gt 1 ]]; then
   echo "usage: ${BASH_SOURCE} [DIRECTORY]"
@@ -23,20 +23,20 @@ fi
 
 OUTPUT_DIR="$@"
 if [[ -z "${OUTPUT_DIR}" ]]; then
-  OUTPUT_DIR=${KEV_ROOT}/docs/cli
+  OUTPUT_DIR=${TAKO_ROOT}/docs/cli
 fi
 
 mkdir -p ${OUTPUT_DIR}
 
-go run ${KEV_ROOT}/hack/doc-gen/cli/kev.go ${OUTPUT_DIR}
+go run ${TAKO_ROOT}/hack/doc-gen/cli/tako.go ${OUTPUT_DIR}
 
 # inject header for hugo
 
 echo """---
 weight: 100
-title: Kev CLI Reference
+title: Tako CLI Reference
 ---
 # CLI Reference
-""" | cat - ${OUTPUT_DIR}/kev.md > ${OUTPUT_DIR}/temp && mv ${OUTPUT_DIR}/temp ${OUTPUT_DIR}/kev.md
+""" | cat - ${OUTPUT_DIR}/tako.md > ${OUTPUT_DIR}/temp && mv ${OUTPUT_DIR}/temp ${OUTPUT_DIR}/tako.md
 
 

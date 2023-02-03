@@ -24,7 +24,7 @@ setup() {
 
 teardown() {
   [ -f "$BATS_TEST_DIRNAME/appmeta.yaml" ] && rm -f "$BATS_TEST_DIRNAME/appmeta.yaml"
-  [ -f "$BATS_TEST_DIRNAME/docker-compose.env.$E2E_KEV_ENV.yaml" ] && rm -rf "$BATS_TEST_DIRNAME/docker-compose.env.$E2E_KEV_ENV.yaml"
+  [ -f "$BATS_TEST_DIRNAME/docker-compose.env.$E2E_TAKO_ENV.yaml" ] && rm -rf "$BATS_TEST_DIRNAME/docker-compose.env.$E2E_TAKO_ENV.yaml"
   [ -d "$TMP/k8s" ] && rm -rf "$TMP/k8s"
   cd -
 }
@@ -34,11 +34,11 @@ create-namespace(){
 }
 
 generate-manifests() {
-  kev init -e $E2E_KEV_ENV && kev render -d "$TMP/k8s" -e $E2E_KEV_ENV
+  tako init -e $E2E_TAKO_ENV && tako render -d "$TMP/k8s" -e $E2E_TAKO_ENV
 }
 
 apply-manifests() {
-  $KUBECTL -n $E2E_NS apply -f "$TMP/k8s/$E2E_KEV_ENV"
+  $KUBECTL -n $E2E_NS apply -f "$TMP/k8s/$E2E_TAKO_ENV"
 }
 
 gen-apply-manifests() {

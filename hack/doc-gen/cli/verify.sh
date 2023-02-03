@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-KEV_ROOT=$(realpath $(dirname ${BASH_SOURCE})/../../..)
+TAKO_ROOT=$(realpath $(dirname ${BASH_SOURCE})/../../..)
 DOC_GEN_DIR=$(dirname "${BASH_SOURCE}")
-DOCS_DIR=${KEV_ROOT}/docs/cli
+DOCS_DIR=${TAKO_ROOT}/docs/cli
 TMP_DIR="$(mktemp -d)"
 
 trap cleanup INT TERM HUP EXIT

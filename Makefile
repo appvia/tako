@@ -1,11 +1,11 @@
 SHELL=/bin/sh -e
-NAME=kev
+NAME=tako
 AUTHOR=appvia
 AUTHOR_EMAIL=info@appvia.io
 BUILD_TIME=$(shell date '+%s')
 CURRENT_TAG=$(shell git tag --points-at HEAD)
 GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
-GIT_SHA=$(shell git --no-pager describe --always --dirty)
+GIT_SHA=$(shell git --no-pager describe --tags --always --dirty)
 GIT_LAST_TAG_SHA=$(shell git rev-list --tags='v[0.9]*.[0-9]*.[0-9]*' --max-count=1)
 GIT_LAST_TAG=$(shell git describe --tags $(GIT_LAST_TAG_SHA))
 HARDWARE=$(shell uname -m)
@@ -21,12 +21,12 @@ else
 	VERSION ?= $(GIT_LAST_TAG)
 endif
 
-LFLAGS ?= -X 'github.com/appvia/kev/pkg/kev/config.AppName=${NAME}' \
-		  -X 'github.com/appvia/kev/pkg/kev/config.Tag=${GIT_LAST_TAG}' \
- 		  -X 'github.com/appvia/kev/pkg/kev/config.GitSHA=${GIT_SHA}' \
- 		  -X 'github.com/appvia/kev/pkg/kev/config.Compiled=${BUILD_TIME}' \
- 		  -X 'github.com/appvia/kev/pkg/kev/config.Release=${VERSION}' \
- 		  -X 'github.com/appvia/kev/pkg/kev/config.GitBranch=${GIT_BRANCH}'
+LFLAGS ?= -X 'github.com/appvia/tako/pkg/tako/config.AppName=${NAME}' \
+		  -X 'github.com/appvia/tako/pkg/tako/config.Tag=${GIT_LAST_TAG}' \
+ 		  -X 'github.com/appvia/tako/pkg/tako/config.GitSHA=${GIT_SHA}' \
+ 		  -X 'github.com/appvia/tako/pkg/tako/config.Compiled=${BUILD_TIME}' \
+ 		  -X 'github.com/appvia/tako/pkg/tako/config.Release=${VERSION}' \
+ 		  -X 'github.com/appvia/tako/pkg/tako/config.GitBranch=${GIT_BRANCH}'
 
 CLI_PLATFORMS=darwin linux windows
 CLI_ARCHITECTURES=amd64 arm64
@@ -49,7 +49,7 @@ package:
 	@rm -rf ./release
 	@mkdir ./release
 	@$(MAKE) package-cli
-	cd ./release && sha256sum * > kev.sha256sums
+	cd ./release && sha256sum * > tako.sha256sums
 
 package-cli:
 	@echo "--> Compiling CLI static binaries"

@@ -1,8 +1,8 @@
 theme = "docuapi"
 themesdir = "themes"
 languageCode = "en-gb"
-baseurl = "https://docs.appvia.io/kev"
-title = "Kev Reference"
+baseurl = "https://docs.appvia.io/tako"
+title = "Tako Reference"
 relativeurls = true
 canonifyurls = true
 
@@ -42,7 +42,7 @@ name = ""
 [languages.en]
 languageName = "English"
 weight = 2
-title = "Kev Reference"
+title = "Tako Reference"
 
 # Left sidebar footer items. Use HTMl or Markdown.
 toc_footers = []
