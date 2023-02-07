@@ -20,9 +20,9 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.19.7
-	k8s.io/apimachinery v0.19.7
-	k8s.io/client-go v0.19.7
+	k8s.io/api v0.20.0
+	k8s.io/apimachinery v0.20.0
+	k8s.io/client-go v0.20.0
 )
 
 require (
@@ -33,10 +33,10 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.2.7 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest v0.10.2 // indirect
+	github.com/Azure/go-autorest/autorest v0.11.1 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.9.5 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
-	github.com/Azure/go-autorest/logger v0.1.0 // indirect
+	github.com/Azure/go-autorest/logger v0.2.0 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.13.0 // indirect
@@ -184,7 +184,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/klog/v2 v2.5.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210113233702-8566a335510f // indirect
-	k8s.io/utils v0.0.0-20200729134348-d5654de09c73 // indirect
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	knative.dev/pkg v0.0.0-20201119170152-e5e30edc364a // indirect
 	sigs.k8s.io/kustomize/kyaml v0.9.2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2 // indirect
