@@ -311,3 +311,27 @@ func WithLogVerbose(c bool) Options {
 		cfg.LogVerbose = c
 	}
 }
+
+// WithPatchManifestsDir configures a project's run config with a location of previously rendered
+// K8s manifests that should be now revisited (e.g. patched with up to date image tags)
+func WithPatchManifestsDir(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.PatchManifestsDir = c
+	}
+}
+
+// WithPatchImages configures a project's run config with a list of images that should be used to patch
+// existing tako generated manifests for specified services.
+func WithPatchImages(c []string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.PatchImages = c
+	}
+}
+
+// WithPatchOutputDir configures a project's run config with a flag that indicates whether
+// to store patched manifests to a dedicated directory or override the original manifests in source directory.
+func WithPatchOutputDir(c string) Options {
+	return func(project *Project, cfg *runConfig) {
+		cfg.PatchOutputDir = c
+	}
+}

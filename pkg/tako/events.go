@@ -72,6 +72,10 @@ func (e RunnerEvent) String() string {
 		return "DevLoopStarting"
 	case DevLoopIterated:
 		return "DevLoopIterated"
+	case PrePatchManifest:
+		return "PrePatchManifest"
+	case PostPatchManifest:
+		return "PostPatchManifest"
 	default:
 		return ""
 	}
@@ -104,6 +108,8 @@ const (
 	SecretsDetected
 	DevLoopStarting
 	DevLoopIterated
+	PrePatchManifest
+	PostPatchManifest
 )
 
 // newEventError returns an event error wrapping the original error

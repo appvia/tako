@@ -55,6 +55,14 @@ type runConfig struct {
 	ExcludeServicesByEnv map[string][]string
 	// LogVerbose enables/disables verbose logging at a debug log level.
 	LogVerbose bool
+	// PatchManifestsDir is a directory where previously generated manifests that should be patched are stored.
+	PatchManifestsDir string
+	// PatchImages is a list of images that should be used when patching existing manifests.
+	PatchImages []string
+	// PatchOutputDir is a directory where patched manifests should be stored.
+	// Output directory structure will reflect that of the source directory tree.
+	// If patch output directory is not specified then manifests will be overriden in the source directory.
+	PatchOutputDir string
 }
 
 // Options helps configure running project commands
@@ -109,6 +117,11 @@ type RenderRunner struct {
 
 // DevRunner runs the required sequences to use dev with a project.
 type DevRunner struct {
+	*Project
+}
+
+// PatchRunner runs the required sequences to use patch with a project.
+type PatchRunner struct {
 	*Project
 }
 
