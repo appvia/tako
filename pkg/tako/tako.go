@@ -80,3 +80,17 @@ func DevWithOptions(workingDir string, opts ...Options) error {
 
 	return nil
 }
+
+// PatchWithOptions patches kubernetes manifestes rendered with Tako and stored in the directory
+// by substituting docker images referenced by specified compose service names. All mutations are performed in place.
+func PatchWithOptions(workingDir string, opts ...Options) error {
+	runner := NewPatchRunner(workingDir, opts...)
+	ui := runner.UI
+
+	if err := runner.Run(); err != nil {
+		printPatchWithOptionsError(runner.AppName, ui)
+		return err
+	}
+
+	return printPatchWithOptionsSuccess(runner)
+}
