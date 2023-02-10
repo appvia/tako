@@ -65,7 +65,7 @@ func init() {
 		`Path to directory where patched manifests should be stored.
 ⌙ Output directory structure will reflect that of the source directory tree.
 ⌙ Note that only manifests that were patched will be stored in the output directory!
-⌙ Manifests will be overriden in-place if output directory is not specified.`,
+⌙ Manifests will be overridden in-place if output directory is not specified.`,
 	)
 
 	rootCmd.AddCommand(patchCmd)
