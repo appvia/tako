@@ -14,6 +14,7 @@ skaffold.yaml
 examples/node-app/docker-compose.tako*
 examples/node-app/tako.yaml
 examples/node-app/k8s
+pkg/tako/testdata/patch-default/patched
 
 ### Wordpress app example
 examples/wordpress-mysql/k8s
