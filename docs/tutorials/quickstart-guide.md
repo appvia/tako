@@ -38,7 +38,7 @@ Creating the files below in your project directory:
 ├── docker-compose.env.dev.yaml         # dev sandbox Compose environment override file
 ├── docker-compose.env.prod.yaml        # prod Compose environment override file
 ├── docker-compose.env.stage.yaml       # stage Compose environment override file
-├── appmeta.yaml                        # Tako project manifest
+├── tako.yaml                           # Tako project manifest
 ├── ...
 ```
 
