@@ -100,4 +100,25 @@ var _ = Describe("Events", func() {
 			Expect(actualEvents).To(ConsistOf(expectedEvents))
 		})
 	})
+
+	Context("Patch", func() {
+		It("fires all the necessary events", func() {
+			expectedEvents := []tako.RunnerEvent{
+				tako.PrePatchManifest,
+				tako.PostPatchManifest,
+				tako.PrePrintSummary,
+				tako.PostPrintSummary,
+			}
+			var actualEvents []tako.RunnerEvent
+			handler := func(event tako.RunnerEvent, _ tako.Runner) error {
+				actualEvents = append(actualEvents, event)
+				return nil
+			}
+
+			err = tako.PatchWithOptions(wd, tako.WithEventHandler(handler))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualEvents).To(ConsistOf(expectedEvents))
+		})
+
+	})
 })
