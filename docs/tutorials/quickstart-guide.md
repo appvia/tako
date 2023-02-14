@@ -100,7 +100,7 @@ This step is usually required when you're using a CI/CD pipeline to build and pu
 
 To ensure that your deployments use up-to-date images, you may use the `tako patch` command to replace images in your manifests.
 
-Run the following command from your project root:
+Run the following command:
 
 ```sh
 $ tako patch -d /path/to/my/k8s/manifest -i web=myweb:tag1 -i db=mydb:tag2
