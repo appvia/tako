@@ -7,6 +7,7 @@ title: Quick start guide
 
 - `tako init` - identifies a project's Compose Kubernetes source files and creates Compose environment overrides.
 - `tako render` - detects, applies any config changes and generates deployment manifests.
+- `tako patch` - patches deployment manifests by replacing images for specified services.
 - `tako help` - run it if you're a little lost.
 
 ## Initialise project
@@ -90,6 +91,31 @@ Other flag options include,
 - `-e` flag(s), to control which environments to generate the manifests for.
 
 **Note:** Generated manifests should **NOT** be treated as templates as they are fully expanded.
+
+## Patch Kubernetes manifests (optional / CI/CD)
+
+There may be a need to patch the generated manifests, e.g to replace images for specific services.
+
+This step is usually required when you're using a CI/CD pipeline to build and push images to a container registry.
+
+To ensure that your deployments use up-to-date images, you may use the `tako patch` command to replace images in your manifests.
+
+Run the following command from your project root:
+
+```sh
+$ tako patch -d /path/to/my/k8s/manifest -i web=myweb:tag1 -i db=mydb:tag2
+```
+
+Note that,
+- `-d` flag, specifies the directory containing the Kubernetes manifests to patch.
+- `-i` flag(s), specifies the service name and image to replace it with.
+- `-o` [optional] flag, specifies the output directory for the patched manifests (if not specified, the patched manifests will be overwritten in the input directory).
+
+The command above replaces the image for the `web` service with `myweb:tag1` and the image for the `db` service with `mydb:tag2`.
+
+Ensure that the service names match the ones in your source K8s file(s).
+
+**Note:** The only resource kinds that `patch` command might affect are: Deployment, StatefulSet and DaemonSet.
 
 ### How can I deploy the app to Kubernetes?
 
