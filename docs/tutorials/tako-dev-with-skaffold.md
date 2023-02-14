@@ -42,11 +42,11 @@ This command prepares your application and bootstraps a new Skaffold config (_sk
 
 #### Retrofit Skaffold support in existing Tako project
 
-If a Tako project has been previously initialised without Skaffold support, the easiest way forward to adopt Skaffold is to remove _appmeta.yaml_ file and initialize the project again.
+If a Tako project has been previously initialised without Skaffold support, the easiest way forward to adopt Skaffold is to remove _tako.yaml_ file and initialize the project again.
 
 **Note:** Be mindful that names of all the environments you want to track must be specified - Tako `init` won't automatically discover existing environment override files!
 
-Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Tako about the fact by adding the following line in _appmeta.yaml_ file:
+Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Tako about the fact by adding the following line in _tako.yaml_ file:
 
 ```sh
 # Initialize Skaffold in your project
@@ -55,7 +55,7 @@ Alternatively, use `skaffold init` to bootstrap _skaffold.yaml_ and tell Tako ab
 skaffold init
 ```
 
-And then add the following line to the `appmeta.yaml` file.
+And then add the following line to the `tako.yaml` file.
 
 ```yaml
 compose:
