@@ -148,4 +148,4 @@ verify-cli-docs:
 	@./hack/doc-gen/cli/verify.sh
 
 changelog: release
-	git log $(shell git tag | tail -n1)..HEAD --no-merges --format=%B >> changelog
+	git log $(shell git tag | tail -n1)..HEAD --no-merges --oneline >> changelog
