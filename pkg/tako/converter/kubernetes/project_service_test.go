@@ -1299,7 +1299,7 @@ var _ = Describe("ProjectService", func() {
 				result, err := projectService.LivenessProbe()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cmp.Diff(result, &v1.Probe{
-					Handler: v1.Handler{
+					ProbeHandler: v1.ProbeHandler{
 						Exec: &v1.ExecAction{
 							Command: []string{"my command"},
 						},
