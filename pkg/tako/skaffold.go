@@ -36,8 +36,11 @@ import (
 	initconfig "github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/deploy"
 	kubectx "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/context"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/parser"
+	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/parser/configlocations"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/runcontext"
+	runnerv1 "github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/v1"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/defaults"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
@@ -47,6 +50,7 @@ import (
 	"github.com/appvia/tako/pkg/tako/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"k8s.io/utils/ptr"
 )
 
 // SkaffoldManifest is a wrapper around latest SkaffoldConfig
@@ -542,6 +546,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 
 	skaffoldOpts := config.SkaffoldOptions{
 		ConfigurationFile:     skaffoldFile,
+		Command:               "dev",
 		ProfileAutoActivation: true,
 		Trigger:               trigger,
 		WatchPollInterval:     pollInterval,
@@ -555,7 +560,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		NoPrune:               false,
 		NoPruneChildren:       false,
 		CacheArtifacts:        false,
-		StatusCheck:           true,
+		StatusCheck:           config.NewBoolOrUndefined(ptr.To(false)),
 		Tail:                  runCfg.SkaffoldTail,
 		PortForward:           pfopts,
 		Muted: config.Muted{
@@ -572,14 +577,15 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 			"tako.dev/namespace=" + runCfg.K8sNamespace,
 			fmt.Sprintf("tako.dev/pollinterval=%d", pollInterval),
 		},
+		DryRun: false,
 	}
 
-	runCtx, cfg, err := runContext(skaffoldOpts, profiles, out)
+	runCtx, cfg, err := runContext(ctx, skaffoldOpts, profiles, out)
 	if err != nil {
 		return errors.Wrap(err, "Skaffold dev failed")
 	}
 
-	r, err := runner.NewForConfig(runCtx)
+	r, err := runnerv1.NewForConfig(ctx, runCtx)
 	if err != nil {
 		return errors.Wrap(err, "Skaffold dev failed")
 	}
@@ -609,7 +615,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 
 				if r.HasDeployed() {
 					cleanup = func() {
-						if err := r.Cleanup(context.Background(), out); err != nil {
+						if err := r.Cleanup(context.Background(), out, skaffoldOpts.DryRun); err != nil {
 							log.Warnf("Skaffold deployer cleanup: %s", err)
 						}
 					}
@@ -639,8 +645,8 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 }
 
 // runContext returns runner context and config for Skaffold dev mode
-func runContext(opts config.SkaffoldOptions, profiles []string, out io.Writer) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
-	parsed, err := schema.ParseConfigAndUpgrade(opts.ConfigurationFile, latest.Version)
+func runContext(ctx context.Context, opts config.SkaffoldOptions, profiles []string, out io.Writer) (*runcontext.RunContext, *latest.SkaffoldConfig, error) {
+	parsedConfigs, err := schema.ParseConfigAndUpgrade(opts.ConfigurationFile)
 	if err != nil {
 		if os.IsNotExist(errors.Unwrap(err)) {
 			return nil, nil, fmt.Errorf("skaffold config file %s not found - check your current working directory, or try running `skaffold init`", opts.ConfigurationFile)
@@ -652,31 +658,40 @@ func runContext(opts config.SkaffoldOptions, profiles []string, out io.Writer) (
 		return nil, nil, fmt.Errorf("parsing skaffold config: %w", err)
 	}
 
-	configs := []*latest.SkaffoldConfig{}
+	skaffoldConfigSet := parser.SkaffoldConfigSet{}
 
-	for _, p := range parsed {
-		configs = append(configs, p.(*latest.SkaffoldConfig))
+	for _, p := range parsedConfigs {
+		skaffoldConfigSet = append(skaffoldConfigSet, &parser.SkaffoldConfigEntry{
+			SkaffoldConfig: p.(*latest.SkaffoldConfig),
+			SourceFile:     opts.ConfigurationFile,
+			IsRootConfig:   true,
+			IsRemote:       false,
+		})
 	}
 
-	config := configs[0]
+	// take the first config from the parsed list for now
+	config := parsedConfigs[0].(*latest.SkaffoldConfig)
 
-	appliedProfiles, err := schema.ApplyProfiles(config, opts, profiles)
+	fieldsOverrodeByProfile := map[string]configlocations.YAMLOverrideInfo{}
+
+	appliedProfiles, _, err := schema.ApplyProfiles(config, fieldsOverrodeByProfile, opts, profiles)
 	if err != nil {
 		return nil, nil, fmt.Errorf("applying profiles: %w", err)
 	}
 	_, _ = fmt.Fprintln(out, "Applied profiles:", appliedProfiles)
 
-	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext, config.Deploy.KubeContext)
+	kubectx.ConfigureKubeConfig(opts.KubeConfig, opts.KubeContext)
 
-	if err := defaults.Set(configs[0]); err != nil {
+	if err := defaults.Set(config); err != nil {
 		return nil, nil, fmt.Errorf("setting default values: %w", err)
 	}
 
-	if err := validation.Process(configs); err != nil {
+	validateConfig := validation.GetValidationOpts(opts)
+	if err := validation.Process(skaffoldConfigSet, validateConfig); err != nil {
 		return nil, nil, fmt.Errorf("invalid skaffold config: %w", err)
 	}
 
-	runCtx, err := runcontext.GetRunContext(opts, []latest.Pipeline{config.Pipeline})
+	runCtx, err := runcontext.GetRunContext(ctx, opts, parsedConfigs)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting run context: %w", err)
 	}
