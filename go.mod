@@ -3,7 +3,7 @@ module github.com/appvia/tako
 go 1.19
 
 require (
-	github.com/GoogleContainerTools/skaffold v1.39.17
+	github.com/GoogleContainerTools/skaffold v1.39.9
 	github.com/appvia/komando v0.0.0-20210615112332-10b3c13b31d3
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.6.0
@@ -56,6 +56,7 @@ require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.3.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
+	github.com/Microsoft/hcsshim v0.10.0-rc.7 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/ahmetb/dlog v0.0.0-20170105205344-4fb5f8204f26 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
@@ -86,6 +87,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20221129204813-6a4d6ed5d396 // indirect
+	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
@@ -130,9 +132,9 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic v0.6.9 // indirect
-	github.com/google/go-containerregistry v0.14.0 // indirect
+	github.com/google/go-containerregistry v0.13.1-0.20230310164735-e94d40893b2d // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/ko v0.13.0 // indirect
+	github.com/google/ko v0.12.0 // indirect
 	github.com/google/s2a-go v0.1.2 // indirect
 	github.com/google/safetext v0.0.0-20230106111101-7156a760e523 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
@@ -170,9 +172,8 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/buildkit v0.8.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/moby/patternmatcher v0.5.0 // indirect
-	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/signal v0.6.0 // indirect
+	github.com/moby/sys/mount v0.2.0 // indirect
+	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -202,8 +203,8 @@ require (
 	github.com/segmentio/textio v1.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sigstore/cosign/v2 v2.0.0 // indirect
-	github.com/sigstore/rekor v1.1.1 // indirect
-	github.com/sigstore/sigstore v1.6.3 // indirect
+	github.com/sigstore/rekor v1.1.0 // indirect
+	github.com/sigstore/sigstore v1.6.0 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -260,13 +261,19 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gotest.tools/v3 v3.1.0 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/kubectl v0.21.6 // indirect
-	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
+	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/cli-utils v0.22.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.17.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.10.17 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+)
+
+replace (
+	github.com/docker/docker => github.com/docker/docker v20.10.24+incompatible
+	github.com/google/ko => github.com/google/ko v0.13.0
 )
