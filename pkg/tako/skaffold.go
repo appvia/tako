@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -30,24 +29,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/analyze"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/build"
-	initconfig "github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/config"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/initializer/deploy"
-	kubectx "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/context"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/parser"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/parser/configlocations"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/runcontext"
-	runnerv1 "github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/v1"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/defaults"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/validation"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/yaml"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/config"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/initializer/analyze"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/initializer/build"
+	initconfig "github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/initializer/config"
+	kubectx "github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/kubernetes/context"
+	skaffoldlog "github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/output/log"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/parser"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/parser/configlocations"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/runner"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/runner/runcontext"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema/defaults"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema/latest"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema/util"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema/validation"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/yaml"
 	"github.com/appvia/tako/pkg/tako/converter/kubernetes"
 	"github.com/appvia/tako/pkg/tako/log"
+	yamlpatch "github.com/krishicks/yaml-patch"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
@@ -97,7 +97,7 @@ func NewSkaffoldManifest(envs []string, project *ComposeProject) *SkaffoldManife
 
 // LoadSkaffoldManifest returns skaffold manifest.
 func LoadSkaffoldManifest(path string) (*SkaffoldManifest, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -225,15 +225,10 @@ func (s *SkaffoldManifest) UpdateProfiles(envToOutputPath map[string]string) boo
 				manifestsPath = outputPath
 			}
 
-			manifests := []string{
-				manifestsPath,
-			}
-
-			// only update when necessary
-			if !reflect.DeepEqual(p.Deploy.KubectlDeploy.Manifests, manifests) {
-				p.Deploy.KubectlDeploy.Manifests = []string{
-					manifestsPath,
-				}
+			// only update profile patches when necessary
+			if !reflect.DeepEqual(p.Patches[0].Value.Node.Value(), manifestsPath) {
+				var path interface{} = manifestsPath
+				p.Patches[0].Value.Node = *yamlpatch.NewNode(&path)
 				changed = true
 			}
 		}
@@ -265,6 +260,12 @@ func BaseSkaffoldManifest() *SkaffoldManifest {
 					},
 				},
 			},
+			// @todo(mc) by default the list of raw k8s manifests is empty as it'll be overridden by profiles
+			Render: latest.RenderConfig{
+				Generate: latest.Generate{
+					RawK8s: []string{""},
+				},
+			},
 		},
 	}
 }
@@ -283,6 +284,14 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 			continue
 		}
 
+		var envManifestsPath interface{} = filepath.Join(kubernetes.MultiFileSubDir, e, "*")
+
+		patch := latest.JSONPatch{
+			Op:   "replace",
+			Path: "/manifests/rawYaml/0",
+		}
+		patch.Value = &util.YamlpatchNode{Node: *yamlpatch.NewNode(&envManifestsPath)}
+
 		s.Profiles = append(s.Profiles, latest.Profile{
 			Name: e + EnvProfileNameSuffix,
 			Pipeline: latest.Pipeline{
@@ -290,16 +299,13 @@ func (s *SkaffoldManifest) SetProfiles(envs []string) {
 					DeployType: latest.DeployType{
 						// @todo(mc) strategy will depend on the output format so deploy
 						// type might mutate as well when iterating with Tako
-						KubectlDeploy: &latest.KubectlDeploy{
-							Manifests: []string{
-								filepath.Join(kubernetes.MultiFileSubDir, e, "*"),
-							},
-						},
+						KubectlDeploy: &latest.KubectlDeploy{},
 					},
 				},
 				Test:        []*latest.TestCase{},
 				PortForward: []*latest.PortForwardResource{},
 			},
+			Patches: []latest.JSONPatch{patch},
 		})
 	}
 }
@@ -457,8 +463,10 @@ func analyzeProject() (*Analysis, error) {
 		return nil, err
 	}
 
-	deployInitializer := deploy.NewInitializer(a.Manifests(), a.KustomizeBases(), a.KustomizePaths(), c)
-	images := deployInitializer.GetImages()
+	images := []string{}
+	for _, b := range a.Builders() {
+		images = append(images, b.ConfiguredImage())
+	}
 
 	buildInitializer := build.NewInitializer(a.Builders(), c)
 	if err := buildInitializer.ProcessImages(images); err != nil {
@@ -523,6 +531,9 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	var trigger string
 	var pollInterval int
 
+	// Set log level on Skaffold logger
+	skaffoldlog.SetLevel(skaffoldlog.WarnLevel)
+
 	if runCfg.SkaffoldManualTrigger {
 		trigger = "manual"
 		pollInterval = 0
@@ -534,7 +545,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 	if runCfg.SkaffoldVerbose {
 		mutedPhases = []string{}
 	} else {
-		mutedPhases = []string{"build"} // possible options "build", "deploy", "status-check"
+		mutedPhases = []string{"Build"} // possible options "DevLoop", "Init", "Build", "Test", "Render", "Deploy", "Verify", "StatusCheck", "PortForward", "Sync", "DevInit", "Exec", "Cleanup"
 	}
 
 	logrus.SetLevel(logrus.WarnLevel)
@@ -585,7 +596,7 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		return errors.Wrap(err, "Skaffold dev failed")
 	}
 
-	r, err := runnerv1.NewForConfig(ctx, runCtx)
+	r, err := runner.NewForConfig(ctx, runCtx)
 	if err != nil {
 		return errors.Wrap(err, "Skaffold dev failed")
 	}
@@ -597,10 +608,11 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 		}()
 	}
 
-	cleanup := func() {}
 	if skaffoldOpts.Cleanup {
 		defer func() {
-			cleanup()
+			if err := r.Cleanup(context.Background(), out, skaffoldOpts.DryRun, r.DeployManifests(), skaffoldOpts.Command); err != nil {
+				log.Warnf("Skaffold deployer cleanup: %s", err)
+			}
 		}()
 	}
 
@@ -612,14 +624,6 @@ func RunSkaffoldDev(ctx context.Context, out io.Writer, skaffoldFile string, pro
 			err := func() error {
 
 				err := r.Dev(ctx, out, cfg.Build.Artifacts)
-
-				if r.HasDeployed() {
-					cleanup = func() {
-						if err := r.Cleanup(context.Background(), out, skaffoldOpts.DryRun); err != nil {
-							log.Warnf("Skaffold deployer cleanup: %s", err)
-						}
-					}
-				}
 
 				if r.HasBuilt() {
 					prune = func() {
