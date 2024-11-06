@@ -29,7 +29,7 @@ func v1probe(probeType string, pc config.ProbeConfig) (*v1.Probe, error) {
 	}
 
 	return &v1.Probe{
-		Handler:             handlerFromType(pt, pc),
+		ProbeHandler:        handlerFromType(pt, pc),
 		InitialDelaySeconds: int32(pc.InitialDelay.Seconds()),
 		TimeoutSeconds:      int32(pc.Timeout.Seconds()),
 		PeriodSeconds:       int32(pc.Period.Seconds()),
@@ -38,23 +38,23 @@ func v1probe(probeType string, pc config.ProbeConfig) (*v1.Probe, error) {
 	}, nil
 }
 
-func handlerFromType(probeType config.ProbeType, pc config.ProbeConfig) v1.Handler {
+func handlerFromType(probeType config.ProbeType, pc config.ProbeConfig) v1.ProbeHandler {
 	switch probeType {
 	case config.ProbeTypeTCP:
-		return v1.Handler{
+		return v1.ProbeHandler{
 			TCPSocket: &v1.TCPSocketAction{
 				Port: intstr.FromInt(pc.TCP.Port),
 			},
 		}
 	case config.ProbeTypeHTTP:
-		return v1.Handler{
+		return v1.ProbeHandler{
 			HTTPGet: &v1.HTTPGetAction{
 				Path: pc.HTTP.Path,
 				Port: intstr.FromInt(pc.HTTP.Port),
 			},
 		}
 	case config.ProbeTypeExec:
-		return v1.Handler{
+		return v1.ProbeHandler{
 			Exec: &v1.ExecAction{
 				Command: pc.Exec.Command,
 			},
@@ -62,5 +62,5 @@ func handlerFromType(probeType config.ProbeType, pc config.ProbeConfig) v1.Handl
 	default:
 	}
 
-	return v1.Handler{}
+	return v1.ProbeHandler{}
 }
