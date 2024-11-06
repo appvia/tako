@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"path/filepath"
 
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema/latest"
+	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/schema/util"
 	"github.com/appvia/tako/pkg/tako"
 	"github.com/appvia/tako/pkg/tako/converter/kubernetes"
 	"github.com/appvia/tako/pkg/tako/log"
 	composego "github.com/compose-spec/compose-go/types"
+	yamlpatch "github.com/krishicks/yaml-patch"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -75,6 +77,11 @@ var _ = Describe("Skaffold", func() {
 								},
 							},
 						},
+						Render: latest.RenderConfig{
+							Generate: latest.Generate{
+								RawK8s: []string{""},
+							},
+						},
 					},
 				},
 			))
@@ -98,11 +105,16 @@ var _ = Describe("Skaffold", func() {
 				for i, p := range manifest.Profiles {
 					Expect(p.Deploy).To(Equal(latest.DeployConfig{
 						DeployType: latest.DeployType{
-							KubectlDeploy: &latest.KubectlDeploy{
-								Manifests: []string{
-									filepath.Join(kubernetes.MultiFileSubDir, envs[i], "*"),
-								},
-							},
+							KubectlDeploy: &latest.KubectlDeploy{},
+						},
+					}))
+
+					var expectedEnvManifestsPath interface{} = filepath.Join(kubernetes.MultiFileSubDir, envs[i], "*")
+					Expect(p.Patches).To(Equal([]latest.JSONPatch{
+						{
+							Op:    "replace",
+							Path:  "/manifests/rawYaml/0",
+							Value: &util.YamlpatchNode{Node: *yamlpatch.NewNode(&expectedEnvManifestsPath)},
 						},
 					}))
 				}
@@ -240,7 +252,7 @@ var _ = Describe("Skaffold", func() {
 
 				It("updates the matching profile with new manifests path selecting all the files in that directory", func() {
 					manifest.UpdateProfiles(envToOutputPath)
-					Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement(filepath.Join(outputPath, "*")))
+					Expect(manifest.Profiles[0].Patches[0].Value.Node.Value().(string)).To(Equal(filepath.Join(outputPath, "*")))
 				})
 			})
 
@@ -253,7 +265,7 @@ var _ = Describe("Skaffold", func() {
 
 				It("updates the matching profile with new manifests path pointing at specific file", func() {
 					manifest.UpdateProfiles(envToOutputPath)
-					Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement(outputPath))
+					Expect(manifest.Profiles[0].Patches[0].Value.Node.Value().(string)).To(Equal(outputPath))
 				})
 			})
 
@@ -266,7 +278,7 @@ var _ = Describe("Skaffold", func() {
 
 			It("profile manifests path should remain unchanged", func() {
 				manifest.UpdateProfiles(envToOutputPath)
-				Expect(manifest.Profiles[0].Deploy.KubectlDeploy.Manifests).To(ContainElement("k8s/test/*"))
+				Expect(manifest.Profiles[0].Patches[0].Value.Node.Value().(string)).To(Equal("k8s/test/*"))
 			})
 		})
 	})
