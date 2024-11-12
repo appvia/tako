@@ -25,11 +25,13 @@ jobs:
         race: true
 
   e2e:
-    machine:
-      docker_layer_caching: true
-      image: ubuntu-2204:2022.10.2
+    executor:
+      name: go/default
+      tag: '1.22'
     steps:
       - checkout
+      - go/load-cache
+      - go/mod-download
       - run:
           name: Vendor
           command: |
