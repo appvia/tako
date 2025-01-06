@@ -2,23 +2,23 @@
 version: 2.1
 
 orbs:
-  go: circleci/go@1.12.0
+  go: circleci/go@2.2.3
   kube-orb: circleci/kubernetes@0.11.1
 
 jobs:
   build:
     executor:
       name: go/default
-      tag: '1.22'
+      tag: '1.23'
     steps:
      - checkout
-     - go/load-cache
+     - go/load-mod-cache
      - go/mod-download
      - run:
         name: Vendor
         command: |
           go mod vendor
-     - go/save-cache
+     - go/save-mod-cache
      - go/test:
         covermode: atomic
         failfast: true
@@ -27,10 +27,10 @@ jobs:
   e2e:
     executor:
       name: go/default
-      tag: '1.22'
+      tag: '1.23'
     steps:
       - checkout
-      - go/load-cache
+      - go/load-mod-cache
       - go/mod-download
       - run:
           name: Vendor
@@ -43,6 +43,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt install -y bats curl
+      - setup_remote_docker
       - run:
           name: Setup
           command: |
