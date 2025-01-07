@@ -42,7 +42,7 @@ jobs:
           name: Installing BATS
           command: |
             sudo apt-get update
-            sudo apt install -y bats curl
+            sudo apt install -y bats curl uuid-runtime
       - setup_remote_docker
       - run:
           name: Setup
