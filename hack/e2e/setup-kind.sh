@@ -29,7 +29,7 @@ KIND="${BIN_DIR}/kind"
 
 # util to install a released kind version into ${BIN_DIR}
 install_kind_release() {
-  VERSION="v0.17.0"
+  VERSION="v0.26.0"
   KIND_BINARY_URL="https://github.com/kubernetes-sigs/kind/releases/download/${VERSION}/kind-linux-amd64"
   mkdir -p "${BIN_DIR}"
   curl --request GET -sL \
