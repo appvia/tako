@@ -17,7 +17,8 @@
 
 ## Set the defaults
 BUILD_CLI=true
-CLUSTER_NAME="cluster-$(uuidgen | tr "[:upper:]" "[:lower:]")"
+# CLUSTER_NAME="cluster-$(uuidgen | tr "[:upper:]" "[:lower:]")"
+CLUSTER_NAME="cluster"
 
 # Make this pretty
 export NC='\e[0m'
@@ -81,6 +82,13 @@ build-cli() {
 create-cluster() {
   announce "Provisioning kind cluster"
   kind create cluster --name "${CLUSTER_NAME}" --kubeconfig hack/e2e/kubeconfig
+
+  # kubectl cluster-info --context kind-cluster-3ba2a826-e52f-4e5f-961b-3f4ad0c57187 --kubeconfig hack/e2e/kubeconfig
+  kubectl cluster-info --context kind-cluster --kubeconfig hack/e2e/kubeconfig
+  kubectl cluster-info --context kind-cluster
+  kubectl config current-context --context kind-cluster --kubeconfig hack/e2e/kubeconfig
+  kubectl config view --context kind-cluster --kubeconfig hack/e2e/kubeconfig
+  kubectl get nodes --context kind-cluster --kubeconfig hack/e2e/kubeconfig
 }
 
 configure-kubeconfig(){
