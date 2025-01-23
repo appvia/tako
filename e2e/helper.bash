@@ -51,6 +51,8 @@ wait-on-deployment() {
   local namespace=$1
   local labels=$2
 
+  kubectl config current-context
+
   attempt 60 2 "$KUBECTL -n ${namespace} get po -l ${labels} --field-selector=status.phase=Running --no-headers | grep -i running"
 }
 
