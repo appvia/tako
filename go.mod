@@ -7,7 +7,7 @@ toolchain go1.23.4
 require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.13.2
 	github.com/appvia/komando v0.0.0-20210615112332-10b3c13b31d3
-	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
+	github.com/compose-spec/compose-go v1.20.2
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-playground/validator/v10 v10.14.0
 	github.com/google/go-cmp v0.6.0
