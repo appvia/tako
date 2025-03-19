@@ -8,7 +8,7 @@ require (
 	github.com/compose-spec/compose-go v0.0.0-20200907084823-057e1edc5b6f
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-playground/validator/v10 v10.14.0
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/imdario/mergo v1.0.1
 	github.com/krishicks/yaml-patch v0.0.10
