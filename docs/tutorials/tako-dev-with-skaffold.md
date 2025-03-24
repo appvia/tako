@@ -101,4 +101,4 @@ When the dev loop is interrupted with Ctrl+C it will automatically cleanup all d
 
 _NOTE: Image pruning might take some time and in some cases won't remove stale docker images. it's therefore advised that local images are periodically pruned manually._
 
-[diagram]: ../images/tako-with-skaffold.svg
+[diagram]: ../images/tako-with-skaffold.jpg
