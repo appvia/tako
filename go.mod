@@ -2,6 +2,8 @@ module github.com/appvia/tako
 
 go 1.23.4
 
+toolchain go1.24.1
+
 require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.14.2
 	github.com/appvia/komando v0.0.0-20210615112332-10b3c13b31d3
@@ -14,7 +16,7 @@ require (
 	github.com/krishicks/yaml-patch v0.0.10
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.36.3
+	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cast v1.7.1
