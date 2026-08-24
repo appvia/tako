@@ -9,7 +9,7 @@ jobs:
   build:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.26'
     steps:
      - checkout
      - go/load-mod-cache
@@ -27,7 +27,7 @@ jobs:
   e2e:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.26'
     steps:
       - checkout
       - go/load-mod-cache

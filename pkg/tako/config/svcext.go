@@ -47,7 +47,7 @@ type ServiceExtension struct {
 // SvcK8sConfig represents the root of the k8s specific fields supported by Tako.
 type SvcK8sConfig struct {
 	Disabled bool     `yaml:"disabled,omitempty"`
-	Workload Workload `yaml:"workload" validate:"required,dive"`
+	Workload Workload `yaml:"workload" validate:"required"`
 	Service  Service  `yaml:"service,omitempty"`
 }
 
