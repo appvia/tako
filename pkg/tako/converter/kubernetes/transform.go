@@ -273,6 +273,12 @@ func (k *Kubernetes) initPodSpec(projectService ProjectService) v1.PodSpec {
 	}
 	if serviceAccount != "" {
 		pod.ServiceAccountName = serviceAccount
+		// the rendered ServiceAccount disables automount at the account level;
+		// a workload that explicitly opted into an identity gets its token
+		if serviceAccount != "default" {
+			automount := true
+			pod.AutomountServiceAccountToken = &automount
+		}
 	}
 
 	return pod
@@ -864,14 +870,21 @@ func (k *Kubernetes) createPVC(volume Volumes) (*v1.PersistentVolumeClaim, error
 		return nil, err
 	}
 
+	// volumes without a name (e.g. bind mounts) are referenced in the pod spec
+	// by the generated PVCName - the PVC object must carry the same name
+	name := volume.VolumeName
+	if name == "" {
+		name = volume.PVCName
+	}
+
 	pvc := &v1.PersistentVolumeClaim{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
 			APIVersion: "v1",
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name:   volume.VolumeName,
-			Labels: configLabels(volume.VolumeName),
+			Name:   name,
+			Labels: configLabels(name),
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			Resources: v1.VolumeResourceRequirements{
