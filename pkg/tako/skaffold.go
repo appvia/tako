@@ -47,6 +47,7 @@ import (
 	"github.com/GoogleContainerTools/skaffold/v2/pkg/skaffold/yaml"
 	"github.com/appvia/tako/pkg/tako/converter/kubernetes"
 	"github.com/appvia/tako/pkg/tako/log"
+	"github.com/distribution/reference"
 	yamlpatch "github.com/krishicks/yaml-patch"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -428,8 +429,8 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 			// manifests which Analysis uses to determine which images are in use.
 			if analysis != nil && analysis.Images != nil {
 				for _, image := range analysis.Images {
-					if len(image) > 0 && strings.HasSuffix(image, svcImageNameFromContext) {
-						buildArtifacts[context] = image
+					if len(image) > 0 && strings.HasSuffix(untagged(image), svcImageNameFromContext) {
+						buildArtifacts[context] = untagged(image)
 						break
 					}
 				}
@@ -443,12 +444,22 @@ func collectBuildArtifacts(analysis *Analysis, project *ComposeProject) map[stri
 	if project != nil && project.Project != nil && project.Project.Services != nil {
 		for _, s := range project.Project.Services {
 			if s.Build != nil && len(s.Build.Context) > 0 && len(s.Image) > 0 {
-				buildArtifacts[s.Build.Context] = s.Image
+				buildArtifacts[s.Build.Context] = untagged(s.Image)
 			}
 		}
 	}
 
 	return buildArtifacts
+}
+
+// untagged strips any tag or digest from an image reference. Skaffold build
+// artifacts must not specify tags - the configured tagger owns the tag.
+func untagged(image string) string {
+	named, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return image
+	}
+	return reference.FamiliarName(named)
 }
 
 // analyzeProject analyses the project and returns Analysis report object

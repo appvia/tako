@@ -517,6 +517,8 @@ var _ = Describe("Skaffold", func() {
 
 				When("Docker Compose project has services referencing images with build contexts", func() {
 					image := "quay.io/org/myimage:latest"
+					// tags are stripped from build artifact image names - Skaffold taggers own the tag
+					untaggedImage := "quay.io/org/myimage"
 					context := "my/context"
 
 					BeforeEach(func() {
@@ -551,7 +553,7 @@ var _ = Describe("Skaffold", func() {
 									Workspace: "src/myservice",
 								},
 								&latest.Artifact{
-									ImageName: image,
+									ImageName: untaggedImage,
 									Workspace: context,
 								},
 							))
@@ -572,7 +574,7 @@ var _ = Describe("Skaffold", func() {
 						It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
 							// Note: there is one build artifact: 1) from Docker Compose (no Skaffold analysis dockefiles detected!)
 							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
-							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(image))
+							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(untaggedImage))
 							Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal(context))
 						})
 
@@ -594,7 +596,7 @@ var _ = Describe("Skaffold", func() {
 						It("generates skaffold build artefacts with extracted Docker Compose images and their respective contexts", func() {
 							// Note: there is one build artifact: 1) from Docker Compose (no Skaffold analysis dockefiles detected!)
 							Expect(skaffoldManifest.Build.Artifacts).To(HaveLen(1))
-							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(image))
+							Expect(skaffoldManifest.Build.Artifacts[0].ImageName).To(Equal(untaggedImage))
 							Expect(skaffoldManifest.Build.Artifacts[0].Workspace).To(Equal(context))
 						})
 
