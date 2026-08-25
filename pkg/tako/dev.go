@@ -135,7 +135,15 @@ func (r *DevRunner) Run() error {
 		defer pr.Close()
 
 		profileName := r.config.Envs[0] + EnvProfileNameSuffix
-		go RunSkaffoldDev(ctx, pw, skaffoldConfigPath, []string{profileName}, r.config)
+		go func() {
+			if err := RunSkaffoldDev(ctx, pw, skaffoldConfigPath, []string{profileName}, r.config); err != nil {
+				r.UI.Output(
+					wordwrap.WrapString(err.Error(), kmd.RecommendedWordWrapLimit),
+					kmd.WithErrorStyle(),
+					kmd.WithIndentChar(kmd.ErrorIndentChar),
+				)
+			}
+		}()
 		go r.displayLogs(pr, ctx)
 	}
 

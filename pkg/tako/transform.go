@@ -17,7 +17,6 @@
 package tako
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/appvia/tako/pkg/tako/config"
@@ -110,7 +109,7 @@ func createDeploy() composego.DeployConfig {
 
 // createHealthCheck returns a healthcheck block with configured placeholders.
 func createHealthCheck() composego.HealthCheckConfig {
-	testMsg := fmt.Sprintf(config.DefaultLivenessProbeCommand[1])
+	testMsg := config.DefaultLivenessProbeCommand[1]
 	to, _ := time.ParseDuration(config.DefaultProbeTimeout)
 	iv, _ := time.ParseDuration(config.DefaultProbeInterval)
 	sp, _ := time.ParseDuration(config.DefaultProbeInitialDelay)

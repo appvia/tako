@@ -87,7 +87,7 @@ func (chg change) patchVersion(override *composeOverride) string {
 	override.Version = newValue
 
 	msg := fmt.Sprintf("version %s updated to %s", pre, newValue)
-	log.Debugf(msg)
+	log.Debug(msg)
 	return msg
 }
 
@@ -106,20 +106,20 @@ func (chg change) patchService(override *composeOverride) (string, error) {
 		}})
 
 		msg := fmt.Sprintf("added service: %s", newValue.Name)
-		log.Debugf(msg)
+		log.Debug(msg)
 		return msg, nil
 	case DELETE:
 		switch {
 		case chg.Parent == "environment":
 			delete(override.Services[chg.Index.(int)].Environment, chg.Target)
 			msg := fmt.Sprintf("removed env var: %s from service %s", chg.Target, override.Services[chg.Index.(int)].Name)
-			log.Debugf(msg)
+			log.Debug(msg)
 			return msg, nil
 		default:
 			deletedSvcName := override.Services[chg.Index.(int)].Name
 			override.Services = append(override.Services[:chg.Index.(int)], override.Services[chg.Index.(int)+1:]...)
 			msg := fmt.Sprintf("removed service: %s", deletedSvcName)
-			log.Debugf(msg)
+			log.Debug(msg)
 			return msg, nil
 		}
 	case UPDATE:
@@ -160,12 +160,12 @@ func (chg change) patchVolume(override *composeOverride) (string, error) {
 		}}
 
 		msg := fmt.Sprintf("added volume: %s", chg.Index.(string))
-		log.Debugf(msg)
+		log.Debug(msg)
 		return msg, nil
 	case DELETE:
 		delete(override.Volumes, chg.Index.(string))
 		msg := fmt.Sprintf("removed volume: %s", chg.Index.(string))
-		log.Debugf(msg)
+		log.Debug(msg)
 		return msg, nil
 	}
 	return "", nil

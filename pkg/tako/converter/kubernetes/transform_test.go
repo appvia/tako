@@ -170,6 +170,13 @@ var _ = Describe("Transform", func() {
 				spec := k.initPodSpec(projectService)
 				Expect(spec.ServiceAccountName).To(Equal("my-service-account"))
 			})
+
+			It("mounts the service account token for the opted-in workload", func() {
+				// the rendered ServiceAccount object disables automount at the
+				// account level, so the pod must enable it explicitly
+				spec := k.initPodSpec(projectService)
+				Expect(*spec.AutomountServiceAccountToken).To(BeTrue())
+			})
 		})
 
 		Context("with command specified via an extension or project service spec", func() {
@@ -1415,6 +1422,21 @@ var _ = Describe("Transform", func() {
 						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 					},
 				}))
+			})
+		})
+
+		When("volume has no name (e.g. bind mount)", func() {
+			volume := Volumes{
+				VolumeName: "",
+				PVCName:    "some-svc-claim0",
+				PVCSize:    "10Mi",
+			}
+
+			It("falls back to the generated PVC name referenced by the pod spec", func() {
+				pvc, err := k.createPVC(volume)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pvc.ObjectMeta.Name).To(Equal("some-svc-claim0"))
+				Expect(pvc.ObjectMeta.Labels).To(Equal(configLabels("some-svc-claim0")))
 			})
 		})
 
