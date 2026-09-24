@@ -15,7 +15,7 @@ require (
 	github.com/krishicks/yaml-patch v0.0.10
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.40.0
+	github.com/onsi/gomega v1.43.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cast v1.10.0
@@ -310,7 +310,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
