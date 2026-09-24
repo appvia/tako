@@ -20,7 +20,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cast v1.10.0
 	github.com/spf13/cobra v1.10.2
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/yaml.v3 v3.0.1
